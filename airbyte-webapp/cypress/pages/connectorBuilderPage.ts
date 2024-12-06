@@ -118,10 +118,6 @@ export const getSlicesFromDropdown = () => {
   return cy.get(`${sliceDropdown} li`);
 };
 
-export const openStreamConfigurationTab = () => {
-  cy.get('[data-testid="tag-tab-stream-configuration"]').click();
-};
-
 export const openStreamSchemaTab = () => {
   cy.get('[data-testid="tag-tab-stream-schema"]').click();
 };

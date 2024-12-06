@@ -7,6 +7,9 @@ package io.airbyte.test.acceptance;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
@@ -23,9 +26,11 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
+import io.airbyte.api.client.model.generated.LogFormatType;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
@@ -35,6 +40,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.Database;
+import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate.Builder;
@@ -137,10 +143,10 @@ public class AcceptanceTestsResources {
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
-    Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
-    Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
+    assertTrue(stream.getDefaultCursorField().isEmpty());
+    assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
@@ -240,18 +246,20 @@ public class AcceptanceTestsResources {
         StreamStatusJobType.SYNC);
   }
 
-  void runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
-    LOGGER.info("Starting runSmallSyncForAWorkspaceId()");
+  record SyncIds(UUID connectionId, Long jobId, Integer attemptNumber) {}
+
+  SyncIds runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
+    LOGGER.info("Starting runSmallSyncForAWorkspaceId(" + workspaceId + ")");
     final UUID sourceId = testHarness.createPostgresSource(workspaceId).getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination(workspaceId).getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
-    Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
-    Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
+    assertTrue(stream.getDefaultCursorField().isEmpty());
+    assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
@@ -289,12 +297,25 @@ public class AcceptanceTestsResources {
         WITHOUT_SCD_TABLE);
     Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
+
+    // Assert that job logs exist
+    final var jobId = connectionSyncRead1.getJob().getId();
+    final var attemptId = connectionSyncRead1.getAttempts().size() - 1;
+    final var attempt = testHarness.getApiClient().getAttemptApi().getAttemptForJob(
+        new GetAttemptStatsRequestBody(jobId, attemptId));
+    // Structured logs should exist
+    assertEquals(LogFormatType.STRUCTURED, attempt.getLogType());
+    assertFalse(attempt.getLogs().getEvents().isEmpty());
+    assertTrue(attempt.getLogs().getLogLines().isEmpty());
+
+    return new SyncIds(connectionId, jobId, attemptId);
   }
 
   void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     final AirbyteApiClient airbyteApiClient =
         createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api",
             Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE));
+    final TestFlagsSetter testFlagsSetter = new TestFlagsSetter(AIRBYTE_SERVER_HOST);
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
@@ -326,7 +347,7 @@ public class AcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId, testFlagsSetter);
 
     testHarness.ensureCleanSlate();
   }

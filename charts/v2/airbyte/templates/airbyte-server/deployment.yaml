@@ -1,0 +1,202 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-server
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.server.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.server.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  minReadySeconds: 30
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.server.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.server.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: {{ .Values.server.deploymentStrategyType }} # Needed due to volume claims
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.server.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.server.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.server.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.server.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.server.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.server.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.server.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.server.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.server.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.server.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.server.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.server.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.server.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.server.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: airbyte-server-container
+        image: {{ include "imageUrl" (list .Values.server.image $) }}
+        imagePullPolicy: "{{ .Values.server.image.pullPolicy }}"
+        env:
+        {{- if .Values.server.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
+
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal server"
+
+        {{- include "airbyte.common.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.security.envs" . | nindent 8 }} 
+        {{- include "airbyte.connector.envs" . | nindent 8 }}
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }} 
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
+        {{- include "airbyte.storage.envs" . | nindent 8 }}
+        {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.envs" . | nindent 8 }}
+        {{- include "airbyte.tracking.envs" . | nindent 8 }}
+        {{- include "airbyte.worker.envs" . | nindent 8 }}
+        {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
+
+        {{- if or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") }}
+        {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }} 
+        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
+        {{- else }}
+        {{- include "airbyte.auth.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
+        {{- end}}
+
+        # Values from secret
+        {{- if .Values.server.secrets }}
+        {{- range $k, $v := .Values.server.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: server-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.server.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.server.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.server.extraEnv }}
+        {{- toYaml .Values.server.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.server.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.server.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.server.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.server.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.server.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.server.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.server.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.server.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.server.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.server.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.server.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.server.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: 8001
+          protocol: TCP
+        {{- if .Values.server.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.server.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        {{- if .Values.server.resources }}
+        resources: {{- toYaml .Values.server.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.server.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.server.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+      {{- if eq .Values.global.deploymentMode "oss" }}
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        - name: gcs-log-creds-volume
+          mountPath: /secrets/gcs-log-creds
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.airbyteYml }}
+        - name: airbyte-yml-volume
+          mountPath: /app/configs/airbyte.yml
+          subPath: fileContents
+          readOnly: true
+        {{- end }}
+      {{- end }}
+
+        {{- if .Values.server.extraVolumeMounts }}
+          {{ toYaml .Values.server.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+          {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.server.extraContainers }}
+        {{ toYaml .Values.server.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
+      volumes:
+    {{- if eq .Values.global.deploymentMode "oss" }}
+      {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+      {{- end }}
+
+      {{- if .Values.global.airbyteYml }}
+      - name: airbyte-yml-volume
+        secret:
+          secretName: {{ .Release.Name }}-airbyte-yml
+      {{- end }}
+    {{- end }}
+      {{- if .Values.server.extraVolumes }}
+{{ toYaml .Values.server.extraVolumes | nindent 6 }}
+      {{- end }}

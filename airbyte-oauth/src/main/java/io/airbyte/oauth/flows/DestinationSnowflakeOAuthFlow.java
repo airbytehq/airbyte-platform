@@ -85,7 +85,8 @@ public class DestinationSnowflakeOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oauthParamConfig)
+                                                  final JsonNode oauthParamConfig,
+                                                  final String state)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
 

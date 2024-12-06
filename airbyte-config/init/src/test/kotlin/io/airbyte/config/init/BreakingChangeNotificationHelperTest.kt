@@ -11,7 +11,7 @@ import io.airbyte.config.NotificationItem
 import io.airbyte.config.NotificationSettings
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
-import io.airbyte.config.persistence.ConfigRepository
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
 import io.airbyte.featureflag.Workspace
@@ -27,14 +27,14 @@ import java.io.IOException
 import java.util.UUID
 
 internal class BreakingChangeNotificationHelperTest {
-  private val mConfigRepository: ConfigRepository = mockk()
+  private val mWorkspaceService: WorkspaceService = mockk()
   private val mNotificationClient: NotificationClient = mockk()
   private val mFeatureFlagClient: FeatureFlagClient = mockk()
   private lateinit var breakingChangeNotificationHelper: BreakingChangeNotificationHelper
 
   @BeforeEach
   fun setup() {
-    breakingChangeNotificationHelper = BreakingChangeNotificationHelper(mConfigRepository, mFeatureFlagClient, mNotificationClient)
+    breakingChangeNotificationHelper = BreakingChangeNotificationHelper(mWorkspaceService, mFeatureFlagClient, mNotificationClient)
 
     every { mFeatureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, any()) } returns true
   }
@@ -43,7 +43,7 @@ internal class BreakingChangeNotificationHelperTest {
   @Throws(IOException::class)
   fun `no notifications should be sent if the feature flag is disabled`() {
     every { mFeatureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, Workspace(WORKSPACE_ID_1)) } returns false
-    every { mConfigRepository.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) } returns
+    every { mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) } returns
       listOf(
         StandardWorkspace()
           .withWorkspaceId(WORKSPACE_ID_1)
@@ -62,12 +62,12 @@ internal class BreakingChangeNotificationHelperTest {
     breakingChangeNotificationHelper.notifyDeprecatedSyncs(notifications)
     breakingChangeNotificationHelper.notifyDisabledSyncs(notifications)
 
-    verify(exactly = 2) { mConfigRepository.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) }
+    verify(exactly = 2) { mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) }
     verifySequence {
-      mConfigRepository.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
-      mConfigRepository.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
+      mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
+      mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
     }
-    confirmVerified(mConfigRepository)
+    confirmVerified(mWorkspaceService)
     confirmVerified(mNotificationClient)
   }
 
@@ -86,7 +86,7 @@ internal class BreakingChangeNotificationHelperTest {
         ),
       )
 
-    every { mConfigRepository.listStandardWorkspacesWithIds(workspaceIds, false) } returns
+    every { mWorkspaceService.listStandardWorkspacesWithIds(workspaceIds, false) } returns
       listOf(
         StandardWorkspace()
           .withWorkspaceId(WORKSPACE_ID_1)
@@ -105,8 +105,8 @@ internal class BreakingChangeNotificationHelperTest {
     breakingChangeNotificationHelper.notifyDisabledSyncs(notifications)
 
     verify { mNotificationClient.notifyBreakingChangeSyncsDisabled(listOf(WORKSPACE_EMAIL_1), CONNECTOR_NAME, ActorType.SOURCE, breakingChange) }
-    verify { mConfigRepository.listStandardWorkspacesWithIds(workspaceIds, false) }
-    confirmVerified(mConfigRepository)
+    verify { mWorkspaceService.listStandardWorkspacesWithIds(workspaceIds, false) }
+    confirmVerified(mWorkspaceService)
   }
 
   @Test
@@ -127,7 +127,7 @@ internal class BreakingChangeNotificationHelperTest {
         ),
       )
 
-    every { mConfigRepository.listStandardWorkspacesWithIds(workspaceIds, false) } returns
+    every { mWorkspaceService.listStandardWorkspacesWithIds(workspaceIds, false) } returns
       listOf(
         StandardWorkspace()
           .withWorkspaceId(WORKSPACE_ID_1)
@@ -147,8 +147,8 @@ internal class BreakingChangeNotificationHelperTest {
     breakingChangeNotificationHelper.notifyDeprecatedSyncs(notifications)
 
     verify { mNotificationClient.notifyBreakingChangeWarning(listOf(WORKSPACE_EMAIL_1), CONNECTOR_NAME, ActorType.DESTINATION, breakingChange) }
-    verify { mConfigRepository.listStandardWorkspacesWithIds(workspaceIds, false) }
-    confirmVerified(mConfigRepository)
+    verify { mWorkspaceService.listStandardWorkspacesWithIds(workspaceIds, false) }
+    confirmVerified(mWorkspaceService)
   }
 
   companion object {

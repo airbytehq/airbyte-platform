@@ -13,15 +13,20 @@ import { Text } from "components/ui/Text";
 
 import { useStreamsStatuses } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { ActorDefinitionVersionRead, FailureOrigin, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { useCurrentConnection, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import {
+  ActorDefinitionVersionRead,
+  ConnectionSyncStatus,
+  DeadlineAction,
+  FailureOrigin,
+  StreamStatusRead,
+} from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionStatusMessages.module.scss";
@@ -48,7 +53,7 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
  * @returns An array containing id of the message to display and the type of error
  */
 export const getBreakingChangeErrorMessage = (
-  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState">,
+  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState" | "breakingChanges">,
   connectorBreakingChangeDeadlinesEnabled: boolean
 ): {
   errorMessageId: string;
@@ -59,9 +64,18 @@ export const getBreakingChangeErrorMessage = (
     return { errorMessageId: "connectionForm.breakingChange.deprecatedNoDeadline.message", errorType: "warning" };
   }
 
+  const isAutoUpgrade = actorDefinitionVersion.breakingChanges?.deadlineAction === DeadlineAction.auto_upgrade;
+
+  const unsupportedMessageId = isAutoUpgrade
+    ? "connectionForm.breakingChange.autoupgrade.unsupported.message"
+    : "connectionForm.breakingChange.unsupported.message";
+  const deprectatedMessageId = isAutoUpgrade
+    ? "connectionForm.breakingChange.autoupgrade.deprecated.message"
+    : "connectionForm.breakingChange.deprecated.message";
+
   return actorDefinitionVersion.supportState === "unsupported"
-    ? { errorMessageId: "connectionForm.breakingChange.unsupported.message", errorType: "error" }
-    : { errorMessageId: "connectionForm.breakingChange.deprecated.message", errorType: "warning" };
+    ? { errorMessageId: unsupportedMessageId, errorType: "error" }
+    : { errorMessageId: deprectatedMessageId, errorType: "warning" };
 };
 
 export const ConnectionStatusMessages: React.FC = () => {
@@ -69,10 +83,8 @@ export const ConnectionStatusMessages: React.FC = () => {
   const { formatMessage } = useIntl();
 
   const workspaceId = useCurrentWorkspaceId();
-  const { connection } = useConnectionEditService();
-  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
-    connection.connectionId
-  );
+  const connection = useCurrentConnection();
+  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, status } = useConnectionStatus(connection.connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -146,7 +158,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         ]
       : [];
 
-    if (isRunning) {
+    if (status === ConnectionSyncStatus.running) {
       return [...rateLimitedMessages];
     }
 
@@ -207,6 +219,7 @@ export const ConnectionStatusMessages: React.FC = () => {
               </FlexItem>
               <FlexContainer direction="row" gap="sm">
                 <CopyButton content={failureUiDetails.secondaryMessage!} />
+                {/* TODO */}
                 <Link
                   to={`../${ConnectionRoutePaths.JobHistory}#${lastSyncJobId}::${lastSyncAttemptNumber}`}
                   title={formatMessage({ id: "connection.stream.status.seeLogs" })}
@@ -325,7 +338,7 @@ export const ConnectionStatusMessages: React.FC = () => {
       return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
     });
   }, [
-    isRunning,
+    status,
     failureReason,
     hasBreakingSchemaChange,
     sourceActorDefinitionVersion,

@@ -87,6 +87,7 @@ export const mockSource: SourceRead = {
   workspaceId: "test-workspace-id",
   sourceDefinitionId: "test-source-definition-id",
   connectionConfiguration: undefined,
+  createdAt: 966690000,
 };
 
 export const mockDestination: DestinationRead = {
@@ -96,4 +97,5 @@ export const mockDestination: DestinationRead = {
   workspaceId: "test-workspace-id",
   destinationDefinitionId: "test-destination-definition-id",
   connectionConfiguration: undefined,
+  createdAt: 966690000,
 };

@@ -20,6 +20,7 @@ import io.airbyte.config.JobStatus;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -27,7 +28,10 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -62,20 +66,29 @@ public class JobNotifier {
   public static final String CONNECTION_DISABLED_WARNING_NOTIFICATION = "Connection Disabled Warning Notification";
   public static final String CONNECTION_DISABLED_NOTIFICATION = "Connection Disabled Notification";
 
-  private final ConfigRepository configRepository;
   private final TrackingClient trackingClient;
   private final WebUrlHelper webUrlHelper;
+  private final ConnectionService connectionService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+  private final WorkspaceService workspaceService;
   private final WorkspaceHelper workspaceHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public JobNotifier(final WebUrlHelper webUrlHelper,
-                     final ConfigRepository configRepository,
+                     final ConnectionService connectionService,
+                     final SourceService sourceService,
+                     final DestinationService destinationService,
+                     final WorkspaceService workspaceService,
                      final WorkspaceHelper workspaceHelper,
                      final TrackingClient trackingClient,
                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.webUrlHelper = webUrlHelper;
+    this.connectionService = connectionService;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
+    this.workspaceService = workspaceService;
     this.workspaceHelper = workspaceHelper;
-    this.configRepository = configRepository;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
@@ -83,7 +96,7 @@ public class JobNotifier {
   private void notifyJob(final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
-      final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
+      final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
       notifyJob(action, job, attemptStats, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
@@ -97,12 +110,12 @@ public class JobNotifier {
     final UUID connectionId = UUID.fromString(job.getScope());
     final NotificationSettings notificationSettings = workspace.getNotificationSettings();
     try {
-      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
-      final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-      final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+      final StandardSync standardSync = connectionService.getStandardSync(connectionId);
+      final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId);
+      final StandardDestinationDefinition destinationDefinition = destinationService.getDestinationDefinitionFromConnection(connectionId);
 
-      final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
-      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+      final SourceConnection source = sourceService.getSourceConnection(standardSync.getSourceId());
+      final DestinationConnection destination = destinationService.getDestinationConnection(standardSync.getDestinationId());
 
       final ActorDefinitionVersion sourceVersion =
           actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspace.getWorkspaceId(), standardSync.getSourceId());
@@ -141,6 +154,7 @@ public class JobNotifier {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
         trackingClient.track(
             workspace.getWorkspaceId(),
+            ScopeType.WORKSPACE,
             action,
             MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata));
       }
@@ -271,10 +285,14 @@ public class JobNotifier {
       long bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;
       long bytesCommitted = syncStats.getBytesCommitted() != null ? syncStats.getBytesCommitted() : 0;
       long recordsEmitted = syncStats.getRecordsEmitted() != null ? syncStats.getRecordsEmitted() : 0;
+      long recordsFilteredOut = syncStats.getRecordsFilteredOut() != null ? syncStats.getRecordsFilteredOut() : 0;
+      long bytesFilteredOut = syncStats.getBytesFilteredOut() != null ? syncStats.getBytesFilteredOut() : 0;
       long recordsCommitted = syncStats.getRecordsCommitted() != null ? syncStats.getRecordsCommitted() : 0;
       summaryBuilder.bytesEmitted(bytesEmitted)
           .bytesCommitted(bytesCommitted)
           .recordsEmitted(recordsEmitted)
+          .recordsFilteredOut(recordsFilteredOut)
+          .bytesFilteredOut(bytesFilteredOut)
           .recordsCommitted(recordsCommitted);
     }
 

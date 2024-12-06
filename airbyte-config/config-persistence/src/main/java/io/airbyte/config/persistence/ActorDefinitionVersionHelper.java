@@ -5,20 +5,22 @@
 package io.airbyte.config.persistence;
 
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,23 +43,20 @@ public class ActorDefinitionVersionHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionHelper.class);
 
-  private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
   private final DefinitionVersionOverrideProvider configOverrideProvider;
-  private final FeatureFlagClient featureFlagClient;
 
-  public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
-                                      @Named("configurationVersionOverrideProvider") final DefinitionVersionOverrideProvider configOverrideProvider,
-                                      final FeatureFlagClient featureFlagClient) {
+  public ActorDefinitionVersionHelper(final ActorDefinitionService actorDefinitionService,
+                                      @Named("configurationVersionOverrideProvider") final DefinitionVersionOverrideProvider configOverrideProvider) {
+    this.actorDefinitionService = actorDefinitionService;
     this.configOverrideProvider = configOverrideProvider;
-    this.featureFlagClient = featureFlagClient;
-    this.configRepository = configRepository;
 
     LOGGER.info("ActorDefinitionVersionHelper initialized with override provider: {}",
         configOverrideProvider.getClass().getSimpleName());
   }
 
   private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition)
-      throws IOException, ConfigNotFoundException {
+      throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID versionId = sourceDefinition.getDefaultVersionId();
 
     if (versionId == null) {
@@ -65,11 +64,11 @@ public class ActorDefinitionVersionHelper {
           sourceDefinition.getSourceDefinitionId()));
     }
 
-    return configRepository.getActorDefinitionVersion(versionId);
+    return actorDefinitionService.getActorDefinitionVersion(versionId);
   }
 
   private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition)
-      throws ConfigNotFoundException, IOException {
+      throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID versionId = destinationDefinition.getDefaultVersionId();
 
     if (versionId == null) {
@@ -77,7 +76,95 @@ public class ActorDefinitionVersionHelper {
           destinationDefinition.getDestinationDefinitionId()));
     }
 
-    return configRepository.getActorDefinitionVersion(versionId);
+    return actorDefinitionService.getActorDefinitionVersion(versionId);
+  }
+
+  /**
+   * Getting versions from a list of definitions.
+   *
+   * @param shownSourceDefs Definitions to get versions for.
+   * @param workspaceId UUID of the workspace, not currently used
+   *
+   * @return Map of ids to definition versions
+   */
+  public Map<UUID, ActorDefinitionVersion> getSourceVersions(List<StandardSourceDefinition> shownSourceDefs, UUID workspaceId) {
+    try {
+      var overrides = configOverrideProvider.getOverrides(
+          shownSourceDefs
+              .stream()
+              .map(StandardSourceDefinition::getSourceDefinitionId)
+              .toList(),
+          workspaceId)
+          // Map to DefinitionId, DefinitionVersion
+          .stream()
+          .collect(
+              Collectors.toMap(
+                  defWithOverride -> defWithOverride.actorDefinitionVersion.getActorDefinitionId(),
+                  defWithOverride -> defWithOverride.actorDefinitionVersion));
+
+      // Get all the actorDefinitionVersions for definitions that do not have an override.
+      var sourceVersions = actorDefinitionService.getActorDefinitionVersions(
+          shownSourceDefs
+              .stream()
+              // Filter out definitions that have a version override
+              .filter(version -> overrides.get(version.getSourceDefinitionId()) == null)
+              .map(StandardSourceDefinition::getDefaultVersionId)
+              .toList())
+          .stream()
+          .collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, Function.identity()));
+
+      // Merge overrides and non-overrides together
+      sourceVersions.putAll(overrides);
+
+      return sourceVersions;
+    } catch (IOException e) {
+      LOGGER.error(e.getLocalizedMessage());
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Getting versions from a list of definitions.
+   *
+   * @param shownDestinationDefs Definitions to get versions for.
+   * @param workspaceId UUID of the workspace, not currently used
+   *
+   * @return Map of ids to definition versions
+   */
+  public Map<UUID, ActorDefinitionVersion> getDestinationVersions(List<StandardDestinationDefinition> shownDestinationDefs, UUID workspaceId) {
+    try {
+      var overrides = configOverrideProvider.getOverrides(
+          shownDestinationDefs
+              .stream()
+              .map(StandardDestinationDefinition::getDestinationDefinitionId)
+              .toList(),
+          workspaceId)
+          // Map to DefinitionId, DefinitionVersion
+          .stream()
+          .collect(
+              Collectors.toMap(
+                  defWithOverride -> defWithOverride.actorDefinitionVersion.getActorDefinitionId(),
+                  defWithOverride -> defWithOverride.actorDefinitionVersion));
+
+      // Get all the actorDefinitionVersions for definitions that do not have an override.
+      var destinationVersions = actorDefinitionService.getActorDefinitionVersions(
+          shownDestinationDefs
+              .stream()
+              // Filter out definitions that have a version override
+              .filter(version -> overrides.get(version.getDestinationDefinitionId()) == null)
+              .map(StandardDestinationDefinition::getDefaultVersionId)
+              .toList())
+          .stream()
+          .collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, Function.identity()));
+
+      // Merge overrides and non-overrides together
+      destinationVersions.putAll(overrides);
+
+      return destinationVersions;
+    } catch (IOException e) {
+      LOGGER.error(e.getLocalizedMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -91,15 +178,13 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersionWithOverrideStatus getSourceVersionWithOverrideStatus(final StandardSourceDefinition sourceDefinition,
                                                                                      final UUID workspaceId,
                                                                                      @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
-        ActorType.SOURCE,
         sourceDefinition.getSourceDefinitionId(),
         workspaceId,
-        actorId,
-        defaultVersion);
+        actorId);
 
     return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
@@ -115,7 +200,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition,
                                                  final UUID workspaceId,
                                                  @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getSourceVersionWithOverrideStatus(sourceDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
@@ -127,7 +212,7 @@ public class ActorDefinitionVersionHelper {
    * @return actor definition version
    */
   public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getSourceVersion(sourceDefinition, workspaceId, null);
   }
 
@@ -142,15 +227,13 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersionWithOverrideStatus getDestinationVersionWithOverrideStatus(final StandardDestinationDefinition destinationDefinition,
                                                                                           final UUID workspaceId,
                                                                                           @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition);
 
     final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
-        ActorType.DESTINATION,
         destinationDefinition.getDestinationDefinitionId(),
         workspaceId,
-        actorId,
-        defaultVersion);
+        actorId);
 
     return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
@@ -166,7 +249,7 @@ public class ActorDefinitionVersionHelper {
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
                                                       final UUID workspaceId,
                                                       @Nullable final UUID actorId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getDestinationVersionWithOverrideStatus(destinationDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
@@ -179,31 +262,8 @@ public class ActorDefinitionVersionHelper {
    */
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
                                                       final UUID workspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return getDestinationVersion(destinationDefinition, workspaceId, null);
-  }
-
-  /**
-   * Helper method to share eligibility logic for free connector program. Checks if either the source
-   * or destination is in alpha or beta status.
-   *
-   * @param workspaceId workspace id
-   * @param sourceDefinition source definition
-   * @param sourceId source id
-   * @param destinationDefinition destination definition
-   * @param destinationId destination id
-   * @return true if either the source or destination is alpha or beta
-   */
-  public boolean getSourceOrDestinationIsAlphaOrBeta(final UUID workspaceId,
-                                                     final StandardSourceDefinition sourceDefinition,
-                                                     final UUID sourceId,
-                                                     final StandardDestinationDefinition destinationDefinition,
-                                                     final UUID destinationId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ActorDefinitionVersion sourceVersion = getSourceVersion(sourceDefinition, workspaceId, sourceId);
-    final ActorDefinitionVersion destinationVersion = getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-
-    return hasAlphaOrBetaVersion(List.of(sourceVersion, destinationVersion));
   }
 
   /**

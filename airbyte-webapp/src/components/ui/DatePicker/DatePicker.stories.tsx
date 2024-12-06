@@ -35,6 +35,14 @@ export const YearMonthDay: StoryObj<typeof DatePicker> = {
   render: (args) => <Template {...args} />,
 };
 
+export const YearMonth: StoryObj<typeof DatePicker> = {
+  args: {
+    placeholder: "YYYY-MM",
+    yearMonth: true,
+  },
+  render: (args) => <Template {...args} />,
+};
+
 export const UtcTimestamp: StoryObj<typeof DatePicker> = {
   args: {
     placeholder: "YYYY-MM-DDTHH:mm:ssZ",

@@ -28,8 +28,8 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -165,7 +165,7 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  void testResolvingMultiple() throws JsonValidationException, ConfigNotFoundException {
+  void testResolvingMultiple() {
     final List<UUID> workspaceIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     final Map<String, String> properties = Map.of(WORKSPACE_IDS_HEADER, Jsons.serialize(workspaceIds));
 
@@ -174,7 +174,7 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  void testResolvingOrganizationDirectlyFromHeader() throws ConfigNotFoundException {
+  void testResolvingOrganizationDirectlyFromHeader() {
     final UUID organizationId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(ORGANIZATION_ID_HEADER, organizationId.toString());
 
@@ -183,7 +183,7 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  void testResolvingOrganizationFromWorkspaceHeader() throws ConfigNotFoundException {
+  void testResolvingOrganizationFromWorkspaceHeader() {
     final UUID organizationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(WORKSPACE_ID_HEADER, workspaceId.toString());
@@ -194,7 +194,7 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  void testResolvingWorkspaceFromPermissionHeader() throws ConfigNotFoundException, IOException {
+  void testResolvingWorkspaceFromPermissionHeader() throws IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID permissionId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(PERMISSION_ID_HEADER, permissionId.toString());
@@ -206,7 +206,7 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  void testResolvingOrganizationFromPermissionHeader() throws ConfigNotFoundException, IOException {
+  void testResolvingOrganizationFromPermissionHeader() throws IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID organizationId = UUID.randomUUID();
     final UUID permissionId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(PERMISSION_ID_HEADER, permissionId.toString());

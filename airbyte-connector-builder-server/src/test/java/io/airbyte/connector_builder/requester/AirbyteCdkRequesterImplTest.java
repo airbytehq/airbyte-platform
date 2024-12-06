@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
+import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -63,8 +64,8 @@ class AirbyteCdkRequesterImplTest {
     mapper.registerModule(new JavaTimeModule());
 
     final JsonNode response = mapper.readTree(
-        "{\"test_read_limit_reached\": true, \"logs\":[{\"message\":\"log message1\"}, {\"message\":\"log message2\"}], "
-            + "\"slices\": [{\"pages\": [{\"records\": [{\"record\": 1}]}], \"slice_descriptor\": {\"startDatetime\": "
+        "{\"test_read_limit_reached\": true, \"logs\":[{\"message\":\"log message1\", \"level\":\"INFO\"}, {\"message\":\"log message2\", "
+            + "\"level\":\"INFO\"}], \"slices\": [{\"pages\": [{\"records\": [{\"record\": 1}]}], \"slice_descriptor\": {\"startDatetime\": "
             + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": [{\"airbyte\": \"state\"}]}, {\"pages\": []}],"
             + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"},"
             + "\"auxiliary_requests\": [{\"title\": \"Refresh token\",\"description\": \"Obtains access token\",\"request\": {\"url\": "
@@ -85,7 +86,7 @@ class AirbyteCdkRequesterImplTest {
     assertEquals(slices, streamRead.getSlices());
 
     assertEquals(2, streamRead.getLogs().size());
-    final List<Object> logs = mapper.convertValue(response.get("logs"), new TypeReference<>() {});
+    final List<StreamReadLogsInner> logs = mapper.convertValue(response.get("logs"), new TypeReference<>() {});
     assertEquals(logs, streamRead.getLogs());
 
     final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = mapper.convertValue(

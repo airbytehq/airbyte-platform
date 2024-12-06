@@ -6,3 +6,8 @@ description: ScopedConfiguration resource types
 type: string
 enum:
   - actor_definition
+  - user
+  - workspace
+  - connection
+  - source
+  - destination

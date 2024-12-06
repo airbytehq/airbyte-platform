@@ -9,7 +9,7 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStream, RefreshMode } from "core/api/types/AirbyteClient";
+import { ConnectionStream, JobReadResponse, RefreshMode } from "core/api/types/AirbyteClient";
 
 import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";
 
@@ -25,7 +25,7 @@ interface ConnectionRefreshModalProps {
   }: {
     streams?: ConnectionStream[];
     refreshMode: RefreshMode;
-  }) => Promise<void>;
+  }) => Promise<JobReadResponse>;
   totalEnabledStreams?: number;
 }
 

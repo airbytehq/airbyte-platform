@@ -58,20 +58,6 @@ Define db secret
 {{- printf "%s-postgresql" .Release.Name }}
 {{- end }}
 
-{{/* 
-Define imageTag
-*/}}
-
-{{- define "worker.imageTag" -}}
-{{- if .Values.image.tag }}
-    {{- printf "%s" .Values.image.tag }}
-{{- else if ((.Values.global.image).tag) }}
-    {{- printf "%s" .Values.global.image.tag }}
-{{- else }}
-    {{- printf "%s" .Chart.AppVersion }}
-{{- end }}
-{{- end }}
-
 ## DEFAULT HELM VALUES
 # Secret Manager Defaults
 {{/*
@@ -253,15 +239,4 @@ Get gcs credentials secret key or default
 {{- else -}}
   {{- printf "gcs-credentials" -}}
 {{- end -}}
-{{- end -}}
-
-{{/*
-Convert tags to a comma-separated list of key=value pairs.
-*/}}
-{{- define "airbyte.tagsToString" -}}
-{{- $result := list -}}
-{{- range . -}}
-  {{- $result = append $result (printf "%s=%s" .key .value) -}}
-{{- end -}}
-{{- join "," $result -}}
 {{- end -}}

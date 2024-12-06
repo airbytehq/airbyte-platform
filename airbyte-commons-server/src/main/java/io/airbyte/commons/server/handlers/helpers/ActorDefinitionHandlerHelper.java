@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.DeadlineAction;
 import io.airbyte.commons.server.ServerConstants;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.SpecFetcher;
@@ -29,7 +30,9 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -47,17 +50,20 @@ public class ActorDefinitionHandlerHelper {
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionService actorDefinitionService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
                                       final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
                                       final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
                                       final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                      final ActorDefinitionService actorDefinitionService) {
+                                      final ActorDefinitionService actorDefinitionService,
+                                      final ApiPojoConverters apiPojoConverters) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.actorDefinitionService = actorDefinitionService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   /**
@@ -148,7 +154,9 @@ public class ActorDefinitionHandlerHelper {
         .withInternalSupportLevel(currentVersion.getInternalSupportLevel())
         .withCdkVersion(currentVersion.getCdkVersion())
         .withLastPublished(currentVersion.getLastPublished())
-        .withAllowedHosts(currentVersion.getAllowedHosts());
+        .withAllowedHosts(currentVersion.getAllowedHosts())
+        .withSupportsFileTransfer(currentVersion.getSupportsFileTransfer())
+        .withSupportsRefreshes(currentVersion.getSupportsRefreshes());
   }
 
   private ConnectorSpecification getSpecForImage(final String dockerRepository,
@@ -203,12 +211,9 @@ public class ActorDefinitionHandlerHelper {
     return breakingChanges.orElse(List.of());
   }
 
-  private LocalDate getMinBreakingChangeUpgradeDeadline(final List<ActorDefinitionBreakingChange> breakingChanges) {
+  private Optional<ActorDefinitionBreakingChange> firstUpcomingBreakingChange(final List<ActorDefinitionBreakingChange> breakingChanges) {
     return breakingChanges.stream()
-        .map(ActorDefinitionBreakingChange::getUpgradeDeadline)
-        .map(LocalDate::parse)
-        .min(LocalDate::compareTo)
-        .orElse(null);
+        .min(Comparator.comparing(b -> LocalDate.parse(b.getUpgradeDeadline())));
   }
 
   public Optional<ActorDefinitionVersionBreakingChanges> getVersionBreakingChanges(final ActorDefinitionVersion actorDefinitionVersion)
@@ -217,10 +222,15 @@ public class ActorDefinitionHandlerHelper {
         actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
 
     if (!breakingChanges.isEmpty()) {
-      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
+      final Optional<ActorDefinitionBreakingChange> firstBreakingChange = firstUpcomingBreakingChange(breakingChanges);
+      final LocalDate minUpgradeDeadline = firstBreakingChange.map(it -> LocalDate.parse(it.getUpgradeDeadline())).orElse(null);
+      final String minDeadlineAction = firstBreakingChange.map(ActorDefinitionBreakingChange::getDeadlineAction).orElse(null);
+      final DeadlineAction apiDeadlineAction =
+          Objects.equals(minDeadlineAction, DeadlineAction.AUTO_UPGRADE.toString()) ? DeadlineAction.AUTO_UPGRADE : DeadlineAction.DISABLE;
       return Optional.of(new ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
-          .minUpgradeDeadline(minUpgradeDeadline));
+          .upcomingBreakingChanges(breakingChanges.stream().map(apiPojoConverters::toApiBreakingChange).toList())
+          .minUpgradeDeadline(minUpgradeDeadline)
+          .deadlineAction(apiDeadlineAction));
     } else {
       return Optional.empty();
     }

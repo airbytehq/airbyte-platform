@@ -4,17 +4,9 @@ import { FlexContainer } from "components/ui/Flex";
 
 import styles from "./ConnectionTimelineEventItem.module.scss";
 
-export const ConnectionTimelineEventItem: React.FC<PropsWithChildren<{ centered?: boolean }>> = ({
-  centered,
-  children,
-}) => {
+export const ConnectionTimelineEventItem: React.FC<PropsWithChildren> = ({ children }) => {
   return (
-    <FlexContainer
-      direction="row"
-      gap="lg"
-      className={styles.connectionTimelineEventItem__container}
-      alignItems={centered ? "center" : undefined}
-    >
+    <FlexContainer direction="row" gap="lg" className={styles.connectionTimelineEventItem__container}>
       {children}
     </FlexContainer>
   );

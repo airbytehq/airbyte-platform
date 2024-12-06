@@ -1,11 +1,11 @@
 import { yupResolver } from "@hookform/resolvers/yup";
+import classNames from "classnames";
 import { ReactNode, useEffect } from "react";
 import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
 import { SchemaOf } from "yup";
 
-import { FormChangeTracker } from "components/common/FormChangeTracker";
-
 import styles from "./Form.module.scss";
+import { FormChangeTracker } from "./FormChangeTracker";
 import { FormDevTools } from "./FormDevTools";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,7 +23,7 @@ interface FormProps<T extends FormValues> {
    */
   onSubmit?: FormSubmissionHandler<T>;
   onSuccess?: (values: T) => void;
-  onError?: (e: Error, values: T) => void;
+  onError?: (e: Error, values: T, methods: UseFormReturn<T>) => void;
   schema: SchemaOf<T>;
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
@@ -88,7 +88,7 @@ export const Form = <T extends FormValues>({
         }
       })
       .catch((e) => {
-        onError?.(e, values);
+        onError?.(e, values, methods);
       });
   };
 
@@ -96,8 +96,8 @@ export const Form = <T extends FormValues>({
     <FormProvider {...methods}>
       <FormDevTools />
       {trackDirtyChanges && <FormChangeTracker formId={formTrackerId} changed={methods.formState.isDirty} />}
-      <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId}>
-        <fieldset disabled={disabled} className={styles.fieldset}>
+      <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId} className={styles.flex}>
+        <fieldset disabled={disabled} className={classNames(styles.fieldset, styles.flex)}>
           {children}
         </fieldset>
       </form>

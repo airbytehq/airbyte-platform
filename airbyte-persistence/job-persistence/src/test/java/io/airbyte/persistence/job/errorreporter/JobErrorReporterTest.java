@@ -19,8 +19,11 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -81,25 +84,38 @@ class JobErrorReporterTest {
   private static final String READ_COMMAND = "read";
   private static final String WRITE_COMMAND = "write";
 
-  private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
   private JobErrorReportingClient jobErrorReportingClient;
   private WebUrlHelper webUrlHelper;
   private JobErrorReporter jobErrorReporter;
 
   @BeforeEach
   void setup() {
-    configRepository = mock(ConfigRepository.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+    workspaceService = mock(WorkspaceService.class);
     jobErrorReportingClient = mock(JobErrorReportingClient.class);
     webUrlHelper = mock(WebUrlHelper.class);
     jobErrorReporter = new JobErrorReporter(
-        configRepository, DEPLOYMENT_MODE, AIRBYTE_VERSION, webUrlHelper, jobErrorReportingClient);
+        actorDefinitionService,
+        sourceService,
+        destinationService,
+        workspaceService,
+        DEPLOYMENT_MODE,
+        AIRBYTE_VERSION,
+        webUrlHelper,
+        jobErrorReportingClient);
 
     Mockito.when(webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL);
     Mockito.when(webUrlHelper.getWorkspaceUrl(WORKSPACE_ID)).thenReturn(WORKSPACE_URL);
   }
 
   @Test
-  void testReportSyncJobFailure() throws ConfigNotFoundException, IOException {
+  void testReportSyncJobFailure() throws IOException, ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
 
     final FailureReason sourceFailureReason = new FailureReason()
@@ -132,24 +148,24 @@ class JobErrorReporterTest {
     final AttemptConfigReportingContext attemptConfig =
         new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
 
-    Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
+    Mockito.when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
-    Mockito.when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
+    Mockito.when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardDestinationDefinition()
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
             .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withInternalSupportLevel(SOURCE_INTERNAL_SUPPORT_LEVEL));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -158,7 +174,7 @@ class JobErrorReporterTest {
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
-    Mockito.when(configRepository.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace);
+    Mockito.when(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace);
 
     jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig);
 
@@ -204,7 +220,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID);
 
@@ -219,12 +235,12 @@ class JobErrorReporterTest {
 
     Mockito.when(mFailureSummary.getFailures()).thenReturn(List.of(sourceFailureReason));
 
-    Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
+    Mockito.when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
-    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+    Mockito.when(actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -232,7 +248,7 @@ class JobErrorReporterTest {
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
-    Mockito.when(configRepository.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace);
+    Mockito.when(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace);
     Mockito.when(webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL);
 
     Mockito.doThrow(new RuntimeException("some exception"))
@@ -256,7 +272,7 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
 
-    Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
+    Mockito.when(sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
@@ -281,7 +297,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testDoNotReportSourceCheckJobFailureFromOtherOrigins() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDoNotReportSourceCheckJobFailureFromOtherOrigins() throws JsonValidationException, IOException, ConfigNotFoundException {
     final FailureReason failureReason = new FailureReason()
         .withMetadata(new Metadata()
             .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
@@ -298,7 +314,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportDestinationCheckJobFailure() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testReportDestinationCheckJobFailure() throws JsonValidationException, IOException, ConfigNotFoundException {
     final FailureReason failureReason = new FailureReason()
         .withMetadata(new Metadata()
             .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
@@ -309,14 +325,14 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE, DESTINATION_INTERNAL_SUPPORT_LEVEL);
 
-    Mockito.when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
+    Mockito.when(destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
         .thenReturn(new StandardDestinationDefinition()
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
-    Mockito.when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
+    Mockito.when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
 
     jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
 
@@ -368,7 +384,7 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE, DESTINATION_INTERNAL_SUPPORT_LEVEL);
 
-    Mockito.when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
+    Mockito.when(destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
         .thenReturn(new StandardDestinationDefinition()
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
@@ -404,14 +420,14 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
 
-    Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
+    Mockito.when(sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
-    Mockito.when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
+    Mockito.when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
 
     jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
 
@@ -446,7 +462,7 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
 
-    Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
+    Mockito.when(sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
@@ -471,7 +487,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testDoNotReportDiscoverJobFailureFromOtherOrigins() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDoNotReportDiscoverJobFailureFromOtherOrigins() throws JsonValidationException, IOException, ConfigNotFoundException {
     final FailureReason failureReason = new FailureReason()
         .withMetadata(new Metadata()
             .withAdditionalProperty(FROM_TRACE_MESSAGE, true)

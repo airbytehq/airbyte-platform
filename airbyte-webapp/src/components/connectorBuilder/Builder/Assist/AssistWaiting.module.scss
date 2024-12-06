@@ -1,0 +1,73 @@
+@use "scss/variables";
+@use "scss/mixins";
+@use "scss/colors";
+
+.container {
+  margin: 0 variables.$spacing-2xl;
+}
+
+.assistLoadingAnimation {
+  width: 100%;
+  max-width: variables.$width-modal-md;
+
+  // Alternate offset of the skeletons
+  > * {
+    &:nth-child(even) {
+      margin-left: variables.$spacing-2xl;
+    }
+
+    &:nth-child(odd) {
+      margin-right: variables.$spacing-2xl;
+    }
+  }
+
+  > div {
+    .loadingSkeleton {
+      height: variables.$button-height-lg;
+      border-radius: variables.$border-radius-xs;
+
+      // Add a hover animation to the skeleton
+      transition: transform 0.3s ease-in-out;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+
+    // Offset the animation of the skeleton
+    &:nth-child(even) {
+      .loadingSkeleton {
+        animation-delay: -2s;
+      }
+    }
+
+    &:nth-child(3n) {
+      .loadingSkeleton {
+        animation-delay: -4.5s;
+      }
+    }
+  }
+}
+
+.floatingAnimation {
+  animation: float-side-to-side 8s ease-in-out infinite;
+
+  &:nth-child(even) {
+    animation-delay: -2.5s;
+  }
+
+  &:nth-child(3n) {
+    animation-delay: -5s;
+  }
+}
+
+@keyframes float-side-to-side {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(10px);
+  }
+}

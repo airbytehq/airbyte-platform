@@ -1,0 +1,25 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/z-indices";
+@use "scss/mixins";
+
+.popoverPanel {
+  z-index: z-indices.$modal;
+  border-radius: variables.$border-radius-md;
+  box-shadow: variables.$box-shadow-popup;
+  @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary);
+}
+
+.assistConfigPanel {
+  width: variables.$width-modal-md;
+  max-width: 100%;
+  padding: variables.$spacing-xl;
+}
+
+.assistForm {
+  margin-top: variables.$spacing-md;
+}
+
+.assistTitle {
+  line-height: 1;
+}

@@ -9,13 +9,14 @@
   margin-top: variables.$spacing-sm;
   min-width: variables.$min-width-listbox-options-list;
   max-height: variables.$height-long-listbox-options-list;
-  overflow: auto;
-  width: 100%;
+  list-style-type: none;
+  overflow-y: auto;
 }
 
 .optionValue {
   padding: variables.$spacing-md variables.$spacing-lg;
   cursor: pointer;
+  word-break: break-all;
 }
 
 .focus {
@@ -30,4 +31,26 @@
 
 .description {
   color: colors.$grey-400;
+}
+
+.optionInstructions {
+  cursor: not-allowed;
+  font-size: variables.$font-size-md;
+  line-height: 1.2;
+}
+
+.optionLoading {
+  color: colors.$grey-400;
+}
+
+.caretButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-300;
+  padding-inline: 8px;
 }

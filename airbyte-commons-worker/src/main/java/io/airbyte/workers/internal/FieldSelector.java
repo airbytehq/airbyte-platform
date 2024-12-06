@@ -13,7 +13,6 @@ import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
-import io.micronaut.core.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import kotlin.text.Regex;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
@@ -33,6 +33,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
  */
 @Slf4j
 public class FieldSelector {
+
+  private static final Regex PROTECTED_JSON_SCHEMA_KEYS = new Regex("^\\$(id|comment|schema)$");
 
   /*
    * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
@@ -238,7 +240,7 @@ public class FieldSelector {
    * @return The unescaped field name.
    */
   private String replaceEscapeCharacter(final String fieldName) {
-    return StringUtils.isNotEmpty(fieldName) ? fieldName.replaceAll("\\$", "") : fieldName;
+    return PROTECTED_JSON_SCHEMA_KEYS.replace(fieldName, "$1");
   }
 
 }

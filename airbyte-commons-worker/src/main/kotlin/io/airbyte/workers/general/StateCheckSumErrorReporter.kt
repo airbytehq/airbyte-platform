@@ -74,33 +74,38 @@ class StateCheckSumErrorReporter(
         val metadata: Map<String, String>
         val dockerImageName: String
 
-        if (origin == FailureReason.FailureOrigin.SOURCE) {
-          val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
-          val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
-          val sourceDefinition =
-            retry { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(source.sourceDefinitionId)) }
-          dockerImageName = getDockerImageName(sourceDefinition.dockerRepository, sourceDefinition.dockerImageTag)
-          metadata = getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
-        } else if (origin == FailureReason.FailureOrigin.DESTINATION) {
-          val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
-          val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
-          val destinationDefinition =
-            retry {
-              airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
-                DestinationDefinitionIdRequestBody(destination.destinationDefinitionId),
+        when (origin) {
+          FailureReason.FailureOrigin.SOURCE -> {
+            val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
+            val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
+            val sourceDefinition =
+              retry { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(source.sourceDefinitionId)) }
+            dockerImageName = getDockerImageName(sourceDefinition.dockerRepository, sourceDefinition.dockerImageTag)
+            metadata =
+              getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
+          }
+          FailureReason.FailureOrigin.DESTINATION -> {
+            val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
+            val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
+            val destinationDefinition =
+              retry {
+                airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
+                  DestinationDefinitionIdRequestBody(destination.destinationDefinitionId),
+                )
+              }
+            dockerImageName = getDockerImageName(destinationDefinition.dockerRepository, destinationDefinition.dockerImageTag)
+            metadata =
+              getDefinitionMetadata(
+                destinationDefinition.destinationDefinitionId,
+                destinationDefinition.name,
+                dockerImageName,
+                destinationDefinition.releaseStage,
               )
-            }
-          dockerImageName = getDockerImageName(destinationDefinition.dockerRepository, destinationDefinition.dockerImageTag)
-          metadata =
-            getDefinitionMetadata(
-              destinationDefinition.destinationDefinitionId,
-              destinationDefinition.name,
-              dockerImageName,
-              destinationDefinition.releaseStage,
-            )
-        } else {
-          logger.info { "Can't use state checksum error reporter for $origin error reporting" }
-          return@ifPresent
+          }
+          else -> {
+            logger.info { "Can't use state checksum error reporter for $origin error reporting" }
+            return@ifPresent
+          }
         }
 
         val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
@@ -127,8 +132,8 @@ class StateCheckSumErrorReporter(
     exception: Throwable,
     jobId: Long,
     attemptNumber: Int,
-  ): FailureReason {
-    return FailureReason()
+  ): FailureReason =
+    FailureReason()
       .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
       .withFailureOrigin(origin)
       .withInternalMessage(internalMessage)
@@ -140,28 +145,23 @@ class StateCheckSumErrorReporter(
           .withAdditionalProperty("jobId", jobId)
           .withAdditionalProperty("attemptNumber", attemptNumber),
       )
-  }
 
   fun getDockerImageName(
     dockerRepository: String,
     dockerImageTag: String,
-  ): String {
-    return "$dockerRepository:$dockerImageTag"
-  }
+  ): String = "$dockerRepository:$dockerImageTag"
 
-  fun airbyteMetadata(): Map<String, String> {
-    return mapOf(
+  fun airbyteMetadata(): Map<String, String> =
+    mapOf(
       JobErrorReporter.AIRBYTE_VERSION_META_KEY to airbyteVersion,
       JobErrorReporter.DEPLOYMENT_MODE_META_KEY to deploymentMode,
     )
-  }
 
-  fun getFailureReasonMetadata(failureReason: FailureReason): Map<String, String> {
-    return mutableMapOf<String, String>().apply {
+  fun getFailureReasonMetadata(failureReason: FailureReason): Map<String, String> =
+    mutableMapOf<String, String>().apply {
       failureReason.failureOrigin?.let { put(JobErrorReporter.FAILURE_ORIGIN_META_KEY, it.value()) }
       failureReason.failureType?.let { put(JobErrorReporter.FAILURE_TYPE_META_KEY, it.value()) }
     }
-  }
 
   fun getDefinitionMetadata(
     definitionId: UUID,
@@ -199,14 +199,14 @@ class StateCheckSumErrorReporter(
   }
 
   companion object {
-    private fun <T> retry(supplier: CheckedSupplier<T>): T {
-      return Failsafe.with(
-        RetryPolicy.builder<T>()
-          .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
-          .withMaxRetries(5)
-          .build(),
-      )
-        .get(supplier)
-    }
+    private fun <T> retry(supplier: CheckedSupplier<T>): T =
+      Failsafe
+        .with(
+          RetryPolicy
+            .builder<T>()
+            .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
+            .withMaxRetries(5)
+            .build(),
+        ).get(supplier)
   }
 }

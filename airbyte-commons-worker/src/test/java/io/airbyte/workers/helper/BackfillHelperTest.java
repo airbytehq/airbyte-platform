@@ -21,11 +21,16 @@ import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+@MicronautTest
 class BackfillHelperTest {
 
+  @Inject
+  private BackfillHelper backfillHelper;
   private static final String STREAM_NAME = "stream-name";
   private static final String STREAM_NAMESPACE = "stream-namespace";
   private static final String ANOTHER_STREAM_NAME = "another-stream-name";
@@ -81,7 +86,7 @@ class BackfillHelperTest {
   void testGetStreamsToBackfillWithNewColumn() {
     assertEquals(
         List.of(DOMAIN_STREAM_DESCRIPTOR),
-        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(SINGLE_STREAM_ADD_COLUMN_DIFF), INCREMENTAL_CATALOG));
+        backfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(SINGLE_STREAM_ADD_COLUMN_DIFF), INCREMENTAL_CATALOG));
   }
 
   @Test
@@ -90,16 +95,16 @@ class BackfillHelperTest {
     // Verify that the second stream is ignored because it's Full Refresh.
     assertEquals(
         1,
-        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog).size());
+        backfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog).size());
     assertEquals(
         List.of(DOMAIN_STREAM_DESCRIPTOR),
-        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog));
+        backfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog));
   }
 
   @Test
   void testClearStateForStreamsToBackfill() {
     final List<io.airbyte.config.StreamDescriptor> streamsToBackfill = List.of(DOMAIN_STREAM_DESCRIPTOR);
-    final State updatedState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
+    final State updatedState = backfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
     assertNotNull(updatedState);
     final var typedState = StateMessageHelper.getTypedState(updatedState.getState());
     assertEquals(1, typedState.get().getStateMessages().size());

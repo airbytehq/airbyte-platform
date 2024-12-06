@@ -31,4 +31,7 @@ public class ReplicateFailureSyncWorkflow implements SyncWorkflow {
         CAUSE);
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

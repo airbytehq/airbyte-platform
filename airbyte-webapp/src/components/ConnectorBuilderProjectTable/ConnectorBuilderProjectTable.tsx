@@ -3,10 +3,12 @@ import classNames from "classnames";
 import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { BaseConnectorInfo } from "components/connectorBuilder/BaseConnectorInfo";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Link } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
@@ -19,7 +21,9 @@ import {
   useCurrentWorkspace,
   useDeleteBuilderProject,
   useListBuilderProjectVersions,
+  useSourceDefinitionList,
 } from "core/api";
+import { ContributionInfo } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -189,16 +193,29 @@ export const ConnectorBuilderProjectTable = ({
     (projectId: string) => `${basePath ? basePath : ""}${getEditPath(projectId)}`,
     [basePath]
   );
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.name" />,
         cell: (props) => (
-          <Link to={getEditUrl(props.row.original.id)} className={styles.nameLink}>
-            {/* TODO: replace with custom logos once available */}
-            <BuilderLogo />
-            <Text>{props.cell.getValue()}</Text>
-          </Link>
+          <FlexContainer direction="column" gap="none">
+            <Link to={getEditUrl(props.row.original.id)} className={styles.nameLink}>
+              {/* TODO: replace with custom logos once available */}
+              <BuilderLogo />
+              <Text>{props.cell.getValue()}</Text>
+              {props.row.original.baseActorDefinitionVersionInfo && (
+                <BaseConnectorInfo
+                  className={styles.baseConnectorInfo}
+                  disableTooltip
+                  {...props.row.original.baseActorDefinitionVersionInfo}
+                />
+              )}
+            </Link>
+            {props.row.original.contributionInfo && (
+              <ContributionInfoDisplay {...props.row.original.contributionInfo} />
+            )}
+          </FlexContainer>
         ),
         meta: {
           tdClassName: styles.nameCell,
@@ -207,81 +224,87 @@ export const ConnectorBuilderProjectTable = ({
       columnHelper.accessor("version", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
         cell: (props) => {
-          return <VersionChanger canUpdateConnector={canUpdateConnector} project={props.row.original} />;
+          return (
+            <BuilderCell>
+              <VersionChanger canUpdateConnector={canUpdateConnector} project={props.row.original} />
+            </BuilderCell>
+          );
         },
       }),
       columnHelper.display({
         id: "actions",
         header: () => null,
         cell: (props) => (
-          <FlexContainer justifyContent="flex-end" gap="sm" alignItems="center">
-            <Text className={styles.draftInProgress} color="grey">
-              {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
-            </Text>
-            {canUpdateConnector ? (
-              <>
+          <BuilderCell>
+            <FlexContainer justifyContent="flex-end" gap="sm" alignItems="center" className={styles.actions}>
+              <Text className={styles.draftInProgress} color="grey">
+                {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
+              </Text>
+              {canUpdateConnector ? (
+                <>
+                  <Link
+                    to={getEditUrl(props.row.original.id)}
+                    data-testid={`edit-project-button-${props.row.original.name}`}
+                  >
+                    <Icon type="pencil" />
+                  </Link>
+                  <Tooltip
+                    disabled={!props.row.original.sourceDefinitionId}
+                    control={
+                      <Button
+                        type="button"
+                        variant="clear"
+                        disabled={Boolean(props.row.original.sourceDefinitionId)}
+                        data-testid={`delete-project-button_${props.row.original.name}`}
+                        icon="trash"
+                        onClick={() => {
+                          unregisterNotificationById(NOTIFICATION_ID);
+                          openConfirmationModal({
+                            text: "connectorBuilder.deleteProjectModal.text",
+                            title: "connectorBuilder.deleteProjectModal.title",
+                            submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
+                            onSubmit: () => {
+                              closeConfirmationModal();
+                              deleteProject(props.row.original)
+                                .then(() => {
+                                  analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
+                                    actionDescription: "User has deleted a Connector Builder project",
+                                    projectId: props.row.original.id,
+                                  });
+                                })
+                                .catch((e) => {
+                                  registerNotification({
+                                    id: NOTIFICATION_ID,
+                                    text: (
+                                      <FormattedMessage
+                                        id={DELETE_PROJECT_ERROR_ID}
+                                        values={{
+                                          reason: e.message,
+                                        }}
+                                      />
+                                    ),
+                                    type: "error",
+                                  });
+                                });
+                            },
+                          });
+                        }}
+                      />
+                    }
+                  >
+                    <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
+                  </Tooltip>
+                </>
+              ) : (
                 <Link
                   to={getEditUrl(props.row.original.id)}
-                  data-testid={`edit-project-button-${props.row.original.name}`}
+                  data-testid={`view-project-button-${props.row.original.name}`}
                 >
-                  <Icon type="pencil" />
+                  <Icon type="eye" />
                 </Link>
-                <Tooltip
-                  disabled={!props.row.original.sourceDefinitionId}
-                  control={
-                    <Button
-                      type="button"
-                      variant="clear"
-                      disabled={Boolean(props.row.original.sourceDefinitionId)}
-                      data-testid={`delete-project-button_${props.row.original.name}`}
-                      icon="trash"
-                      onClick={() => {
-                        unregisterNotificationById(NOTIFICATION_ID);
-                        openConfirmationModal({
-                          text: "connectorBuilder.deleteProjectModal.text",
-                          title: "connectorBuilder.deleteProjectModal.title",
-                          submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
-                          onSubmit: () => {
-                            closeConfirmationModal();
-                            deleteProject(props.row.original)
-                              .then(() => {
-                                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
-                                  actionDescription: "User has deleted a Connector Builder project",
-                                  projectId: props.row.original.id,
-                                });
-                              })
-                              .catch((e) => {
-                                registerNotification({
-                                  id: NOTIFICATION_ID,
-                                  text: (
-                                    <FormattedMessage
-                                      id={DELETE_PROJECT_ERROR_ID}
-                                      values={{
-                                        reason: e.message,
-                                      }}
-                                    />
-                                  ),
-                                  type: "error",
-                                });
-                              });
-                          },
-                        });
-                      }}
-                    />
-                  }
-                >
-                  <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
-                </Tooltip>
-              </>
-            ) : (
-              <Link
-                to={getEditUrl(props.row.original.id)}
-                data-testid={`view-project-button-${props.row.original.name}`}
-              >
-                <Icon type="eye" />
-              </Link>
-            )}
-          </FlexContainer>
+              )}
+            </FlexContainer>
+          </BuilderCell>
         ),
       }),
     ],
@@ -307,5 +330,47 @@ export const ConnectorBuilderProjectTable = ({
       stickyHeaders={false}
       initialSortBy={[{ id: "name", desc: false }]}
     />
+  );
+};
+
+const BuilderCell: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  return (
+    <FlexContainer className={styles.cell} alignItems="center">
+      {children}
+    </FlexContainer>
+  );
+};
+
+const ContributionInfoDisplay: React.FC<ContributionInfo> = ({ actorDefinitionId, pullRequestUrl }) => {
+  // list instead of fetching definition individually to reuse cached request and avoid 404 for net-new definitions
+  const sourceDefinition = useSourceDefinitionList().sourceDefinitionMap.get(actorDefinitionId);
+
+  return (
+    <FlexContainer direction="row" className={styles.contributionInfo} gap="sm">
+      <Icon className={styles.contributionIcon} type="nested" color="action" />
+      <FlexContainer className={styles.contributionText} gap="sm" alignItems="center">
+        <Text color="grey" size="sm">
+          <FormattedMessage
+            id={
+              sourceDefinition?.name
+                ? "connectorBuilder.listPage.contributing.toExising"
+                : "connectorBuilder.listPage.contributing.asNew"
+            }
+            values={{
+              name: sourceDefinition?.name,
+            }}
+          />
+        </Text>
+        {sourceDefinition?.icon ? (
+          <ConnectorIcon icon={sourceDefinition.icon} className={styles.connectorIcon} />
+        ) : undefined}
+        <ExternalLink href={pullRequestUrl}>
+          <FormattedMessage
+            id="connectorBuilder.listPage.contributing.pullRequest"
+            values={{ prNumber: pullRequestUrl.split("/").pop() }}
+          />
+        </ExternalLink>
+      </FlexContainer>
+    </FlexContainer>
   );
 };

@@ -12,9 +12,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
@@ -32,20 +33,24 @@ public class ConnectorDocumentationHandler {
 
   static final String LATEST = "latest";
 
-  private final ConfigRepository configRepository;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
 
-  public ConnectorDocumentationHandler(final ConfigRepository configRepository,
-                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                                       final RemoteDefinitionsProvider remoteDefinitionsProvider) {
-    this.configRepository = configRepository;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+
+  public ConnectorDocumentationHandler(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                       final RemoteDefinitionsProvider remoteDefinitionsProvider,
+                                       final SourceService sourceService,
+                                       final DestinationService destinationService) {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   public ConnectorDocumentationRead getConnectorDocumentation(final ConnectorDocumentationRequestBody request)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ActorDefinitionVersion actorDefinitionVersion = request.getActorType().equals(ActorType.SOURCE)
         ? getSourceActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId())
         : getDestinationActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId());
@@ -68,15 +73,15 @@ public class ConnectorDocumentationHandler {
 
   private ActorDefinitionVersion getSourceActorDefinitionVersion(final UUID sourceDefinitionId, final UUID workspaceId, @Nullable final UUID sourceId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
     return actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
   }
 
   private ActorDefinitionVersion getDestinationActorDefinitionVersion(final UUID destDefinitionId,
                                                                       final UUID workspaceId,
                                                                       @Nullable final UUID destId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardDestinationDefinition destDefinition = configRepository.getStandardDestinationDefinition(destDefinitionId);
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final StandardDestinationDefinition destDefinition = destinationService.getStandardDestinationDefinition(destDefinitionId);
     return actorDefinitionVersionHelper.getDestinationVersion(destDefinition, workspaceId, destId);
   }
 

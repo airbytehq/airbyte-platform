@@ -114,6 +114,8 @@ object ConfigClientErrorHandler {
         throw OAuthCallbackFailureProblem(ProblemMessageData().message(throwable.message))
       }
 
+      is AbstractThrowableProblem -> throw throwable
+
       else -> {
         val message = throwable.message ?: DEFAULT_INTERNAL_SERVER_ERROR_MESSAGE
         if (message.contains("Could not find job with id")) {

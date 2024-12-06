@@ -11,17 +11,27 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException;
 import io.airbyte.commons.temporal.exception.UnreachableWorkflowException;
+import io.airbyte.commons.temporal.scheduling.CheckCommandInput;
+import io.airbyte.commons.temporal.scheduling.CheckCommandInput.CheckConnectionInput;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput.DiscoverCatalogInput;
+import io.airbyte.commons.temporal.scheduling.SpecCommandInput;
+import io.airbyte.commons.temporal.scheduling.SpecCommandInput.SpecInput;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.config.ActorContext;
+import io.airbyte.config.ConfigScopeType;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.RefreshStream.RefreshType;
+import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StreamDescriptor;
@@ -29,25 +39,35 @@ import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.data.services.ScopedConfigurationService;
+import io.airbyte.data.services.shared.NetworkSecurityTokenKey;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseAsyncActivities;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.micronaut.context.annotation.Property;
 import io.temporal.api.common.v1.WorkflowType;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsResponse;
+import io.temporal.client.WorkflowOptions;
+import io.temporal.common.RetryOptions;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +82,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Airbyte's interface over temporal.
@@ -86,16 +107,23 @@ public class TemporalClient {
   private final ConnectionManagerUtils connectionManagerUtils;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
   private final MetricClient metricClient;
+  private final FeatureFlagClient featureFlagClient;
+  private final ScopedConfigurationService scopedConfigurationService;
+  private final String uiCommandsQueue;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
+                        @Property(name = "airbyte.temporal.queues.ui-commands") final String uiCommandsQueue,
                         final WorkflowClientWrapped workflowClientWrapped,
                         final WorkflowServiceStubsWrapped serviceStubsWrapped,
                         final StreamResetPersistence streamResetPersistence,
                         final StreamRefreshesRepository streamRefreshesRepository,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
-                        final MetricClient metricClient) {
+                        final MetricClient metricClient,
+                        final FeatureFlagClient featureFlagClient,
+                        final ScopedConfigurationService scopedConfigurationService) {
     this.workspaceRoot = workspaceRoot;
+    this.uiCommandsQueue = uiCommandsQueue;
     this.workflowClientWrapped = workflowClientWrapped;
     this.serviceStubsWrapped = serviceStubsWrapped;
     this.streamResetPersistence = streamResetPersistence;
@@ -103,6 +131,8 @@ public class TemporalClient {
     this.connectionManagerUtils = connectionManagerUtils;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
     this.metricClient = metricClient;
+    this.featureFlagClient = featureFlagClient;
+    this.scopedConfigurationService = scopedConfigurationService;
   }
 
   private final Set<String> workflowNames = new HashSet<>();
@@ -412,9 +442,12 @@ public class TemporalClient {
         .withWorkspaceId(resolvedWorkspaceId)
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector());
-    return execute(jobRunConfig,
-        () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC).run(jobRunConfig, launcherConfig));
-
+    if (!featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(resolvedWorkspaceId))) {
+      return execute(jobRunConfig,
+          () -> getWorkflowStub(SpecWorkflow.class, TemporalJobType.GET_SPEC, jobId).run(jobRunConfig, launcherConfig));
+    } else {
+      return executeConnectorCommandWorkflow(jobRunConfig, new SpecCommandInput(new SpecInput(jobRunConfig, launcherConfig)));
+    }
   }
 
   /**
@@ -447,10 +480,15 @@ public class TemporalClient {
         .withActorId(config.getActorId())
         .withConnectionConfiguration(config.getConnectionConfiguration())
         .withResourceRequirements(config.getResourceRequirements())
-        .withActorContext(context);
+        .withActorContext(context)
+        .withPodLabels(getPodLabelValues(workspaceId));
 
-    return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+    if (!featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(workspaceId))) {
+      return execute(jobRunConfig,
+          () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
+    } else {
+      return executeConnectorCommandWorkflow(jobRunConfig, new CheckCommandInput(new CheckConnectionInput(jobRunConfig, launcherConfig, input)));
+    }
   }
 
   /**
@@ -481,10 +519,15 @@ public class TemporalClient {
         .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
-        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true);
+        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true)
+        .withPodLabels(getPodLabelValues(workspaceId));
 
-    return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+    if (!featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(workspaceId))) {
+      return execute(jobRunConfig,
+          () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue, jobId).run(jobRunConfig, launcherConfig, input));
+    } else {
+      return executeConnectorCommandWorkflow(jobRunConfig, new DiscoverCommandInput(new DiscoverCatalogInput(jobRunConfig, launcherConfig, input)));
+    }
   }
 
   /**
@@ -542,12 +585,24 @@ public class TemporalClient {
     return new TemporalResponse<>(operationOutput, metadata);
   }
 
-  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
+  private TemporalResponse<ConnectorJobOutput> executeConnectorCommandWorkflow(final JobRunConfig jobRunConfig, final ConnectorCommandInput input) {
+    return execute(jobRunConfig,
+        () -> workflowClientWrapped.newWorkflowStub(
+            ConnectorCommandWorkflow.class,
+            WorkflowOptions.newBuilder()
+                .setTaskQueue(uiCommandsQueue)
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
+                .setWorkflowId(String.format("%s_%s", input.getType(), jobRunConfig.getJobId()))
+                .build())
+            .run(input));
   }
 
-  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue) {
-    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
+  private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType, jobId));
+  }
+
+  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue, final UUID jobId) {
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue, jobId));
   }
 
   /**
@@ -637,6 +692,18 @@ public class TemporalClient {
 
   boolean isInRunningWorkflowCache(final String workflowName) {
     return workflowNames.contains(workflowName);
+  }
+
+  private @NotNull List<String> getPodLabelValues(final UUID workspaceId) {
+    final Map<ConfigScopeType, UUID> scopes = Map.of(ConfigScopeType.WORKSPACE, workspaceId);
+    try {
+      final List<ScopedConfiguration> podLabelConfigurations =
+          scopedConfigurationService.getScopedConfigurations(NetworkSecurityTokenKey.INSTANCE, scopes);
+      return podLabelConfigurations.stream().map(ScopedConfiguration::getValue).toList();
+    } catch (IllegalArgumentException e) {
+      log.error(e.getMessage());
+      return Collections.emptyList();
+    }
   }
 
 }

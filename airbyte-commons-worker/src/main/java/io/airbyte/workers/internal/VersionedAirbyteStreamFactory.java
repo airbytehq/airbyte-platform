@@ -29,9 +29,11 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
+import io.micronaut.core.util.StringUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +56,10 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("PMD.MoreThanOneLogger")
 public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
+
+  public static final String CONNECTION_ID_NOT_PRESENT = "not present";
+  public static final String MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE = "Malformed non-Airbyte record (connectionId = {}): {}";
+  public static final String MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE = "Malformed Airbyte record (connectionId = {}): {}";
 
   public record InvalidLineFailureConfiguration(boolean printLongRecordPks) {}
 
@@ -378,16 +384,13 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         // Filter on record into debug to try and prevent such cases. Though this catches non-record
         // messages, this is ok as we rather be safe than sorry.
         logger.warn("Could not parse the string received from source, it seems to be a record message");
-        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
-            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1));
-        logger.debug(line);
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
+            malformedLogAttributes(line, connectionId));
+        logger.debug(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line);
       } else {
-        connectionId.ifPresentOrElse(
-            c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1,
-                new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
-            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1));
-        logger.info(line);
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1,
+            malformedLogAttributes(line, connectionId));
+        logger.info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line);
       }
     } catch (final Exception e) {
       throw e;
@@ -402,6 +405,17 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       logger.warn("Failed to upgrade a message from version {}: {}", protocolVersion, Jsons.serialize(msg), e);
       return Stream.empty();
     }
+  }
+
+  private MetricAttribute[] malformedLogAttributes(final String line, final Optional<UUID> connectionId) {
+    final List<MetricAttribute> attributes = new ArrayList<>();
+    attributes.add(new MetricAttribute(MetricTags.MALFORMED_LOG_LINE_LENGTH, String.valueOf(StringUtils.isNotEmpty(line) ? line.length() : 0)));
+    connectionId.ifPresent(c -> attributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())));
+    return attributes.toArray(new MetricAttribute[0]);
+  }
+
+  private String getConnectionId() {
+    return connectionId.isPresent() ? connectionId.get().toString() : CONNECTION_ID_NOT_PRESENT;
   }
 
 }

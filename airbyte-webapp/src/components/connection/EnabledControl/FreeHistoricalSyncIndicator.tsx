@@ -8,7 +8,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useExperiment } from "hooks/services/Experiment";
 
 export const FreeHistoricalSyncIndicator: React.FC = () => {
-  const isFreeHistoricalSyncEnabled = useExperiment("billing.early-sync-enabled", false);
+  const isFreeHistoricalSyncEnabled = useExperiment("billing.early-sync-enabled");
   const {
     connection: { createdAt: connectionCreatedAt },
   } = useConnectionFormService();

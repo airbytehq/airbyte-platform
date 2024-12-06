@@ -40,6 +40,10 @@ public class SyncSummary {
 
   private long recordsCommitted;
 
+  private long recordsFilteredOut;
+
+  private long bytesFilteredOut;
+
   private String errorMessage;
 
   private static String formatVolume(final long bytes) {

@@ -12,12 +12,14 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OP
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
@@ -107,6 +109,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
+  @Trace
   public StandardSync getStandardSync(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
@@ -203,6 +206,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
+  @Trace
   public List<StandardSync> listWorkspaceStandardSyncs(final StandardSyncQuery standardSyncQuery)
       throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
@@ -455,18 +459,38 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * Disable a list of connections by setting their status to inactive.
    *
    * @param connectionIds list of connection ids to disable
+   * @return set of connection ids that were updated
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
-    database.transaction(ctx -> {
-      ctx.update(CONNECTION)
-          .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
-          .set(CONNECTION.STATUS, StatusType.inactive)
-          .where(CONNECTION.ID.in(connectionIds))
-          .execute();
-      return null;
-    });
+  public Set<UUID> disableConnectionsById(final List<UUID> connectionIds) throws IOException {
+    return database.transaction(ctx -> ctx.update(CONNECTION)
+        .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
+        .set(CONNECTION.STATUS, StatusType.inactive)
+        .where(CONNECTION.ID.in(connectionIds)
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
+        .returning(CONNECTION.ID)
+        .fetchSet(CONNECTION.ID));
+  }
+
+  @Override
+  public List<UUID> listConnectionIdsForWorkspace(final UUID workspaceId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .fetchInto(UUID.class));
+  }
+
+  @Override
+  public List<UUID> listConnectionIdsForOrganization(final UUID organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR.WORKSPACE_ID))
+        .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+        .and(CONNECTION.STATUS.ne(StatusType.deprecated))
+        .fetchInto(UUID.class));
   }
 
   private Set<Long> getEarlySyncJobsFromResult(final Result<Record> result) {
@@ -504,7 +528,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           // Consider only jobs that are in a generally accepted terminal status
           // io/airbyte/persistence/job/models/JobStatus.java:23
           + " WHERE j.status IN ('succeeded', 'cancelled', 'failed')"
-          + " AND j.config_type = 'sync'"
+          + " AND j.config_type IN ('sync', 'refresh')"
           + " AND c.id IS NOT NULL"
           // Keep a job if it was created within 7 days of its connection's creation,
           // OR if it was the first successful sync job of its connection

@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
+import { useDescribeCronExpressionFetchQuery } from "core/api";
 import {
   AirbyteStreamAndConfiguration,
   AirbyteStream,
@@ -9,60 +10,75 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   DestinationSyncMode,
-  Geography,
   NamespaceDefinitionType,
-  NonBreakingChangesPreference,
   SyncMode,
-  SchemaChangeBackfillPreference,
+  StreamMapperType,
 } from "core/api/types/AirbyteClient";
+import { traverseSchemaToField } from "core/domain/catalog";
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 
 /**
  * yup schema for the schedule data
  */
-const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
-  yup.mixed().when("scheduleType", (scheduleType) => {
-    if (scheduleType === ConnectionScheduleType.manual) {
-      return yup.mixed<ConnectionScheduleData>().notRequired();
-    }
+export const useGetScheduleDataSchema = () => {
+  const validateCronExpression = useDescribeCronExpressionFetchQuery();
 
-    if (scheduleType === ConnectionScheduleType.basic) {
+  return useMemo(() => {
+    return yup.mixed().when("scheduleType", (scheduleType) => {
+      if (scheduleType === ConnectionScheduleType.manual) {
+        return yup.mixed<ConnectionScheduleData>().notRequired();
+      }
+
+      if (scheduleType === ConnectionScheduleType.basic) {
+        return yup.object({
+          basicSchedule: yup
+            .object({
+              units: yup.number().required("form.empty.error"),
+              timeUnit: yup.string().required("form.empty.error"),
+            })
+            .defined("form.empty.error"),
+        });
+      }
+
       return yup.object({
-        basicSchedule: yup
+        cron: yup
           .object({
-            units: yup.number().required("form.empty.error"),
-            timeUnit: yup.string().required("form.empty.error"),
+            cronExpression: yup
+              .string()
+              .trim()
+              .required("form.empty.error")
+              .test("validCron", async (value, { createError, path }) => {
+                if (!value) {
+                  return createError({
+                    path,
+                    message: "form.empty.error",
+                  });
+                }
+                try {
+                  const response = await validateCronExpression(value);
+                  if (!response.isValid) {
+                    return createError({
+                      path,
+                      message: response.validationErrorMessage,
+                      type: NON_I18N_ERROR_TYPE,
+                    });
+                  }
+                } catch (error) {
+                  return createError({
+                    path,
+                    message: error.message,
+                    type: NON_I18N_ERROR_TYPE,
+                  });
+                }
+                return true;
+              }),
+            cronTimeZone: yup.string().required("form.empty.error"),
           })
           .defined("form.empty.error"),
       });
-    }
-
-    return yup.object({
-      cron: yup
-        .object({
-          cronExpression: yup
-            .string()
-            .trim()
-            .required("form.empty.error")
-            .test("validCron", (value, { createError, path }) => {
-              const validation = validateCronExpression(value);
-              return (
-                validation.isValid ||
-                createError({
-                  path,
-                  message: "form.cronExpression.invalid",
-                })
-              );
-            })
-            .test(
-              "validCronFrequency",
-              "form.cronExpression.underOneHourNotAllowed",
-              (expression) => allowSubOneHourCronExpressions || validateCronFrequencyOneHourOrMore(expression)
-            ),
-          cronTimeZone: yup.string().required("form.empty.error"),
-        })
-        .defined("form.empty.error"),
     });
-  });
+  }, [validateCronExpression]);
+};
 
 /**
  * yup schema for the stream
@@ -97,6 +113,19 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
   selectedFields: yup
     .array()
     .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
+    .optional(),
+  hashedFields: yup
+    .array()
+    .of(yup.object({ fieldPath: yup.array().of(yup.string().optional()).optional() }))
+    .optional(),
+  mappers: yup
+    .array()
+    .of(
+      yup.object({
+        type: yup.mixed<StreamMapperType>().oneOf(Object.values(StreamMapperType)),
+        mapperConfiguration: yup.object(),
+      })
+    )
     .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
@@ -158,7 +187,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
 /**
  * yup schema for the sync catalog
  */
-const syncCatalogSchema = yup.object({
+export const syncCatalogSchema = yup.object({
   streams: yup
     .array()
     .of(streamAndConfigurationSchema)
@@ -166,7 +195,79 @@ const syncCatalogSchema = yup.object({
       "syncCatalog.streams.required",
       "connectionForm.streams.required",
       (streams) => streams?.some(({ config }) => !!config?.selected) ?? false
-    ),
+    )
+    .test(
+      "syncCatalog.streams.mappers",
+      "connectionForm.streams.existingMappers",
+      (streams) =>
+        !streams?.some(
+          (stream) => stream.config?.mappers?.some((mapper) => mapper.type !== StreamMapperType.hashing)
+        ) ?? true
+    )
+    .test("syncCatalog.streams.hash", "connectionForm.streams.hashFieldCollision", (streams) => {
+      // group all top-level included fields by stream name & namespace
+      const selectedFieldNamesByStream = (streams ?? []).reduce<Record<string, Set<string>>>(
+        (acc, { stream, config }) => {
+          if (!stream || !config?.selected) {
+            return acc;
+          }
+
+          const namespace = stream.namespace ?? "";
+          const name = stream.name ?? "";
+          const key = `${namespace}_${name}`;
+
+          const selectedFields = config.selectedFields?.map((field) => field.fieldPath?.join(".")) ?? [];
+          const hasSelectedFields = selectedFields.length > 0;
+
+          const traversedFields = traverseSchemaToField(stream.jsonSchema, stream.name);
+          const topLevelFields = traversedFields.reduce<Set<string>>((acc, field) => {
+            if (field.path.length === 1) {
+              if (!hasSelectedFields || selectedFields.includes(field.path[0])) {
+                acc.add(field.path[0]);
+              }
+            }
+            return acc;
+          }, new Set());
+
+          acc[key] = topLevelFields;
+          return acc;
+        },
+        {}
+      );
+
+      // check if any included, hashed field within a given stream will conflict
+      // with another stream with the same resulting field name
+      const hasConflictingStream = streams?.some(({ stream, config }) => {
+        if (!config?.selected) {
+          // stream isn't selected
+          return false;
+        }
+
+        const { hashedFields } = config;
+        if (!hashedFields) {
+          // stream doesn't have hashed fields
+          return false;
+        }
+
+        const streamName = stream?.name;
+        const namespace = stream?.namespace ?? "";
+        const selectedFieldNames = selectedFieldNamesByStream[`${namespace}_${streamName}`];
+
+        const resolvedHashedFields = hashedFields.map(({ fieldPath }) => fieldPath?.join("."));
+        if (
+          resolvedHashedFields.some(
+            // check if this field is selected and conflicts with another selected field
+            (field) => selectedFieldNames.has(field ?? "") && selectedFieldNames.has(`${field}_hashed`)
+          )
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      return !hasConflictingStream;
+    }),
 });
 
 /**
@@ -183,29 +284,3 @@ export const namespaceFormatSchema = yup.string().when("namespaceDefinition", {
   is: NamespaceDefinitionType.customformat,
   then: yup.string().trim().required("form.empty.error"),
 });
-
-/**
- * generate yup schema for the create connection form
- */
-export const createConnectionValidationSchema = (
-  allowSubOneHourCronExpressions: boolean,
-  allowAutoDetectSchema: boolean
-) =>
-  yup
-    .object({
-      name: yup.string().required("form.empty.error"),
-      // scheduleType can't be 'undefined', make it required()
-      scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
-      scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
-      namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
-      namespaceFormat: namespaceFormatSchema,
-      prefix: yup.string().default(""),
-      nonBreakingChangesPreference: allowAutoDetectSchema
-        ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
-        : yup.mixed().notRequired(),
-      geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
-      syncCatalog: syncCatalogSchema,
-      notifySchemaChanges: yup.boolean().optional(),
-      backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
-    })
-    .noUnknown();

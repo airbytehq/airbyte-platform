@@ -23,8 +23,9 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -43,23 +44,28 @@ import java.util.function.Supplier;
 @Singleton
 public class OperationsHandler {
 
-  private final ConfigRepository configRepository;
-
   private final WorkspaceService workspaceService;
   private final Supplier<UUID> uuidGenerator;
 
+  private final ConnectionService connectionService;
+  private final OperationService operationService;
+
   @Inject
-  public OperationsHandler(final ConfigRepository configRepository, WorkspaceService workspaceService) {
-    this(configRepository, workspaceService, UUID::randomUUID);
+  public OperationsHandler(final WorkspaceService workspaceService,
+                           final OperationService operationService,
+                           final ConnectionService connectionService) {
+    this(workspaceService, UUID::randomUUID, connectionService, operationService);
   }
 
   @VisibleForTesting
-  OperationsHandler(final ConfigRepository configRepository,
-                    final WorkspaceService workspaceService,
-                    @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
-    this.configRepository = configRepository;
+  OperationsHandler(final WorkspaceService workspaceService,
+                    @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
+                    final ConnectionService connectionService,
+                    final OperationService operationService) {
     this.uuidGenerator = uuidGenerator;
     this.workspaceService = workspaceService;
+    this.connectionService = connectionService;
+    this.operationService = operationService;
   }
 
   public CheckOperationRead checkOperation(final OperatorConfiguration operationCheck) {
@@ -106,7 +112,7 @@ public class OperationsHandler {
   @SuppressWarnings({"PMD.PreserveStackTrace"})
   public OperationRead updateOperation(final OperationUpdate operationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationUpdate.getOperationId());
+    final StandardSyncOperation standardSyncOperation = operationService.getStandardSyncOperation(operationUpdate.getOperationId());
     final StandardWorkspace workspace;
     try {
       workspace = workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false);
@@ -127,16 +133,16 @@ public class OperationsHandler {
 
   private OperationRead persistOperation(final StandardSyncOperation standardSyncOperation)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardSyncOperation(standardSyncOperation);
+    operationService.writeStandardSyncOperation(standardSyncOperation);
     return buildOperationRead(standardSyncOperation.getOperationId());
   }
 
   public OperationReadList listOperationsForConnection(final ConnectionIdRequestBody connectionIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final List<OperationRead> operationReads = Lists.newArrayList();
-    final StandardSync standardSync = configRepository.getStandardSync(connectionIdRequestBody.getConnectionId());
+    final StandardSync standardSync = connectionService.getStandardSync(connectionIdRequestBody.getConnectionId());
     for (final UUID operationId : standardSync.getOperationIds()) {
-      final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+      final StandardSyncOperation standardSyncOperation = operationService.getStandardSyncOperation(operationId);
       if (standardSyncOperation.getTombstone() != null && standardSyncOperation.getTombstone()) {
         continue;
       }
@@ -152,13 +158,13 @@ public class OperationsHandler {
 
   public void deleteOperationsForConnection(final ConnectionIdRequestBody connectionIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync standardSync = configRepository.getStandardSync(connectionIdRequestBody.getConnectionId());
+    final StandardSync standardSync = connectionService.getStandardSync(connectionIdRequestBody.getConnectionId());
     deleteOperationsForConnection(standardSync, standardSync.getOperationIds());
   }
 
   public void deleteOperationsForConnection(final UUID connectionId, final List<UUID> deleteOperationIds)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     deleteOperationsForConnection(standardSync, deleteOperationIds);
   }
 
@@ -168,7 +174,7 @@ public class OperationsHandler {
     for (final UUID operationId : deleteOperationIds) {
       operationIds.remove(operationId);
       boolean sharedOperation = false;
-      for (final StandardSync sync : configRepository.listStandardSyncsUsingOperation(operationId)) {
+      for (final StandardSync sync : connectionService.listStandardSyncsUsingOperation(operationId)) {
         // Check if other connections are using the same operation
         if (!sync.getConnectionId().equals(standardSync.getConnectionId())) {
           sharedOperation = true;
@@ -180,17 +186,17 @@ public class OperationsHandler {
       }
     }
 
-    configRepository.updateConnectionOperationIds(standardSync.getConnectionId(), new HashSet<>(operationIds));
+    operationService.updateConnectionOperationIds(standardSync.getConnectionId(), new HashSet<>(operationIds));
   }
 
   public void deleteOperation(final OperationIdRequestBody operationIdRequestBody)
       throws IOException {
     final UUID operationId = operationIdRequestBody.getOperationId();
-    configRepository.deleteStandardSyncOperation(operationId);
+    operationService.deleteStandardSyncOperation(operationId);
   }
 
   private void removeOperation(final UUID operationId) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+    final StandardSyncOperation standardSyncOperation = operationService.getStandardSyncOperation(operationId);
     if (standardSyncOperation != null) {
       standardSyncOperation.withTombstone(true);
       persistOperation(standardSyncOperation);
@@ -201,7 +207,7 @@ public class OperationsHandler {
 
   private OperationRead buildOperationRead(final UUID operationId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+    final StandardSyncOperation standardSyncOperation = operationService.getStandardSyncOperation(operationId);
     if (standardSyncOperation != null) {
       return buildOperationRead(standardSyncOperation);
     } else {

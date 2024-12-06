@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.ScopeType
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
@@ -14,7 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger
 const val MAX_ANALYTICS_MESSAGES_PER_SYNC = 1000
 const val MAX_ANALYTICS_MESSAGES_PER_BATCH = 100
 
-class AnalyticsMessageTracker(private val trackingClient: TrackingClient) {
+class AnalyticsMessageTracker(
+  private val trackingClient: TrackingClient,
+) {
   var ctx: ReplicationContext? = null
   private val messages = Collections.synchronizedList(mutableListOf<JsonNode>())
   private val totalNumberOfMessages = AtomicInteger(0)
@@ -71,7 +74,7 @@ class AnalyticsMessageTracker(private val trackingClient: TrackingClient) {
     val currentMessages = getCurrentMessages()
     if (currentMessages.isNotEmpty()) {
       val context = requireNotNull(ctx)
-      trackingClient.track(context.workspaceId, "analytics_messages", generateAnalyticsMetadata(currentMessages))
+      trackingClient.track(context.workspaceId, ScopeType.WORKSPACE, "analytics_messages", generateAnalyticsMetadata(currentMessages))
     }
   }
 }

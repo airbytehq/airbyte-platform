@@ -1,0 +1,11 @@
+@use "scss/variables";
+
+// provide exact width to prevent content from "jumping"
+.control.control {
+  width: 185px;
+}
+
+.pkList {
+  margin: 0;
+  padding-left: variables.$spacing-xl;
+}

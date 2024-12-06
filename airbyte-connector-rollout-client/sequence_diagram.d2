@@ -1,0 +1,130 @@
+direction: right
+Start and advance rollout manually: {
+  Start: Start Rollout {
+    shape: sequence_diagram
+    c: {
+        label: Client
+      }
+      ab: {
+        label: ab-server\n\nPostgres
+        shape: cylinder
+      }
+      t: {
+        label: Temporal Server\n \& Workflow Worker
+        shape: oval
+      }
+      w: {
+        label: Rollout Worker
+        shape: oval
+      }
+    start rollout: {
+      c.start -> ab: start rollout
+      ab."insert rollout row"
+      start workflow: {
+        ab.workflow -> t.workflow: start workflow
+        t.workflow."Workflow Started"
+        t.workflow -> ab.workflow: success
+      }
+
+      update workflow: {
+        ab.update -> t.update: execute\n`start rollout`\nupdate
+        t.update."Activity Scheduled:\n start rollout"
+        t.update -> w.update: execute activity
+        w.update -> ab.update.2: update rollout table
+        ab.update.2."update rollout table"
+        ab.update.2 -> w.update: success
+        w.update -> t.update: success
+        t.update."Activity Completed"
+        t.update -> ab.update: success
+      }
+      ab -> c.start: done
+    }
+  }
+
+  Advance: Advance Rollout {
+    shape: sequence_diagram
+    c: {
+        label: Client
+      }
+      ab: {
+        label: ab-server\n\nPostgres
+        shape: cylinder
+      }
+      t: {
+        label: Temporal Server\n \& Workflow Worker
+        shape: oval
+      }
+      w: {
+        label: Rollout Worker
+        shape: oval
+      }
+    advance rollout: {
+      c.advance -> ab: update rollout
+      ab."update rollout row"
+      update workflow: "update workflow" {
+        ab.advance -> t.advance: execute\n`advance rollout`\n update
+        t."Activity Scheduled:\n advance rollout"
+        t -> w.advance: execute activity
+        w.advance -> ab.advance.2: update rollout table & pin actors
+        ab.advance.2."update rollout table\npin actors"
+        ab.advance.2 -> w.advance: success
+        w.advance -> t.advance: success
+        t.advance."Activity Completed"
+        t.advance -> ab.advance: success
+      }
+      ab -> c.advance: done
+    }
+  }
+
+  Finalize: Finalize Rollout {
+    shape: sequence_diagram
+    c: {
+        label: Client
+      }
+      ab: {
+        label: ab-server\n\nPostgres
+        shape: cylinder
+      }
+      t: {
+        label: Temporal Server\n \& Workflow Worker
+        shape: oval
+      }
+      w: {
+        label: Rollout Worker
+        shape: oval
+      }
+      gh: {
+        label: GitHub Actions
+        shape: oval
+      }
+    finalize rollout: {
+      c.finalize -> ab: finalize rollout
+      ab."update rollout row"
+      finalize rollout: {
+        "promote/rollback" {
+            ab.finalize -> t.gha: execute\n`finalize rollout`\n action
+            t.gha."Activity Scheduled:\npromote/rollback rollout"
+            t.gha -> w.gha: execute activity
+            w.gha -> gh.gha: finalize rollout\nGHA
+            gh.gha."GHA scheduled"
+            t.gha."Wait until default version is available"
+          }
+        "update workflow" {
+            t."Activity Scheduled:\nfinalize rollout"
+            t.unpin -> w.unpin: execute activity
+            w.unpin -> ab.unpin.2: update rollout table & unpin actors
+            ab.unpin.2."update rollout table\nunpin actors"
+            ab.unpin.2 -> w.unpin: success
+            w.unpin -> t.unpin: success
+            t.unpin."Activity Completed"
+            t.unpin -> ab.finalize: success
+          }
+      }
+      c.status -> ab.status: get status
+      ab.status -> c.status: done
+    }
+  }
+
+  Start -> Advance: Do Rollout
+  Advance -> Finalize: Finalize Rollout
+}

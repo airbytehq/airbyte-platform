@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
-import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.UserHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Body;
@@ -48,7 +47,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
   public UserRead getUser(@Body final UserIdRequestBody userIdRequestBody) {
@@ -56,7 +54,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get_by_auth_id")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
   public UserRead getUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
@@ -64,7 +61,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get_by_email")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
   public UserRead getUserByEmail(@Body final UserEmailRequestBody userEmailRequestBody) {
@@ -72,7 +68,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/delete")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
   public void deleteUser(@Body final UserIdRequestBody userIdRequestBody) {
@@ -84,7 +79,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/update")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
   public UserRead updateUser(@Body final UserUpdate userUpdate) {
@@ -124,7 +118,6 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get_or_create_by_auth_id")
-  @SecuredUser
   @Secured({ADMIN, SELF})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

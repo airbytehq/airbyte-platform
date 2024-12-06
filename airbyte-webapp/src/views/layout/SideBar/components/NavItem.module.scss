@@ -43,6 +43,11 @@
       background: colors.$blue-30;
     }
   }
+
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+  }
 }
 
 .icon {

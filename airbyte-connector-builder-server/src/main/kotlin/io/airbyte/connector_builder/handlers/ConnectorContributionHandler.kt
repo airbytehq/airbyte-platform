@@ -3,7 +3,6 @@
 package io.airbyte.connector_builder.handlers
 
 import io.airbyte.api.problems.model.generated.GithubContributionProblemData
-import io.airbyte.api.problems.throwable.generated.ConnectorImageNameInUseProblem
 import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
 import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
@@ -13,14 +12,12 @@ import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequ
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
-import io.airbyte.connector_builder.utils.ManifestParser
+import io.airbyte.connector_builder.utils.BuilderContributionInfo
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -39,7 +36,7 @@ class ConnectorContributionHandler(
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
-    val connectorName = if (connectorExists) githubContributionService.readConnectorMetadataName() else null
+    val connectorName = githubContributionService.readConnectorMetadataValue("name")
     val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
 
     return CheckContributionRead().apply {
@@ -57,105 +54,81 @@ class ConnectorContributionHandler(
     }
   }
 
-  fun createFileCommitMap(
-    connectorImageName: String,
-    connectorName: String,
-    connectorDescription: String,
-    rawManifestYaml: String,
-    baseImage: String,
+  fun getFilesToCommitGenerationMap(
+    contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
-  ): Map<String, String> {
-    val versionTag = "0.0.1"
-    val releaseDate = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now())
-    val readmeContent =
-      contributionTemplates.renderContributionReadmeMd(
-        connectorImageName = connectorImageName,
-        connectorName = connectorName,
-        description = connectorDescription,
-      )
-
-    val manifestParser = ManifestParser(rawManifestYaml)
-    var docsContent =
-      contributionTemplates.renderContributionDocsMd(
-        connectorImageName = connectorImageName,
-        connectorName = connectorName,
-        connectorVersionTag = versionTag,
-        description = connectorDescription,
-        manifestParser = manifestParser,
-        authorUsername = githubContributionService.username,
-        releaseDate = releaseDate,
-      )
-
-    // TODO: Ensure metadata is correctly formatted
-    // TODO: Merge metadata with existing metadata if it exists
-    val metadataContent =
-      contributionTemplates.renderContributionMetadataYaml(
-        connectorImageName = connectorImageName,
-        connectorName = connectorName,
-        actorDefinitionId = UUID.randomUUID().toString(),
-        versionTag = versionTag,
-        baseImage = baseImage,
-        // TODO: Parse Allowed Hosts from manifest
-        allowedHosts = listOf("*"),
-        connectorDocsSlug = githubContributionService.connectorDocsSlug,
-        releaseDate = releaseDate,
-      )
-
-    val iconContent = contributionTemplates.renderIconSvg()
-    val acceptanceTestConfigContent = contributionTemplates.renderAcceptanceTestConfigYaml(connectorImageName = connectorImageName)
-
-    // TODO: Decern which files are update (metadata.yaml), always overwrite (manifest.yaml), or only create if missing (icon.svg)
+  ): Map<String, () -> String> {
+    // Always generate the manifest and metadata files
     val filesToCommit =
-      mapOf(
-        githubContributionService.connectorReadmePath to readmeContent,
-        githubContributionService.connectorManifestPath to rawManifestYaml,
-        githubContributionService.connectorMetadataPath to metadataContent,
-        githubContributionService.connectorIconPath to iconContent,
-        githubContributionService.connectorAcceptanceTestConfigPath to acceptanceTestConfigContent,
-        githubContributionService.connectorDocsPath to docsContent,
+      mutableMapOf(
+        githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
+        githubContributionService.connectorMetadataPath to {
+          contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService)
+        },
       )
 
+    // Others - generate if not pre-existing
+    val createIfNotExistsFiles =
+      listOf(
+        githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
+        githubContributionService.connectorIconPath to { contributionTemplates.renderIconSvg() },
+        githubContributionService.connectorAcceptanceTestConfigPath to { contributionTemplates.renderAcceptanceTestConfigYaml(contributionInfo) },
+        githubContributionService.connectorDocsPath to { contributionTemplates.renderContributionDocsMd(contributionInfo) },
+      )
+
+    createIfNotExistsFiles.forEach { (filePath, generationFunction) ->
+      if (!githubContributionService.checkFileExistsOnMain(filePath)) {
+        filesToCommit[filePath] = generationFunction
+      }
+    }
     return filesToCommit
   }
 
-  fun generateContributionPullRequest(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
-    val githubToken = generateContributionRequestBody.githubToken
-    val connectorImageName = generateContributionRequestBody.connectorImageName
-
-    val githubContributionService = GithubContributionService(connectorImageName, githubToken)
-
-    // 0. Error if connector already exists
-    if (githubContributionService.checkIfConnectorExistsOnMain()) {
-      throw ConnectorImageNameInUseProblem()
-    }
-
-    // 1. Create a branch
-    githubContributionService.prepareBranchForContribution()
-
-    // 2. Generate Files
-    val filesToCommit =
-      createFileCommitMap(
-        connectorImageName,
-        generateContributionRequestBody.name,
-        generateContributionRequestBody.description,
-        generateContributionRequestBody.manifestYaml,
-        generateContributionRequestBody.baseImage,
-        githubContributionService,
-      )
-
-    // 3. Commit Files
-    githubContributionService.commitFiles(
-      "Submission for $connectorImageName from Connector Builder",
-      filesToCommit,
+  private fun getContributionInfo(
+    generateContributionRequestBody: GenerateContributionRequestBody,
+    githubContributionService: GithubContributionService,
+  ): BuilderContributionInfo {
+    val isEdit = githubContributionService.checkIfConnectorExistsOnMain()
+    val actorDefinitionId = githubContributionService.readConnectorMetadataValue("definitionId") ?: UUID.randomUUID().toString()
+    val authorUsername = githubContributionService.username
+    return BuilderContributionInfo(
+      isEdit = isEdit,
+      connectorName = generateContributionRequestBody.name,
+      connectorImageName = generateContributionRequestBody.connectorImageName,
+      actorDefinitionId = actorDefinitionId,
+      description = generateContributionRequestBody.description,
+      githubToken = generateContributionRequestBody.githubToken,
+      manifestYaml = generateContributionRequestBody.manifestYaml,
+      baseImage = generateContributionRequestBody.baseImage,
+      versionTag = "0.0.1",
+      authorUsername = authorUsername,
+      changelogMessage = "Initial release by [@$authorUsername](https://github.com/$authorUsername) via Connector Builder",
     )
-
-    // 4. Create / update pull request
-    val pullRequest = githubContributionService.getOrCreatePullRequest()
-
-    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString())
   }
 
-  fun convertGithubExceptionToContributionException(e: HttpException): Exception {
+  private fun generateContributionPullRequest(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
+    val githubContributionService =
+      GithubContributionService(generateContributionRequestBody.connectorImageName, generateContributionRequestBody.githubToken)
+    val contributionInfo = getContributionInfo(generateContributionRequestBody, githubContributionService)
+
+    // Create or get branch
+    githubContributionService.prepareBranchForContribution()
+
+    // Commit files to branch
+    val fileGenerationMap = getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
+    val filesToCommit = fileGenerationMap.mapValues { it.value.invoke() }
+    githubContributionService.commitFiles(filesToCommit)
+
+    // Create / update pull request of branch
+    val pullRequestDescription = contributionTemplates.renderContributionPullRequestDescription(contributionInfo)
+    val pullRequest = githubContributionService.getOrCreatePullRequest(pullRequestDescription)
+
+    return GenerateContributionResponse()
+      .pullRequestUrl(pullRequest.htmlUrl.toString())
+      .actorDefinitionId(UUID.fromString(contributionInfo.actorDefinitionId))
+  }
+
+  private fun convertGithubExceptionToContributionException(e: HttpException): Exception {
     return when (e.responseCode) {
       401 -> InvalidGithubTokenProblem()
       409 -> InsufficientGithubTokenPermissionsProblem(e)
@@ -163,7 +136,7 @@ class ConnectorContributionHandler(
     }
   }
 
-  fun convertToContributionException(e: Exception): Exception {
+  private fun convertToContributionException(e: Exception): Exception {
     logger.error(e) { "Failed to generate contribution" }
     return when (e) {
       is HttpException -> convertGithubExceptionToContributionException(e)

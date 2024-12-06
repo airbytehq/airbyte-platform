@@ -1,11 +1,21 @@
 
 global:
+  # imagePullSecrets:
+  #   - name: ""
   serviceAccountName: placeholderServiceAccount
   deploymentMode: oss
   extraContainers: []
   database:
     secretName: ""
     secretValue: ""
+
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    tag: ""
 
 enabled: true
 ##  metrics.replicaCount Number of metrics-reporter replicas

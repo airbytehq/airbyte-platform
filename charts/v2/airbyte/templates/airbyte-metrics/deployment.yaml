@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airbyte-metrics
+  labels:
+    app.kubernetes.io/name: {{ include "airbyte.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    helm.sh/chart: {{ include "airbyte.chart" . }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.airbyte.io/fullname: {{ include "airbyte.fullname" . }}
+spec:
+  replicas: {{ .Values.metrics.replicaCount }}
+  selector:
+    matchLabels:
+      airbyte: metrics
+  strategy:
+    type: Recreate # Needed due to volume claims
+  template:
+    metadata:
+      labels:
+        airbyte: metrics
+        {{- if .Values.metrics.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.metrics.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }} 
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.metrics.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-metrics-container
+        image: {{ include "imageUrl" (list .Values.metrics.image $) }}
+        imagePullPolicy: "{{ .Values.metrics.image.pullPolicy }}"
+        env:
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+
+        # Values from secret
+        {{- if .Values.metrics.secrets }}
+        {{- range $k, $v := .Values.metrics.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: metrics-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.metrics.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.metrics.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.metrics.extraEnv }}
+        {{- toYaml .Values.metrics.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.metrics.resources }}
+        resources:
+          {{- toYaml .Values.metrics.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.metrics.containerSecurityContext }}
+        securityContext:
+          {{- toYaml .Values.metrics.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        {{- if .Values.metrics.extraVolumeMounts }}
+        volumeMounts:
+          {{ toYaml .Values.metrics.extraVolumeMounts | nindent 10 }}
+        {{- end }}
+      {{- if .Values.metrics.extraContainers }}
+      {{ toYaml .Values.metrics.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.metrics.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if .Values.metrics.extraVolumes }}
+      {{ toYaml .Values.metrics.extraVolumes | nindent 6 }}
+      {{- end }}

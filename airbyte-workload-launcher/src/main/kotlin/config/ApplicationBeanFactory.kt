@@ -5,20 +5,13 @@
 package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.Context
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
-import io.airbyte.workers.CheckConnectionInputHydrator
-import io.airbyte.workers.ConnectorSecretsHydrator
-import io.airbyte.workers.DiscoverCatalogInputHydrator
-import io.airbyte.workers.ReplicationInputHydrator
-import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
+import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
@@ -28,6 +21,8 @@ import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 /**
  * Micronaut bean factory for general application beans.
@@ -38,39 +33,6 @@ class ApplicationBeanFactory {
   fun metricClient(): MetricClient {
     MetricClientFactory.initialize(MetricEmittingApps.SERVER)
     return MetricClientFactory.getMetricClient()
-  }
-
-  @Singleton
-  fun replicationInputHydrator(
-    airbyteApiClient: AirbyteApiClient,
-    resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
-    secretsRepositoryReader: SecretsRepositoryReader,
-    featureFlagClient: FeatureFlagClient,
-  ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient)
-  }
-
-  @Singleton
-  fun baseInputHydrator(
-    airbyteApiClient: AirbyteApiClient,
-    secretsRepositoryReader: SecretsRepositoryReader,
-    featureFlagClient: FeatureFlagClient,
-  ): ConnectorSecretsHydrator {
-    return ConnectorSecretsHydrator(
-      secretsRepositoryReader = secretsRepositoryReader,
-      airbyteApiClient = airbyteApiClient,
-      featureFlagClient = featureFlagClient,
-    )
-  }
-
-  @Singleton
-  fun checkInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): CheckConnectionInputHydrator {
-    return CheckConnectionInputHydrator(connectorSecretsHydrator)
-  }
-
-  @Singleton
-  fun discoverCatalogInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): DiscoverCatalogInputHydrator {
-    return DiscoverCatalogInputHydrator(connectorSecretsHydrator)
   }
 
   @Singleton
@@ -150,4 +112,17 @@ class ApplicationBeanFactory {
       listOf(Geography(geography), PlaneName(dataPlaneName))
     }
   }
+
+  @Singleton
+  fun connectorApmSupportHelper(): ConnectorApmSupportHelper {
+    return ConnectorApmSupportHelper()
+  }
+
+  @Singleton
+  @Named("claimedProcessorBackoffDuration")
+  fun claimedProcessorBackoffDuration() = 5.seconds.toJavaDuration()
+
+  @Singleton
+  @Named("claimedProcessorBackoffMaxDelay")
+  fun claimedProcessorBackoffMaxDelay() = 60.seconds.toJavaDuration()
 }

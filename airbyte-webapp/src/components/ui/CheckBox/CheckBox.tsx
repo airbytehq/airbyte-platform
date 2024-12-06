@@ -17,6 +17,12 @@ export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize 
 
   const checkMarkSize = checkboxSize === "lg" ? "md" : "sm";
 
+  // Without this, two click events will bubble due to how the input is nested. This breaks headless UI's change
+  // detection, so we stop the duplicate event from bubbling.
+  const handleClick = (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => {
+    e.stopPropagation();
+  };
+
   return (
     <label
       className={classNames(
@@ -31,7 +37,8 @@ export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize 
         className
       )}
     >
-      <input type="checkbox" aria-checked={indeterminate ? "mixed" : checked} {...inputProps} />
+      <input type="checkbox" aria-checked={indeterminate ? "mixed" : checked} {...inputProps} onClick={handleClick} />
+
       {indeterminate ? (
         <Icon type="minus" size={checkMarkSize} />
       ) : (

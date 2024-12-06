@@ -29,6 +29,7 @@ dependencies {
   implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
   implementation(libs.commons.io)
+  implementation(libs.kotlin.logging)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
@@ -54,30 +55,6 @@ jsonSchema2Pojo {
   serializable = true
 }
 
-tasks.named<Test>("test") {
-  useJUnitPlatform {
-    excludeTags("log4j2-config", "logger-client")
-  }
-}
-
 tasks.named("compileKotlin") {
   dependsOn(tasks.named("generateJsonSchema2Pojo"))
-}
-
-tasks.register<Test>("log4j2IntegrationTest") {
-  useJUnitPlatform {
-    includeTags("log4j2-config")
-  }
-  testLogging {
-    events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
-}
-
-tasks.register<Test>("logClientsIntegrationTest") {
-  useJUnitPlatform {
-    includeTags("logger-client")
-  }
-  testLogging {
-    events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
 }

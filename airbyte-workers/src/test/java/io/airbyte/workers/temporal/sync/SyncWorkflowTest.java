@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.sync;
 
-import static io.airbyte.workers.temporal.workflow.MockDiscoverCatalogAndAutoPropagateWorkflow.REFRESH_SCHEMA_ACTIVITY_OUTPUT;
+import static io.airbyte.workers.temporal.workflows.MockDiscoverCatalogAndAutoPropagateWorkflow.REFRESH_SCHEMA_ACTIVITY_OUTPUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,9 +43,7 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivityImpl;
-import io.airbyte.workers.temporal.workflow.MockDiscoverCatalogAndAutoPropagateWorkflow;
+import io.airbyte.workers.temporal.workflows.MockDiscoverCatalogAndAutoPropagateWorkflow;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
@@ -68,8 +66,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.UnusedPrivateMethod"})
 class SyncWorkflowTest {
@@ -87,10 +83,8 @@ class SyncWorkflowTest {
   private InvokeOperationsActivity invokeOperationsActivity;
   private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
-  private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
   private ReportRunTimeActivity reportRunTimeActivity;
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
-  private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
 
   // AIRBYTE CONFIGURATION
   private static final long JOB_ID = 11L;
@@ -127,6 +121,8 @@ class SyncWorkflowTest {
   private ActivityOptions shortActivityOptions;
   private ActivityOptions discoveryActivityOptions;
   private ActivityOptions refreshSchemaActivityOptions;
+  private ActivityOptions asyncReplicationActivityOptions;
+  private ActivityOptions workloadStatusCheckActivityOptions;
   private TemporalProxyHelper temporalProxyHelper;
 
   @BeforeEach
@@ -152,18 +148,13 @@ class SyncWorkflowTest {
     invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
-    workloadFeatureFlagActivity = mock(WorkloadFeatureFlagActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
     syncFeatureFlagFetcherActivity = mock(SyncFeatureFlagFetcherActivityImpl.class);
-    routeToSyncTaskQueueActivity = mock(RouteToSyncTaskQueueActivityImpl.class);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
     when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
     when(configFetchActivity.getStatus(sync.getConnectionId())).thenReturn(Optional.of(ConnectionStatus.ACTIVE));
     when(configFetchActivity.getSourceConfig(SOURCE_ID)).thenReturn(Jsons.emptyObject());
-    when(workloadFeatureFlagActivity.useWorkloadApi(any())).thenReturn(false);
-    when(routeToSyncTaskQueueActivity.routeToDiscoverCatalog(any())).thenReturn(
-        new RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput(TemporalJobType.DISCOVER_SCHEMA.name()));
 
     longActivityOptions = ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofDays(3))
@@ -189,6 +180,16 @@ class SyncWorkflowTest {
         .setStartToCloseTimeout(Duration.ofSeconds(360))
         .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
+    asyncReplicationActivityOptions = ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(60))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+    workloadStatusCheckActivityOptions = ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(60))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
+        .build();
 
     final BeanIdentifier longActivitiesBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration longActivityOptionsBeanRegistration = mock(BeanRegistration.class);
@@ -210,9 +211,19 @@ class SyncWorkflowTest {
     when(refreshSchemaActivityBeanIdentifier.getName()).thenReturn("refreshSchemaActivityOptions");
     when(refreshSchemaActivityOptionsBeanRegistration.getIdentifier()).thenReturn(refreshSchemaActivityBeanIdentifier);
     when(refreshSchemaActivityOptionsBeanRegistration.getBean()).thenReturn(refreshSchemaActivityOptions);
+    final BeanIdentifier asyncActivitiesBeanIdentifier = mock(BeanIdentifier.class);
+    final BeanRegistration asyncActivityOptionsBeanRegistration = mock(BeanRegistration.class);
+    when(asyncActivitiesBeanIdentifier.getName()).thenReturn("asyncActivityOptions");
+    when(asyncActivityOptionsBeanRegistration.getIdentifier()).thenReturn(asyncActivitiesBeanIdentifier);
+    when(asyncActivityOptionsBeanRegistration.getBean()).thenReturn(asyncReplicationActivityOptions);
+    final BeanIdentifier workloadStatusCheckActivitiesBeanIdentifier = mock(BeanIdentifier.class);
+    final BeanRegistration workloadStatusCheckActivityOptionsBeanRegistration = mock(BeanRegistration.class);
+    when(workloadStatusCheckActivitiesBeanIdentifier.getName()).thenReturn("workloadStatusCheckActivityOptions");
+    when(workloadStatusCheckActivityOptionsBeanRegistration.getIdentifier()).thenReturn(workloadStatusCheckActivitiesBeanIdentifier);
+    when(workloadStatusCheckActivityOptionsBeanRegistration.getBean()).thenReturn(workloadStatusCheckActivityOptions);
     temporalProxyHelper = new TemporalProxyHelper(
         List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration, discoveryActivityOptionsBeanRegistration,
-            refreshSchemaActivityOptionsBeanRegistration));
+            refreshSchemaActivityOptionsBeanRegistration, asyncActivityOptionsBeanRegistration, workloadStatusCheckActivityOptionsBeanRegistration));
 
     syncWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
   }
@@ -232,10 +243,8 @@ class SyncWorkflowTest {
         invokeOperationsActivity,
         refreshSchemaActivity,
         configFetchActivity,
-        workloadFeatureFlagActivity,
         reportRunTimeActivity,
-        syncFeatureFlagFetcherActivity,
-        routeToSyncTaskQueueActivity);
+        syncFeatureFlagFetcherActivity);
     testEnv.start();
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());
@@ -261,12 +270,11 @@ class SyncWorkflowTest {
   @Test
   void testSuccessWithChildWorkflow() {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
-    doReturn(true).when(workloadFeatureFlagActivity).useWorkloadApi(any());
     doReturn(true).when(syncFeatureFlagFetcherActivity).shouldRunAsChildWorkflow(any());
 
     final StandardSyncOutput actualOutput = execute();
 
-    verifyReplication(replicationActivity, syncInput, true, false, REFRESH_SCHEMA_ACTIVITY_OUTPUT);
+    verifyReplication(replicationActivity, syncInput, REFRESH_SCHEMA_ACTIVITY_OUTPUT);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(
@@ -277,12 +285,11 @@ class SyncWorkflowTest {
   @Test
   void testNoChildWorkflowWithReset() {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
-    doReturn(true).when(workloadFeatureFlagActivity).useWorkloadApi(any());
     doReturn(true).when(syncFeatureFlagFetcherActivity).shouldRunAsChildWorkflow(any());
 
     final StandardSyncOutput actualOutput = execute(true);
 
-    verifyReplication(replicationActivity, syncInput, true, false, null);
+    verifyReplication(replicationActivity, syncInput, null);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(
@@ -290,16 +297,14 @@ class SyncWorkflowTest {
         removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void passesThroughFFCall(final boolean useWorkloadApi) throws Exception {
-    when(workloadFeatureFlagActivity.useWorkloadApi(any())).thenReturn(useWorkloadApi);
+  @Test
+  void passesThroughFFCall() throws Exception {
 
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     final StandardSyncOutput actualOutput = execute();
 
-    verifyReplication(replicationActivity, syncInput, useWorkloadApi, false, null);
+    verifyReplication(replicationActivity, syncInput, null);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
@@ -412,13 +417,11 @@ class SyncWorkflowTest {
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity, final StandardSyncInput syncInput) {
-    verifyReplication(replicationActivity, syncInput, false, false, null);
+    verifyReplication(replicationActivity, syncInput, null);
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity,
                                         final StandardSyncInput syncInput,
-                                        final boolean useWorkloadApi,
-                                        final boolean useOutputDocStore,
                                         final RefreshSchemaActivityOutput refreshSchemaOutput) {
     verify(replicationActivity).replicateV2(new ReplicationActivityInput(
         syncInput.getSourceId(),
@@ -438,8 +441,7 @@ class SyncWorkflowTest {
         syncInput.getPrefix(),
         refreshSchemaOutput,
         new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID),
-        useWorkloadApi,
-        useOutputDocStore));
+        null));
   }
 
   private static void verifyShouldRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity) {

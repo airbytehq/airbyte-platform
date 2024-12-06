@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
@@ -25,6 +23,7 @@ dependencies {
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.http)
+  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.flyway)
@@ -40,21 +39,22 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(libs.google.cloud.storage)
   implementation(libs.cron.utils)
-  implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
+  implementation(libs.kubernetes.client)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:public-api"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-audit-logging"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-logging"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-server"))
@@ -66,16 +66,20 @@ dependencies {
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-notification"))
   implementation(project(":oss:airbyte-oauth"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
+  runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
+  runtimeOnly(libs.bundles.logback)
 
   // Required for local database secret hydration)
   runtimeOnly(libs.hikaricp)
@@ -88,6 +92,11 @@ dependencies {
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.micronaut.jaxrs.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.postgresql)
@@ -96,6 +105,7 @@ dependencies {
   testImplementation(libs.mockito.inline)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.bundles.kotest)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
@@ -105,11 +115,12 @@ dependencies {
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
-val copySeed = tasks.register<Copy>("copySeed") {
-  from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
-  into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
-  dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
-}
+val copySeed =
+  tasks.register<Copy>("copySeed") {
+    from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
+    into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
+    dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
+  }
 
 // need to make sure that the files are in the resource directory before copying.)
 // tests require the seed to exist.)
@@ -120,32 +131,25 @@ tasks.named("assemble") {
   dependsOn(copySeed)
 }
 
-val env =
-  Properties().apply {
-    load(rootProject.file(".env.dev").inputStream())
-  }
-
 airbyte {
   application {
     mainClass = "io.airbyte.server.Application"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
-        "DATABASE_USER" to env["DATABASE_USER"].toString(),
-        "DATABASE_PASSWORD" to env["DATABASE_PASSWORD"].toString(),
-        "CONFIG_DATABASE_USER" to (env["CONFIG_DATABASE_USER"]?.toString() ?: ""),
-        "CONFIG_DATABASE_PASSWORD" to (env["CONFIG_DATABASE_PASSWORD"]?.toString() ?: ""),
+        "AIRBYTE_ROLE" to "undefined",
+        "AIRBYTE_VERSION" to "dev",
+        "DATABASE_USER" to "docker",
+        "DATABASE_PASSWORD" to "docker",
+        "CONFIG_DATABASE_USER" to "docker",
+        "CONFIG_DATABASE_PASSWORD" to "docker",
         // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
-        "DATABASE_URL" to "jdbc:postgresql://localhost:5433/${env["DATABASE_DB"]}",
-        "CONFIG_DATABASE_URL" to "jdbc:postgresql://localhost:5433/${env["CONFIG_DATABASE_DB"]}",
+        "DATABASE_URL" to "jdbc:postgresql://localhost:5433/airbyte",
+        "CONFIG_DATABASE_URL" to "jdbc:postgresql://localhost:5433/airbyte",
         "RUN_DATABASE_MIGRATION_ON_STARTUP" to "true",
-        "WORKSPACE_ROOT" to env["WORKSPACE_ROOT"].toString(),
+        "WORKSPACE_ROOT" to "/tmp/workspace",
         "CONFIG_ROOT" to "/tmp/airbyte_config",
-        "TRACKING_STRATEGY" to env["TRACKING_STRATEGY"].toString(),
+        "TRACKING_STRATEGY" to "logging",
         "TEMPORAL_HOST" to "localhost:7233",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
       ),
@@ -176,7 +180,7 @@ airbyte {
 tasks.named<Test>("test") {
   environment(
     mapOf(
-      "AIRBYTE_VERSION" to env["VERSION"],
+      "AIRBYTE_VERSION" to "dev",
       "MICRONAUT_ENVIRONMENTS" to "test",
       "SERVICE_NAME" to project.name,
     ),

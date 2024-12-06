@@ -9,8 +9,7 @@ import {
   replicateSourceModes,
 } from "components/connection/ConnectionForm/preferredSyncModes";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
-import { updateStreamSyncMode } from "components/connection/syncCatalog/SyncCatalog/updateStreamSyncMode";
-import { SyncModeValue } from "components/connection/syncCatalog/SyncModeSelect";
+import { updateStreamSyncMode } from "components/connection/SyncCatalogTable/utils";
 import { ControlLabels } from "components/LabeledControl";
 import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
@@ -24,6 +23,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SimplifiedSchemaQuestionnaire.module.scss";
+import { SyncModeValue } from "../../SyncCatalogTable/components/SyncModeCell";
 
 type Delivery = "replicateSource" | "appendChanges";
 type IncrementOrRefresh = SyncMode;

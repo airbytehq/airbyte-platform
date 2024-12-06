@@ -52,6 +52,18 @@
   }
 }
 
+.checkboxLabel {
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.disabledCheckboxLabel {
+  &:hover {
+    cursor: not-allowed;
+  }
+}
+
 .countAndSort {
   padding-top: variables.$spacing-md;
   padding-bottom: variables.$spacing-xl;

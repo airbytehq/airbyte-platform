@@ -1,1 +1,28 @@
-@forward "../../ConnectionForm/ScheduleFormField/CronScheduleFormControl.module.scss";
+@use "scss/variables";
+
+.cronZonesOptionsMenu {
+  overflow: auto;
+  max-height: variables.$height-long-listbox-options-list;
+}
+
+.cronZoneOption {
+  overflow: visible;
+}
+
+.cronZonesListBoxBtn {
+  min-width: calc(variables.$height-long-listbox-options-list / 2);
+}
+
+.errorMessageContainer {
+  position: relative;
+  padding-bottom: 30px;
+}
+
+.customErrorMessage {
+  position: absolute;
+  width: 100%;
+  height: 30px;
+  bottom: 0;
+  left: 0;
+  padding-top: variables.$spacing-sm;
+}

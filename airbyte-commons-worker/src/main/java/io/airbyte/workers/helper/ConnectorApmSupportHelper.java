@@ -67,31 +67,39 @@ public class ConnectorApmSupportHelper {
 
   /**
    * Extracts the image name from the provided image string, if the image string uses the following
-   * format: {@code <image name>:<image version>}.
+   * format: {@code <image name>:<image version>}. Image name may include registry and port number,
+   * which is also delimited by ":"
    *
    * @param image The image.
    * @return The name extracted from the image, or the originally provided string if blank.
    */
   public static String getImageName(final String image) {
     if (StringUtils.isNotEmpty(image)) {
-      return image.split(IMAGE_DELIMITER)[0];
+      final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+      if (delimeterIndex >= 0) {
+        return image.substring(0, delimeterIndex);
+      }
     }
-
+    // If image is null, empty, or does not contain a delimiter, return the original string.
     return image;
   }
 
   /**
    * Extracts the image version from the provided image string, if the image string uses the following
-   * format: {@code <image name>:<image version>}.
+   * format: {@code <image name>:<image version>}. Image name may include registry and port number,
+   * which is also delimited by ":"
    *
    * @param image The image.
    * @return The version extracted from the image, or the originally provided string if blank.
    */
   public static String getImageVersion(final String image) {
     if (StringUtils.isNotEmpty(image)) {
-      return image.split(IMAGE_DELIMITER)[1];
+      final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+      if (delimeterIndex >= 0 && image.length() > delimeterIndex + 1) {
+        return image.substring(delimeterIndex + 1);
+      }
     }
-
+    // If image is null, empty, or does not contain a delimiter, return the original string.
     return image;
   }
 

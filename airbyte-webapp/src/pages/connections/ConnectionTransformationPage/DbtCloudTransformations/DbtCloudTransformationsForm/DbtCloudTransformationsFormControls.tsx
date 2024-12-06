@@ -1,7 +1,9 @@
+import classNames from "classnames";
 import React from "react";
 import { useFieldArray, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
+import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu } from "components/ui/DropdownMenu";
@@ -15,7 +17,6 @@ import { DbtCloudTransformationsFormValues } from "./DbtCloudTransformationsForm
 import styles from "./DbtCloudTransformationsFormControls.module.scss";
 import { NoDbtIntegrationMsg } from "./NoDbtIntegrationMessage";
 import { NoJobsFoundForAccountMsg } from "./NoJobsFoundForAccountMessage";
-import { NoJobsPlaceholder } from "./NoJobsPlaceholder";
 import { JobListItem } from "../JobListItem";
 
 interface DbtCloudTransformationsFormControlsProps {
@@ -67,7 +68,7 @@ export const DbtCloudTransformationsFormControls: React.FC<DbtCloudTransformatio
           )
         ) : null}
       </FlexContainer>
-      <Box p="md" className={styles.cardBodyContainer}>
+      <Box p="md" className={classNames({ [styles.cardBodyContainer]: !isFormFieldsEmpty })}>
         {!isFormFieldsEmpty ? (
           <FlexContainer direction="column" gap="md">
             {fields.map((field, index) => (
@@ -77,7 +78,13 @@ export const DbtCloudTransformationsFormControls: React.FC<DbtCloudTransformatio
         ) : (
           <FlexContainer alignItems="center" justifyContent="center">
             <FlexContainer direction="column" alignItems="center">
-              {!hasDbtIntegration ? <NoDbtIntegrationMsg /> : isFormFieldsEmpty ? <NoJobsPlaceholder /> : null}
+              {!hasDbtIntegration ? (
+                <NoDbtIntegrationMsg />
+              ) : isFormFieldsEmpty ? (
+                <Box py="lg">
+                  <EmptyState icon="folder" text={<FormattedMessage id="connection.dbtCloudJobs.noJobs" />} />
+                </Box>
+              ) : null}
             </FlexContainer>
           </FlexContainer>
         )}

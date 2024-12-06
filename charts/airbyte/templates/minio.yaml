@@ -33,8 +33,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: airbyte-minio
-          # Pulls the default Minio image from Docker Hub
-          image: "{{ .Values.minio.image.repository }}:{{ .Values.minio.image.tag }}"
+          image: {{ include "imageUrl" (list .Values.minio.image $) }}
           args:
             - server
             - /storage
@@ -44,21 +43,21 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-airbyte-secrets
-                  key: DEFAULT_MINIO_ACCESS_KEY
+                  key: MINIO_ACCESS_KEY_ID 
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-airbyte-secrets
-                  key: DEFAULT_MINIO_SECRET_KEY
+                  key: MINIO_SECRET_ACCESS_KEY
           ports:
             - containerPort: 9000
           resources:
             requests:
-              memory: "1024Mi"
-              cpu: "200m"
+              memory: {{ .Values.minio.resources.requests.memory }}
+              cpu: {{ .Values.minio.resources.requests.cpu }}
             limits:
-              memory: "1024Mi"
-              cpu: "200m"
+              memory: {{ .Values.minio.resources.limits.memory }}
+              cpu: {{ .Values.minio.resources.limits.cpu }}
           # Mount the volume into the pod
           securityContext:
             allowPrivilegeEscalation: false 
@@ -87,6 +86,12 @@ spec:
       {{- with .Values.minio.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
       {{- end }}
 
 ---
@@ -117,12 +122,18 @@ metadata:
     "helm.sh/hook": post-install, post-upgrade
     "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
 spec:
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- range .Values.global.imagePullSecrets }}
+      {{- printf "- name: %s" .name | nindent 8 }}
+    {{- end }}
+  {{- end }}
   restartPolicy: OnFailure
   securityContext:
     fsGroup: 1000
   containers:
     - name: minio-mc
-      image: airbyte/mc
+      image: {{ include "imageUrl" (list .Values.minio.mcImage $) }}
       command: ["/bin/sh", "-c",
         "until (/usr/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
           /usr/bin/mc mb --ignore-existing myminio/state-storage;
@@ -159,12 +170,12 @@ spec:
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_ACCESS_KEY
+              key: MINIO_ACCESS_KEY_ID
         - name: MINIO_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_SECRET_KEY
+              key: MINIO_SECRET_ACCESS_KEY
         {{- end }}
         - name: MINIO_ENDPOINT
           valueFrom:

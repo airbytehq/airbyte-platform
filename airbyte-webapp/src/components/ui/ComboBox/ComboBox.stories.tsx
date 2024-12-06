@@ -105,15 +105,19 @@ WithIcons.args = {
   options: [
     {
       value: "success",
-      icon: <Icon type="statusSuccess" size="sm" color="success" />,
+      iconLeft: <Icon type="statusSuccess" size="sm" color="success" />,
     },
     {
       value: "warning",
-      icon: <Icon type="statusWarning" size="sm" color="warning" />,
+      iconLeft: <Icon type="statusWarning" size="sm" color="warning" />,
     },
     {
       value: "error",
-      icon: <Icon type="statusError" size="sm" color="error" />,
+      iconLeft: <Icon type="statusError" size="sm" color="error" />,
+    },
+    {
+      value: "error",
+      iconRight: <Icon type="aiStars" size="sm" color="magic" />,
     },
   ],
   value: "",

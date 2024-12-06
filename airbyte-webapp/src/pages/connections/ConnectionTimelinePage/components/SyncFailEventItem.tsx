@@ -6,7 +6,9 @@ import { Text } from "components/ui/Text";
 
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 
+import { JobStats } from "./JobStats";
 import styles from "./SyncFailEventItem.module.scss";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
@@ -16,15 +18,17 @@ import { syncFailEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface SyncFailEventItemProps {
-  syncEvent: InferType<typeof syncFailEventSchema>;
+  event: InferType<typeof syncFailEventSchema>;
 }
 
-export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent }) => {
-  const { formatMessage } = useIntl();
-  const titleId = titleIdMap[syncEvent.eventType];
+export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) => {
+  const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
-  const failureUiDetails = failureUiDetailsFromReason(syncEvent.summary.failureReason, formatMessage);
-  const jobStatus = getStatusByEventType(syncEvent.eventType);
+  const { formatMessage } = useIntl();
+  const titleId = titleIdMap[event.eventType];
+
+  const failureUiDetails = failureUiDetailsFromReason(event.summary.failureReason, formatMessage);
+  const jobStatus = getStatusByEventType(event.eventType);
 
   return (
     <ConnectionTimelineEventItem>
@@ -33,17 +37,19 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
+        <JobStats {...event.summary} />
         {failureUiDetails && (
           <Box pt="xs" className={styles.details}>
             <JobFailureDetails failureUiDetails={failureUiDetails} />
           </Box>
         )}
+        {!failureUiDetails && showExtendedStats && (
+          <Text as="span" color="grey400" size="sm">
+            <FormattedMessage id="jobs.jobId" values={{ id: event.summary.jobId }} />
+          </Text>
+        )}
       </ConnectionTimelineEventSummary>
-      <ConnectionTimelineEventActions
-        createdAt={syncEvent.createdAt}
-        jobId={syncEvent.summary.jobId}
-        eventId={syncEvent.id}
-      />
+      <ConnectionTimelineEventActions createdAt={event.createdAt} jobId={event.summary.jobId} eventId={event.id} />
     </ConnectionTimelineEventItem>
   );
 };

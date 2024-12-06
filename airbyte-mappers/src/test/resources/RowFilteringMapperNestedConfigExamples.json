@@ -1,0 +1,72 @@
+[
+  {
+    "name": "row-filtering",
+    "config": {
+      "conditions": {
+        "type": "EQUAL",
+        "fieldName": "status",
+        "comparisonValue": "active"
+      }
+    }
+  },
+  {
+    "name": "row-filtering",
+    "config": {
+      "conditions": {
+        "type": "AND",
+        "conditions": [
+          {
+            "type": "EQUAL",
+            "fieldName": "status",
+            "comparisonValue": "active"
+          },
+          {
+            "type": "NOT",
+            "conditions": [
+              {
+                "type": "EQUAL",
+                "fieldName": "region",
+                "comparisonValue": "eu"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "row-filtering",
+    "config": {
+      "conditions": {
+        "type": "NOT",
+        "conditions": [
+          {
+            "type": "OR",
+            "conditions": [
+              {
+                "type": "EQUAL",
+                "fieldName": "region",
+                "comparisonValue": "us"
+              },
+              {
+                "type": "AND",
+                "conditions": [
+                  {
+                    "type": "EQUAL",
+                    "fieldName": "status",
+                    "comparisonValue": "inactive"
+                  },
+                  {
+                    "type": "EQUAL",
+                    "fieldName": "region",
+                    "comparisonValue": "eu"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+]

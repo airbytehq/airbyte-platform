@@ -12,6 +12,7 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -22,6 +23,8 @@ public interface ConnectorBuilderService {
 
   ConnectorBuilderProject getConnectorBuilderProject(UUID builderProjectId, boolean fetchManifestDraft) throws IOException, ConfigNotFoundException;
 
+  Optional<UUID> getConnectorBuilderProjectIdForActorDefinitionId(UUID actorDefinitionId) throws IOException;
+
   ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(UUID builderProjectId, Long version)
       throws ConfigNotFoundException, IOException;
 
@@ -31,13 +34,27 @@ public interface ConnectorBuilderService {
 
   void updateBuilderProjectTestingValues(UUID projectId, JsonNode testingValues) throws IOException;
 
-  void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
+  void writeBuilderProjectDraft(UUID projectId,
+                                UUID workspaceId,
+                                String name,
+                                JsonNode manifestDraft,
+                                UUID baseActorDefinitionVersionId,
+                                String contributionUrl,
+                                UUID contributionActorDefinitionId)
+      throws IOException;
 
   void deleteBuilderProjectDraft(UUID projectId) throws IOException;
 
   void deleteManifestDraftForActorDefinition(UUID actorDefinitionId, UUID workspaceId) throws IOException;
 
-  void updateBuilderProjectAndActorDefinition(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft, UUID actorDefinitionId)
+  void updateBuilderProjectAndActorDefinition(UUID projectId,
+                                              UUID workspaceId,
+                                              String name,
+                                              JsonNode manifestDraft,
+                                              UUID baseActorDefinitionVersionId,
+                                              String contributionUrl,
+                                              UUID contributionActorDefinitionId,
+                                              UUID actorDefinitionId)
       throws IOException;
 
   void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId, UUID actorDefinitionId) throws IOException;

@@ -9,16 +9,16 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { RoleManagementCell } from "./components/RoleManagementCell";
-import { getWorkspaceAccessLevel, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
 import { UserCell } from "./components/UserCell";
+import { getWorkspaceAccessLevel, UnifiedUserModel } from "./components/util";
 
 export const WorkspaceUsersTable: React.FC<{
-  users: UnifiedWorkspaceUserModel[];
+  users: UnifiedUserModel[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
 
-  const columnHelper = createColumnHelper<UnifiedWorkspaceUserModel>();
+  const columnHelper = createColumnHelper<UnifiedUserModel>();
 
   const columns = useMemo(
     () => [

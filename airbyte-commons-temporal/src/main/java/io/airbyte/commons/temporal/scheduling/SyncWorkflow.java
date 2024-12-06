@@ -8,6 +8,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import java.util.UUID;
@@ -24,5 +25,8 @@ public interface SyncWorkflow {
                          IntegrationLauncherConfig destinationLauncherConfig,
                          StandardSyncInput syncInput,
                          UUID connectionId);
+
+  @SignalMethod
+  void checkAsyncActivityStatus();
 
 }

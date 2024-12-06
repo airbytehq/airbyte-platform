@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import React from "react";
 import { EMPTY, Subject } from "rxjs";
 
-import { Experiments } from "./experiments";
+import { Experiments, defaultExperimentValues } from "./experiments";
 import { ExperimentProvider, ExperimentService, useExperiment } from "./ExperimentService";
 
 type TestExperimentValueType = Experiments["connector.airbyteCloudIpAddresses"];
@@ -22,6 +22,10 @@ const removeContext = jest.fn();
 
 describe("ExperimentService", () => {
   describe("useExperiment", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it("should return the value from the ExperimentService if provided", () => {
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <ExperimentProvider
@@ -36,11 +40,12 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), { wrapper });
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), { wrapper });
       expect(result.current).toEqual("10.0.0.0,10.1.0.0");
     });
 
     it("should return the defaultValue if ExperimentService provides undefined", () => {
+      jest.replaceProperty(defaultExperimentValues, "connector.airbyteCloudIpAddresses", "10.42.0.0");
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <ExperimentProvider
           value={{
@@ -55,12 +60,13 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), { wrapper });
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), { wrapper });
       expect(result.current).toEqual("10.42.0.0");
     });
 
     it("should return the default value if no ExperimentService is provided", () => {
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"));
+      jest.replaceProperty(defaultExperimentValues, "connector.airbyteCloudIpAddresses", "10.42.0.0");
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY));
       expect(result.current).toEqual("10.42.0.0");
     });
 
@@ -80,7 +86,7 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), {
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), {
         wrapper,
       });
       expect(result.current).toEqual("10.0.0.0,10.1.0.0");

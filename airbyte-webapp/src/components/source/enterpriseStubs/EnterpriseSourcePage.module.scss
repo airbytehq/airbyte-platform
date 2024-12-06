@@ -1,0 +1,86 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.pageContent {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+%section {
+  flex: 1;
+}
+
+.leftSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  z-index: z-indices.$base;
+}
+
+.blurredForm {
+  @extend %section;
+
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.backgroundImage {
+  height: 100%;
+  width: 100%;
+}
+
+.backgroundImageDark {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.content {
+  position: absolute;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.backButtonContainer {
+  padding: variables.$spacing-md;
+}
+
+.button {
+  background-color: colors.$blue-400;
+  color: colors.$white;
+  gap: variables.$spacing-sm;
+  margin-top: variables.$spacing-md;
+
+  &:hover {
+    background-color: colors.$blue-500;
+    color: colors.$white;
+  }
+
+  &:active {
+    background-color: colors.$blue-600;
+  }
+}
+
+.rightSection {
+  @extend %section;
+
+  overflow-y: auto;
+  box-shadow: var(--box-shadow-left);
+  background-color: var(--color-foreground);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  z-index: z-indices.$sidePanel;
+}
+
+.enterpriseInterestText {
+  // Keep the text visible against the blurred form in dark mode
+  color: colors.$black;
+  margin-bottom: variables.$spacing-md;
+}

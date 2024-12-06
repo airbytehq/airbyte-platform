@@ -22,16 +22,13 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -39,6 +36,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,7 +111,9 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 
-  private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
 
   @BeforeEach
   void setup() throws SQLException, JsonValidationException, IOException {
@@ -126,53 +126,50 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = spy(
-        new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
-            new CatalogServiceJooqImpl(database),
-            connectionService,
-            new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
-            new OperationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService,
-                connectionService,
-                actorDefinitionVersionUpdater),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+    actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
 
-    configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
+    sourceService = spy(
+        new SourceServiceJooqImpl(
+            database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService,
+            connectionService,
+            new ActorDefinitionVersionUpdater(
+                featureFlagClient,
+                connectionService,
+                actorDefinitionService,
+                scopedConfigurationService)));
+    destinationService = spy(
+        new DestinationServiceJooqImpl(
+            database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService,
+            connectionService,
+            new ActorDefinitionVersionUpdater(
+                featureFlagClient,
+                connectionService,
+                actorDefinitionService,
+                scopedConfigurationService)));
+
+    sourceService.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));
-    configRepository.writeConnectorMetadata(DESTINATION_DEFINITION,
+    destinationService.writeConnectorMetadata(DESTINATION_DEFINITION,
         createActorDefVersion(DESTINATION_DEFINITION.getDestinationDefinitionId()), List.of(OTHER_CONNECTOR_BREAKING_CHANGE));
   }
 
   @Test
   void testGetBreakingChanges() throws IOException {
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef1 = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef1 =
+        actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
     assertEquals(4, breakingChangesForDef1.size());
     assertEquals(BREAKING_CHANGE, breakingChangesForDef1.get(0));
 
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef2 = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_2);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef2 =
+        actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_2);
     assertEquals(1, breakingChangesForDef2.size());
     assertEquals(OTHER_CONNECTOR_BREAKING_CHANGE, breakingChangesForDef2.get(0));
   }
@@ -187,11 +184,11 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withUpgradeDeadline("2025-12-12") // Updated date
         .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#updated-miration-url")
         .withScopedImpact(List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream3"))));
-    configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
+    sourceService.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(updatedBreakingChange, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));
 
     // Check updated breaking change
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
+    final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1);
     assertEquals(4, breakingChanges.size());
     assertEquals(updatedBreakingChange, breakingChanges.get(0));
   }
@@ -200,29 +197,29 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   void testListBreakingChanges() throws IOException {
     final List<ActorDefinitionBreakingChange> expectedAllBreakingChanges =
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4, OTHER_CONNECTOR_BREAKING_CHANGE);
-    assertThat(expectedAllBreakingChanges).containsExactlyInAnyOrderElementsOf(configRepository.listBreakingChanges());
+    assertThat(expectedAllBreakingChanges).containsExactlyInAnyOrderElementsOf(actorDefinitionService.listBreakingChanges());
   }
 
   @Test
   void testListBreakingChangesForVersion() throws IOException {
     final ActorDefinitionVersion ADV_4_0_0 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "4.0.0");
-    configRepository.writeConnectorMetadata(SOURCE_DEFINITION, ADV_4_0_0);
+    sourceService.writeConnectorMetadata(SOURCE_DEFINITION, ADV_4_0_0, Collections.emptyList());
 
     // no breaking changes for latest default
-    assertEquals(4, configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1).size());
-    assertEquals(0, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_4_0_0).size());
+    assertEquals(4, actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1).size());
+    assertEquals(0, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_4_0_0).size());
 
     // should see future breaking changes for 2.0.0
     final ActorDefinitionVersion ADV_2_0_0 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "2.0.0");
-    assertEquals(2, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
-    assertEquals(List.of(BREAKING_CHANGE_3, BREAKING_CHANGE_4), configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
+    assertEquals(2, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
+    assertEquals(List.of(BREAKING_CHANGE_3, BREAKING_CHANGE_4), actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
 
     // move back default version for Actor Definition to 3.0.0, should stop seeing "rolled back"
     // breaking changes
     final ActorDefinitionVersion ADV_3_0_0 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "3.0.0");
-    configRepository.writeConnectorMetadata(SOURCE_DEFINITION, ADV_3_0_0);
-    assertEquals(1, configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
-    assertEquals(List.of(BREAKING_CHANGE_3), configRepository.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
+    sourceService.writeConnectorMetadata(SOURCE_DEFINITION, ADV_3_0_0, Collections.emptyList());
+    assertEquals(1, actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0).size());
+    assertEquals(List.of(BREAKING_CHANGE_3), actorDefinitionService.listBreakingChangesForActorDefinitionVersion(ADV_2_0_0));
   }
 
 }

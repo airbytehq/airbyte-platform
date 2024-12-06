@@ -3,6 +3,7 @@ package io.airbyte.workers.internal
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.config.ScopeType
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.AirbyteLogMessage
 import io.airbyte.protocol.models.AirbyteMessage
@@ -32,7 +33,7 @@ class AnalyticsMessageTrackerTest {
   @BeforeEach
   fun setUp() {
     trackingClient = mockk()
-    every { trackingClient.track(any(), any(), any()) } returns Unit
+    every { trackingClient.track(any(), any(), any(), any()) } returns Unit
     analyticsMessageTracker = AnalyticsMessageTracker(trackingClient)
     ctx =
       ReplicationContext(
@@ -59,7 +60,7 @@ class AnalyticsMessageTrackerTest {
       analyticsMessageTracker.addMessage(message, AirbyteMessageOrigin.SOURCE)
     }
 
-    verify(exactly = 1) { trackingClient.track(any(), "analytics_messages", any()) }
+    verify(exactly = 1) { trackingClient.track(any(), ScopeType.WORKSPACE, "analytics_messages", any()) }
   }
 
   @Test
@@ -67,7 +68,7 @@ class AnalyticsMessageTrackerTest {
     val nonAnalyticsMessage = createNonAnalyticsAirbyteMessage()
     analyticsMessageTracker.addMessage(nonAnalyticsMessage, AirbyteMessageOrigin.SOURCE)
 
-    verify(exactly = 0) { trackingClient.track(any(), any(), any()) }
+    verify(exactly = 0) { trackingClient.track(any(), any(), any(), any()) }
   }
 
   @Test
@@ -80,7 +81,7 @@ class AnalyticsMessageTrackerTest {
     // never track more batches than what would be required to get to max analytics messages, even if more are added
     verify(
       exactly = MAX_ANALYTICS_MESSAGES_PER_SYNC / MAX_ANALYTICS_MESSAGES_PER_BATCH,
-    ) { trackingClient.track(any(), "analytics_messages", any()) }
+    ) { trackingClient.track(any(), ScopeType.WORKSPACE, "analytics_messages", any()) }
   }
 
   @Test
@@ -92,13 +93,13 @@ class AnalyticsMessageTrackerTest {
 
     analyticsMessageTracker.flush()
 
-    verify(exactly = 0) { trackingClient.track(any(), any(), any()) }
+    verify(exactly = 0) { trackingClient.track(any(), any(), any(), any()) }
 
     analyticsMessageTracker.addMessage(message, AirbyteMessageOrigin.SOURCE)
 
     analyticsMessageTracker.flush()
 
-    verify(exactly = 1) { trackingClient.track(any(), any(), any()) }
+    verify(exactly = 1) { trackingClient.track(any(), any(), any(), any()) }
   }
 
   @Test
@@ -106,11 +107,11 @@ class AnalyticsMessageTrackerTest {
     val message = createAnalyticsAirbyteMessage()
     analyticsMessageTracker.addMessage(message, AirbyteMessageOrigin.SOURCE)
 
-    verify(exactly = 0) { trackingClient.track(any(), any(), any()) }
+    verify(exactly = 0) { trackingClient.track(any(), any(), any(), any()) }
 
     analyticsMessageTracker.flush()
 
-    verify(exactly = 1) { trackingClient.track(any(), any(), any()) }
+    verify(exactly = 1) { trackingClient.track(any(), any(), any(), any()) }
   }
 
   @Test
@@ -124,7 +125,7 @@ class AnalyticsMessageTrackerTest {
 
     // Capture the argument passed to track
     val payloadSlot = slot<Map<String, Any?>>()
-    verify(exactly = 1) { trackingClient.track(any(), any(), capture(payloadSlot)) }
+    verify(exactly = 1) { trackingClient.track(any(), ScopeType.WORKSPACE, any(), capture(payloadSlot)) }
 
     // Extract and assert the captured payload
     val capturedPayload = payloadSlot.captured

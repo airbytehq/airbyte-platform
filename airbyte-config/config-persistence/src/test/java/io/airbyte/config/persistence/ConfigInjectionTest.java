@@ -22,21 +22,20 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,15 +43,14 @@ import org.junit.jupiter.api.Test;
 
 class ConfigInjectionTest extends BaseConfigDatabaseTest {
 
-  private ConfigRepository configRepository;
   private ConfigInjector configInjector;
-
   private StandardSourceDefinition sourceDefinition;
-
   private JsonNode exampleConfig;
 
   private static final String SAMPLE_CONFIG_KEY = "my_config_key";
   private static final String SAMPLE_INJECTED_KEY = "injected_under";
+  private ConnectorBuilderService connectorBuilderService;
+  private SourceService sourceService;
 
   ConfigInjectionTest() {}
 
@@ -63,42 +61,24 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
-    final ConnectionService connectionService = mock(ConnectionService.class);
+    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
-    configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
+
+    connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
+    sourceService = new SourceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
         connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
+        new ActorDefinitionVersionUpdater(
             featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
             connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
-    configInjector = new ConfigInjector(configRepository);
+            actorDefinitionService,
+            scopedConfigurationService));
+    configInjector = new ConfigInjector(new ConnectorBuilderServiceJooqImpl(database));
     exampleConfig = Jsons.jsonNode(Map.of(SAMPLE_CONFIG_KEY, 123));
   }
 
@@ -132,7 +112,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
 
     // write an injection object with the same definition id and the same injection path - will update
     // the existing one
-    configRepository.writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
+    connectorBuilderService.writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId()).withInjectionPath("a").withJsonToInject(new TextNode("abc")));
 
     final JsonNode injected = configInjector.injectConfig(exampleConfig, sourceDefinition.getSourceDefinitionId());
@@ -148,7 +128,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
 
     // write an injection object with the same definition id and a new injection path - will create a
     // new one and leave the others in place
-    configRepository.writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
+    connectorBuilderService.writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId()).withInjectionPath("c").withJsonToInject(new TextNode("thirdInject")));
 
     final JsonNode injected = configInjector.injectConfig(exampleConfig, sourceDefinition.getSourceDefinitionId());
@@ -161,7 +141,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   private void createBaseObjects() throws IOException {
     sourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, Collections.emptyList());
 
     createInjection(sourceDefinition, "a");
     createInjection(sourceDefinition, "b");
@@ -169,7 +149,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     // unreachable injection, should not show up
     final StandardSourceDefinition otherSourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(otherSourceDefinition.getSourceDefinitionId());
-    configRepository.writeConnectorMetadata(otherSourceDefinition, actorDefinitionVersion2);
+    sourceService.writeConnectorMetadata(otherSourceDefinition, actorDefinitionVersion2, Collections.emptyList());
     createInjection(otherSourceDefinition, "c");
   }
 
@@ -178,7 +158,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     final ActorDefinitionConfigInjection injection = new ActorDefinitionConfigInjection().withActorDefinitionId(definition.getSourceDefinitionId())
         .withInjectionPath(path).withJsonToInject(Jsons.jsonNode(Map.of(SAMPLE_INJECTED_KEY, path)));
 
-    configRepository.writeActorDefinitionConfigInjectionForPath(injection);
+    connectorBuilderService.writeActorDefinitionConfigInjectionForPath(injection);
     return injection;
   }
 

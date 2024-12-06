@@ -8,21 +8,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.version.AirbyteVersion;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,28 +28,16 @@ import org.slf4j.LoggerFactory;
 public class EnvConfigs implements Configs {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EnvConfigs.class);
-  private static final String DEFAULT_SIDECAR_MEMORY_REQUEST = "25Mi";
-  private static final String DEFAULT_SIDECAR_KUBE_MEMORY_LIMIT = "50Mi";
-  private static final String DEFAULT_SIDECAR_KUBE_CPU_REQUEST = "0.1";
 
-  // Test show at least 1.5 CPU is required to hit >20 Mb/s. Overprovision to ensure sidecar resources
-  // do not cause bottlenecks.
-  // This is fine as the limit only affects whether the container is throttled by Kube. It does not
-  // affect scheduling.
-  private static final String DEFAULT_SIDECAR_KUBE_CPU_LIMIT = "2.0";
   // job-type-specific overrides
-  private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
   private static final String DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
-  private static final String DEFAULT_JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
-  private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
   public static final int DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE = 100;
   public static final int DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = 14;
 
   public static final Map<String, Function<EnvConfigs, String>> JOB_SHARED_ENVS = Map.of(
       EnvVar.AIRBYTE_VERSION.name(), (instance) -> instance.getAirbyteVersion().serialize(),
       EnvVar.AIRBYTE_ROLE.name(), EnvConfigs::getAirbyteRole,
-      EnvVar.DEPLOYMENT_MODE.name(), (instance) -> instance.getDeploymentMode().name(),
-      EnvVar.WORKER_ENVIRONMENT.name(), (instance) -> instance.getWorkerEnvironment().name());
+      EnvVar.DEPLOYMENT_MODE.name(), (instance) -> instance.getDeploymentMode().name());
 
   private final Function<String, String> getEnv;
   private final Supplier<Set<String>> getAllEnvKeys;
@@ -93,11 +76,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public WorkerEnvironment getWorkerEnvironment() {
-    return getEnvOrDefault(EnvVar.WORKER_ENVIRONMENT, WorkerEnvironment.DOCKER, s -> WorkerEnvironment.valueOf(s.toUpperCase()));
-  }
-
-  @Override
   public Path getWorkspaceRoot() {
     return getPath(EnvVar.WORKSPACE_ROOT);
   }
@@ -118,55 +96,10 @@ public class EnvConfigs implements Configs {
     return getEnsureEnv(EnvVar.DATABASE_URL);
   }
 
-  /**
-   * Returns worker pod tolerations parsed from its own environment variable. The value of the env is
-   * a string that represents one or more tolerations.
-   * <ul>
-   * <li>Tolerations are separated by a `;`
-   * <li>Each toleration contains k=v pairs mentioning some/all of key, effect, operator and value and
-   * separated by `,`
-   * </ul>
-   * <p>
-   * For example:- The following represents two tolerations, one checking existence and another
-   * matching a value
-   * <p>
-   * key=airbyte-server,operator=Exists,effect=NoSchedule;key=airbyte-server,operator=Equals,value=true,effect=NoSchedule
-   *
-   * @return list of WorkerKubeToleration parsed from env
-   */
   @Override
   public List<TolerationPOJO> getJobKubeTolerations() {
     final String tolerationsStr = getEnvOrDefault(EnvVar.JOB_KUBE_TOLERATIONS, "");
-
-    final Stream<String> tolerations = Strings.isNullOrEmpty(tolerationsStr) ? Stream.of()
-        : Splitter.on(";")
-            .splitToStream(tolerationsStr)
-            .filter(tolerationStr -> !Strings.isNullOrEmpty(tolerationStr));
-
-    return tolerations
-        .map(this::parseToleration)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList());
-  }
-
-  private TolerationPOJO parseToleration(final String tolerationStr) {
-    final Map<String, String> tolerationMap = Splitter.on(",")
-        .splitToStream(tolerationStr)
-        .map(s -> s.split("="))
-        .collect(Collectors.toMap(s -> s[0], s -> s[1]));
-
-    if (tolerationMap.containsKey("key") && tolerationMap.containsKey("effect") && tolerationMap.containsKey("operator")) {
-      return new TolerationPOJO(
-          tolerationMap.get("key"),
-          tolerationMap.get("effect"),
-          tolerationMap.get("value"),
-          tolerationMap.get("operator"));
-    } else {
-      LOGGER.warn(
-          "Ignoring toleration {}, missing one of key,effect or operator",
-          tolerationStr);
-      return null;
-    }
+    return TolerationPOJO.getJobKubeTolerations(tolerationsStr);
   }
 
   /**
@@ -238,11 +171,6 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY, DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY);
   }
 
-  @Override
-  public String getJobKubeSidecarContainerImagePullPolicy() {
-    return getEnvOrDefault(EnvVar.JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY, DEFAULT_JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY);
-  }
-
   /**
    * Returns the name of the secret to be used when pulling down docker images for jobs. Automatically
    * injected in the KubePodProcess class and used in the job pod templates.
@@ -254,57 +182,6 @@ public class EnvConfigs implements Configs {
   public List<String> getJobKubeMainContainerImagePullSecrets() {
     final String secrets = getEnvOrDefault(EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET, "");
     return Arrays.stream(secrets.split(",")).collect(Collectors.toList());
-  }
-
-  @Override
-  public String getSidecarKubeCpuRequest() {
-    return getEnvOrDefault(EnvVar.SIDECAR_KUBE_CPU_REQUEST, DEFAULT_SIDECAR_KUBE_CPU_REQUEST);
-  }
-
-  @Override
-  public String getSidecarKubeCpuLimit() {
-    return getEnvOrDefault(EnvVar.SIDECAR_KUBE_CPU_LIMIT, DEFAULT_SIDECAR_KUBE_CPU_LIMIT);
-  }
-
-  @Override
-  public String getSidecarKubeMemoryLimit() {
-    return getEnvOrDefault(EnvVar.SIDECAR_KUBE_MEMORY_LIMIT, DEFAULT_SIDECAR_KUBE_MEMORY_LIMIT);
-  }
-
-  @Override
-  public String getSidecarMemoryRequest() {
-    return getEnvOrDefault(EnvVar.SIDECAR_MEMORY_REQUEST, DEFAULT_SIDECAR_MEMORY_REQUEST);
-  }
-
-  @Override
-  public String getSocatSidecarKubeCpuRequest() {
-    return getEnvOrDefault(EnvVar.SOCAT_KUBE_CPU_REQUEST, getSidecarKubeCpuRequest());
-  }
-
-  @Override
-  public String getSocatSidecarKubeCpuLimit() {
-    return getEnvOrDefault(EnvVar.SOCAT_KUBE_CPU_LIMIT, getSidecarKubeCpuLimit());
-  }
-
-  /**
-   * There are two types of environment variables available to the job container.
-   * <ul>
-   * <li>Exclusive variables prefixed with JOB_DEFAULT_ENV_PREFIX</li>
-   * <li>Shared variables defined in JOB_SHARED_ENVS</li>
-   * </ul>
-   */
-  @Override
-  public Map<String, String> getJobDefaultEnvMap() {
-    final Map<String, String> jobPrefixedEnvMap = getAllEnvKeys.get().stream()
-        .filter(key -> key.startsWith(EnvVar.JOB_DEFAULT_ENV_.name()))
-        .collect(Collectors.toMap(key -> key.replace(EnvVar.JOB_DEFAULT_ENV_.name(), ""), getEnv));
-    // This method assumes that these shared env variables are not critical to the execution
-    // of the jobs, and only serve as metadata. So any exception is swallowed and default to
-    // an empty string. Change this logic if this assumption no longer holds.
-    final Map<String, String> jobSharedEnvMap = JOB_SHARED_ENVS.entrySet().stream().collect(Collectors.toMap(
-        Entry::getKey,
-        entry -> Exceptions.swallowWithDefault(() -> Objects.requireNonNullElse(entry.getValue().apply(this), ""), "")));
-    return MoreMaps.merge(jobPrefixedEnvMap, jobSharedEnvMap);
   }
 
   // Helpers

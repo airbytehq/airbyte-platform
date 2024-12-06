@@ -4,75 +4,73 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
-import { OrganizationUserRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
-import { RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
+import { FeatureItem, useFeature } from "core/services/features";
+import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { RoleManagementCell } from "./components/RoleManagementCell";
 import { UserCell } from "./components/UserCell";
+import { UnifiedUserModel, getOrganizationAccessLevel } from "./components/util";
 
 export const OrganizationUsersTable: React.FC<{
-  users: OrganizationUserRead[];
+  users: UnifiedUserModel[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
+  const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
 
-  const columnHelper = createColumnHelper<OrganizationUserRead>();
+  const columnHelper = createColumnHelper<UnifiedUserModel>();
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor("name", {
+      columnHelper.accessor("userName", {
         header: () => <FormattedMessage id="settings.accessManagement.table.column.member" />,
         cell: (props) => {
           return (
             <UserCell
-              name={props.row.original.name}
-              email={props.row.original.email}
-              isCurrentUser={props.row.original.userId === currentUserId}
-              uniqueId={props.row.original.userId}
+              name={props.row.original.userName}
+              email={props.row.original.userEmail}
+              isCurrentUser={props.row.original.id === currentUserId}
+              uniqueId={props.row.original.id}
             />
           );
         },
         sortingFn: "alphanumeric",
       }),
-      columnHelper.accessor("permissionType", {
-        id: "permissionType",
-        header: () => (
-          <>
-            <FormattedMessage id="resource.organization" />{" "}
-            <FormattedMessage id="settings.accessManagement.table.column.role" />
-          </>
-        ),
-        cell: (props) => {
-          const user = {
-            userName: props.row.original.name ?? "",
-            id: props.row.original.userId,
-            userEmail: props.row.original.email,
-            organizationPermission: {
-              permissionType: props.row.original.permissionType,
-              organizationId: props.row.original.organizationId,
-              permissionId: props.row.original.permissionId,
-              userId: props.row.original.userId,
-            },
-          };
-
-          return <RoleManagementCell user={user} resourceType="organization" />;
+      columnHelper.accessor(
+        (row) => {
+          return getOrganizationAccessLevel(row);
         },
-        sortingFn: (a, b, order) => {
-          const aRole = partitionPermissionType(a.original.permissionType)[1];
-          const bRole = partitionPermissionType(b.original.permissionType)[1];
+        {
+          id: "permissionType",
+          header: () => (
+            <>
+              <FormattedMessage id="resource.organization" />{" "}
+              <FormattedMessage id="settings.accessManagement.table.column.role" />
+            </>
+          ),
+          cell: (props) => {
+            return <RoleManagementCell user={props.row.original} resourceType="organization" />;
+          },
+          enableSorting: !!areAllRbacRolesEnabled,
+          sortingFn: (a, b, order) => {
+            const aRole = getOrganizationAccessLevel(a.original);
+            const bRole = getOrganizationAccessLevel(b.original);
 
-          const aValue = RbacRoleHierarchy.indexOf(aRole);
-          const bValue = RbacRoleHierarchy.indexOf(bRole);
+            const aValue = RbacRoleHierarchy.indexOf(aRole);
+            const bValue = RbacRoleHierarchy.indexOf(bRole);
 
-          if (order === "asc") {
-            return aValue - bValue;
-          }
-          return bValue - aValue;
-        },
-      }),
+            if (order === "asc") {
+              return aValue - bValue;
+            }
+            return bValue - aValue;
+          },
+        }
+      ),
     ],
-    [columnHelper, currentUserId]
+    [areAllRbacRolesEnabled, columnHelper, currentUserId]
   );
 
-  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} stickyHeaders={false} />;
+  return (
+    <Table data={users} columns={columns} initialSortBy={[{ id: "userName", desc: false }]} stickyHeaders={false} />
+  );
 };

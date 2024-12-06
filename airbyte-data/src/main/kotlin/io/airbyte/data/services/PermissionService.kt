@@ -8,6 +8,16 @@ import java.util.UUID
  */
 interface PermissionService {
   /**
+   * Get a permission by its unique id.
+   */
+  fun getPermission(permissionId: UUID): Permission
+
+  /**
+   * Get all permissions
+   */
+  fun listPermissions(): List<Permission>
+
+  /**
    * Get all permissions for a given user.
    */
   fun getPermissionsForUser(userId: UUID): List<Permission>

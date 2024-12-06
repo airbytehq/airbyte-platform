@@ -11,6 +11,9 @@ $border-radius: variables.$border-radius-lg;
   max-width: 100%;
   border-radius: $border-radius;
 
+  // create a new stacking context so that thead--sticky doesn't show over higher z-index elements like filter dropdowns
+  will-change: opacity;
+
   &--default {
     box-shadow: variables.$box-shadow;
   }

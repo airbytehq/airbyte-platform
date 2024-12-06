@@ -135,7 +135,7 @@ abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>
            INNER JOIN (
                SELECT id, created_at, updated_at
                FROM jobs
-               WHERE config_type = 'sync' AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
+               WHERE config_type in ('sync', 'refresh') AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
                ORDER BY created_at DESC
                LIMIT :lastXJobs
              ) AS last_x_jobs ON j.id = last_x_jobs.id

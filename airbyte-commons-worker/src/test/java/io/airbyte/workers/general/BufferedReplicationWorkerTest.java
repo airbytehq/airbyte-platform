@@ -14,8 +14,6 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
-import java.util.Optional;
-import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,11 +23,12 @@ import org.junit.jupiter.api.Test;
 class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
 
   @Override
-  ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
+  BufferedReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
-        analyticsMessageTracker, Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory));
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
+        analyticsMessageTracker, "workload-id", airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
+        recordMapper, featureFlagClient, destinationCatalogGenerator));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -41,13 +40,10 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         replicationFeatureFlagReader,
         replicationWorkerHelper,
         destinationTimeoutMonitor,
-        getQueueType(),
-        OptionalInt.of(1),
-        streamStatusCompletionTracker);
-  }
-
-  public BufferedReplicationWorkerType getQueueType() {
-    return BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
+        streamStatusCompletionTracker,
+        BufferConfiguration.withPollTimeout(1),
+        metricClient,
+        replicationInput);
   }
 
   // BufferedReplicationWorkerTests.
@@ -66,7 +62,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in readFromSource")).when(source).attemptRead();
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -77,7 +73,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in processMessage")).when(messageTracker).acceptFromSource(any());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -88,7 +84,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in writeToDest")).when(destination).accept(any());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -99,7 +95,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     setUpInfiniteSource();
 
     doThrow(new RuntimeException("Failure in readFromDest")).when(destination).attemptRead();
-    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final var worker = getDefaultReplicationWorker();
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());

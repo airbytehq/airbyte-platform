@@ -35,6 +35,17 @@ export interface IntentDefinition {
   roles: PermissionType[];
 }
 
+const intentEnumEntry = (intentKey: string, intent: IntentDefinition) => `
+  /**
+   * **${intent.name}**
+   *
+   * ${intent.description}
+   *
+   * _Allowed roles:_
+${intent.roles.map((role) => `   * - ${role}`).join("\n")}
+   */
+  ${intentKey} = "${intentKey}",`;
+
 /**
  * Generates a strongly-typed generated-intents.ts file based on the intents.yaml defined in airbyte-commons-auth
  */
@@ -42,7 +53,7 @@ export function generateIntents(): Plugin {
   return {
     name: "airbyte/intent-generation",
     buildStart() {
-      process.stdout.write(`🤖 Generate ${chalk.cyan("intents.ts")} file... `);
+      process.stdout.write(`🤖 Generate ${chalk.cyan("generated-intents.ts")} file... `);
       const { intents } = yaml.load(
         fs.readFileSync(
           path.resolve(__dirname, "../../../airbyte-commons-auth/src/main/resources/intents.yaml"),
@@ -52,9 +63,17 @@ export function generateIntents(): Plugin {
 
       const patchedIntents = patchRoleStrings(intents);
 
+      const intentEnum = `export const enum Intent {${Object.entries(patchedIntents)
+        .map(([intentKey, intent]) => intentEnumEntry(intentKey, intent))
+        .join("")}\n}`;
+
+      const intentMap = `export const INTENTS = {\n${Object.entries(patchedIntents)
+        .map(([intentKey, intent]) => `[Intent.${intentKey}]: ${JSON.stringify(intent, null, 2)},`)
+        .join("\n")}\n} as const;`;
+
       fs.writeFileSync(
         path.resolve(__dirname, "../../src/core/utils/rbac/generated-intents.ts"),
-        `// eslint-disable\nexport const INTENTS = ${JSON.stringify(patchedIntents, null, 2)} as const;`,
+        `// eslint-disable\n${intentEnum}\n\n${intentMap}\n`,
         "utf-8"
       );
 

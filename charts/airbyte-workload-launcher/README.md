@@ -36,7 +36,6 @@ Helm chart to deploy airbyte-workload-launcher
 | global.jobs.kube.annotations | object | `{}` |  |
 | global.jobs.kube.images.busybox | string | `""` |  |
 | global.jobs.kube.images.curl | string | `""` |  |
-| global.jobs.kube.images.socat | string | `""` |  |
 | global.jobs.kube.labels | object | `{}` |  |
 | global.jobs.kube.main_container_image_pull_secret | string | `""` |  |
 | global.jobs.kube.nodeSelector | object | `{}` |  |

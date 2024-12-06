@@ -53,7 +53,7 @@ spec:
       {{- end }}
       containers:
         - name: airbyte-cron
-          image: {{ printf "%s:%s" .Values.image.repository (include "cron.imageTag" .) }}
+          image: {{ include "imageUrl" (list .Values.image $) }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
           {{- if eq .Values.global.deploymentMode "oss"  }}

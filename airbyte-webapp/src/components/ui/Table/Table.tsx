@@ -6,6 +6,8 @@ import {
   Row,
   getSortedRowModel,
   getCoreRowModel,
+  ColumnFiltersState,
+  getFilteredRowModel,
 } from "@tanstack/react-table";
 import classNames from "classnames";
 import React, { PropsWithChildren, useMemo } from "react";
@@ -33,6 +35,7 @@ export interface TableProps<T> {
   expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
   testId?: string;
   columnVisibility?: VisibilityState;
+  columnFilters?: ColumnFiltersState;
   sorting?: boolean;
   stickyHeaders?: boolean;
   getRowClassName?: (data: T) => string | undefined;
@@ -65,6 +68,7 @@ export const Table = <T,>({
   getIsRowExpanded,
   expandedRow,
   columnVisibility,
+  columnFilters,
   getRowClassName,
   stickyHeaders = true,
   sorting = true,
@@ -80,8 +84,12 @@ export const Table = <T,>({
       columnVisibility,
       sorting: initialSortBy,
     },
+    state: {
+      columnFilters,
+    },
     getCoreRowModel: getCoreRowModel<T>(),
     getSortedRowModel: getSortedRowModel<T>(),
+    getFilteredRowModel: getFilteredRowModel<T>(),
     getRowCanExpand,
     getIsRowExpanded,
     enableSorting: sorting,

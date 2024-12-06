@@ -4,6 +4,23 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
 }
 
+airbyte {
+  spotless {
+    excludes =
+      listOf(
+        "src/main/openapi/api.yaml",
+        "src/main/openapi/api_sdk.yaml",
+        "src/main/openapi/api_terraform.yaml",
+        "src/main/openapi/api_documentation_connections.yaml",
+        "src/main/openapi/api_documentation_sources.yaml",
+        "src/main/openapi/api_documentation_destinations.yaml",
+        "src/main/openapi/api_documentation_streams.yaml",
+        "src/main/openapi/api_documentation_jobs.yaml",
+        "src/main/openapi/api_documentation_workspaces.yaml",
+      )
+  }
+}
+
 dependencies {
   annotationProcessor(libs.micronaut.openapi)
 
@@ -43,7 +60,8 @@ dependencies {
 
 val specFile = "$projectDir/src/main/openapi/config.yaml"
 
-val genApiServer = tasks.register<GenerateTask>("generateApiServer") {
+val genApiServer =
+  tasks.register<GenerateTask>("generateApiServer") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server"
 
     inputs.file(specFile)
@@ -52,52 +70,58 @@ val genApiServer = tasks.register<GenerateTask>("generateApiServer") {
     generatorName = "jaxrs-spec"
     inputSpec = specFile
     outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/jaxrs-spec"
 
     apiPackage = "io.airbyte.api.generated"
     invokerPackage = "io.airbyte.api.invoker.generated"
     modelPackage = "io.airbyte.api.model.generated"
 
-    schemaMappings = mapOf(
-            "OAuthConfiguration"                to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceDefinitionSpecification"     to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceConfiguration"               to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "StreamJsonSchema"                  to "com.fasterxml.jackson.databind.JsonNode",
-            "StateBlob"                         to "com.fasterxml.jackson.databind.JsonNode",
-            "FieldSchema"                       to "com.fasterxml.jackson.databind.JsonNode",
-            "DeclarativeManifest"               to "com.fasterxml.jackson.databind.JsonNode",
-            "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
-            "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-  )
+    schemaMappings =
+      mapOf(
+        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
+        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
+        "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+        "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+      )
 
     generateApiDocumentation = false
 
-    configOptions = mapOf(
-            "dateLibrary"                   to "java8",
-            "generatePom"                   to "false",
-            "interfaceOnly"                 to "true",
+    configOptions =
+      mapOf(
+        "dateLibrary" to "java8",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
             /*
             JAX-RS generator does not respect nullable properties defined in the OpenApi Spec.
             It means that if a field is not nullable but not set it is still returning a null value for this field in the serialized json.
             The below Jackson annotation is made to only keep non null values in serialized json.
             We are not yet using nullable=true properties in our OpenApi so this is a valid workaround at the moment to circumvent the default JAX-RS behavior described above.
             Feel free to read the conversation on https://github.com/airbytehq/airbyte/pull/13370 for more details.
-            */
-            "additionalModelTypeAnnotations" to "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+             */
+        "additionalModelTypeAnnotations" to
+          "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+        // Generate separate classes for each endpoint "domain"
+        "useTags" to "true",
+        "useJakartaEe" to "true",
+      )
 
-            // Generate separate classes for each endpoint "domain"
-            "useTags"                       to "true",
-            "useJakartaEe"                  to "true",
-  )
-
-  doLast {
-    // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
-    delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
+    doLast {
+      // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+      delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
+    }
   }
-}
 
-val genApiServer2 = tasks.register<GenerateTask>("genApiServer2") {
+val genApiServer2 =
+  tasks.register<GenerateTask>("genApiServer2") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server2"
 
     inputs.file(specFile)
@@ -112,109 +136,124 @@ val genApiServer2 = tasks.register<GenerateTask>("genApiServer2") {
 
     generateApiDocumentation = false
 
-    configOptions = mapOf(
-      "dateLibrary"                   to "java8",
-      "enumPropertyNaming"            to "UPPERCASE",
-      "generatePom"                   to "false",
-      "interfaceOnly"                 to "true",
-      "library"                       to "jaxrs-spec",
-      "returnResponse"                to "false",
-      "additionalModelTypeAnnotations" to "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
-      "useTags"                       to "true",
-      "useJakartaEe"                  to "true",
-  )
+    configOptions =
+      mapOf(
+        "dateLibrary" to "java8",
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "library" to "jaxrs-spec",
+        "returnResponse" to "false",
+        "additionalModelTypeAnnotations" to
+          "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+        "useTags" to "true",
+        "useJakartaEe" to "true",
+      )
 
-    schemaMappings = mapOf(
-            "OAuthConfiguration"                to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceDefinitionSpecification"     to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceConfiguration"               to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "StreamJsonSchema"                  to "com.fasterxml.jackson.databind.JsonNode",
-            "StateBlob"                         to "com.fasterxml.jackson.databind.JsonNode",
-            "FieldSchema"                       to "com.fasterxml.jackson.databind.JsonNode",
-            "DeclarativeManifest"               to "com.fasterxml.jackson.databind.JsonNode",
-            "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
-            "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-    )
-}
-
-val genApiClient = tasks.register<GenerateTask>("genApiClient") {
-  val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client"
-
-  inputs.file(specFile)
-  outputs.dir(clientOutputDir)
-
-  generatorName = "kotlin"
-  inputSpec = specFile
-  outputDir = clientOutputDir
-
-  apiPackage = "io.airbyte.api.client.generated"
-  invokerPackage = "io.airbyte.api.client.invoker.generated"
-  modelPackage = "io.airbyte.api.client.model.generated"
-
-  schemaMappings = mapOf(
-    "OAuthConfiguration"                to "com.fasterxml.jackson.databind.JsonNode",
-    "SourceDefinitionSpecification"     to "com.fasterxml.jackson.databind.JsonNode",
-    "SourceConfiguration"               to "com.fasterxml.jackson.databind.JsonNode",
-    "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-    "DestinationConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-    "StreamJsonSchema"                  to "com.fasterxml.jackson.databind.JsonNode",
-    "StateBlob"                         to "com.fasterxml.jackson.databind.JsonNode",
-    "FieldSchema"                       to "com.fasterxml.jackson.databind.JsonNode",
-    "DeclarativeManifest"               to "com.fasterxml.jackson.databind.JsonNode",
-    "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
-    "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-  )
-
-  generateApiDocumentation = false
-
-  configOptions = mapOf(
-    "enumPropertyNaming" to "UPPERCASE",
-    "generatePom"        to "false",
-    "interfaceOnly"      to "true",
-    "serializationLibrary" to "jackson",
-  )
-
-  doLast {
-    val apiClientPath = "${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt"
-    updateApiClientWithFailsafe(apiClientPath)
-    updateDomainClientsWithFailsafe("${outputDir.get()}/src/main/kotlin/io/airbyte/api/client/generated")
-    configureApiSerializer("${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt")
+    schemaMappings =
+      mapOf(
+        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
+        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
+        "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+        "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+      )
   }
-}
 
-val genApiDocs = tasks.register<GenerateTask>("generateApiDocs") {
-  val docsOutputDir = "${getLayout().buildDirectory.get()}/generated/api/docs"
+val genApiClient =
+  tasks.register<GenerateTask>("genApiClient") {
+    val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client"
 
-  generatorName = "html"
-  inputSpec = specFile
-  outputDir = docsOutputDir
+    inputs.file(specFile)
+    outputs.dir(clientOutputDir)
 
-  apiPackage = "io.airbyte.api.client.generated"
-  invokerPackage = "io.airbyte.api.client.invoker.generated"
-  modelPackage = "io.airbyte.api.client.model.generated"
+    generatorName = "kotlin"
+    inputSpec = specFile
+    outputDir = clientOutputDir
 
-  schemaMappings = mapOf(
-    "OAuthConfiguration"                to "com.fasterxml.jackson.databind.JsonNode",
-    "SourceDefinitionSpecification"     to "com.fasterxml.jackson.databind.JsonNode",
-    "SourceConfiguration"               to "com.fasterxml.jackson.databind.JsonNode",
-    "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-    "DestinationConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-    "StreamJsonSchema"                  to "com.fasterxml.jackson.databind.JsonNode",
-    "StateBlob"                         to "com.fasterxml.jackson.databind.JsonNode",
-    "FieldSchema"                       to "com.fasterxml.jackson.databind.JsonNode",
-    "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-  )
+    apiPackage = "io.airbyte.api.client.generated"
+    invokerPackage = "io.airbyte.api.client.invoker.generated"
+    modelPackage = "io.airbyte.api.client.model.generated"
 
-  generateApiDocumentation = false
+    schemaMappings =
+      mapOf(
+        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
+        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
+        "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+        "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+      )
 
-  configOptions = mapOf(
-    "dateLibrary"  to "java8",
-    "generatePom" to  "false",
-    "interfaceOnly" to "true",
-  )
-}
+    generateApiDocumentation = false
+
+    configOptions =
+      mapOf(
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "serializationLibrary" to "jackson",
+      )
+
+    doLast {
+      val apiClientPath = "${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt"
+      updateApiClientWithFailsafe(apiClientPath)
+      updateDomainClientsWithFailsafe("${outputDir.get()}/src/main/kotlin/io/airbyte/api/client/generated")
+      configureApiSerializer("${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt")
+    }
+  }
+
+val genApiDocs =
+  tasks.register<GenerateTask>("generateApiDocs") {
+    val docsOutputDir = "${getLayout().buildDirectory.get()}/generated/api/docs"
+
+    generatorName = "html"
+    inputSpec = specFile
+    outputDir = docsOutputDir
+
+    apiPackage = "io.airbyte.api.client.generated"
+    invokerPackage = "io.airbyte.api.client.invoker.generated"
+    modelPackage = "io.airbyte.api.client.model.generated"
+
+    schemaMappings =
+      mapOf(
+        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
+        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+        "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+      )
+
+    generateApiDocumentation = false
+
+    configOptions =
+      mapOf(
+        "dateLibrary" to "java8",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+      )
+  }
 
 sourceSets {
   main {
@@ -246,7 +285,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(genApiClient, genApiServer2)
+  dependsOn(genApiClient, genApiServer2)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
@@ -260,7 +299,7 @@ afterEvaluate {
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
-    enabled = false
+  enabled = false
 }
 
 private fun updateApiClientWithFailsafe(clientPath: String) {
@@ -268,24 +307,27 @@ private fun updateApiClientWithFailsafe(clientPath: String) {
    * UPDATE ApiClient.kt to use Failsafe.
    */
   val apiClientFile = file(clientPath)
-  var apiClientFileText = apiClientFile.readText()
-    // replace class declaration
-    .replace(
-      "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient) {",
-      "open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {")
-    // replace execute call
-    .replace("val response = client.newCall(request).execute()",
-      """val call = client.newCall(request)
+  var apiClientFileText =
+    apiClientFile
+      .readText()
+      // replace class declaration
+      .replace(
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient) {",
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {",
+      )
+      // replace execute call
+      .replace(
+        "val response = client.newCall(request).execute()",
+        """val call = client.newCall(request)
         val failsafeCall = FailsafeCall.with(policy).compose(call)
-        val response: Response = failsafeCall.execute()""")
-
+        val response: Response = failsafeCall.execute()""",
+      )
 
   // add imports if not exist
   if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
     val newImports = """import dev.failsafe.RetryPolicy
 import dev.failsafe.okhttp.FailsafeCall"""
     apiClientFileText = apiClientFileText.replaceFirst("import ", "$newImports\nimport ")
-
   }
   apiClientFile.writeText(apiClientFileText)
 }
@@ -300,13 +342,15 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
       var domainClientFileText = domainClient.readText()
 
       // replace class declaration
-      domainClientFileText = domainClientFileText.replace(
-        "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)".toRegex(),
-        "class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)"
-      )
+      domainClientFileText =
+        domainClientFileText.replace(
+          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
+            .toRegex(),
+          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
+        )
 
       // add imports if not exist
-      if(!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+      if (!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
         val newImports = "import dev.failsafe.RetryPolicy"
         domainClientFileText = domainClientFileText.replaceFirst("import ", "$newImports\nimport ")
       }
@@ -320,9 +364,11 @@ private fun updateDomainClientsToIncludeHttpResponseBodyOnClientException(client
   val dir = file(clientPath)
   dir.walk().forEach { domainClient ->
     if (domainClient.name.endsWith(".kt")) {
-      val domainClientFileText = domainClient.readText().replace(
-        "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()}\", localVarError.statusCode, localVarResponse)",
-        "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()} \${localVarError.body ?: \"\"}\", localVarError.statusCode, localVarResponse)")
+      val domainClientFileText =
+        domainClient.readText().replace(
+          "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()}\", localVarError.statusCode, localVarResponse)",
+          "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()} \${localVarError.body ?: \"\"}\", localVarError.statusCode, localVarResponse)",
+        )
 
       domainClient.writeText(domainClientFileText)
     }
@@ -335,17 +381,19 @@ private fun configureApiSerializer(serializerPath: String) {
    */
   val serializerFile = file(serializerPath)
 
-  val imports = listOf(
-    "import com.fasterxml.jackson.annotation.JsonInclude",
-    "import com.fasterxml.jackson.databind.ObjectMapper",
-    "import com.fasterxml.jackson.databind.DeserializationFeature",
-    "import com.fasterxml.jackson.databind.SerializationFeature",
-    "import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
-    "import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper",
-    "import org.openapitools.jackson.nullable.JsonNullableModule"
-  )
+  val imports =
+    listOf(
+      "import com.fasterxml.jackson.annotation.JsonInclude",
+      "import com.fasterxml.jackson.databind.ObjectMapper",
+      "import com.fasterxml.jackson.databind.DeserializationFeature",
+      "import com.fasterxml.jackson.databind.SerializationFeature",
+      "import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+      "import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper",
+      "import org.openapitools.jackson.nullable.JsonNullableModule",
+    )
 
-  val body = """
+  val body =
+    """
 object Serializer {
     @JvmStatic
     val jacksonObjectMapper: ObjectMapper = jacksonObjectMapper()
@@ -360,13 +408,15 @@ object Serializer {
         .registerModule(JavaTimeModule())
         .registerModule(JsonNullableModule())
 }
-  """.trimIndent()
+    """.trimIndent()
 
-  serializerFile.writeText("""
+  serializerFile.writeText(
+    """
 package org.openapitools.client.infrastructure
     
 ${imports.joinToString("\n")}
     
 $body
-  """.trimIndent())
+    """.trimIndent(),
+  )
 }

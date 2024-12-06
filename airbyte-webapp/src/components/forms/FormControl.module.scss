@@ -1,11 +1,11 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.control {
-  --space-below: 30px;
+$spaceBelow: 30px;
 
+.control {
   position: relative;
-  padding-bottom: var(--space-below);
+  padding-bottom: $spaceBelow;
 
   &__label {
     display: block;
@@ -25,29 +25,20 @@
     margin: 0;
   }
 
-  &__footerMessage {
-    position: absolute;
-    width: 100%;
-    top: variables.$spacing-sm;
-    font-size: variables.$font-size-sm;
-    color: colors.$grey-400;
-    margin: 0;
-    transition:
-      transform variables.$transition ease-in,
-      opacity variables.$transition ease-in-out;
+  &__footerText {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    &.control__errorMessage {
-      color: colors.$red;
-    }
+    transition:
+      transform variables.$transition ease-in,
+      opacity variables.$transition ease-in-out;
   }
 
-  &__footerWrapper {
+  &__footer {
     position: absolute;
     width: 100%;
-    height: var(--space-below);
+    height: $spaceBelow;
+    padding-top: variables.$spacing-sm;
     bottom: 0;
     left: 0;
   }

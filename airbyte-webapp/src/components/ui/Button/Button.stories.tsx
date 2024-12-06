@@ -97,12 +97,40 @@ SecondaryDark.args = {
   disabled: false,
 };
 
-export const Highlight = Template.bind({});
-Highlight.args = {
-  variant: "highlight",
+export const Magic = Template.bind({});
+Magic.args = {
+  variant: "magic",
   icon: "aiStars",
   iconPosition: "left",
   disabled: false,
   isLoading: false,
-  children: "AI Assist",
+  children: "AI Assistant",
 };
+
+export const SideBySide = () => (
+  <div style={{ display: "flex", gap: "10px" }}>
+    <Button icon="addCircle" variant="primary">
+      Primary
+    </Button>
+    <Button variant="magic" icon="aiStars" iconPosition="left">
+      Magic
+    </Button>
+    <Button variant="primary" isLoading>
+      Loading Primary
+    </Button>
+    <Button icon="bell" variant="secondary">
+      Secondary
+    </Button>
+    <Button icon="cross" variant="danger">
+      Danger
+    </Button>
+    <Button variant="secondary" isLoading>
+      Loading Secondary
+    </Button>
+    <Button variant="magic" icon="aiStars" iconPosition="left" isLoading>
+      Loading Magic
+    </Button>
+  </div>
+);
+
+SideBySide.storyName = "Side by Side";

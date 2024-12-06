@@ -59,6 +59,10 @@ public interface ConnectionService {
 
   Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException;
 
-  void disableConnectionsById(final List<UUID> connectionIds) throws IOException;
+  Set<UUID> disableConnectionsById(final List<UUID> connectionIds) throws IOException;
+
+  List<UUID> listConnectionIdsForWorkspace(UUID workspaceId) throws IOException;
+
+  List<UUID> listConnectionIdsForOrganization(UUID organizationId) throws IOException;
 
 }

@@ -30,10 +30,10 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
-      {{- if .Values.global.imagePullSecrets }}
+      {{- if .Values.global.imagePullSecrets }} 
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
-          {{- printf "- name: %s" .name | nindent 2 }}
+          {{- printf "- name: %s" .name | nindent 8 }}
         {{- end }}
       {{- end }}
       {{- if .Values.nodeSelector }}
@@ -47,7 +47,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-metrics-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "metrics.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if eq .Values.global.deploymentMode "oss"  }}

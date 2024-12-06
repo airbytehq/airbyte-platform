@@ -16,6 +16,7 @@ class AirbyteKeycloakConfiguration {
   var airbyteRealm: String = ""
   var realm: String = ""
   var clientRealm: String = ""
+  var internalRealm: String = ""
   var clientId: String = ""
   var webClientId: String = ""
   var username: String = ""

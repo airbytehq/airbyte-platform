@@ -24,11 +24,19 @@ import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.workers.models.ReplicationActivityInput;
+import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Singleton
 public class BackfillHelper {
+
+  private final CatalogClientConverters catalogClientConverters;
+
+  public BackfillHelper(final CatalogClientConverters catalogClientConverters) {
+    this.catalogClientConverters = catalogClientConverters;
+  }
 
   /**
    * Indicates whether the current sync replication activity should perform a backfill. A backfill
@@ -40,14 +48,16 @@ public class BackfillHelper {
    * @param connectionInfo details about the connection to determine whether backfill is enabled
    * @return true if at least one stream should be backfilled
    */
-  public static boolean syncShouldBackfill(final ReplicationActivityInput replicationActivityInput, final ConnectionRead connectionInfo) {
+  public boolean syncShouldBackfill(final ReplicationActivityInput replicationActivityInput,
+                                    final ConnectionRead connectionInfo) {
     final boolean backfillEnabledForConnection =
         connectionInfo.getBackfillPreference() != null && connectionInfo.getBackfillPreference().equals(SchemaChangeBackfillPreference.ENABLED);
     final boolean hasSchemaDiff =
         replicationActivityInput.getSchemaRefreshOutput() != null && replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff() != null
             && !replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff().getTransforms().isEmpty();
     final boolean schemaDiffNeedsBackfill =
-        hasSchemaDiff && atLeastOneStreamNeedsBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), connectionInfo);
+        hasSchemaDiff
+            && atLeastOneStreamNeedsBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), connectionInfo);
     return backfillEnabledForConnection && hasSchemaDiff && schemaDiffNeedsBackfill;
   }
 
@@ -58,7 +68,7 @@ public class BackfillHelper {
    * @param streamsToBackfill the list of streams that need backfill
    * @return the modified state if any streams were cleared, else null
    */
-  public static State clearStateForStreamsToBackfill(final State inputState, final List<StreamDescriptor> streamsToBackfill) {
+  public State clearStateForStreamsToBackfill(final State inputState, final List<StreamDescriptor> streamsToBackfill) {
     if (inputState == null) {
       // This would be the case for a Full Refresh sync.
       return null;
@@ -89,14 +99,14 @@ public class BackfillHelper {
   }
 
   /**
-   * Given a catalog diff and a configured catalog, identifies the streams that and candidates for
+   * Given a catalog diff and a configured catalog, identifies the streams that are candidates for
    * backfill.
    *
    * @param appliedDiff the diff that was applied since the last sync
    * @param catalog the entire catalog
    * @return any streams that need to be backfilled
    */
-  public static List<StreamDescriptor> getStreamsToBackfill(final CatalogDiff appliedDiff, final ConfiguredAirbyteCatalog catalog) {
+  public List<StreamDescriptor> getStreamsToBackfill(final CatalogDiff appliedDiff, final ConfiguredAirbyteCatalog catalog) {
     if (appliedDiff == null || appliedDiff.getTransforms().isEmpty()) {
       // No diff, so no streams to backfill.
       return List.of();
@@ -117,7 +127,7 @@ public class BackfillHelper {
    * @param streamsToBackfill the streams to backfill
    * @param syncOutput output param, where we indicate the backfilled streams
    */
-  public static void markBackfilledStreams(final List<StreamDescriptor> streamsToBackfill, final StandardSyncOutput syncOutput) {
+  public void markBackfilledStreams(final List<StreamDescriptor> streamsToBackfill, final StandardSyncOutput syncOutput) {
     if (syncOutput.getStandardSyncSummary().getStreamStats() == null) {
       return; // No stream stats, no backfill.
     }
@@ -131,11 +141,14 @@ public class BackfillHelper {
     }
   }
 
-  private static boolean atLeastOneStreamNeedsBackfill(final CatalogDiff appliedDiff, final ConnectionRead connectionInfo) {
-    return !getStreamsToBackfill(appliedDiff, CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog())).isEmpty();
+  private boolean atLeastOneStreamNeedsBackfill(final CatalogDiff appliedDiff,
+                                                final ConnectionRead connectionInfo) {
+    final ConfiguredAirbyteCatalog configuredCatalog =
+        catalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
+    return !getStreamsToBackfill(appliedDiff, configuredCatalog).isEmpty();
   }
 
-  private static boolean shouldBackfillStream(final StreamTransform transform, final ConfiguredAirbyteCatalog catalog) {
+  private boolean shouldBackfillStream(final StreamTransform transform, final ConfiguredAirbyteCatalog catalog) {
 
     final var streamOptional = catalog.getStreams().stream().filter(
         stream -> {
@@ -153,12 +166,12 @@ public class BackfillHelper {
     }
     final ConfiguredAirbyteStream stream = streamOptional.get();
     if (!SyncMode.INCREMENTAL.equals(stream.getSyncMode())) {
-      // Only backfill incremental streams, since Full Refresh streams and pulling the whole history
+      // Only backfill incremental streams, since Full Refresh streams are pulling the whole history
       // anyway.
       return false;
     }
     for (final FieldTransform fieldTransform : transform.getUpdateStream().getFieldTransforms()) {
-      // TODO: we'll add other cases here, when we develop the config options further.
+      // TODO: we'll add other cases here when we develop the config options further.
       if (FieldTransform.TransformType.ADD_FIELD.equals(fieldTransform.getTransformType())) {
         return true;
       }

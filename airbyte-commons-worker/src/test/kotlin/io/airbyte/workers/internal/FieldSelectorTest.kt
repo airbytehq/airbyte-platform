@@ -48,6 +48,46 @@ internal class FieldSelectorTest {
       }
       """.trimIndent()
 
+    private val SCHEMA_WITH_DOLLAR_SIGNS =
+      """
+      {
+        "type": ["null", "object"],
+        "properties": {
+          "test${'$'}ign": {"type": ["null", "string"]},
+          "test${'$'}id": {"type": ["null", "string"]},
+          "test${'$'}schema": {"type": ["null", "string"]},
+          "test${'$'}comment": {"type": ["null", "string"]},
+          "key": {"type": ["null", "string"]},
+          "value": {"type": ["null", "string"]}
+        }
+      }
+      """.trimIndent()
+
+    private val RECORD_WITH_DOLLAR_SIGNS =
+      """
+      {
+        "test${'$'}ign": "myId",
+        "test${'$'}id": "id field",
+        "test${'$'}schema": "schema field",
+        "test${'$'}comment": "comment field",
+        "key": "myKey",
+        "value": "myValue",
+        "unexpected": "strip me"
+      }
+      """.trimIndent()
+
+    private val RECORD_WITH_DOLLAR_SIGNS_WITHOUT_EXTRA =
+      """
+      {
+        "test${'$'}ign": "myId",
+        "test${'$'}id": "id field",
+        "test${'$'}schema": "schema field",
+        "test${'$'}comment": "comment field",
+        "key": "myKey",
+        "value": "myValue"
+      }
+      """.trimIndent()
+
     private val RECORD_WITH_EXTRA =
       """
       {
@@ -125,6 +165,34 @@ internal class FieldSelectorTest {
     fieldSelector.filterSelectedFields(message)
 
     val expectedMessage = createRecord(RECORD_WITH_ID_WITHOUT_EXTRA)
+    assertEquals(expectedMessage, message)
+  }
+
+  @Test
+  internal fun `test we select columns with dollar signs`() {
+    val configuredCatalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              stream =
+                AirbyteStream(
+                  name = STREAM_NAME,
+                  jsonSchema = Jsons.deserialize(SCHEMA_WITH_DOLLAR_SIGNS),
+                  supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+                ),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+
+    val fieldSelector = createFieldSelector(configuredCatalog, fieldSelectionEnabled = true)
+
+    val message = createRecord(RECORD_WITH_DOLLAR_SIGNS)
+    fieldSelector.filterSelectedFields(message)
+
+    val expectedMessage = createRecord(RECORD_WITH_DOLLAR_SIGNS_WITHOUT_EXTRA)
     assertEquals(expectedMessage, message)
   }
 

@@ -44,17 +44,17 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Organization;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
@@ -78,7 +78,6 @@ public class WorkspacesHandler {
 
   public static final int MAX_SLUG_GENERATION_ATTEMPTS = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
-  private final ConfigRepository configRepository;
   private final WorkspacePersistence workspacePersistence;
   private final OrganizationPersistence organizationPersistence;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
@@ -90,10 +89,10 @@ public class WorkspacesHandler {
   private final WorkspaceService workspaceService;
   private final Slugify slugify;
   private final TrackingClient trackingClient;
+  private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
-  public WorkspacesHandler(final ConfigRepository configRepository,
-                           final WorkspacePersistence workspacePersistence,
+  public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
                            final OrganizationPersistence organizationPersistence,
                            final SecretsRepositoryWriter secretsRepositoryWriter,
                            final PermissionPersistence permissionPersistence,
@@ -102,8 +101,8 @@ public class WorkspacesHandler {
                            final SourceHandler sourceHandler,
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
-                           final TrackingClient trackingClient) {
-    this.configRepository = configRepository;
+                           final TrackingClient trackingClient,
+                           final ApiPojoConverters apiPojoConverters) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -115,6 +114,7 @@ public class WorkspacesHandler {
     this.workspaceService = workspaceService;
     this.slugify = new Slugify();
     this.trackingClient = trackingClient;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -208,9 +208,9 @@ public class WorkspacesHandler {
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     // get existing implementation
-    final StandardWorkspace persistedWorkspace = configRepository.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), false);
+    final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), false);
 
     // disable all connections associated with this workspace
     for (final ConnectionRead connectionRead : connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody).getConnections()) {
@@ -271,7 +271,7 @@ public class WorkspacesHandler {
   }
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
-    final List<WorkspaceRead> reads = configRepository.listStandardWorkspaces(false).stream()
+    final List<WorkspaceRead> reads = workspaceService.listStandardWorkspaces(false).stream()
         .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
@@ -279,7 +279,7 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listAllWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
       throws IOException {
-    final List<WorkspaceRead> reads = configRepository.listAllWorkspacesPaginated(
+    final List<WorkspaceRead> reads = workspaceService.listAllWorkspacesPaginated(
         new ResourcesQueryPaginated(
             listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
             listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
@@ -294,7 +294,7 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
       throws IOException {
-    final List<StandardWorkspace> standardWorkspaces = configRepository.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
+    final List<StandardWorkspace> standardWorkspaces = workspaceService.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
         listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
         listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
         listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
@@ -311,7 +311,7 @@ public class WorkspacesHandler {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
     return WorkspaceConverter.domainToApiModel(workspace);
   }
 
@@ -328,14 +328,14 @@ public class WorkspacesHandler {
   @SuppressWarnings("unused")
   public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody) throws IOException, ConfigNotFoundException {
     // for now we assume there is one workspace and it has a default uuid.
-    final StandardWorkspace workspace = configRepository.getWorkspaceBySlug(slugRequestBody.getSlug(), false);
+    final StandardWorkspace workspace = workspaceService.getWorkspaceBySlug(slugRequestBody.getSlug(), false);
     return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody, boolean includeTombstone)
       throws ConfigNotFoundException {
     final StandardWorkspace workspace =
-        configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
+        workspaceService.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
     return WorkspaceConverter.domainToApiModel(workspace);
   }
 
@@ -416,7 +416,7 @@ public class WorkspacesHandler {
     LOGGER.debug("Starting updateWorkspace for workspaceId {}...", workspaceId);
     LOGGER.debug("Incoming workspacePatch: {}", workspacePatch);
 
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     LOGGER.debug("Initial workspace: {}", workspace);
 
     validateWorkspacePatch(workspace, workspacePatch);
@@ -430,14 +430,14 @@ public class WorkspacesHandler {
     if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
-      configRepository.writeStandardWorkspaceNoSecrets(workspace);
+      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     } else {
       // We're saving new webhook configs, so we need to persist the secrets.
       persistStandardWorkspace(workspace);
     }
 
     // after updating email or tracking info, we need to re-identify the instance.
-    trackingClient.identify(workspaceId);
+    trackingClient.identify(workspaceId, ScopeType.WORKSPACE);
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -446,7 +446,7 @@ public class WorkspacesHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID workspaceId = workspaceUpdateName.getWorkspaceId();
 
-    final StandardWorkspace persistedWorkspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
 
     persistedWorkspace
         .withName(workspaceUpdateName.getName())
@@ -454,7 +454,7 @@ public class WorkspacesHandler {
 
     // NOTE: it's safe (and necessary) to use the NoSecrets variant because we never hydrated them in
     // the first place.
-    configRepository.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -464,24 +464,20 @@ public class WorkspacesHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID workspaceId = workspaceUpdateOrganization.getWorkspaceId();
 
-    try {
-      final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
-      persistedWorkspace
-          .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
-      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
-      return buildWorkspaceReadFromId(workspaceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
+    persistedWorkspace
+        .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
+    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    return buildWorkspaceReadFromId(workspaceId);
   }
 
   public void setFeedbackDone(final WorkspaceGiveFeedback workspaceGiveFeedback)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    configRepository.setFeedback(workspaceGiveFeedback.getWorkspaceId());
+      throws IOException, ConfigNotFoundException {
+    workspaceService.setFeedback(workspaceGiveFeedback.getWorkspaceId());
   }
 
   private WorkspaceRead buildWorkspaceReadFromId(final UUID workspaceId) throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     return WorkspaceConverter.domainToApiModel(workspace);
   }
 
@@ -498,7 +494,7 @@ public class WorkspacesHandler {
 
     // todo (cgardens) - this is going to be too expensive once there are too many workspaces. needs to
     // be replaced with an actual sql query. e.g. SELECT COUNT(*) WHERE slug=%s;
-    boolean isSlugUsed = configRepository.getWorkspaceBySlugOptional(proposedSlug, true).isPresent();
+    boolean isSlugUsed = workspaceService.getWorkspaceBySlugOptional(proposedSlug, true).isPresent();
     String resolvedSlug = proposedSlug;
     int count = 0;
     while (isSlugUsed) {
@@ -506,7 +502,7 @@ public class WorkspacesHandler {
       // same slug in two different threads. this should be very unlikely. we can fix this by exposing
       // database transaction, but that is not something we can do quickly.
       resolvedSlug = proposedSlug + "-" + RandomStringUtils.randomAlphabetic(8);
-      isSlugUsed = configRepository.getWorkspaceBySlugOptional(resolvedSlug, true).isPresent();
+      isSlugUsed = workspaceService.getWorkspaceBySlugOptional(resolvedSlug, true).isPresent();
       count++;
       if (count > MAX_SLUG_GENERATION_ATTEMPTS) {
         throw new InternalServerKnownException(String.format("could not generate a valid slug after %s tries.", MAX_SLUG_GENERATION_ATTEMPTS));
@@ -546,7 +542,7 @@ public class WorkspacesHandler {
       workspace.setNotificationSettings(NotificationSettingsConverter.toConfig(workspacePatch.getNotificationSettings()));
     }
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
     // Empty List is a valid value for webhookConfigs
     if (workspacePatch.getWebhookConfigs() != null) {
@@ -557,11 +553,7 @@ public class WorkspacesHandler {
   @SuppressWarnings("PMD.PreserveStackTrace")
   private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      workspaceService.writeWorkspaceWithSecrets(workspace);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    workspaceService.writeWorkspaceWithSecrets(workspace);
     return WorkspaceConverter.domainToApiModel(workspace);
   }
 

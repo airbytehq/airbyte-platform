@@ -37,4 +37,7 @@ public class SyncWorkflowFailingWithHearbeatTimeoutException implements SyncWork
     throw new TimeoutFailure("heartbeat timeout", null, TimeoutType.TIMEOUT_TYPE_HEARTBEAT);
   }
 
+  @Override
+  public void checkAsyncActivityStatus() {}
+
 }

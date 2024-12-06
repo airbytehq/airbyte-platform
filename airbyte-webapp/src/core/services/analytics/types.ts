@@ -5,7 +5,6 @@ export const enum Namespace {
   CONNECTOR = "Connector",
   ONBOARDING = "Onboarding",
   USER = "User",
-  CREDITS = "Credits",
   CONNECTOR_BUILDER = "ConnectorBuilder",
   SCHEMA = "Schema",
   ERD = "ERD",
@@ -13,6 +12,7 @@ export const enum Namespace {
   SYNC_QUESTIONNAIRE = "SyncQuestionnaire",
   STREAM_SELECTION = "StreamSelection",
   FORM = "Form",
+  ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
 }
 
 export const enum Action {
@@ -32,9 +32,6 @@ export const enum Action {
   PREFERENCES = "Preferences",
   NO_MATCHING_CONNECTOR = "NoMatchingConnector",
   SELECTION_OPENED = "SelectionOpened",
-  CHECKOUT_START = "CheckoutStart",
-  LOAD_MORE_JOBS = "LoadMoreJobs",
-  LOAD_MORE_EVENTS = "LoadMoreEvents",
   INVITE = "Invite",
   OAUTH_ATTEMPT = "OAuthAttempt",
   OAUTH_SUCCESS = "OAuthSuccess",
@@ -85,10 +82,19 @@ export const enum Action {
   PUBLISH_PROJECT = "PublishProject",
   RELEASE_NEW_PROJECT_VERSION = "ReleaseNewProjectVersion",
   CONNECTOR_BUILDER_DELETE = "ConnectorBuilderDelete",
+  CONTRIBUTE_FORM_FOCUSED = "ContributeFormFocused",
   CONTRIBUTE_SUCCESS = "ContributeSuccess",
   CONTRIBUTE_FAILURE = "ContributeFailure",
   PUBLISH_DROPDOWN_SELECTED = "PublishDropdownSelected",
   PUBLISH_RADIO_BUTTON_SELECTED = "PublishRadioButtonSelected",
+
+  // Connector Builder Actions
+  CONNECTOR_BUILDER_ASSIST_CONFIG_OPENED = "ConnectorBuilderAssistConfigOpened",
+  CONNECTOR_BUILDER_ASSIST_CONFIG_CLOSED = "ConnectorBuilderAssistConfigClosed",
+  CONNECTOR_BUILDER_ASSIST_ENABLED = "ConnectorBuilderAssistEnabled",
+  CONNECTOR_BUILDER_ASSIST_DISABLED = "ConnectorBuilderAssistDisabled",
+  CONNECTOR_BUILDER_ASSIST_SUGGESTION_VIEWED = "ConnectorBuilderAssistSuggestionViewed",
+  CONNECTOR_BUILDER_ASSIST_SUGGESTION_ACCEPTED = "ConnectorBuilderAssistSuggestionAccepted",
 }
 
 export type EventParams = Record<string, unknown>;

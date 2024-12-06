@@ -15,6 +15,7 @@ import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -31,6 +32,7 @@ private data class SyncStatsCounters(
 class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
   @param:Parameter private val stateCheckSumEventHandler: StateCheckSumCountEventHandler,
+  @Value("\${airbyte.use-file-transfer}") private val useFileTransfer: Boolean,
 ) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
@@ -42,6 +44,10 @@ class ParallelStreamStatsTracker(
 
   @Volatile
   private var checksumValidationEnabled = true
+
+  override fun updateFilteredOutRecordsStats(recordMessage: AirbyteRecordMessage) {
+    getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage)).updateFilteredOutRecordsStats(recordMessage)
+  }
 
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
     getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage))
@@ -134,13 +140,15 @@ class ParallelStreamStatsTracker(
       }
       else -> {
         val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+        val filteredOutRecords = statsTracker.getTrackedFilteredOutRecordsSinceLastStateMessage(stateMessage)
         stateCheckSumEventHandler.validateStateChecksum(
           stateMessage = stateMessage,
-          platformRecordCount = statsTracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage).toDouble(),
+          platformRecordCount = statsTracker.getTrackedEmittedRecordsSinceLastStateMessage(stateMessage).toDouble(),
           origin = AirbyteMessageOrigin.DESTINATION,
           failOnInvalidChecksum = failOnInvalidChecksum,
           checksumValidationEnabled = checksumValidationEnabled,
           streamPlatformRecordCounts = getStreamToCommittedRecords(),
+          filteredOutRecords = filteredOutRecords.toDouble(),
         )
         statsTracker.trackStateFromDestination(stateMessage)
       }
@@ -172,6 +180,12 @@ class ParallelStreamStatsTracker(
     failOnInvalidChecksum: Boolean,
   ) {
     val expectedRecordCount = streamTrackers.values.sumOf { getEmittedCount(origin, stateMessage, it).toDouble() }
+    val filteredOutRecords =
+      if (origin == AirbyteMessageOrigin.DESTINATION) {
+        streamTrackers.values.sumOf { it.getTrackedFilteredOutRecordsSinceLastStateMessage(stateMessage) }
+      } else {
+        0
+      }
     stateCheckSumEventHandler.validateStateChecksum(
       stateMessage = stateMessage,
       platformRecordCount = expectedRecordCount,
@@ -180,6 +194,7 @@ class ParallelStreamStatsTracker(
       checksumValidationEnabled = checksumValidationEnabled,
       includeStreamInLogs = false,
       streamPlatformRecordCounts = getStreamToEmittedRecords(),
+      filteredOutRecords = filteredOutRecords.toDouble(),
     )
   }
 
@@ -190,7 +205,7 @@ class ParallelStreamStatsTracker(
   ): Long {
     return when (origin) {
       AirbyteMessageOrigin.SOURCE -> tracker.getTrackedEmittedRecordsSinceLastStateMessage()
-      AirbyteMessageOrigin.DESTINATION -> tracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage)
+      AirbyteMessageOrigin.DESTINATION -> tracker.getTrackedEmittedRecordsSinceLastStateMessage(stateMessage)
       AirbyteMessageOrigin.INTERNAL -> 0
     }
   }
@@ -208,6 +223,8 @@ class ParallelStreamStatsTracker(
     // [sumOf] methods handle null values as 0, which is a change that we don't want to make at this time.
     val streamSyncStats = getAllStreamSyncStats(hasReplicationCompleted).takeIf { it.isNotEmpty() }
     val bytesCommitted = streamSyncStats?.sumOf { it.stats.bytesCommitted }
+    val recordsFilteredOut = streamSyncStats?.sumOf { it.stats.recordsFilteredOut }
+    val bytesFilteredOut = streamSyncStats?.sumOf { it.stats.bytesFilteredOut }
     val recordsCommitted = streamSyncStats?.sumOf { it.stats.recordsCommitted }
     val bytesEmitted = streamSyncStats?.sumOf { it.stats.bytesEmitted }
     val recordsEmitted = streamSyncStats?.sumOf { it.stats.recordsEmitted }
@@ -239,6 +256,8 @@ class ParallelStreamStatsTracker(
       .withRecordsCommitted(recordsCommitted)
       .withBytesEmitted(bytesEmitted)
       .withRecordsEmitted(recordsEmitted)
+      .withRecordsFilteredOut(recordsFilteredOut)
+      .withBytesFilteredOut(bytesFilteredOut)
       .withEstimatedBytes(estimatedBytes)
       .withEstimatedRecords(estimatedRecords)
   }
@@ -280,6 +299,16 @@ class ParallelStreamStatsTracker(
       .filterValues { it.nameNamespacePair.name != null }
       .mapValues { it.value.streamStats.emittedRecordsCount.get() }
 
+  override fun getStreamToFilteredOutRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
+    streamTrackers
+      .filterValues { it.nameNamespacePair.name != null }
+      .mapValues { it.value.streamStats.filteredOutRecords.get() }
+
+  override fun getStreamToFilteredOutBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
+    streamTrackers
+      .filterValues { it.nameNamespacePair.name != null }
+      .mapValues { it.value.streamStats.filteredOutBytesCount.get() }
+
   override fun getStreamToEstimatedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
     if (hasEstimatesErrors) {
       mapOf()
@@ -299,6 +328,10 @@ class ParallelStreamStatsTracker(
     }
 
   override fun getTotalRecordsEmitted(): Long = getTotalStats().recordsEmitted ?: 0
+
+  override fun getTotalRecordsFilteredOut(): Long = getTotalStats().recordsFilteredOut ?: 0
+
+  override fun getTotalBytesFilteredOut(): Long = getTotalStats().bytesFilteredOut ?: 0
 
   override fun getTotalRecordsEstimated(): Long = getTotalStats().estimatedRecords ?: 0
 
@@ -368,10 +401,12 @@ class ParallelStreamStatsTracker(
         SyncStats()
           .withBytesEmitted(streamStats.emittedBytesCount.get())
           .withRecordsEmitted(streamStats.emittedRecordsCount.get())
+          .withRecordsFilteredOut(streamStats.filteredOutRecords.get())
+          .withBytesFilteredOut(streamStats.filteredOutBytesCount.get())
           .apply {
             if (hasReplicationCompleted) {
-              withBytesCommitted(streamStats.emittedBytesCount.get())
-              withRecordsCommitted(streamStats.emittedRecordsCount.get())
+              withBytesCommitted(streamStats.emittedBytesCount.get().minus(bytesFilteredOut))
+              withRecordsCommitted(streamStats.emittedRecordsCount.get().minus(recordsFilteredOut))
             } else {
               withBytesCommitted(streamStats.committedBytesCount.get())
               withRecordsCommitted(streamStats.committedRecordsCount.get())
@@ -413,6 +448,7 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
+        useFileTransfer = useFileTransfer,
       ).also { streamTrackers[pair] = it }
     }
   }

@@ -249,7 +249,6 @@ tasks.named("build") {
 
 tasks.named("dockerCopyDistribution") {
     dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
-
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment

@@ -15,6 +15,8 @@ properties:
       - destination
       - replication
       - persistence
+      - normalization # no longer possible for new jobs, but needed to deserialize historical job failures from the db with this value
+      - dbt # no longer possible for new jobs, but needed to deserialize historical job failures from the db with this value
       - airbyte_platform
       - unknown
   failureType:

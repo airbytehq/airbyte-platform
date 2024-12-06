@@ -55,7 +55,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-workload-launcher-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "workload-launcher.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -93,12 +93,7 @@ spec:
         {{- end }}
 
         {{- include "airbyte.database.envs" . | nindent 8 }}
-
-        - name: LOG4J_CONFIGURATION_FILE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOG4J_CONFIGURATION_FILE
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
         - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
@@ -136,11 +131,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKSPACE_ROOT
-        - name: LOCAL_ROOT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOCAL_ROOT
         - name: WEBAPP_URL
           valueFrom:
             configMapKeyRef:
@@ -161,8 +151,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TEMPORAL_WORKER_PORTS
-        - name: LOG_LEVEL
-          value: "{{ .Values.log.level }}"
         - name: JOB_KUBE_NAMESPACE
           valueFrom:
             fieldRef:
@@ -197,27 +185,36 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
+        - name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+        - name: CONNECTOR_SIDECAR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_SIDECAR_IMAGE
+        - name: WORKLOAD_INIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_INIT_IMAGE
+        - name: CONTAINER_ORCHESTRATOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTAINER_ORCHESTRATOR_IMAGE
         - name: JOB_KUBE_BUSYBOX_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.socat }}
-        - name: JOB_KUBE_SOCAT_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_SOCAT_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
         - name: JOB_KUBE_CURL_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_CURL_IMAGE
-        {{- end }}
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:
@@ -245,6 +242,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+        - name: JOB_KUBE_LOCAL_VOLUME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_LOCAL_VOLUME_ENABLED
         - name: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
           valueFrom:
             configMapKeyRef:
@@ -319,6 +321,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -374,6 +386,43 @@ spec:
           value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
         {{- end }}
 
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
+        {{- end }}
+
         # Values for googleSecretManager secrets
         {{- if (((.Values.global).secretsManager).googleSecretManager) }}
         - name: SECRET_STORE_GCP_PROJECT_ID
@@ -406,106 +455,8 @@ spec:
           value: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
         {{- end }}
 
-        # STORAGE
-        - name: STORAGE_TYPE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_TYPE
-        - name: STORAGE_BUCKET_ACTIVITY_PAYLOAD
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_BUCKET_ACTIVITY_PAYLOAD
-        - name: STORAGE_BUCKET_LOG
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_BUCKET_LOG
-        - name: STORAGE_BUCKET_STATE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_BUCKET_STATE
-        - name: STORAGE_BUCKET_WORKLOAD_OUTPUT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_BUCKET_WORKLOAD_OUTPUT
-
-        # local
-        {{- if eq (lower (default "" .Values.global.storage.type)) "local" }}
-        - name: LOCAL_ROOT
-          valueFrom:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOCAL_ROOT
-        {{- end }}
-
-        # S3
-        {{- if eq ((((.Values.global).storage).s3).authenticationType) "credentials" }}
-        - name: AWS_ACCESS_KEY_ID # todo: change to S3_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.s3AccessKeyIdSecretKey" .Values.global.storage.s3.accessKeyIdSecretKey }}
-        - name: AWS_SECRET_ACCESS_KEY # todo: change to S3_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.s3SecretAccessKeySecretKey" .Values.global.storage.s3.secretAccessKeySecretKey }}
-        {{- end }}
-        {{- if ((((.Values.global).storage).s3).region) }}
-        - name: AWS_DEFAULT_REGION # todo: change to S3_DEFAULT_REGION, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AWS_DEFAULT_REGION
-        {{- end }}
-        - name: S3_PATH_STYLE_ACCESS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: S3_PATH_STYLE_ACCESS
-
-        # MINIO
-        {{- if and (eq (lower (default "" .Values.global.storage.type)) "minio") (((.Values.global).storage).minio)}}
-        - name: AWS_ACCESS_KEY_ID # todo: change to MINIO_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.minioAccessKeyIdSecretKey" .Values.global.storage.minio.accessKeyIdSecretKey }}
-        - name: AWS_SECRET_ACCESS_KEY # todo: change to MINIO_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
-              key: {{ include "airbyte.minioSecretAccessKeySecretKey" .Values.global.storage.minio.secretAccessKeySecretKey }}
-        {{- else if (ne (lower (default "" .Values.global.storage.type)) "s3") }} # default behavior if none supplied is internal minio deployment
-        # this is for the internally deployed minio
-        - name: AWS_ACCESS_KEY_ID # todo: change to MINIO_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_ACCESS_KEY
-        - name: AWS_SECRET_ACCESS_KEY # todo: change to MINIO_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DEFAULT_MINIO_SECRET_KEY
-        {{- end }}
-        - name: MINIO_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MINIO_ENDPOINT
-
-        #GCS
-        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: GOOGLE_APPLICATION_CREDENTIALS
-        {{- end }}
+        # Storage
+        {{- include "airbyte.storage.envs" . | nindent 8 }}
 
         {{- end }}
 
@@ -570,6 +521,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
         {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
@@ -589,6 +544,11 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:

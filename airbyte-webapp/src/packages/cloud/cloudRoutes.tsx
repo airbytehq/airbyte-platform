@@ -3,6 +3,7 @@ import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-
 import { useEffectOnce } from "react-use";
 
 import LoadingPage from "components/LoadingPage";
+import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
@@ -12,41 +13,42 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
+import { useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
 import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { OrganizationBillingPage } from "./views/billing/OrganizationBillingPage";
 import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
 import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
-import { WorkspaceUsagePage } from "./views/workspaces/WorkspaceUsagePage";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
-const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
+const OrganizationBillingPage = React.lazy(() => import("packages/cloud/views/billing/OrganizationBillingPage"));
+const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/billing/OrganizationUsagePage"));
 const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
+const WorkspaceUsagePage = React.lazy(() => import("packages/cloud/views/workspaces/WorkspaceUsagePage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
 
@@ -69,9 +71,9 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
+  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -103,6 +105,7 @@ const MainRoutes: React.FC = () => {
           <Route index element={<AllSourcesPage />} />
           <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
           <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
+          <Route path={SourcePaths.EnterpriseSource} element={<EnterpriseSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
             <Route index element={<SourceSettingsPage />} />
             <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />
@@ -111,9 +114,7 @@ const MainRoutes: React.FC = () => {
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
           <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
-          {isTokenManagementEnabled && (
-            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
-          )}
+          <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
           {supportsDataResidency && (
             <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />
@@ -124,19 +125,22 @@ const MainRoutes: React.FC = () => {
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
+          <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
           {canViewOrgSettings && (
-            <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-          )}
-          {isBillingInArrearsActive && (
             <>
-              <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
-              <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
+              <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
             </>
+          )}
+          {canManageOrganizationBilling && (
+            <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+          )}
+          {canViewOrganizationUsage && (
+            <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
-        <Route path={CloudRoutes.Billing} element={<BillingPage />} />
         <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />

@@ -12,13 +12,16 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Organization
+import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -38,6 +41,8 @@ open class ResourceBootstrapHandler(
   private val permissionService: PermissionService,
   private val currentUserService: CurrentUserService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val featureFlagClient: FeatureFlagClient,
+  private val organizationPaymentConfigService: OrganizationPaymentConfigService,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -84,17 +89,24 @@ open class ResourceBootstrapHandler(
 
   fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
     findExistingOrganization(user)?.let { return it }
-
     val organization =
       Organization().apply {
         this.organizationId = uuidSupplier.get()
         this.userId = user.userId
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
-        this.orgLevelBilling = false
+        this.orgLevelBilling = true
         this.pba = false
       }
     organizationService.writeOrganization(organization)
+
+    val paymentConfig =
+      OrganizationPaymentConfig()
+        .withOrganizationId(organization.organizationId)
+        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
+
+    organizationPaymentConfigService.savePaymentConfig(paymentConfig)
 
     val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
     permissionService.createPermission(organizationPermission)

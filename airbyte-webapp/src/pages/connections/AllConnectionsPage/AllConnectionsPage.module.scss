@@ -1,3 +1,15 @@
+@use "scss/variables";
+
+.pageHeader {
+  grid-area: page-header;
+  padding-bottom: variables.$spacing-lg;
+}
+
+.pageBody {
+  grid-area: page-content;
+  padding-top: 0;
+}
+
 .alignSelfStart {
   align-self: flex-start;
 }

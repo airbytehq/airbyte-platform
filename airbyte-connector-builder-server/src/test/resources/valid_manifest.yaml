@@ -168,7 +168,7 @@ definitions:
         schema:
           $ref: "#/schemas/collections_items_dashboards"
   base_requester:
-    url_base: "{{ config['instance_api_url'] }}"
+    url_base: "api.whatahost.com/{{ config['instance_api_url'] }}/"
     http_method: "GET"
     authenticator:
       type: "LegacySessionTokenAuthenticator"

@@ -2,6 +2,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
@@ -94,13 +95,15 @@ class PermissionServiceDataImplTest {
           },
         ).map { it.toEntity() }
 
-      every { permissionRepository.deleteById(permId) } just Runs
+      every { permissionRepository.deleteByIdIn(any()) } just Runs
+      every { permissionRepository.findByUserId(testUserId) } returns listOf(permissionToDelete.toEntity())
 
       permissionService.deletePermission(permId)
 
       verify { permissionRepository.findByIdIn(listOf(permId)) }
+      verify { permissionRepository.findByUserId(testUserId) }
       verify { permissionRepository.findByOrganizationId(orgId) }
-      verify { permissionRepository.deleteById(permId) }
+      verify { permissionRepository.deleteByIdIn(listOf(permId)) }
       confirmVerified(permissionRepository)
     }
 
@@ -134,7 +137,89 @@ class PermissionServiceDataImplTest {
 
       verify { permissionRepository.findByIdIn(listOf(permId)) }
       verify { permissionRepository.findByOrganizationId(orgId) }
-      verify(exactly = 0) { permissionRepository.deleteById(any()) }
+      verify(exactly = 0) { permissionRepository.deleteByIdIn(any()) }
+      confirmVerified(permissionRepository)
+    }
+
+    @Test
+    fun `deletePermission for org permission should cascade to workspace permissions`() {
+      val permId = UUID.randomUUID()
+      val orgId = UUID.randomUUID()
+      val workspaceInOrgId = UUID.randomUUID()
+      val workspaceOutOfOrgId = UUID.randomUUID()
+      val workspacePermissionInOrg =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          workspaceId = workspaceInOrgId
+          permissionType = PermissionType.WORKSPACE_ADMIN
+        }
+
+      val workspacePermissionOutOfOrg =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          workspaceId = workspaceOutOfOrgId
+          permissionType = PermissionType.WORKSPACE_ADMIN
+        }
+
+      val permissionToDelete =
+        Permission().apply {
+          permissionId = permId
+          userId = testUserId
+          organizationId = orgId
+          permissionType = PermissionType.ORGANIZATION_ADMIN
+        }
+
+      every { permissionRepository.findByIdIn(listOf(permId)) } returns listOf(permissionToDelete.toEntity())
+
+      every { permissionRepository.findByOrganizationId(orgId) } returns
+        listOf(
+          permissionToDelete,
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            userId = UUID.randomUUID()
+            organizationId = orgId
+            permissionType = PermissionType.ORGANIZATION_ADMIN
+          },
+        ).map { it.toEntity() }
+
+      every { permissionRepository.findByUserId(testUserId) } returns
+        listOf(
+          permissionToDelete,
+          workspacePermissionInOrg,
+          workspacePermissionOutOfOrg,
+        ).map { it.toEntity() }
+
+      val workspaceInOrg =
+        StandardWorkspace().apply {
+          workspaceId = workspaceInOrgId
+          name = "workspaceInOrg"
+          organizationId = orgId
+          email = "email@email.com"
+        }
+
+      val workspaceOutOfOrg =
+        StandardWorkspace().apply {
+          workspaceId = workspaceOutOfOrgId
+          name = "workspaceOutOfOrg"
+          organizationId = UUID.randomUUID()
+          email = "email@email.com"
+        }
+
+      every {
+        workspaceService.listStandardWorkspacesWithIds(listOf(workspaceInOrgId, workspaceOutOfOrgId), true)
+      } returns listOf(workspaceInOrg, workspaceOutOfOrg)
+
+      every { permissionRepository.deleteByIdIn(any()) } just Runs
+      every { permissionRepository.deleteById(any()) } just Runs
+
+      permissionService.deletePermission(permId)
+
+      verify { permissionRepository.findByIdIn(listOf(permId)) }
+      verify { permissionRepository.findByUserId(testUserId) }
+      verify { permissionRepository.findByOrganizationId(orgId) }
+      verify(exactly = 1) { permissionRepository.deleteByIdIn(listOf(permissionToDelete.permissionId, workspacePermissionInOrg.permissionId)) }
       confirmVerified(permissionRepository)
     }
   }
@@ -181,11 +266,18 @@ class PermissionServiceDataImplTest {
           },
         ).map { it.toEntity() }
 
+      every { permissionRepository.findByUserId(testUserId) } returns
+        listOf(
+          permissionToDelete1,
+          permissionToDelete2,
+        ).map { it.toEntity() }
+
       every { permissionRepository.deleteByIdIn(listOf(permId1, permId2)) } just Runs
 
       permissionService.deletePermissions(listOf(permId1, permId2))
 
       verify { permissionRepository.findByIdIn(listOf(permId1, permId2)) }
+      verify(exactly = 1) { permissionRepository.findByUserId(testUserId) }
       verify { permissionRepository.findByOrganizationId(orgId) }
       verify { permissionRepository.deleteByIdIn(listOf(permId1, permId2)) }
       confirmVerified(permissionRepository)
@@ -248,6 +340,125 @@ class PermissionServiceDataImplTest {
       verify { permissionRepository.findByOrganizationId(orgId1) }
       verify { permissionRepository.findByOrganizationId(orgId2) }
       verify(exactly = 0) { permissionRepository.deleteByIdIn(any()) }
+      confirmVerified(permissionRepository)
+    }
+
+    @Test
+    fun `deletePermissions for org permission should cascade to workspace permissions`() {
+      val permId1 = UUID.randomUUID()
+      val permId2 = UUID.randomUUID()
+      val orgId1 = UUID.randomUUID()
+      val orgId2 = UUID.randomUUID()
+      val workspaceInOrgId = UUID.randomUUID()
+      val workspaceOutOfOrgId = UUID.randomUUID()
+
+      val workspacePermissionInOrg =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          workspaceId = workspaceInOrgId
+          permissionType = PermissionType.WORKSPACE_ADMIN
+        }
+
+      val workspacePermissionOutOfOrg =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          workspaceId = workspaceOutOfOrgId
+          permissionType = PermissionType.WORKSPACE_ADMIN
+        }
+
+      val permissionToDelete1 =
+        Permission().apply {
+          permissionId = permId1
+          userId = testUserId
+          organizationId = orgId1
+          permissionType = PermissionType.ORGANIZATION_ADMIN // not the last admin in org 1
+        }
+
+      val permissionToDelete2 =
+        Permission().apply {
+          permissionId = permId2
+          userId = testUserId
+          organizationId = orgId2
+          permissionType = PermissionType.ORGANIZATION_ADMIN // is the last admin in org 2, should throw
+        }
+
+      every { permissionRepository.findByIdIn(listOf(permId1, permId2)) } returns
+        listOf(
+          permissionToDelete1.toEntity(),
+          permissionToDelete2.toEntity(),
+        )
+
+      every { permissionRepository.findByOrganizationId(orgId1) } returns
+        listOf(
+          permissionToDelete1,
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            userId = UUID.randomUUID()
+            organizationId = orgId1
+            permissionType = PermissionType.ORGANIZATION_ADMIN // another admin exists in org 1, so this doesn't cause the throw
+          },
+          workspacePermissionInOrg,
+          workspacePermissionOutOfOrg,
+        ).map { it.toEntity() }
+
+      every { permissionRepository.findByOrganizationId(orgId2) } returns
+        listOf(
+          permissionToDelete2,
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            userId = UUID.randomUUID()
+            organizationId = orgId1
+            permissionType = PermissionType.ORGANIZATION_ADMIN // another admin exists in org 1, so this doesn't cause the throw
+          },
+        ).map { it.toEntity() }
+
+      every { permissionRepository.findByUserId(testUserId) } returns
+        listOf(
+          permissionToDelete1,
+          permissionToDelete2,
+          workspacePermissionInOrg,
+          workspacePermissionOutOfOrg,
+        ).map { it.toEntity() }
+
+      val workspaceInOrg =
+        StandardWorkspace().apply {
+          workspaceId = workspaceInOrgId
+          name = "workspaceInOrg"
+          organizationId = orgId1
+          email = "email@email.com"
+        }
+
+      // This workspace is out of both orgs.
+      val workspaceOutOfOrg =
+        StandardWorkspace().apply {
+          workspaceId = workspaceOutOfOrgId
+          name = "workspaceOutOfOrg"
+          organizationId = UUID.randomUUID()
+          email = "email@email.com"
+        }
+
+      every {
+        workspaceService.listStandardWorkspacesWithIds(listOf(workspaceInOrgId, workspaceOutOfOrgId), true)
+      } returns listOf(workspaceInOrg, workspaceOutOfOrg)
+      every { permissionRepository.deleteByIdIn(any()) } just Runs
+
+      permissionService.deletePermissions(listOf(permId1, permId2))
+
+      verify { permissionRepository.findByIdIn(listOf(permId1, permId2)) }
+      verify { permissionRepository.findByUserId(testUserId) }
+      verify { permissionRepository.findByOrganizationId(orgId1) }
+      verify { permissionRepository.findByOrganizationId(orgId2) }
+      verify(exactly = 1) {
+        permissionRepository.deleteByIdIn(
+          listOf(
+            permissionToDelete1.permissionId,
+            permissionToDelete2.permissionId,
+            workspacePermissionInOrg.permissionId,
+          ),
+        )
+      }
       confirmVerified(permissionRepository)
     }
   }

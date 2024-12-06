@@ -2,14 +2,14 @@
 
 exports[`SchemaChangesBackdrop renders with breaking changes and prevents background interaction 1`] = `
 <div
-  class="schemaChangeBackdropContainer"
+  class="schemaBreakingChanges"
   data-testid="schemaChangesBackdrop"
 >
   <div
-    class="backdrop"
+    class="directionRow gapMd alignItemsCenter justifyContentCenter wrapNowrap container schemaBreakingChanges__backdrop"
   >
     <div
-      class="contentContainer"
+      class="directionColumn gapLg alignItemsCenter justifyContentCenter wrapNowrap container schemaBreakingChanges__message"
     >
       <p
         class="text lg darkBlue center"

@@ -2,8 +2,8 @@ import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
 import { createSearchParams, useNavigate } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { useConnectorSpecificationMap } from "components/connection/ConnectionOnboarding/ConnectionOnboarding";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";

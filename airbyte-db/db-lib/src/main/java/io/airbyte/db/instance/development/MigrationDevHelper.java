@@ -8,10 +8,9 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.db.instance.FlywayDatabaseMigrator;
-import java.io.BufferedReader;
+import io.micronaut.core.util.StringUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +40,9 @@ import org.slf4j.LoggerFactory;
 public class MigrationDevHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MigrationDevHelper.class);
+
+  public static final String AIRBYTE_VERSION_ENV_VAR = "AIRBYTE_VERSION";
+  public static final String VERSION_ENV_VAR = "VERSION";
 
   /**
    * This method is used for migration development. Run it to see how your migration changes the
@@ -118,8 +120,8 @@ public class MigrationDevHelper {
 
   /**
    * This method is for migration development and testing purposes. So it is not exposed on the
-   * interface. Reference:
-   * https://github.com/flyway/flyway/blob/master/flyway-core/src/main/java/org/flywaydb/core/Flyway.java#L621.
+   * interface. Reference: <a href=
+   * "https://github.com/flyway/flyway/blob/master/flyway-core/src/main/java/org/flywaydb/core/Flyway.java#L621">Flyway.java</a>.
    */
   private static List<ResolvedMigration> getAllMigrations(final FlywayDatabaseMigrator migrator) {
     final Configuration configuration = migrator.getFlyway().getConfiguration();
@@ -141,25 +143,20 @@ public class MigrationDevHelper {
     if (migrations.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(migrations.get(migrations.size() - 1).getVersion());
+    return Optional.of(migrations.getLast().getVersion());
   }
 
   @VisibleForTesting
   static AirbyteVersion getCurrentAirbyteVersion() {
-    try (final BufferedReader reader = new BufferedReader(new FileReader("../../.env", StandardCharsets.UTF_8))) {
-      String line = reader.readLine();
-      while (line != null) {
-        if (line.startsWith("VERSION")) {
-          return new AirbyteVersion(line.split("=")[1]);
-        }
-        line = reader.readLine();
-      }
-    } catch (final FileNotFoundException e) {
-      throw new IllegalStateException("Cannot find the .env file", e);
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
+    final String airbyteVersion = System.getenv(AIRBYTE_VERSION_ENV_VAR);
+    final String version = System.getenv(VERSION_ENV_VAR);
+    if (StringUtils.isNotEmpty(airbyteVersion)) {
+      return new AirbyteVersion(airbyteVersion);
+    } else if (StringUtils.isNotEmpty(version)) {
+      return new AirbyteVersion(version);
+    } else {
+      throw new IllegalStateException("Cannot find current Airbyte version from environment.");
     }
-    throw new IllegalStateException("Cannot find current Airbyte version from .env file");
   }
 
   /**

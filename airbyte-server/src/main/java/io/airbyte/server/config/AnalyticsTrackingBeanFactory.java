@@ -7,13 +7,17 @@ package io.airbyte.server.config;
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.problems.model.generated.ProblemResourceData;
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
+import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.OrganizationService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
@@ -33,7 +37,7 @@ public class AnalyticsTrackingBeanFactory {
   public Supplier<DeploymentMetadataRead> deploymentSupplier(final DeploymentMetadataHandler deploymentMetadataHandler) {
     return () -> {
       final io.airbyte.api.model.generated.DeploymentMetadataRead deploymentMetadataRead = deploymentMetadataHandler.getDeploymentMetadata();
-      return new DeploymentMetadataRead(deploymentMetadataRead.getEnvironment(), deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
+      return new DeploymentMetadataRead(deploymentMetadataRead.getId(), deploymentMetadataRead.getMode(),
           deploymentMetadataRead.getVersion());
     };
   }
@@ -41,10 +45,10 @@ public class AnalyticsTrackingBeanFactory {
   @Singleton
   @Named("workspaceFetcher")
   @Replaces(named = "workspaceFetcher")
-  public Function<UUID, WorkspaceRead> workspaceFetcher(final ConfigRepository configRepository) {
+  public Function<UUID, WorkspaceRead> workspaceFetcher(final WorkspaceService workspaceService) {
     return (final UUID workspaceId) -> {
       try {
-        final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
+        final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
         return new WorkspaceRead(
             workspace.getWorkspaceId(),
             workspace.getCustomerId(),
@@ -63,7 +67,8 @@ public class AnalyticsTrackingBeanFactory {
             workspace.getFeedbackDone(),
             Enums.convertTo(workspace.getDefaultGeography(), Geography.class),
             null,
-            workspace.getTombstone());
+            workspace.getTombstone(),
+            null);
       } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
         // No longer throwing a runtime exception so that we can support the Airbyte API.
         return new WorkspaceRead(
@@ -84,8 +89,29 @@ public class AnalyticsTrackingBeanFactory {
             null,
             null,
             null,
+            null,
             null);
       }
+    };
+  }
+
+  @Singleton
+  @Named("organizationFetcher")
+  @Replaces(named = "organizationFetcher")
+  public Function<UUID, Organization> organizationFetcher(final OrganizationService organizationService) {
+    return (final UUID organizationId) -> {
+
+      final Organization organization;
+      try {
+        organization = organizationService.getOrganization(organizationId).orElseThrow(
+            () -> new ResourceNotFoundProblem(new ProblemResourceData()
+                .resourceId(organizationId.toString())
+                .resourceType("Organization")));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      return organization;
     };
   }
 

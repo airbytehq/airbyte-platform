@@ -4,7 +4,11 @@
 
 package io.airbyte.server.config;
 
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OperationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.micronaut.context.annotation.Factory;
@@ -17,8 +21,13 @@ import jakarta.inject.Singleton;
 public class HelperBeanFactory {
 
   @Singleton
-  public WorkspaceHelper workspaceHelper(final ConfigRepository configRepository, final JobPersistence jobPersistence) {
-    return new WorkspaceHelper(configRepository, jobPersistence);
+  public WorkspaceHelper workspaceHelper(final JobPersistence jobPersistence,
+                                         final ConnectionService connectionService,
+                                         final SourceService sourceService,
+                                         final DestinationService destinationService,
+                                         final OperationService operationService,
+                                         final WorkspaceService workspaceService) {
+    return new WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService);
   }
 
 }

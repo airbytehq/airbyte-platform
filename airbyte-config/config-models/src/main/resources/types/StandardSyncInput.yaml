@@ -64,3 +64,14 @@ properties:
     description: Context object with IDs of the relevant connection, source, destination, etc.
     type: object
     "$ref": ConnectionContext.yaml
+  useAsyncReplicate:
+    description: whether we should use async replicate
+    type: boolean
+  useAsyncActivities:
+    description: whether we should use async activities
+    type: boolean
+  podLabels:
+    description: Additional labels to apply to the pods created for this job
+    type: array
+    items:
+      type: string

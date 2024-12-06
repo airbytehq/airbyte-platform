@@ -1,6 +1,10 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
+import io.airbyte.commons.storage.STORAGE_MOUNT
+import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.workers.pod.FileConstants
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSource
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeBuilder
@@ -11,17 +15,20 @@ import io.micronaut.core.util.StringUtils
 import jakarta.inject.Singleton
 
 @Singleton
-class VolumeFactory(
+data class VolumeFactory(
   @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
-  @Value("\${airbyte.container.orchestrator.secret-name}") private val secretName: String?,
-  @Value("\${airbyte.container.orchestrator.secret-mount-path}") private val secretMountPath: String?,
-  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
-  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.secret-name}") private val secretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.mount-path}") private val secretMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.mount-path}") private val dataPlaneCredsMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
+  @Value("\${airbyte.cloud.storage.type}") private val cloudStorageType: String,
+  @Value("\${airbyte.worker.job.kube.volumes.local.enabled}") private val localVolumeEnabled: Boolean,
 ) {
-  fun config(): VolumeMountPair {
+  private fun config(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-config")
+        .withName(CONFIG_VOLUME_NAME)
         .withNewEmptyDir()
         .withMedium("Memory")
         .endEmptyDir()
@@ -29,14 +36,14 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-config")
+        .withName(CONFIG_VOLUME_NAME)
         .withMountPath(FileConstants.CONFIG_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun secret(): VolumeMountPair? {
+  private fun secret(): VolumeMountPair? {
     val hasSecrets =
       StringUtils.isNotEmpty(secretName) &&
         StringUtils.isNotEmpty(secretMountPath) &&
@@ -47,7 +54,7 @@ class VolumeFactory(
 
     val volume =
       VolumeBuilder()
-        .withName("airbyte-secret")
+        .withName(SECRET_VOLUME_NAME)
         .withSecret(
           SecretVolumeSourceBuilder()
             .withSecretName(secretName)
@@ -58,24 +65,24 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-secret")
+        .withName(SECRET_VOLUME_NAME)
         .withMountPath(secretMountPath)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun dataplaneCreds(): VolumeMountPair? {
+  private fun dataplaneCreds(): VolumeMountPair? {
     val hasDataplaneCreds =
       StringUtils.isNotEmpty(dataPlaneCredsSecretName) &&
-        StringUtils.isNotEmpty(dataPlaneCredsSecretMountPath)
+        StringUtils.isNotEmpty(dataPlaneCredsMountPath)
     if (!hasDataplaneCreds) {
       return null
     }
 
     val volume =
       VolumeBuilder()
-        .withName("airbyte-dataplane-creds")
+        .withName(DATA_PLANE_CREDS_VOLUME_NAME)
         .withSecret(
           SecretVolumeSourceBuilder()
             .withSecretName(dataPlaneCredsSecretName)
@@ -86,52 +93,152 @@ class VolumeFactory(
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-dataplane-creds")
-        .withMountPath(dataPlaneCredsSecretMountPath)
+        .withName(DATA_PLANE_CREDS_VOLUME_NAME)
+        .withMountPath(dataPlaneCredsMountPath)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun source(): VolumeMountPair {
+  private fun source(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-source")
+        .withName(SOURCE_VOLUME_NAME)
         .withNewEmptyDir()
         .endEmptyDir()
         .build()
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-source")
+        .withName(SOURCE_VOLUME_NAME)
         .withMountPath(FileConstants.SOURCE_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun destination(): VolumeMountPair {
+  private fun destination(): VolumeMountPair {
     val volume =
       VolumeBuilder()
-        .withName("airbyte-destination")
+        .withName(DESTINATION_VOLUME_NAME)
         .withNewEmptyDir()
         .endEmptyDir()
         .build()
 
     val mount =
       VolumeMountBuilder()
-        .withName("airbyte-destination")
+        .withName(DESTINATION_VOLUME_NAME)
         .withMountPath(FileConstants.DEST_DIR)
         .build()
 
     return VolumeMountPair(volume, mount)
   }
 
-  fun replication(): ReplicationVolumes {
-    val volumes: MutableList<Volume> = ArrayList()
-    val orchVolumeMounts: MutableList<VolumeMount> = ArrayList()
-    val sourceVolumeMounts: MutableList<VolumeMount> = ArrayList()
-    val destVolumeMounts: MutableList<VolumeMount> = ArrayList()
+  private fun staging(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withNewEmptyDir()
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(STAGING_VOLUME_NAME)
+        .withMountPath(stagingMountPath)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  // returns a volume+mount which allows the platform to use the local filesystem for storage (logs, state, etc).
+  private fun storage(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(STORAGE_VOLUME_NAME)
+        .withPersistentVolumeClaim(PersistentVolumeClaimVolumeSource(STORAGE_CLAIM_NAME, false))
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(STORAGE_VOLUME_NAME)
+        .withMountPath(STORAGE_MOUNT)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  // returns a volume+mount which allows connectors to access the volume mounted at /local.
+  private fun connectorHostFileAccess(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(LOCAL_VOLUME_NAME)
+        .withPersistentVolumeClaim(PersistentVolumeClaimVolumeSource(LOCAL_CLAIM_NAME, false))
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(LOCAL_VOLUME_NAME)
+        .withMountPath(LOCAL_VOLUME_MOUNT)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
+  fun connector(): ConnectorVolumes {
+    val volumes = mutableListOf<Volume>()
+    val initMounts = mutableListOf<VolumeMount>()
+    val sidecarMounts = mutableListOf<VolumeMount>()
+    val mainMounts = mutableListOf<VolumeMount>()
+
+    val config = config()
+    volumes.add(config.volume)
+    initMounts.add(config.mount)
+    mainMounts.add(config.mount)
+    sidecarMounts.add(config.mount)
+
+    val secrets = secret()
+    if (secrets != null) {
+      volumes.add(secrets.volume)
+      initMounts.add(secrets.mount)
+      sidecarMounts.add(secrets.mount)
+    }
+
+    val dataPlaneCreds = dataplaneCreds()
+    if (dataPlaneCreds != null) {
+      volumes.add(dataPlaneCreds.volume)
+      initMounts.add(dataPlaneCreds.mount)
+      sidecarMounts.add(dataPlaneCreds.mount)
+    }
+
+    if (cloudStorageType.lowercase() == "local") {
+      storage().also {
+        volumes.add(it.volume)
+        initMounts.add(it.mount)
+        sidecarMounts.add(it.mount)
+      }
+    }
+
+    if (localVolumeEnabled) {
+      connectorHostFileAccess().also {
+        volumes.add(it.volume)
+        mainMounts.add(it.mount)
+      }
+    }
+
+    return ConnectorVolumes(
+      volumes,
+      initMounts = initMounts,
+      mainMounts = mainMounts,
+      sidecarMounts = sidecarMounts,
+    )
+  }
+
+  fun replication(useStaging: Boolean): ReplicationVolumes {
+    val volumes = mutableListOf<Volume>()
+    val orchVolumeMounts = mutableListOf<VolumeMount>()
+    val sourceVolumeMounts = mutableListOf<VolumeMount>()
+    val destVolumeMounts = mutableListOf<VolumeMount>()
 
     val config = config()
     volumes.add(config.volume)
@@ -159,12 +266,49 @@ class VolumeFactory(
       orchVolumeMounts.add(dataPlaneCreds.mount)
     }
 
+    if (useStaging) {
+      val staging = staging()
+      volumes.add(staging.volume)
+      orchVolumeMounts.add(staging.mount)
+      sourceVolumeMounts.add(staging.mount)
+      destVolumeMounts.add(staging.mount)
+    }
+
+    if (cloudStorageType.lowercase() == "local") {
+      storage().also {
+        volumes.add(it.volume)
+        orchVolumeMounts.add(it.mount)
+      }
+    }
+
+    if (localVolumeEnabled) {
+      connectorHostFileAccess().also {
+        volumes.add(it.volume)
+        sourceVolumeMounts.add(it.mount)
+        destVolumeMounts.add(it.mount)
+      }
+    }
+
     return ReplicationVolumes(
       volumes,
       orchVolumeMounts,
       sourceVolumeMounts,
       destVolumeMounts,
     )
+  }
+
+  companion object {
+    const val CONFIG_VOLUME_NAME = "airbyte-config"
+    const val DATA_PLANE_CREDS_VOLUME_NAME = "airbyte-data-plane-creds"
+    const val DESTINATION_VOLUME_NAME = "airbyte-destination"
+    const val SECRET_VOLUME_NAME = "airbyte-secret"
+    const val SOURCE_VOLUME_NAME = "airbyte-source"
+    const val STAGING_VOLUME_NAME = "airbyte-file-staging"
+
+    // "local" means that the connector has local file access to this volume.
+    const val LOCAL_VOLUME_MOUNT = "/local"
+    const val LOCAL_VOLUME_NAME = "airbyte-local"
+    const val LOCAL_CLAIM_NAME = "airbyte-local-pvc"
   }
 }
 
@@ -178,4 +322,11 @@ data class ReplicationVolumes(
   val orchVolumeMounts: List<VolumeMount>,
   val sourceVolumeMounts: List<VolumeMount>,
   val destVolumeMounts: List<VolumeMount>,
+)
+
+data class ConnectorVolumes(
+  val volumes: List<Volume>,
+  val mainMounts: List<VolumeMount>,
+  val sidecarMounts: List<VolumeMount>,
+  val initMounts: List<VolumeMount>,
 )

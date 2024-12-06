@@ -14,7 +14,7 @@ import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import { AddUserModal } from "./components/AddUserModal";
-import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
+import { UnifiedUserModel, unifyWorkspaceUserData } from "./components/util";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 
@@ -25,7 +25,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
   const { openModal } = useModalService();
 
-  const usersWithAccess = useListWorkspaceAccessUsers(workspace.workspaceId).usersWithAccess;
+  const { usersWithAccess } = useListWorkspaceAccessUsers(workspace.workspaceId);
 
   const pendingInvitations = useListUserInvitations({
     scopeType: "workspace",
@@ -41,8 +41,8 @@ const WorkspaceAccessManagementSection: React.FC = () => {
 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
-      title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
+      title: formatMessage({ id: "userInvitations.create.modal.title" }, { scopeName: workspace.name }),
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} scope="workspace" />,
       size: "md",
     });
 
@@ -55,7 +55,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
     setSearchParams(searchParams);
   }, [debouncedUserFilter, searchParams, setSearchParams]);
 
-  const filteredWorkspaceUsers: UnifiedWorkspaceUserModel[] = (unifiedWorkspaceUsers ?? []).filter((user) => {
+  const filteredWorkspaceUsers: UnifiedUserModel[] = (unifiedWorkspaceUsers ?? []).filter((user) => {
     return (
       user.userName?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
       user.userEmail?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")

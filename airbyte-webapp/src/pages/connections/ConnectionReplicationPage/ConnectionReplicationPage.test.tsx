@@ -34,6 +34,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnectionQuery: jest.fn(() => async () => mockConnection),
   useGetConnection: () => mockConnection,
+  useCurrentConnection: () => mockConnection,
   useGetStateTypeQuery: () => async () => "global",
   useUpdateConnection: () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
@@ -46,6 +47,11 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
+  useDescribeCronExpressionFetchQuery: () => async () => ({
+    isValid: true,
+    cronDescription: "every hour",
+    nextExecutions: [],
+  }),
 }));
 
 jest.mock("core/utils/rbac", () => ({

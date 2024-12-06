@@ -55,6 +55,8 @@ import {
   ExponentialBackoffStrategy,
   WaitUntilTimeFromHeader,
   WaitTimeFromHeader,
+  SimpleRetrieverDecoder,
+  XmlDecoderType,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
@@ -74,7 +76,7 @@ export interface BuilderState {
 
 export interface AssistData {
   docsUrl?: string;
-  openApiSpecUrl?: string;
+  openapiSpecUrl?: string;
 }
 
 export interface BuilderFormInput {
@@ -86,13 +88,17 @@ export interface BuilderFormInput {
 
 type BuilderHttpMethod = "GET" | "POST";
 
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "gzip JSON"] as const;
+export type BuilderDecoder = (typeof BUILDER_DECODER_TYPES)[number];
+
 interface BuilderRequestOptions {
   requestParameters: Array<[string, string]>;
   requestHeaders: Array<[string, string]>;
   requestBody: BuilderRequestBody;
 }
 
-export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "login_requester"> & {
+export const BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES = ["JSON", "XML"] as const;
+export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "login_requester" | "decoder"> & {
   login_requester: {
     url: string;
     authenticator: NoAuth | ApiKeyAuthenticator | BearerAuthenticator | BasicHttpAuthenticator;
@@ -100,6 +106,7 @@ export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "
     requestOptions: BuilderRequestOptions;
     errorHandler?: BuilderErrorHandler[];
   };
+  decoder: (typeof BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES)[number];
 };
 
 export type BuilderFormAuthenticator =
@@ -263,6 +270,7 @@ export interface BuilderStream {
   urlPath: string;
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
+  decoder: BuilderDecoder;
   requestOptions: BuilderRequestOptions;
   recordSelector?: BuilderRecordSelector | YamlString;
   paginator?: BuilderPaginator | YamlString;
@@ -347,7 +355,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   assist: {
     docsUrl: "",
-    openApiSpecUrl: "",
+    openapiSpecUrl: "",
   },
   inputs: [],
   streams: [],
@@ -374,6 +382,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   urlPath: "",
   primaryKey: [],
   httpMethod: "GET",
+  decoder: "JSON",
   schema: DEFAULT_SCHEMA,
   requestOptions: {
     requestParameters: [],
@@ -386,6 +395,8 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   autoImportSchema: true,
   unknownFields: undefined,
 };
+
+export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
@@ -543,6 +554,7 @@ export function builderAuthenticatorToManifest(
         request_headers: Object.fromEntries(builderLoginRequester.requestOptions.requestHeaders),
         ...builderRequestBodyToStreamRequestBody(builderLoginRequester.requestOptions.requestBody),
       },
+      decoder: authenticator.decoder === "XML" ? { type: XmlDecoderType.XmlDecoder } : undefined,
     };
   }
   return authenticator as HttpRequesterAuthenticator;
@@ -873,6 +885,22 @@ export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSel
   });
 }
 
+const builderDecoderToManifest = (decoder: BuilderDecoder): SimpleRetrieverDecoder | undefined => {
+  switch (decoder) {
+    case "JSON":
+      // JSON is the default decoder, so don't specify it to keep manifests lean
+      return undefined;
+    case "XML":
+      return { type: "XmlDecoder" };
+    case "JSON Lines":
+      return { type: "JsonlDecoder" };
+    case "Iterable":
+      return { type: "IterableDecoder" };
+    case "gzip JSON":
+      return { type: "GzipJsonDecoder" };
+  }
+};
+
 type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
 
 function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: BuilderStream[]): DeclarativeStream {
@@ -905,6 +933,7 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
         ...convertOrLoadYamlString(stream.parameterizedRequests, builderParameterizedRequestsToManifest),
         ...convertOrLoadYamlString(stream.parentStreams, parentStreamsToManifest)
       ),
+      decoder: builderDecoderToManifest(stream.decoder),
     },
     incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
     transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
@@ -1039,6 +1068,28 @@ function schemaRef(streamName: string) {
 }
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
+export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      url_base: "",
+      authenticator: undefined,
+      path: "",
+      http_method: "GET",
+    },
+    paginator: undefined,
+  },
+  primary_key: undefined,
+};
 
 export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
   useWatch<BuilderState, TPath>({ name: path, ...options });

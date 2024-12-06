@@ -1,5 +1,6 @@
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "./Assist/AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
@@ -20,7 +21,6 @@ type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
-
   const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
@@ -121,6 +121,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         currentStreamIndex: props.currentStreamIndex,
         componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
+      labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
+      label="Request Options"
     >
       {content}
     </BuilderCard>

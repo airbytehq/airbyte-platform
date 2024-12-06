@@ -7,6 +7,7 @@ package io.airbyte.workers.helper;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.temporal.exception.SizeLimitException;
+import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -14,6 +15,7 @@ import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.workers.exception.ResourceConstraintException;
 import io.airbyte.workers.exception.WorkloadLauncherException;
 import io.airbyte.workers.exception.WorkloadMonitorException;
 import java.util.Comparator;
@@ -61,11 +63,6 @@ public class FailureHelper {
     }
 
   }
-
-  private static final String WORKFLOW_TYPE_SYNC = "SyncWorkflow";
-  private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
-  private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
-  private static final String ACTIVITY_TYPE_PERSIST = "Persist";
 
   /**
    * Create generic failure.
@@ -294,6 +291,11 @@ public class FailureHelper {
   public static FailureReason replicationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     final FailureReason failure = genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.REPLICATION);
+    if (isInstanceOf(t, ResourceConstraintException.class)) {
+      return failure.withFailureType(FailureType.TRANSIENT_ERROR)
+          .withExternalMessage("Airbyte could not start the sync process."
+              + " This may be due to insufficient system resources. Please check available resources and try again.");
+    }
     if (isInstanceOf(t, WorkloadLauncherException.class)) {
       return failure.withFailureType(FailureType.TRANSIENT_ERROR)
           .withExternalMessage("Airbyte could not start the sync process.");
@@ -315,20 +317,6 @@ public class FailureHelper {
     }
 
     return Objects.nonNull(exception) && Objects.nonNull(exception.getMessage()) && exception.getMessage().contains(exceptionType.getName());
-  }
-
-  /**
-   * Create persistence failure.
-   *
-   * @param t throwable that caused the failure
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason persistenceFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.PERSISTENCE)
-        .withExternalMessage("Something went wrong during state persistence");
   }
 
   /**
@@ -385,21 +373,17 @@ public class FailureHelper {
    * Create a failure reason based workflow type and activity type.
    *
    * @param workflowType workflow type
-   * @param activityType activity type
    * @param t throwable that caused the failure
    * @param jobId job id
    * @param attemptNumber attempt number
    * @return failure reason
    */
   public static FailureReason failureReasonFromWorkflowAndActivity(final String workflowType,
-                                                                   final String activityType,
                                                                    final Throwable t,
                                                                    final Long jobId,
                                                                    final Integer attemptNumber) {
-    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && (ACTIVITY_TYPE_REPLICATE.equals(activityType) || ACTIVITY_TYPE_REPLICATEV2.equals(activityType))) {
+    if (SyncWorkflow.class.getName().contains(workflowType)) {
       return replicationFailure(t, jobId, attemptNumber);
-    } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
-      return persistenceFailure(t, jobId, attemptNumber);
     } else {
       return unknownOriginFailure(t, jobId, attemptNumber);
     }

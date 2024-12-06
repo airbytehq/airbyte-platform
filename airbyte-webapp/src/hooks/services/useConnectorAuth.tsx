@@ -218,6 +218,11 @@ export function useRunOauthFlow({
 
       param.current = consentRequestInProgress.payload;
 
+      // some oauth services (e.g. airflow) drop some of the query params we send as part of the consent url
+      // so parse apart that url and re-apply the query params when completing the oauth flow
+      const url = new URL(consentRequestInProgress.consentUrl);
+      const consentUrlQueryParams = Object.fromEntries(url.searchParams);
+
       if (windowObjectReference && !windowObjectReference.closed) {
         // popup window is already open, so just focus it
         windowObjectReference.focus();
@@ -233,7 +238,12 @@ export function useRunOauthFlow({
             return;
           }
           if (event.type === "completed") {
-            await completeOauth(event.query);
+            const queryParams = {
+              ...consentUrlQueryParams, // ensure we pass along params from the consent url
+              ...event.query, // but any params provided here take priority and override
+            };
+
+            await completeOauth(queryParams);
           }
           // OAuth flow is completed or taken over by another tab, so close the broadcast channel
           // and popup window if it is still open.

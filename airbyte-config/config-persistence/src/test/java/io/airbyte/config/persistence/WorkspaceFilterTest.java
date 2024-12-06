@@ -16,17 +16,9 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
-import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
@@ -66,7 +58,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private static final UUID WORKSPACE_ID_1 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID_2 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID_3 = UUID.randomUUID();
-  private ConfigRepository configRepository;
+  private WorkspaceService workspaceService;
 
   @BeforeAll
   static void setUpAll() throws SQLException, IOException {
@@ -139,37 +131,12 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
-    final ConnectionService connectionService = mock(ConnectionService.class);
-    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
-    configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+    workspaceService = new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
   }
 
   @Test
@@ -182,7 +149,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
      * time window. Step 2: Trace back via CONNECTION table and ACTOR table. Step 3: Return workspace
      * IDs from ACTOR table.
      */
-    final List<UUID> actualResult = configRepository.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
+    final List<UUID> actualResult = workspaceService.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
     /*
      * With the test data provided above, expected outputs for each step: Step 1: `jobs` (IDs) OL, 1L,
      * 2L, 3L, 4L, 5L and 6L. Step 2: `connections` (IDs) CONN_ID_0, CONN_ID_1, CONN_ID_2, CONN_ID_3,

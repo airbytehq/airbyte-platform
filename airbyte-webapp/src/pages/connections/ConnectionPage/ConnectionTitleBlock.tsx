@@ -1,10 +1,10 @@
 import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ConnectionHeaderControls } from "components/connection/ConnectionHeaderControls";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicator } from "components/connection/ConnectionStatusIndicator";
+import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -14,6 +14,7 @@ import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import {
+  useCurrentConnection,
   useDestinationDefinition,
   useDestinationDefinitionVersion,
   useSourceDefinition,
@@ -21,7 +22,6 @@ import {
 } from "core/api";
 import { ConnectionStatus, SupportLevel } from "core/api/types/AirbyteClient";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
@@ -57,9 +57,9 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, support
 };
 
 export const ConnectionTitleBlock = () => {
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { name, source, destination, status: connectionStatus } = connection;
-  const { isRunning, status } = useConnectionStatus(connection.connectionId);
+  const { status } = useConnectionStatus(connection.connectionId);
   const sourceDefinition = useSourceDefinition(connection.source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(connection.source.sourceId);
   const destinationDefinition = useDestinationDefinition(connection.destination.destinationDefinitionId);
@@ -72,7 +72,7 @@ export const ConnectionTitleBlock = () => {
       )}
       <FlexContainer alignItems="center" justifyContent="space-between" wrap="wrap">
         <FlexContainer alignItems="center" className={styles.titleContainer}>
-          <ConnectionStatusIndicator status={status} withBox loading={isRunning} />
+          <ConnectionStatusIndicator status={status} withBox />
           <FlexContainer direction="column" gap="xs" className={styles.textEllipsis}>
             <Heading as="h1" size="sm" title={name} className={styles.heading}>
               {name}

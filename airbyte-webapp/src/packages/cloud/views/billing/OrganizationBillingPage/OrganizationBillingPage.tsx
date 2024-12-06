@@ -1,14 +1,136 @@
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
-import { FlexContainer } from "components/ui/Flex";
+import { EmptyState } from "components/EmptyState";
+import { PageContainer } from "components/PageContainer";
+import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
+import { Box } from "components/ui/Box";
+import { Button } from "components/ui/Button";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
+import { Message } from "components/ui/Message";
+import { Text } from "components/ui/Text";
+
+import {
+  HttpProblem,
+  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
+  useGetOrganizationSubscriptionInfo,
+} from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { links } from "core/utils/links";
+import { useFormatCredits } from "core/utils/numberHelper";
+
+import { AccountBalance } from "./AccountBalance";
+import { BillingBanners } from "./BillingBanners";
+import { BillingInformation } from "./BillingInformation";
+import { Invoices } from "./Invoices";
+import { PaymentMethod } from "./PaymentMethod";
+import { Subscription } from "./Subscription";
+import { useRedirectToCustomerPortal } from "../../../area/billing/utils/useRedirectToCustomerPortal";
 
 export const OrganizationBillingPage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_BILLING);
+
+  const { formatMessage } = useIntl();
+  const { organizationId } = useCurrentWorkspace();
+  const { billing } = useCurrentOrganizationInfo();
+  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("portal");
+  const { formatCredits } = useFormatCredits();
+
+  const { data: subscriptionInfo, isLoading, error } = useGetOrganizationSubscriptionInfo(organizationId);
+
+  const noSubscriptionExists = !isLoading && HttpProblem.isType(error, "error:billing/no-active-subscription");
+
+  const hideAccountBalance = noSubscriptionExists || subscriptionInfo?.balanceHidden;
+
   return (
-    <FlexContainer direction="column" gap="xl">
-      <Heading as="h1" size="md">
-        <FormattedMessage id="settings.organization.billing.title" />
-      </Heading>
-    </FlexContainer>
+    <PageContainer>
+      {billing && billing.paymentStatus !== "uninitialized" ? (
+        <FlexContainer direction="column" gap="xl">
+          <FlexContainer justifyContent="space-between" alignItems="center">
+            <Heading as="h1" size="md">
+              <FormattedMessage id="settings.organization.billing.title" />
+            </Heading>
+            <FlexItem>
+              <Text size="sm">
+                <ExternalLink
+                  href={links.billingNotificationsForm.replace("{organizationId}", organizationId)}
+                  opensInNewTab
+                >
+                  <FlexContainer alignItems="center" gap="xs">
+                    <Icon type="bell" size="sm" />
+                    <FormattedMessage id="settings.organization.billing.setupNotifications" />
+                  </FlexContainer>
+                </ExternalLink>
+              </Text>
+            </FlexItem>
+          </FlexContainer>
+
+          <BillingBanners />
+
+          <BorderedTiles>
+            {!noSubscriptionExists && <Subscription />}
+
+            {!hideAccountBalance && <AccountBalance />}
+
+            <BorderedTile>
+              <BillingInformation />
+            </BorderedTile>
+
+            <BorderedTile>
+              <PaymentMethod />
+            </BorderedTile>
+          </BorderedTiles>
+
+          <Box py="lg">
+            <Invoices />
+          </Box>
+        </FlexContainer>
+      ) : (
+        <FlexContainer gap="md" direction="column">
+          {!!subscriptionInfo?.credits?.balance && subscriptionInfo?.credits?.balance > 0 && (
+            <Message
+              text={
+                <FormattedMessage
+                  id="settings.organization.billing.remainingCreditsBanner"
+                  values={{
+                    amount: formatCredits(subscriptionInfo.credits.balance),
+                  }}
+                />
+              }
+            />
+          )}
+          <BillingBanners />
+          <Box py="2xl">
+            <EmptyState
+              text={
+                <FlexContainer direction="column" alignItems="center" gap="lg">
+                  <FlexItem>{formatMessage({ id: "settings.organization.billing.notSetUp" })}</FlexItem>
+                  <FlexItem>
+                    <FormattedMessage
+                      id="settings.organization.billing.notSetUpDetails"
+                      values={{
+                        lnk: (node: React.ReactNode) => (
+                          <ExternalLink href={links.creditDescription} opensInNewTab>
+                            {node}
+                          </ExternalLink>
+                        ),
+                      }}
+                    />
+                  </FlexItem>
+                </FlexContainer>
+              }
+              button={
+                <Button variant="primary" onClick={goToCustomerPortal} isLoading={redirecting}>
+                  <FormattedMessage id="settings.organization.billing.paymentMethod.add" />
+                </Button>
+              }
+            />
+          </Box>
+        </FlexContainer>
+      )}
+    </PageContainer>
   );
 };

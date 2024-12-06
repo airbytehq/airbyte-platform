@@ -3,20 +3,19 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
-import { FlexContainer } from "components/ui/Flex";
-import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
+import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { useCurrentConnection, useDonwnloadJobLogsFetchQuery } from "core/api";
+import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
+import { DefaultErrorBoundary } from "core/errors";
 import { copyToClipboard } from "core/utils/clipboard";
-import { trackError } from "core/utils/datadog";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ModalOptions, ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobEventMenu.module.scss";
 import { JobLogsModalContent } from "./JobLogsModalContent";
+import { TimelineFilterValues } from "./utils";
 
 enum JobMenuOptions {
   OpenLogsModal = "OpenLogsModal",
@@ -24,20 +23,20 @@ enum JobMenuOptions {
   DownloadLogs = "DownloadLogs",
 }
 
-export const openJobLogsModalFromTimeline = ({
+export const openJobLogsModal = ({
   openModal,
   jobId,
   eventId,
-  connectionName,
+  connection,
   attemptNumber,
-  connectionId,
+  setFilterValue,
 }: {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
   jobId?: number;
   eventId?: string;
-  connectionName: string;
+  connection: WebBackendConnectionRead;
   attemptNumber?: number;
-  connectionId: string;
+  setFilterValue?: (filterName: keyof TimelineFilterValues, value: string) => void;
 }) => {
   if (!jobId && !eventId) {
     return;
@@ -45,23 +44,27 @@ export const openJobLogsModalFromTimeline = ({
 
   openModal({
     size: "full",
-    title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName }} />,
+    title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName: connection.name }} />,
     content: () => (
-      <Suspense
-        fallback={
-          <div className={styles.modalLoading}>
-            <Spinner />
-          </div>
-        }
-      >
-        <JobLogsModalContent
-          jobId={jobId}
-          attemptNumber={attemptNumber}
-          eventId={eventId}
-          connectionId={connectionId}
-        />
-      </Suspense>
+      <DefaultErrorBoundary>
+        <Suspense
+          fallback={
+            <div className={styles.modalLoading}>
+              <Spinner />
+              <Text>
+                <FormattedMessage id="jobHistory.logs.loadingJob" />
+              </Text>
+            </div>
+          }
+        >
+          <JobLogsModalContent jobId={jobId} attemptNumber={attemptNumber} eventId={eventId} connection={connection} />
+        </Suspense>
+      </DefaultErrorBoundary>
     ),
+  }).then((result) => {
+    if (result && setFilterValue) {
+      setFilterValue("openLogs", "");
+    }
   });
 };
 
@@ -71,22 +74,20 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   attemptCount,
 }) => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { openModal } = useModalService();
-  const { registerNotification, unregisterNotificationById } = useNotificationService();
+  const { registerNotification } = useNotificationService();
 
-  const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobId);
-  const { name: workspaceName, workspaceId } = useCurrentWorkspace();
+  const downloadJobLogs = useDonwnloadJobLogsFetchQuery();
 
   const onChangeHandler = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
       case JobMenuOptions.OpenLogsModal:
-        openJobLogsModalFromTimeline({
+        openJobLogsModal({
           openModal,
           jobId,
           eventId,
-          connectionName: connection.name,
-          connectionId: connection.connectionId,
+          connection,
         });
         break;
 
@@ -109,60 +110,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
       }
 
       case JobMenuOptions.DownloadLogs:
-        const notificationId = `download-logs-${jobId}`;
-        registerNotification({
-          type: "info",
-          text: (
-            <FlexContainer alignItems="center">
-              <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId }} />
-              <div className={styles.spinnerContainer}>
-                <LoadingSpinner />
-              </div>
-            </FlexContainer>
-          ),
-          id: notificationId,
-          timeout: false,
-        });
-        // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
-        Promise.all([
-          fetchJobLogs()
-            .then(({ data }) => {
-              if (!data) {
-                throw new Error("No logs returned from server");
-              }
-              const file = new Blob(
-                [
-                  data.attempts
-                    .flatMap((info, index) => [
-                      `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
-                      ...info.logs.logLines,
-                      `\n\n\n`,
-                    ])
-                    .join("\n"),
-                ],
-                {
-                  type: FILE_TYPE_DOWNLOAD,
-                }
-              );
-              downloadFile(file, fileizeString(`${workspaceName}-logs-${jobId}.txt`));
-            })
-            .catch((e) => {
-              trackError(e, { workspaceId, jobId });
-              registerNotification({
-                type: "error",
-                text: formatMessage(
-                  {
-                    id: "jobHistory.logs.logDownloadFailed",
-                  },
-                  { connectionName: connection.name }
-                ),
-                id: `download-logs-error-${jobId}`,
-              });
-            }),
-          new Promise((resolve) => setTimeout(resolve, 1000)),
-        ]).finally(() => {
-          unregisterNotificationById(notificationId);
-        });
+        downloadJobLogs(connection.name, jobId);
         break;
     }
   };
@@ -170,22 +118,26 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCo
   return (
     <DropdownMenu
       placement="bottom-end"
+      data-testid="job-event-menu"
       options={[
         {
           displayName: formatMessage({
             id: "jobHistory.copyLinkToEvent",
           }),
           value: JobMenuOptions.CopyLinkToEvent,
+          "data-testid": "copy-link-to-event",
         },
         {
           displayName: formatMessage({ id: "jobHistory.viewLogs" }),
           value: JobMenuOptions.OpenLogsModal,
           disabled: attemptCount === 0,
+          "data-testid": "view-logs",
         },
         {
           displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
           value: JobMenuOptions.DownloadLogs,
           disabled: attemptCount === 0,
+          "data-testid": "download-logs",
         },
       ]}
       onChange={onChangeHandler}

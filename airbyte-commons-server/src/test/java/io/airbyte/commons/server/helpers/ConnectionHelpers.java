@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.helpers;
 
-import static io.airbyte.commons.server.handlers.helpers.CatalogConverter.toApi;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
@@ -31,11 +29,13 @@ import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.FieldType;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
@@ -44,9 +44,11 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogHelpers;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,6 +68,11 @@ public class ConnectionHelpers {
   private static final String ONE_HUNDRED_G = "100g";
   private static final String STANDARD_SYNC_NAME = "presto to hudi";
   private static final String STANDARD_SYNC_PREFIX = "presto_to_hudi";
+  private static final FieldGenerator fieldGenerator = new FieldGenerator();
+
+  private static final CatalogConverter catalogConverters = new CatalogConverter(fieldGenerator, Collections.emptyList());
+
+  private static final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverters);
 
   public static final StreamDescriptor STREAM_DESCRIPTOR = new StreamDescriptor().withName(STREAM_NAME);
 
@@ -241,7 +248,7 @@ public class ConnectionHelpers {
         .namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceCatalogId(standardSync.getSourceCatalogId())
-        .geography(ApiPojoConverters.toApiGeography(standardSync.getGeography()))
+        .geography(apiPojoConverters.toApiGeography(standardSync.getGeography()))
         .breakingChange(standardSync.getBreakingChange())
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
@@ -253,10 +260,10 @@ public class ConnectionHelpers {
     if (standardSync.getStatus() != null) {
       connectionRead.status(io.airbyte.api.model.generated.ConnectionStatus.fromValue(standardSync.getStatus().value()));
     }
-    ApiPojoConverters.populateConnectionReadSchedule(standardSync, connectionRead);
+    apiPojoConverters.populateConnectionReadSchedule(standardSync, connectionRead);
 
     if (standardSync.getCatalog() != null) {
-      connectionRead.syncCatalog(toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()));
+      connectionRead.syncCatalog(catalogConverters.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()));
     }
     if (standardSync.getResourceRequirements() != null) {
       connectionRead.resourceRequirements(new io.airbyte.api.model.generated.ResourceRequirements()
@@ -292,12 +299,12 @@ public class ConnectionHelpers {
             .destinationName(destination.getDestinationName())
             .destinationDefinitionId(destination.getDestinationDefinitionId())
             .destinationId(destination.getDestinationId()))
-        .status(ApiPojoConverters.toApiStatus(standardSync.getStatus()))
+        .status(apiPojoConverters.toApiStatus(standardSync.getStatus()))
         .isSyncing(isSyncing)
         .latestSyncJobCreatedAt(latestSyncJobCreatedAt)
         .latestSyncJobStatus(latestSynJobStatus)
-        .scheduleType(ApiPojoConverters.toApiConnectionScheduleType(standardSync))
-        .scheduleData(ApiPojoConverters.toApiConnectionScheduleData(standardSync))
+        .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
+        .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
         .schemaChange(schemaChange);
 
     return connectionListItem;
@@ -318,14 +325,17 @@ public class ConnectionHelpers {
   }
 
   public static ConfiguredAirbyteCatalog generateAirbyteCatalogWithTwoFields() {
-    return new ConfiguredAirbyteCatalog(List.of(new ConfiguredAirbyteStream(
-        new io.airbyte.config.AirbyteStream(STREAM_NAME, generateJsonSchemaWithTwoFields(),
+    return new ConfiguredAirbyteCatalog(List.of(new ConfiguredAirbyteStream.Builder()
+        .stream(new io.airbyte.config.AirbyteStream(STREAM_NAME, generateJsonSchemaWithTwoFields(),
             List.of(io.airbyte.config.SyncMode.FULL_REFRESH, io.airbyte.config.SyncMode.INCREMENTAL))
                 .withDefaultCursorField(List.of(FIELD_NAME))
                 .withSourceDefinedCursor(false)
-                .withSourceDefinedPrimaryKey(List.of()),
-        io.airbyte.config.SyncMode.INCREMENTAL,
-        DestinationSyncMode.APPEND)));
+                .withSourceDefinedPrimaryKey(List.of()))
+        .cursorField(List.of(FIELD_NAME))
+        .syncMode(io.airbyte.config.SyncMode.INCREMENTAL)
+        .destinationSyncMode(DestinationSyncMode.APPEND)
+        .fields(fieldGenerator.getFieldsFromSchema(generateJsonSchemaWithTwoFields()))
+        .build()));
   }
 
   public static ConfiguredAirbyteCatalog generateMultipleStreamsConfiguredAirbyteCatalog(final int streamsCount) {
@@ -337,8 +347,13 @@ public class ConnectionHelpers {
   }
 
   public static ConfiguredAirbyteStream generateBasicConfiguredStream(final String nameSuffix) {
-    return new ConfiguredAirbyteStream(generateBasicAirbyteStream(nameSuffix), io.airbyte.config.SyncMode.INCREMENTAL, DestinationSyncMode.APPEND)
-        .withCursorField(List.of(FIELD_NAME));
+    return new ConfiguredAirbyteStream.Builder()
+        .stream(generateBasicAirbyteStream(nameSuffix))
+        .syncMode(io.airbyte.config.SyncMode.INCREMENTAL)
+        .destinationSyncMode(DestinationSyncMode.APPEND)
+        .cursorField(List.of(FIELD_NAME))
+        .fields(List.of(new io.airbyte.config.Field(FIELD_NAME, FieldType.STRING)))
+        .build();
   }
 
   private static io.airbyte.config.AirbyteStream generateBasicAirbyteStream(final String nameSuffix) {

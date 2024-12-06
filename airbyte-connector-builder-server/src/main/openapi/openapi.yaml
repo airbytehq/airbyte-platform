@@ -206,10 +206,15 @@ components:
       type: object
       required:
         - pull_request_url
+        - actor_definition_id
       properties:
         pull_request_url:
           type: string
           description: URL of the PR that was created or updated
+        actor_definition_id:
+          type: string
+          format: UUID
+          description: The definition ID of the connector that was contributed to
     StreamRead:
       type: object
       required:
@@ -222,7 +227,19 @@ components:
           description: The LOG AirbyteMessages that were emitted during the read of this slice
           items:
             type: object
-            # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteLogMessage"
+            required:
+              - message
+              - level
+            properties:
+              message:
+                type: string
+              level:
+                type: string
+                enum: ["INFO", "WARN", "ERROR", "FATAL"]
+              internal_message:
+                type: string
+              stacktrace:
+                type: string
         slices:
           type: array
           description: The stream slices returned from the read command. If no stream slicer is configured, this should contain a single item containing all of the results.
@@ -447,6 +464,8 @@ components:
           type: array
           items:
             type: string
+        details:
+          type: object
     InvalidInputExceptionInfo:
       type: object
       required:

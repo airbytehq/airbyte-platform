@@ -13,38 +13,61 @@ import java.util.UUID
 interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration, UUID> {
   fun getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
     key: String,
-    resourceType: ConfigResourceType,
-    resourceId: UUID,
+    resourceType: ConfigResourceType?,
+    resourceId: UUID?,
     scopeType: ConfigScopeType,
     scopeId: UUID,
   ): ScopedConfiguration?
 
   fun findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
     key: String,
-    resourceType: ConfigResourceType,
-    resourceId: UUID,
+    resourceType: ConfigResourceType?,
+    resourceId: UUID?,
     scopeType: ConfigScopeType,
     scopeId: List<UUID>,
   ): List<ScopedConfiguration>
 
   fun findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
     key: String,
-    resourceType: ConfigResourceType,
-    resourceId: UUID,
+    resourceType: ConfigResourceType?,
+    resourceId: UUID?,
     originType: ConfigOriginType,
     origins: List<String>,
   ): List<ScopedConfiguration>
 
   fun findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
     key: String,
-    resourceType: ConfigResourceType,
-    resourceId: UUID,
+    resourceType: ConfigResourceType?,
+    resourceId: UUID?,
     scopeType: ConfigScopeType,
     originType: ConfigOriginType,
     values: List<String>,
   ): List<ScopedConfiguration>
 
+  fun findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+    key: String,
+    configResourceType: ConfigResourceType?,
+    configScopeType: ConfigScopeType?,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
+
+  fun findByKeyAndScopeTypeAndScopeId(
+    key: String,
+    configScopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
+
   fun findByKey(key: String): List<ScopedConfiguration>
 
   fun deleteByIdInList(ids: List<UUID>)
+
+  fun updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    origin: String,
+    value: String,
+  )
 }

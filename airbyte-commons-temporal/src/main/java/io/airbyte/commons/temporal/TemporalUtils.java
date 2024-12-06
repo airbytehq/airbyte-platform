@@ -68,6 +68,8 @@ public class TemporalUtils {
   /**
    * Create temporal service client.
    *
+   * Wait until the Temporal service is available and the namespace is initialized.
+   *
    * @param options client options
    * @param namespace temporal namespace
    * @return temporal service client
@@ -83,6 +85,8 @@ public class TemporalUtils {
 
   /**
    * Create temporal service client.
+   *
+   * Wait until the Temporal service is available and the namespace is initialized.
    *
    * @return temporal service client
    */

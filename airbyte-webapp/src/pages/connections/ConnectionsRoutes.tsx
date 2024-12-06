@@ -5,7 +5,6 @@ import { useEffectOnce } from "react-use";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionRoutePaths, RoutePaths } from "../routePaths";
 
@@ -15,8 +14,9 @@ const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
 const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage"));
-const ConnectionJobHistoryPage = React.lazy(() => import("./ConnectionJobHistoryPage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
+const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
+
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
 export const JobHistoryToTimelineRedirect = () => {
@@ -58,8 +58,6 @@ export const JobHistoryToTimelineRedirect = () => {
 };
 
 export const ConnectionsRoutes: React.FC = () => {
-  const showTimeline = useExperiment("connection.timeline", false);
-
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>
@@ -71,13 +69,10 @@ export const ConnectionsRoutes: React.FC = () => {
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
-          {showTimeline ? (
-            <Route path={ConnectionRoutePaths.JobHistory} element={<JobHistoryToTimelineRedirect />} />
-          ) : (
-            <Route path={ConnectionRoutePaths.JobHistory} element={<ConnectionJobHistoryPage />} />
-          )}
+          <Route path={ConnectionRoutePaths.JobHistory} element={<JobHistoryToTimelineRedirect />} />
           <Route path={ConnectionRoutePaths.Timeline} element={<ConnectionTimelinePage />} />
           <Route path={ConnectionRoutePaths.Replication} element={<ConnectionReplicationPage />} />
+          <Route path={ConnectionRoutePaths.Mappings} element={<ConnectionMappingsPage />} />
           <Route path={ConnectionRoutePaths.Transformation} element={<ConnectionTransformationPage />} />
           <Route path={ConnectionRoutePaths.Settings} element={<ConnectionSettingsPage />} />
           <Route index element={<Navigate to={ConnectionRoutePaths.Status} replace />} />

@@ -56,6 +56,16 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
 
 endpoints:
   beans:
@@ -122,14 +132,20 @@ temporal:
 
 logger:
   levels:
-    # io.micronaut.data.query: TRACE
-    #   Uncomment to help resolve issues with conditional beans
-    # io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#    io.micronaut.context.condition: DEBUG
 #   Uncomment to help resolve issues with security beans
-#      io.micronaut.security: DEBUG
+#    io.micronaut.security: DEBUG
 #   Uncomment to help resolve issues with micronaut data
-#      com.zaxxer.hikari.HikariConfig: DEBUG
-#      com.zaxxer.hikari: TRACE
+#    io.micronaut.data.query: TRACE
+#    com.zaxxer.hikari.HikariConfig: DEBUG
+#    com.zaxxer.hikari: TRACE
 
 jackson:
   mapper:

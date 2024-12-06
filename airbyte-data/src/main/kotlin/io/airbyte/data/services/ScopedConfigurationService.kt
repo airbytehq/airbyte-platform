@@ -54,6 +54,29 @@ interface ScopedConfigurationService {
   ): Optional<ScopedConfiguration>
 
   /**
+   * Get a scoped configuration by key, resource and scope map.
+   *
+   * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.
+   * Scopes included in the map must be defined as a supported scope in the key definition (see ScopedConfigurationKey).
+   */
+  fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
+    resourceType: ConfigResourceType,
+  ): List<ScopedConfiguration>
+
+  /**
+   * Get a scoped configuration by key and scope map.
+   *
+   * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.
+   * Scopes included in the map must be defined as a supported scope in the key definition (see ScopedConfigurationKey).
+   */
+  fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
+  ): List<ScopedConfiguration>
+
+  /**
    * Get scoped configurations for multiple key, resource and scope map (in batch).
    *
    * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.
@@ -133,4 +156,17 @@ interface ScopedConfigurationService {
    * Delete multiple configurations by their IDs.
    */
   fun deleteScopedConfigurations(configIds: List<UUID>)
+
+  /**
+   * Update the value for scoped configurations with given origin values for an origin type.
+   */
+  fun updateScopedConfigurationsOriginAndValuesForOriginInList(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    newOrigin: String,
+    newValue: String,
+  )
 }

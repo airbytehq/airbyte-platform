@@ -7,6 +7,8 @@ package io.airbyte.api.client.config
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
+import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
+import io.airbyte.commons.micronaut.EnvConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
@@ -37,7 +39,8 @@ class InternalApiAuthenticationFactory {
 
   @Singleton
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
-  @Requires(env = [CONTROL_PLANE])
+  @Requires(env = [EnvConstants.CONTROL_PLANE])
+  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
@@ -56,7 +59,8 @@ class InternalApiAuthenticationFactory {
    */
   @Prototype
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
-  @Requires(env = [DATA_PLANE])
+  @Requires(env = [EnvConstants.DATA_PLANE])
+  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun dataPlaneInternalApiAuthToken(
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
@@ -96,8 +100,6 @@ class InternalApiAuthenticationFactory {
 
   companion object {
     const val CLAIM_NAME = "email"
-    const val CONTROL_PLANE = "control-plane"
-    const val DATA_PLANE = "data-plane"
     const val INTERNAL_API_AUTH_TOKEN_BEAN_NAME = "internalApiAuthToken"
     const val JWT_TTL_MINUTES = 5
   }

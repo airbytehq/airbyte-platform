@@ -16,12 +16,12 @@ import { refreshEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface RefreshEventItemProps {
-  refreshEvent: InferType<typeof refreshEventSchema>;
+  event: InferType<typeof refreshEventSchema>;
 }
-export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent }) => {
-  const titleId = titleIdMap[refreshEvent.eventType];
-  const jobStatus = getStatusByEventType(refreshEvent.eventType);
-  const streamsToList = refreshEvent.summary.streams.map((stream) => stream.name);
+export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => {
+  const titleId = titleIdMap[event.eventType];
+  const jobStatus = getStatusByEventType(event.eventType);
+  const streamsToList = event.summary.streams.map((stream) => stream.name);
 
   return (
     <ConnectionTimelineEventItem>
@@ -33,19 +33,15 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent
             <FormattedMessage id={titleId} values={{ value: streamsToList.length }} />
           </Text>
           <FlexContainer gap="xs" alignItems="baseline">
-            {jobStatus === "cancelled" && !!refreshEvent.user && (
-              <UserCancelledDescription user={refreshEvent.user} jobType="refresh" />
+            {jobStatus === "cancelled" && !!event.user && (
+              <UserCancelledDescription user={event.user} jobType="refresh" />
             )}
-            <JobStats {...refreshEvent.summary} />
+            <JobStats {...event.summary} />
           </FlexContainer>
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
         </FlexContainer>
       </ConnectionTimelineEventSummary>
-      <ConnectionTimelineEventActions
-        createdAt={refreshEvent.createdAt}
-        eventId={refreshEvent.id}
-        jobId={refreshEvent.summary.jobId}
-      />
+      <ConnectionTimelineEventActions createdAt={event.createdAt} eventId={event.id} jobId={event.summary.jobId} />
     </ConnectionTimelineEventItem>
   );
 };

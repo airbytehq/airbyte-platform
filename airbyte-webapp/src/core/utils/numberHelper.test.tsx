@@ -13,12 +13,12 @@ const _render = (args: Parameters<typeof formatBytes>) =>
 
 describe("#formatBytes", () => {
   const cases: Array<[number | undefined, string]> = [
-    [undefined, "0 Bytes"],
-    [0, "0 Bytes"],
-    [-1, "0 Bytes"],
-    [12, "12 Bytes"],
-    [1024 * 1 + 1, "1 KB"],
-    [1024 * 10 + 1, "10 KB"],
+    [undefined, "0 bytes"],
+    [0, "0 bytes"],
+    [-1, "0 bytes"],
+    [12, "12 bytes"],
+    [1024 * 1 + 1, "1 kB"],
+    [1024 * 10 + 1, "10 kB"],
     [1024 * 1024 + 1, "1 MB"],
     [1024 * 1024 * 10 + 1, "10 MB"],
     [1024 * 1024 * 1024 + 1, "1 GB"],

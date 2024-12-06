@@ -19,9 +19,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Optional;
@@ -31,10 +32,12 @@ import org.junit.jupiter.api.Test;
 
 class ConnectorDocumentationHandlerTest {
 
-  private ConfigRepository configRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private ConnectorDocumentationHandler connectorDocumentationHandler;
+
+  private SourceService sourceService;
+  private DestinationService destinationService;
 
   private static final String SOURCE_DOCKER_REPO = "airbyte/source-test";
   private static final String SOURCE_VERSION_OLD = "0.0.1";
@@ -63,22 +66,24 @@ class ConnectorDocumentationHandlerTest {
 
   @BeforeEach
   void setup() {
-    configRepository = mock(ConfigRepository.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
 
     connectorDocumentationHandler =
-        new ConnectorDocumentationHandler(configRepository, actorDefinitionVersionHelper, remoteDefinitionsProvider);
+        new ConnectorDocumentationHandler(actorDefinitionVersionHelper, remoteDefinitionsProvider, sourceService, destinationService);
   }
 
   // SOURCE
 
   @Test
-  void testNoSourceDocumentationFound() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testNoSourceDocumentationFound()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
     when(remoteDefinitionsProvider.getConnectorDocumentation(any(), any())).thenReturn(Optional.empty());
@@ -90,11 +95,12 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
     when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD))
@@ -111,11 +117,12 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
     when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD)).thenReturn(Optional.empty());
@@ -132,10 +139,11 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
 
     when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST))
@@ -152,10 +160,11 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewSourceDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
 
     when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST)).thenReturn(Optional.empty());
@@ -173,11 +182,12 @@ class ConnectorDocumentationHandlerTest {
 
   // DESTINATION
   @Test
-  void testNoDestinationDocumentationFound() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testNoDestinationDocumentationFound()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
@@ -190,11 +200,12 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
@@ -212,11 +223,12 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
@@ -235,10 +247,11 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
         .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
 
@@ -256,10 +269,11 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetLatestNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewDestinationDocumentation()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
         .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
 

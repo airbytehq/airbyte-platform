@@ -6,12 +6,16 @@ package io.airbyte.workers.internal.bookkeeping
 
 import com.google.common.hash.Hashing
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.FileTransferInformations
 import io.airbyte.protocol.models.AirbyteGlobalState
+import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 
 class StatsTrackerTest {
@@ -71,5 +75,53 @@ class StatsTrackerTest {
       perStreamStateMessageWithoutStats.getStateHashCode(hashFunction),
       perStreamStateMessageWithStats.getStateHashCode(hashFunction),
     )
+  }
+
+  @Test
+  internal fun `test file transfer stats`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(),
+        true,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+    val size = 11L
+    val record =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1)))
+        .withAdditionalProperty("file", FileTransferInformations("", "", "", "", size))
+
+    streamStatsTracker.trackRecord(record)
+
+    assertEquals(size, streamStatsTracker.streamStats.emittedBytesCount.get())
+  }
+
+  @Test
+  internal fun `test not file transfer stats`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(),
+        false,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+    val size = 11L
+    val record =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1)))
+        .withAdditionalProperty("file", FileTransferInformations("", "", "", "", size))
+
+    streamStatsTracker.trackRecord(record)
+
+    assertNotEquals(size, streamStatsTracker.streamStats.emittedBytesCount.get())
   }
 }

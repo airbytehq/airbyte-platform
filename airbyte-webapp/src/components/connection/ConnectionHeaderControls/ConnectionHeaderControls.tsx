@@ -9,7 +9,9 @@ import { SwitchNext } from "components/ui/SwitchNext";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { useCurrentConnection, useCurrentWorkspace } from "core/api";
+import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -23,22 +25,25 @@ import { FreeHistoricalSyncIndicator } from "../EnabledControl/FreeHistoricalSyn
 
 export const ConnectionHeaderControls: React.FC = () => {
   const { mode } = useConnectionFormService();
-  const { connection, updateConnectionStatus, connectionUpdating } = useConnectionEditService();
+  const connection = useCurrentConnection();
+  const { updateConnectionStatus, connectionUpdating, schemaRefreshing } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const navigate = useNavigate();
-  const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
-  const isReadOnly = mode === "readonly";
+  const { workspaceId } = useCurrentWorkspace();
+  const connectionStatus = useConnectionStatus(connection.connectionId);
+  const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
+  const canClearData = useIntent("ClearData", { workspaceId });
 
   const {
+    jobRefreshRunning,
+    jobClearRunning,
     syncStarting,
     cancelStarting,
     cancelJob,
+    isSyncConnectionAvailable,
     syncConnection,
-    connectionEnabled,
-    clearStarting: resetStarting,
+    clearStarting,
     refreshStarting,
-    jobClearRunning: jobResetRunning,
-    jobRefreshRunning,
   } = useConnectionSyncContext();
 
   const onScheduleBtnClick = () => {
@@ -50,10 +55,21 @@ export const ConnectionHeaderControls: React.FC = () => {
   const onChangeStatus = async (checked: boolean) =>
     await updateConnectionStatus(checked ? ConnectionStatus.active : ConnectionStatus.inactive);
 
-  const isDisabled = isReadOnly || syncStarting || cancelStarting || resetStarting || refreshStarting;
-  const isStartSyncBtnDisabled = isDisabled || !connectionEnabled;
-  const isCancelBtnDisabled = isDisabled || connectionUpdating;
-  const isSwitchDisabled = isDisabled || hasBreakingSchemaChange;
+  const isActionDisabled = !isSyncConnectionAvailable || schemaRefreshing || connectionUpdating;
+
+  const isSyncActionsDisabled = connection.status !== ConnectionStatus.active || !canSyncConnection || isActionDisabled;
+
+  const isSwitchDisabled = mode === "readonly" || schemaRefreshing || connectionUpdating || hasBreakingSchemaChange;
+
+  const isCancelDisabled =
+    !canSyncConnection ||
+    (!canClearData && jobClearRunning) ||
+    syncStarting ||
+    cancelStarting ||
+    clearStarting ||
+    refreshStarting ||
+    schemaRefreshing ||
+    connectionUpdating;
 
   return (
     <FlexContainer alignItems="center" gap="none">
@@ -66,6 +82,7 @@ export const ConnectionHeaderControls: React.FC = () => {
             data-testid="schedule-button"
             className={styles.scheduleButton}
             onClick={onScheduleBtnClick}
+            disabled={mode === "readonly"}
           >
             <FormattedScheduleDataMessage
               scheduleType={connection.scheduleType}
@@ -77,13 +94,13 @@ export const ConnectionHeaderControls: React.FC = () => {
       >
         <FormattedMessage id="connection.header.frequency.tooltip" />
       </Tooltip>
-      {!connectionStatus.isRunning && (
+      {connectionStatus.status !== ConnectionSyncStatus.running && (
         <Button
           onClick={syncConnection}
           variant="clear"
           data-testid="manual-sync-button"
-          disabled={isStartSyncBtnDisabled}
-          icon={syncStarting ? "loading" : "sync"}
+          disabled={isSyncActionsDisabled}
+          icon={syncStarting || clearStarting || refreshStarting ? "loading" : "sync"}
           iconSize="sm"
           iconColor="primary"
         >
@@ -92,10 +109,10 @@ export const ConnectionHeaderControls: React.FC = () => {
           </Text>
         </Button>
       )}
-      {connectionStatus.isRunning && cancelJob && (
+      {connectionStatus.status === ConnectionSyncStatus.running && cancelJob && (
         <Button
           onClick={cancelJob}
-          disabled={isCancelBtnDisabled}
+          disabled={isCancelDisabled}
           data-testid="cancel-sync-button"
           variant="clear"
           icon={cancelStarting ? "loading" : "cross"}
@@ -104,7 +121,7 @@ export const ConnectionHeaderControls: React.FC = () => {
           <Text size="md" color="red" bold>
             <FormattedMessage
               id={
-                resetStarting || jobResetRunning
+                clearStarting || jobClearRunning
                   ? "connection.cancelDataClear"
                   : jobRefreshRunning || refreshStarting
                   ? "connection.cancelRefresh"

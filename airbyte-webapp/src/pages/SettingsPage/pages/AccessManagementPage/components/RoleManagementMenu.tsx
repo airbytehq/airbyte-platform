@@ -11,13 +11,13 @@ import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 import { RoleManagementButton } from "./RoleManagementButton";
 import styles from "./RoleManagementMenu.module.scss";
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
-import { UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
 import { UserRoleText } from "./UserRoleText";
+import { UnifiedUserModel } from "./util";
 
 type ResourceType = "workspace" | "organization" | "instance";
 
 export interface RoleManagementMenuProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   resourceType: ResourceType;
   highestPermissionType: RbacRole;
 }

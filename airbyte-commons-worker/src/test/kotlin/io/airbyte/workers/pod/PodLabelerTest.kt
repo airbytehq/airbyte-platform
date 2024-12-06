@@ -1,5 +1,17 @@
 package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.Metadata.CHECK_JOB
+import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
+import io.airbyte.workers.pod.Metadata.IMAGE_NAME
+import io.airbyte.workers.pod.Metadata.IMAGE_VERSION
+import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
+import io.airbyte.workers.pod.Metadata.ORCHESTRATOR_REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.READ_STEP
+import io.airbyte.workers.pod.Metadata.REPLICATION_STEP
+import io.airbyte.workers.pod.Metadata.SPEC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_JOB
+import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
+import io.airbyte.workers.pod.Metadata.WRITE_STEP
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_NAME
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_VERSION
@@ -8,19 +20,6 @@ import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_NAME
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
-import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.DISCOVER_JOB
-import io.airbyte.workers.process.Metadata.IMAGE_NAME
-import io.airbyte.workers.process.Metadata.IMAGE_VERSION
-import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.REPLICATION_STEP
-import io.airbyte.workers.process.Metadata.SPEC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_JOB
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workers.process.ProcessFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -61,8 +60,8 @@ class PodLabelerTest {
   fun getReplicationOrchestratorLabels() {
     val labeler = PodLabeler()
     val result = labeler.getReplicationOrchestratorLabels(ORCHESTRATOR_IMAGE_NAME)
-    val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
-    val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
+    val shortImageName = PodUtils.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
+    val imageVersion = PodUtils.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
     assert(
       result ==

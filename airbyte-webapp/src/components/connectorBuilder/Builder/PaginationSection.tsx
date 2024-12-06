@@ -2,12 +2,12 @@ import lowerCase from "lodash/lowerCase";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import { LabelInfo } from "components/Label";
 
 import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 
-import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";

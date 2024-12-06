@@ -9,7 +9,8 @@ plugins {
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-  annotationProcessor(libs.log4j.core)
+
+  api(libs.bundles.micronaut.annotation)
 
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
@@ -17,7 +18,6 @@ dependencies {
   implementation(libs.commons.io)
   implementation(libs.bundles.apache)
   implementation(libs.google.cloud.storage)
-  implementation(libs.bundles.log4j)
   implementation(libs.airbyte.protocol)
 
   // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
@@ -28,6 +28,7 @@ dependencies {
   testImplementation(libs.junit.pioneer)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+  testRuntimeOnly(libs.bundles.logback)
 }
 
 airbyte {

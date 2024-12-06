@@ -40,6 +40,10 @@ properties:
     type: integer
   recordsCommitted:
     type: integer # if unset, committed records could not be computed
+  recordsFilteredOut:
+    type: integer
+  bytesFilteredOut:
+    type: integer
   replicationEndTime:
     type: integer
     description: The end of the replication activity

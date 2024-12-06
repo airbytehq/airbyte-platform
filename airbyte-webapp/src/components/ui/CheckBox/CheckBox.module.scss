@@ -39,9 +39,11 @@ $sm-size: 14px;
 .sizeLg {
   height: $lg-size;
   width: $lg-size;
+  min-width: $lg-size;
 }
 
 .sizeSm {
   height: $sm-size;
   width: $sm-size;
+  min-width: $sm-size;
 }

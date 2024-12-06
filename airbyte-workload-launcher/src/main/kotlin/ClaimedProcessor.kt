@@ -7,7 +7,6 @@ package io.airbyte.workload.launcher
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
@@ -27,13 +26,16 @@ import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
-import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -45,6 +47,8 @@ class ClaimedProcessor(
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
   @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
   private val claimProcessorTracker: ClaimProcessorTracker,
+  @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration = 5.seconds.toJavaDuration(),
+  @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration = 60.seconds.toJavaDuration(),
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -92,30 +96,24 @@ class ClaimedProcessor(
   }
 
   private fun getWorkloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse {
-    while (true) {
-      try {
-        // TODO: consider tuning the retry policy here, since we currently get the default 2 retries.
-        return Failsafe.with(
-          RetryPolicy.builder<Any>()
-            .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
-            .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
-            .abortOn { exception ->
-              when (exception) {
-                // This makes us to retry only on 5XX errors
-                is ServerException -> exception.statusCode / 100 != 5
-                else -> true
-              }
-            }
-            .build(),
-        )
-          .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
-      } catch (e: FailsafeException) {
-        if (e.cause !is ConnectException && e.cause !is SocketTimeoutException) {
-          throw e; // Surface all other errors.
+    return Failsafe.with(
+      RetryPolicy.builder<Any>()
+        .withBackoff(backoffDuration, backoffMaxDelay)
+        .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+        .withMaxAttempts(-1)
+        .abortOn { exception ->
+          when (exception) {
+            // This makes us to retry only on 5XX errors
+            is ServerException -> exception.statusCode / 100 != 5
+
+            // We want to retry on most network errors
+            is SocketException -> false
+            is SocketTimeoutException -> false
+            else -> true
+          }
         }
-        // On a ConnectionException or SocketTimeoutException, we'll retry indefinitely.
-        logger.warn { "Failed to connect to workload API fetching workloads for dataplane $dataplaneId, retrying..." }
-      }
-    }
+        .build(),
+    )
+      .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
   }
 }

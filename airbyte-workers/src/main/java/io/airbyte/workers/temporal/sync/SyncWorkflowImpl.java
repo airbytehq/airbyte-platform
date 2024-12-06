@@ -20,11 +20,18 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.temporal.TemporalJobType;
+import io.airbyte.commons.temporal.TemporalTaskQueueUtils;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWorkflow;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput.DiscoverCatalogInput;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.SignalInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
@@ -36,15 +43,21 @@ import io.airbyte.config.WorkloadPriority;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.PostprocessCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
+import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
+import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,15 +83,25 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ReportRunTimeActivity reportRunTimeActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private InvokeOperationsActivity invokeOperationsActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "asyncActivityOptions")
+  private AsyncReplicationActivity asyncReplicationActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "workloadStatusCheckActivityOptions")
+  private WorkloadStatusCheckActivity workloadStatusCheckActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
+
+  private Boolean shouldBlock;
+
+  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @Override
+  public void checkAsyncActivityStatus() {
+    this.shouldBlock = false;
+  }
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -90,8 +113,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
-    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput.getWorkspaceId());
-    final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
     final var sendRunTimeMetrics = shouldReportRuntime();
     final var shouldRunAsChildWorkflow = shouldRunAsAChildWorkflow(connectionId, syncInput.getWorkspaceId(),
         syncInput.getConnectionContext().getSourceDefinitionId(), syncInput.getIsReset());
@@ -102,8 +123,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             CONNECTION_ID_KEY, connectionId.toString(),
             JOB_ID_KEY, jobRunConfig.getJobId(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage(),
-            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
-            "USE_WORKLOAD_API", useWorkloadApi));
+            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
@@ -114,8 +134,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       try {
         if (shouldRunAsChildWorkflow) {
           final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
-          final String discoverTaskQueue = routeToSyncTaskQueueActivity.routeToDiscoverCatalog(
-              new RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueInput(connectionId)).getTaskQueue();
+          final String discoverTaskQueue = TemporalTaskQueueUtils.getTaskQueue(TemporalJobType.DISCOVER_SCHEMA);
           refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig, discoverTaskQueue);
         } else if (shouldRefreshSchema) {
           refreshSchemaOutput =
@@ -130,17 +149,43 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final long discoverSchemaEndTime = Workflow.currentTimeMillis();
 
     final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
-    if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
+    if (status.isPresent() && ConnectionStatus.INACTIVE == status.get()) {
       LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
-      final StandardSyncOutput output =
-          new StandardSyncOutput()
-              .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
-      return output;
+      return new StandardSyncOutput()
+          .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
     }
 
-    final StandardSyncOutput syncOutput = replicationActivity
-        .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-            refreshSchemaOutput, useWorkloadApi, useWorkloadOutputDocStore));
+    final ReplicationActivityInput replicationActivityInput =
+        generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+            refreshSchemaOutput);
+    final StandardSyncOutput syncOutput;
+
+    if (syncInput.getUseAsyncReplicate() == null || !syncInput.getUseAsyncReplicate()) {
+      syncOutput = replicationActivity.replicateV2(replicationActivityInput);
+    } else {
+      final String workloadId = asyncReplicationActivity.startReplication(replicationActivityInput);
+
+      try {
+        shouldBlock = true;
+        while (shouldBlock) {
+          Workflow.await(Duration.ofMinutes(15), () -> !shouldBlock);
+          shouldBlock = !workloadStatusCheckActivity.isTerminal(workloadId);
+        }
+      } catch (final CanceledFailure | ActivityFailure cf) {
+        if (workloadId != null) {
+          // This is in order to be usable from the detached scope
+          CancellationScope detached =
+              Workflow.newDetachedCancellationScope(() -> {
+                asyncReplicationActivity.cancel(replicationActivityInput, workloadId);
+                shouldBlock = false;
+              });
+          detached.run();
+        }
+        throw cf;
+      }
+
+      syncOutput = asyncReplicationActivity.getReplicationOutput(replicationActivityInput, workloadId);
+    }
 
     final WebhookOperationSummary webhookOperationSummary = invokeOperationsActivity.invokeOperations(
         syncInput.getOperationSequence(), syncInput, jobRunConfig);
@@ -183,26 +228,42 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                 final JsonNode sourceConfig,
                                                                 final String discoverTaskQueue) {
     try {
-      final DiscoverCatalogAndAutoPropagateWorkflow childDiscoverCatalogWorkflow =
-          Workflow.newChildWorkflowStub(DiscoverCatalogAndAutoPropagateWorkflow.class,
-              ChildWorkflowOptions.newBuilder()
-                  .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
-                  .setTaskQueue(discoverTaskQueue)
-                  .build());
-      return childDiscoverCatalogWorkflow.run(jobRunConfig, sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT),
-          new StandardDiscoverCatalogInput()
-              .withActorContext(new ActorContext()
-                  .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
-                  .withActorType(ActorType.SOURCE)
-                  .withActorId(syncInput.getSourceId())
-                  .withWorkspaceId(syncInput.getWorkspaceId())
-                  .withOrganizationId(syncInput.getConnectionContext().getOrganizationId()))
-              .withConnectionConfiguration(syncInput.getSourceConfiguration())
-              .withSourceId(syncInput.getSourceId().toString())
-              .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
-                  Charsets.UTF_8)).toString())
-              .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
-              .withManual(false));
+      final StandardDiscoverCatalogInput discoverCatalogInput = new StandardDiscoverCatalogInput()
+          .withActorContext(new ActorContext()
+              .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
+              .withActorType(ActorType.SOURCE)
+              .withActorId(syncInput.getSourceId())
+              .withWorkspaceId(syncInput.getWorkspaceId())
+              .withOrganizationId(syncInput.getConnectionContext().getOrganizationId()))
+          .withConnectionConfiguration(syncInput.getSourceConfiguration())
+          .withSourceId(syncInput.getSourceId().toString())
+          .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
+              Charsets.UTF_8)).toString())
+          .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
+          .withManual(false);
+      if (Boolean.TRUE.equals(syncInput.getUseAsyncActivities())) {
+        final ConnectorCommandWorkflow childDiscoverWorkflow = Workflow.newChildWorkflowStub(
+            ConnectorCommandWorkflow.class,
+            ChildWorkflowOptions.newBuilder()
+                .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
+                .build());
+        final ConnectorJobOutput discoverOutput = childDiscoverWorkflow.run(new DiscoverCommandInput(
+            new DiscoverCatalogInput(jobRunConfig, sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT), discoverCatalogInput)));
+
+        final PostprocessCatalogOutput postprocessCatalogOutput = discoverCatalogHelperActivity
+            .postprocess(new PostprocessCatalogInput(discoverOutput.getDiscoverCatalogId(), sourceLauncherConfig.getConnectionId()));
+        return new RefreshSchemaActivityOutput(postprocessCatalogOutput.getDiff());
+      } else {
+        final DiscoverCatalogAndAutoPropagateWorkflow childDiscoverCatalogWorkflow =
+            Workflow.newChildWorkflowStub(DiscoverCatalogAndAutoPropagateWorkflow.class,
+                ChildWorkflowOptions.newBuilder()
+                    .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
+                    .setTaskQueue(discoverTaskQueue)
+                    .build());
+        return childDiscoverCatalogWorkflow.run(jobRunConfig,
+            sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT),
+            discoverCatalogInput);
+      }
     } catch (Exception e) {
       LOGGER.error("error", e);
       throw new RuntimeException(e);
@@ -215,13 +276,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (shouldRunAsChildWorkflowVersion == Workflow.DEFAULT_VERSION) {
       return false;
     } else if (shouldRunAsChildWorkflowVersion == versionWithoutResetCheck) {
-      return checkUseWorkloadApiFlag(workspaceId)
-          && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
-              Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
-              sourceDefinitionId,
-              workspaceId));
+      return syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
+          Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
+          sourceDefinitionId,
+          workspaceId));
     } else {
-      return !isReset && checkUseWorkloadApiFlag(workspaceId)
+      return !isReset
           && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
               Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
               sourceDefinitionId,
@@ -241,9 +301,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
-                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput,
-                                                                    final boolean useWorkloadApi,
-                                                                    final boolean useWorkloadOutputDocStore) {
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
+    final String signalInput;
+    if (syncInput.getUseAsyncReplicate() != null && syncInput.getUseAsyncReplicate()) {
+      signalInput = Jsons.serialize(new SignalInput(SignalInput.SYNC_WORKFLOW, Workflow.getInfo().getWorkflowId()));
+    } else {
+      signalInput = null;
+    }
     return new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -262,17 +326,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getPrefix(),
         refreshSchemaOutput,
         syncInput.getConnectionContext(),
-        useWorkloadApi,
-        useWorkloadOutputDocStore);
-  }
-
-  private boolean checkUseWorkloadApiFlag(final UUID workspaceId) {
-    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(workspaceId));
-  }
-
-  private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
-    return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId()));
+        signalInput);
   }
 
 }

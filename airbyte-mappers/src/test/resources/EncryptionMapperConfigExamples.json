@@ -1,0 +1,11 @@
+[
+  {
+    "name": "encryption",
+    "config": {
+      "algorithm": "RSA",
+      "targetField": "column_name",
+      "fieldNameSuffix": "_suffix",
+      "publicKey": "some public key"
+    }
+  }
+]

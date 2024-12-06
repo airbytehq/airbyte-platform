@@ -19,8 +19,11 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -59,19 +62,27 @@ public class JobErrorReporter {
   private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
 
-  private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
+  private final DestinationService destinationService;
+  private final SourceService sourceService;
+  private final WorkspaceService workspaceService;
   private final DeploymentMode deploymentMode;
   private final String airbyteVersion;
   private final WebUrlHelper webUrlHelper;
   private final JobErrorReportingClient jobErrorReportingClient;
 
-  public JobErrorReporter(final ConfigRepository configRepository,
+  public JobErrorReporter(final ActorDefinitionService actorDefinitionService,
+                          final SourceService sourceService,
+                          final DestinationService destinationService,
+                          final WorkspaceService workspaceService,
                           final DeploymentMode deploymentMode,
                           final String airbyteVersion,
                           final WebUrlHelper webUrlHelper,
                           final JobErrorReportingClient jobErrorReportingClient) {
-
-    this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
+    this.destinationService = destinationService;
+    this.sourceService = sourceService;
+    this.workspaceService = workspaceService;
     this.deploymentMode = deploymentMode;
     this.airbyteVersion = airbyteVersion;
     this.webUrlHelper = webUrlHelper;
@@ -97,7 +108,7 @@ public class JobErrorReporter {
             .filter(failure -> failure.getMetadata() != null && failure.getMetadata().getAdditionalProperties().containsKey(FROM_TRACE_MESSAGE))
             .toList();
 
-        final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionId, true);
+        final StandardWorkspace workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, true);
         final Map<String, String> commonMetadata = MoreMaps.merge(
             Map.of(JOB_ID_KEY, String.valueOf(jobContext.jobId())),
             getConnectionMetadata(workspace.getWorkspaceId(), connectionId));
@@ -110,8 +121,8 @@ public class JobErrorReporter {
           // We only care about the failure origins listed below, i.e. those that come from connectors.
           // The rest are ignored.
           if (failureOrigin == FailureOrigin.SOURCE) {
-            final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-            final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
+            final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId);
+            final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata,
@@ -119,8 +130,8 @@ public class JobErrorReporter {
 
             reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
           } else if (failureOrigin == FailureOrigin.DESTINATION) {
-            final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
-            final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+            final StandardDestinationDefinition destinationDefinition = destinationService.getDestinationDefinitionFromConnection(connectionId);
+            final ActorDefinitionVersion destinationVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.destinationVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage(),
@@ -147,12 +158,12 @@ public class JobErrorReporter {
                                           @Nullable final UUID workspaceId,
                                           final FailureReason failureReason,
                                           final ConnectorJobReportingContext jobContext)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE) {
       return;
     }
-    final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final StandardWorkspace workspace = workspaceId != null ? workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage(), jobContext.internalSupportLevel()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
@@ -171,12 +182,12 @@ public class JobErrorReporter {
                                                @Nullable final UUID workspaceId,
                                                final FailureReason failureReason,
                                                final ConnectorJobReportingContext jobContext)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     if (failureReason.getFailureOrigin() != FailureOrigin.DESTINATION) {
       return;
     }
-    final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
-    final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final StandardWorkspace workspace = workspaceId != null ? workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
+    final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
         getDestinationMetadata(destinationDefinition, jobContext.dockerImage(), jobContext.releaseStage(), jobContext.internalSupportLevel()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
@@ -194,12 +205,12 @@ public class JobErrorReporter {
                                        @Nullable final UUID workspaceId,
                                        final FailureReason failureReason,
                                        final ConnectorJobReportingContext jobContext)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE) {
       return;
     }
-    final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+    final StandardWorkspace workspace = workspaceId != null ? workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage(), jobContext.internalSupportLevel()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));

@@ -18,6 +18,7 @@ import { HelpDropdown } from "views/layout/SideBar/components/HelpDropdown";
 import { DownloadYamlButton } from "./DownloadYamlButton";
 import styles from "./MenuBar.module.scss";
 import { PublishButton } from "./PublishButton";
+import AssistConfigButton from "../Builder/Assist/AssistConfigButton";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
 import { NameInput } from "../NameInput";
 import { useBuilderWatch } from "../types";
@@ -47,8 +48,14 @@ export const MenuBar: React.FC = () => {
   );
 
   return (
-    <FlexContainer direction="row" alignItems="center" gap="2xl" className={styles.container}>
-      <FlexContainer direction="row" alignItems="center" className={styles.leftSide} gap="lg">
+    <FlexContainer
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+      gap="xl"
+      className={styles.container}
+    >
+      <FlexContainer direction="row" alignItems="center" gap="lg">
         <FlexContainer direction="row" alignItems="center" gap="md" className={styles.exitAndName}>
           <Link to={RoutePaths.ConnectorBuilder}>
             <Button
@@ -110,6 +117,9 @@ export const MenuBar: React.FC = () => {
             </Tooltip>
           </FlexContainer>
         )}
+      </FlexContainer>
+      <FlexContainer direction="row" alignItems="center">
+        <AssistConfigButton />
       </FlexContainer>
       <FlexContainer direction="row" alignItems="center" className={styles.rightSide}>
         {isCloudApp() ? (

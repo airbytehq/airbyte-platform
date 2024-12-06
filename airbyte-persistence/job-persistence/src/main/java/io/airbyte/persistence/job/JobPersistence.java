@@ -150,11 +150,6 @@ public interface JobPersistence {
    */
   void setAttemptTemporalWorkflowInfo(long jobId, int attemptNumber, String temporalWorkflowId, String processingTaskQueue) throws IOException;
 
-  /**
-   * Retrieves an attempt's temporal workflow id. Used to cancel the workflow.
-   */
-  Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
-
   //
   // END OF LIFECYCLE
   //
@@ -290,6 +285,12 @@ public interface JobPersistence {
    * @return List of jobs that have attempts after the provided timestamp
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+
+  List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
+                                          Set<JobStatus> jobStatuses,
+                                          OffsetDateTime createdAtStart,
+                                          OffsetDateTime createdAtEnd)
+      throws IOException;
 
   /**
    * List jobs based on job IDs, nothing more.

@@ -64,10 +64,6 @@ public class ReplicationActivityInput {
   private RefreshSchemaActivityOutput schemaRefreshOutput;
   // Replication context object containing relevant IDs
   private ConnectionContext connectionContext;
-  // Whether to use workload API
-  private Boolean useWorkloadApi;
-  // TODO: remove with another temporal version
-  @Deprecated
-  private Boolean useNewDocStoreApi;
+  private String signalInput;
 
 }

@@ -87,14 +87,14 @@ class AuthConfigsForCloudTest {
 }
 
 @MicronautTest
+@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "community")
+@Property(name = "micronaut.security.enabled", value = "true")
 class AuthConfigsForCommunityAuthTest {
   @Inject
   lateinit var authConfigs: AuthConfigs
 
   @Test
-  @Property(name = "airbyte.deployment-mode", value = "OSS")
-  @Property(name = "airbyte.edition", value = "community")
-  @Property(name = "micronaut.security.enabled", value = "true")
   fun `test community-auth environment sets mode to SIMPLE`() {
     Assertions.assertTrue(authConfigs.authMode == AuthMode.SIMPLE)
   }

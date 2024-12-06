@@ -8,7 +8,7 @@ import io.airbyte.featureflag.UseCustomK8sInitCheck
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.process.KubePodResourceHelper
+import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
@@ -42,7 +42,6 @@ private val logger = KotlinLogging.logger {}
 class KubePodLauncher(
   private val kubernetesClient: KubernetesClient,
   private val metricClient: MetricClient,
-  private val kubeCopyClient: KubeCopyClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
   private val featureFlagClient: FeatureFlagClient,
@@ -81,11 +80,11 @@ class KubePodLauncher(
           kubernetesClient
             .resource(pod)
             .waitUntilCondition(
-              { p: Pod ->
-                (
+              { p: Pod? ->
+                p?.let {
                   p.status.initContainerStatuses.isNotEmpty() &&
                     p.status.initContainerStatuses[0].state.terminated != null
-                )
+                } ?: false
               },
               waitDuration.toMinutes(),
               TimeUnit.MINUTES,
@@ -199,7 +198,7 @@ class KubePodLauncher(
           .waitUntilCondition(
             { p: Pod? ->
               Objects.nonNull(p) &&
-                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+                (Readiness.getInstance().isReady(p) || isTerminal(p))
             },
             waitDuration.toMinutes(),
             TimeUnit.MINUTES,
@@ -220,7 +219,7 @@ class KubePodLauncher(
           .waitUntilCondition(
             { p: Pod? ->
               Objects.nonNull(p) &&
-                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+                (Readiness.getInstance().isReady(p) || isTerminal(p))
             },
             waitDuration.toMinutes(),
             TimeUnit.MINUTES,
@@ -240,7 +239,7 @@ class KubePodLauncher(
             .list()
             .items
             .stream()
-            .filter { kubePod: Pod -> !KubePodResourceHelper.isTerminal(kubePod) && !PodStatusUtil.isInitializing(kubePod) }
+            .filter { kubePod: Pod -> !isTerminal(kubePod) && !PodStatusUtil.isInitializing(kubePod) }
             .findAny()
             .isPresent
         },
@@ -280,16 +279,32 @@ class KubePodLauncher(
     )
   }
 
-  fun copyFilesToKubeConfigVolumeMain(
-    pod: Pod,
-    files: Map<String, String>,
-  ) {
-    runKubeCommand(
-      {
-        kubeCopyClient.copyFilesToKubeConfigVolumeMain(pod, files)
-      },
-      "kubectl_cp",
-    )
+  /**
+   * Checks that the pod's main container(s) are in a terminal state.
+   */
+  private fun isTerminal(pod: Pod?): Boolean {
+    // if pod is null or there is no status default to false.
+    if (pod?.status == null) {
+      return false
+    }
+
+    // Get statuses for all "non-init" containers.
+    val mainContainerStatuses =
+      pod.status
+        .containerStatuses
+        .stream()
+        .filter { containerStatus -> (ContainerConstants.INIT_CONTAINER_NAME) != containerStatus.name }
+        .toList()
+
+    // There should be at least 1 container with a status.
+    if (mainContainerStatuses.size < 1) {
+      logger.warn { "Unexpectedly no non-init container statuses found for pod: ${pod.fullResourceName}" }
+      return false
+    }
+
+    return mainContainerStatuses.all {
+      it.state?.terminated != null
+    }
   }
 
   private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {

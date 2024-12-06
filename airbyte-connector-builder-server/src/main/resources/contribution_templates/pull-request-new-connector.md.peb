@@ -1,0 +1,35 @@
+## What
+
+This PR adds a new connector for source {{ connectorName }} ({{ connectorImageName }}).
+
+Contributor-provided connector description:
+
+{{ description }}
+
+## Details
+
+<details><summary>Expand for list of spec properties and streams</summary>
+
+### Configuration
+
+| Input | Type | Description | Default Value |
+|-------|------|-------------|---------------|
+{% for property in specProperties -%}
+| `{{ property.name }}` | `{{ property.type }}` | {{ property.description }} | {{ property.default }} |
+{% endfor %}
+
+### Streams
+| Stream Name | Primary Key | Pagination | Supports Full Sync | Supports Incremental |
+|-------------|-------------|------------|---------------------|----------------------|
+{% for stream in streams -%}
+| {{ stream.name }} | {{ stream.primaryKey }} | {{ stream.paginationStrategy }} | ✅ | {% if stream.incrementalSyncEnabled %} ✅ {% else %} ❌ {% endif %} |
+{% endfor %}
+
+</details>
+
+## Reviewer checklist
+- [ ] Run `/format-fix` to resolve any formatting errors
+- [ ] Help the contributor upload an icon that follows our icon design guidelines
+- [ ] Click into the CI workflows that wait for a maintainer to run them, which should trigger CI runs
+
+<!-- DO NOT REMOVE: connector-builder-new-connector-contribution -->

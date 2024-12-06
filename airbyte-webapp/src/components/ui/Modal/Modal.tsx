@@ -1,7 +1,6 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
 import classNames from "classnames";
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 
@@ -26,6 +25,7 @@ export interface ModalProps {
    * If specified, the full content of the modal including header, body and footer is wrapped in this component (only a class name prop might be set on the component)
    */
   wrapIn?: React.FC<React.PropsWithChildren<{ className?: string }>>;
+  allowNavigation?: boolean; // We block navigation by default, but occasionally want to allow redirects in the background
 }
 
 const cardStyleBySize = {
@@ -44,6 +44,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   cardless,
   testId,
   wrapIn,
+  allowNavigation = false,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const { formatMessage } = useIntl();
@@ -58,26 +59,21 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   }, [onCancel]);
 
   useEffect(() => {
-    if (location !== originalLocation.current) {
+    if (location !== originalLocation.current && !allowNavigation) {
       setIsOpen(false);
       onModalCancel();
     }
-  }, [location, onModalCancel]);
+  }, [allowNavigation, location, onModalCancel]);
 
   const Wrapper = wrapIn || "div";
 
-  useHotkeys(["escape"], () => {
-    onModalCancel();
-  });
-
   return (
-    <Dialog open={isOpen} onClose={() => null} data-testid={testId} className={styles.modalPageContainer}>
+    <Dialog open={isOpen} onClose={onModalCancel} data-testid={testId} className={styles.modalPageContainer}>
       <Overlay />
       <Wrapper
         className={classNames(styles.modalContainer, {
           [styles["modalContainer--noSidebarOffset"]]: size === "full",
         })}
-        onClick={onModalCancel}
       >
         <DialogPanel className={styles.modalPanel}>
           {cardless ? (
@@ -96,6 +92,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
                       className={styles.card__closeButton}
                       onClick={onModalCancel}
                       aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
+                      data-testid="close-modal-button"
                     >
                       <Icon type="cross" />
                     </button>

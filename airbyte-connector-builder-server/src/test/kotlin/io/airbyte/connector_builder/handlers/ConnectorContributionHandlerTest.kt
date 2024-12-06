@@ -5,6 +5,7 @@ package io.airbyte.connector_builder.handlers
 import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
+import io.airbyte.connector_builder.utils.BuilderContributionInfo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -31,9 +32,9 @@ class ConnectorContributionHandlerTest {
   }
 
   @Test
-  fun `returns details of an existing connector if found in target repository`() {
+  fun `checkContribution returns details of an existing connector if found in target repository`() {
     every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns true
-    every { anyConstructed<GithubContributionService>().readConnectorMetadataName() } returns "Test Connector"
+    every { anyConstructed<GithubContributionService>().readConnectorMetadataValue("name") } returns "Test Connector"
 
     val response = connectorContributionHandler.checkContribution(requestBodyMock)
 
@@ -43,7 +44,7 @@ class ConnectorContributionHandlerTest {
   }
 
   @Test
-  fun `returns 'false' for connectorExists if connector not found in target repository`() {
+  fun `checkContribution returns 'false' for connectorExists if connector not found in target repository`() {
     every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns false
 
     val response = connectorContributionHandler.checkContribution(requestBodyMock)
@@ -54,7 +55,7 @@ class ConnectorContributionHandlerTest {
   }
 
   @Test
-  fun `throws IllegalArgumentException for invalid connectorImageName`() {
+  fun `checkContribution throws IllegalArgumentException for invalid connectorImageName`() {
     val invalidRequestBodyMock = mockk<CheckContributionRequestBody>()
     every { invalidRequestBodyMock.connectorImageName } returns "not-a-valid_image_name"
 
@@ -64,5 +65,35 @@ class ConnectorContributionHandlerTest {
       }
 
     assertEquals("not-a-valid_image_name is not a valid image name.", exception.message)
+  }
+
+  @Test
+  fun `getFilesToCommitGenerationMap gets all files if they don't exist`() {
+    val contributionInfo = mockk<BuilderContributionInfo>(relaxed = true)
+    val githubContributionService = mockk<GithubContributionService>(relaxed = true)
+    every { githubContributionService.connectorManifestPath } returns "manifestPath"
+    every { githubContributionService.connectorReadmePath } returns "readmePath"
+    every { githubContributionService.connectorMetadataPath } returns "metadataPath"
+    every { githubContributionService.connectorIconPath } returns "iconPath"
+    every { githubContributionService.connectorAcceptanceTestConfigPath } returns "acceptanceTestConfigPath"
+    every { githubContributionService.connectorDocsPath } returns "docsPath"
+    every { githubContributionService.checkFileExistsOnMain(any()) } returns false
+
+    val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
+    assertEquals(6, filesToCommit.size)
+    assertEquals(setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath"), filesToCommit.keys)
+  }
+
+  @Test
+  fun `getFilesToCommitGenerationMap gets only manifest and metadata file if all files exist`() {
+    val contributionInfo = mockk<BuilderContributionInfo>(relaxed = true)
+    val githubContributionService = mockk<GithubContributionService>(relaxed = true)
+    every { githubContributionService.connectorManifestPath } returns "manifestPath"
+    every { githubContributionService.connectorMetadataPath } returns "metadataPath"
+    every { githubContributionService.checkFileExistsOnMain(any()) } returns true
+
+    val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
+    assertEquals(2, filesToCommit.size)
+    assertEquals(setOf("manifestPath", "metadataPath"), filesToCommit.keys)
   }
 }

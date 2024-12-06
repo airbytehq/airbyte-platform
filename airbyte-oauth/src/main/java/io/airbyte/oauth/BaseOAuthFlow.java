@@ -123,6 +123,16 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
     return result;
   }
 
+  protected static JsonNode getOAuthDeclarativeInputSpec(final OAuthConfigSpecification oauthConfigSpecification) {
+    if (oauthConfigSpecification != null && oauthConfigSpecification.getOauthConnectorInputSpecification() != null) {
+      JsonNode oauthDeclarativeInputSpec = oauthConfigSpecification.getOauthConnectorInputSpecification().get(PROPERTIES);
+      if (oauthDeclarativeInputSpec != null) {
+        return oauthDeclarativeInputSpec;
+      }
+    }
+    return Jsons.emptyObject();
+  }
+
   /**
    * This function should be redefined in each OAuthFlow implementation to isolate such "hardcoded"
    * values. It is being @deprecated because the output path should not be "hard-coded" in the OAuth

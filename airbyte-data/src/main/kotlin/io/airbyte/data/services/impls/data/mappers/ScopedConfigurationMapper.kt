@@ -31,12 +31,22 @@ fun ModelConfigScopeType.toEntity(): EntityConfigScopeType {
 fun EntityConfigResourceType.toConfigModel(): ModelConfigResourceType {
   return when (this) {
     EntityConfigResourceType.actor_definition -> ModelConfigResourceType.ACTOR_DEFINITION
+    EntityConfigResourceType.user -> ModelConfigResourceType.USER
+    EntityConfigResourceType.workspace -> ModelConfigResourceType.WORKSPACE
+    EntityConfigResourceType.connection -> ModelConfigResourceType.USER
+    EntityConfigResourceType.source -> ModelConfigResourceType.SOURCE
+    EntityConfigResourceType.destination -> ModelConfigResourceType.DESTINATION
   }
 }
 
 fun ModelConfigResourceType.toEntity(): EntityConfigResourceType {
   return when (this) {
     ModelConfigResourceType.ACTOR_DEFINITION -> EntityConfigResourceType.actor_definition
+    ModelConfigResourceType.USER -> EntityConfigResourceType.user
+    ModelConfigResourceType.WORKSPACE -> EntityConfigResourceType.workspace
+    ModelConfigResourceType.CONNECTION -> EntityConfigResourceType.connection
+    ModelConfigResourceType.SOURCE -> EntityConfigResourceType.source
+    ModelConfigResourceType.DESTINATION -> EntityConfigResourceType.destination
   }
 }
 
@@ -44,6 +54,7 @@ fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType {
   return when (this) {
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
     EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
+    EntityConfigOriginType.connector_rollout -> ModelConfigOriginType.CONNECTOR_ROLLOUT
   }
 }
 
@@ -51,6 +62,7 @@ fun ModelConfigOriginType.toEntity(): EntityConfigOriginType {
   return when (this) {
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
     ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
+    ModelConfigOriginType.CONNECTOR_ROLLOUT -> EntityConfigOriginType.connector_rollout
   }
 }
 
@@ -61,7 +73,7 @@ fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration {
     .withValue(this.value)
     .withScopeType(this.scopeType.toConfigModel())
     .withScopeId(this.scopeId)
-    .withResourceType(this.resourceType.toConfigModel())
+    .withResourceType(this.resourceType?.toConfigModel())
     .withResourceId(this.resourceId)
     .withOriginType(this.originType.toConfigModel())
     .withOrigin(this.origin)

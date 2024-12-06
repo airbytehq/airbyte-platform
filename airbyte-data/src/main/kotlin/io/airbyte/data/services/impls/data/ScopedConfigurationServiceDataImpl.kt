@@ -81,6 +81,80 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
 
   override fun getScopedConfigurations(
     configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
+    resourceType: ConfigResourceType,
+  ): List<ScopedConfiguration> {
+    for (scopeType in scopes.keys) {
+      if (!configKey.supportedScopes.contains(scopeType)) {
+        throw IllegalArgumentException("Scope type $scopeType is not supported by key ${configKey.key}")
+      }
+    }
+
+    val scopeConfigMap = HashMap<UUID, ScopedConfiguration>()
+    // We care about the order in which we loop over the keys, this order is reversed from its declaration.
+    for (supportedScope in configKey.supportedScopes.reversed()) {
+      if (!scopes.keys.contains(supportedScope)) {
+        continue
+      }
+
+      val scopedConfigs =
+        repository
+          .findByKeyAndResourceTypeAndScopeTypeAndScopeId(
+            configKey.key,
+            resourceType.toEntity(),
+            supportedScope.toEntity(),
+            // Get the id for this scope
+            scopes[supportedScope]!!,
+          )
+          .map { it.toConfigModel() }
+          .toList()
+
+      // For each iteration, add or replace items to give a "sorted" values list
+      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId }, { it }))
+    }
+
+    // Return the values as they are now a list of scoped configs by precedence of supportedScopes.
+    return scopeConfigMap.values.toList()
+  }
+
+  override fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
+  ): List<ScopedConfiguration> {
+    for (scopeType in scopes.keys) {
+      if (!configKey.supportedScopes.contains(scopeType)) {
+        throw IllegalArgumentException("Scope type $scopeType is not supported by key ${configKey.key}")
+      }
+    }
+
+    val scopeConfigMap = HashMap<UUID, ScopedConfiguration>()
+    // We care about the order in which we loop over the keys, this order is reversed from its declaration.
+    for (supportedScope in configKey.supportedScopes.reversed()) {
+      if (!scopes.keys.contains(supportedScope)) {
+        continue
+      }
+
+      val scopedConfigs =
+        repository
+          .findByKeyAndScopeTypeAndScopeId(
+            configKey.key,
+            supportedScope.toEntity(),
+            // Get the id for this scope
+            scopes[supportedScope]!!,
+          )
+          .map { it.toConfigModel() }
+          .toList()
+
+      // For each iteration, add or replace items to give a "sorted" values list
+      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId }, { it }))
+    }
+
+    // Return the values as they are now a list of scoped configs by precedence of supportedScopes.
+    return scopeConfigMap.values.toList()
+  }
+
+  override fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
     resourceType: ConfigResourceType,
     resourceId: UUID,
     scopeMaps: List<ConfigScopeMapWithId>,
@@ -198,5 +272,25 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
 
   override fun deleteScopedConfigurations(configIds: List<UUID>) {
     repository.deleteByIdInList(configIds)
+  }
+
+  override fun updateScopedConfigurationsOriginAndValuesForOriginInList(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    newOrigin: String,
+    newValue: String,
+  ) {
+    repository.updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+      key,
+      resourceType.toEntity(),
+      resourceId,
+      originType.toEntity(),
+      origins,
+      newOrigin,
+      newValue,
+    )
   }
 }

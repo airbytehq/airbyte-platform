@@ -352,6 +352,13 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
 
   return (
     <BuilderFieldWithInputs
+      preview={(fieldValue) => {
+        const mostRecentRecordValues = data?.slices?.at(0)?.pages.at(0)?.records.at(0);
+        const cursorValue = mostRecentRecordValues?.[fieldValue];
+        return cursorValue != null ? (
+          <FormattedMessage id="connectorBuilder.incremental.cursorValuePreview" values={{ cursorValue }} />
+        ) : undefined;
+      }}
       type={datetimeFields.length > 0 ? "combobox" : "string"}
       path={streamFieldPath(CURSOR_PATH)}
       manifestPath="DatetimeBasedCursor.properties.cursor_field"

@@ -1,0 +1,45 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$min-width-small: 650px;
+$min-width-medium: 900px;
+$min-width-extra-wide: 1100px;
+
+.borderedTiles {
+  container-type: inline-size;
+
+  &__grid {
+    background: colors.$grey-100;
+    border: variables.$border-thin solid colors.$grey-100;
+    border-radius: variables.$border-radius-md;
+    display: grid;
+    grid-template-rows: 1fr;
+    gap: variables.$border-thin;
+    overflow: hidden;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+
+    @container (max-width: #{$min-width-medium}) {
+      grid-auto-flow: row;
+    }
+
+    &:has(> .borderedTiles__tile:nth-child(4)) {
+      grid-auto-flow: unset;
+      grid-template-columns: repeat(4, 1fr);
+
+      @container (max-width: #{$min-width-extra-wide}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      @container (max-width: #{$min-width-small}) {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+
+  &__tile {
+    background: colors.$foreground;
+    overflow: hidden;
+    padding: variables.$spacing-xl;
+  }
+}

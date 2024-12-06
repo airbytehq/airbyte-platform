@@ -1,34 +1,35 @@
-import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
-import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ScrollParent } from "components/ui/ScrollParent";
 
-import { useFilters, useGetConnectionEvent } from "core/api";
+import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 
-import { EventLineItem } from "./components/EventLineItem";
-import { ConnectionTimelineAllEventsList } from "./ConnectionTimelineAllEventsList";
+import { ConnectionTimelineAllEventsList, validateAndMapEvent } from "./ConnectionTimelineAllEventsList";
 import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";
-import { openJobLogsModalFromTimeline } from "./JobEventMenu";
+import { openJobLogsModal } from "./JobEventMenu";
 import { TimelineFilterValues } from "./utils";
 
 const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eventId, connectionId }) => {
   const { data: singleEventItem } = useGetConnectionEvent(eventId, connectionId);
-  return singleEventItem ? <EventLineItem event={singleEventItem} /> : null;
+
+  if (!singleEventItem) {
+    return null;
+  }
+
+  return validateAndMapEvent(singleEventItem);
 };
 
 export const ConnectionTimelinePage = () => {
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TIMELINE);
-  const { connection } = useConnectionEditService();
+  const connection = useCurrentConnection();
   const { openModal } = useModalService();
 
   const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<TimelineFilterValues>({
@@ -46,18 +47,18 @@ export const ConnectionTimelinePage = () => {
     const jobIdFromFilter = parseInt(filterValues.jobId ?? "");
     const attemptNumberFromFilter = parseInt(filterValues.attemptNumber ?? "");
 
-    openJobLogsModalFromTimeline({
+    openJobLogsModal({
       openModal,
       jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : undefined,
       eventId: filterValues.eventId,
-      connectionName: connection.name,
+      connection,
       attemptNumber: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
-      connectionId: connection.connectionId,
+      setFilterValue,
     });
   }
 
   return (
-    <ScrollableContainer ref={setScrollElement}>
+    <ScrollParent>
       <PageContainer centered>
         <ConnectionSyncContextProvider>
           <Box pb="xl">
@@ -80,12 +81,12 @@ export const ConnectionTimelinePage = () => {
               {filterValues.eventId ? (
                 <OneEventItem eventId={filterValues.eventId} connectionId={connection.connectionId} />
               ) : (
-                <ConnectionTimelineAllEventsList filterValues={filterValues} scrollElement={scrollElement} />
+                <ConnectionTimelineAllEventsList filterValues={filterValues} />
               )}
             </Card>
           </Box>
         </ConnectionSyncContextProvider>
       </PageContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };

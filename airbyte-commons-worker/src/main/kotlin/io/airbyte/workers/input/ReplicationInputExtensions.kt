@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
 package io.airbyte.workers.input
 
 import io.airbyte.config.ResourceRequirements
@@ -25,22 +28,4 @@ fun ReplicationInput.getDestinationResourceReqs(): ResourceRequirements? {
 
 fun ReplicationInput.usesCustomConnector(): Boolean {
   return this.sourceLauncherConfig.isCustomConnector || this.destinationLauncherConfig.isCustomConnector
-}
-
-fun ReplicationInput.setSourceLabels(labels: Map<String, String>): ReplicationInput {
-  return this.apply {
-    sourceLauncherConfig =
-      sourceLauncherConfig.apply {
-        additionalLabels = labels
-      }
-  }
-}
-
-fun ReplicationInput.setDestinationLabels(labels: Map<String, String>): ReplicationInput {
-  return this.apply {
-    destinationLauncherConfig =
-      destinationLauncherConfig.apply {
-        additionalLabels = labels
-      }
-  }
 }

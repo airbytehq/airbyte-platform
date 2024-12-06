@@ -5,6 +5,7 @@ package io.airbyte.data.services.impls.jooq
 
 import com.google.common.io.Resources
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -36,7 +37,7 @@ internal class DbConverterTest {
     internal: InternalConfiguredAirbyteCatalog,
     protocol: ProtocolConfiguredAirbyteCatalog,
   ) {
-    val internalToProtocol = Jsons.convertValue(internal, ProtocolConfiguredAirbyteCatalog::class.java)
+    val internalToProtocol = parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
     Assertions.assertEquals(protocol, internalToProtocol)
   }
 

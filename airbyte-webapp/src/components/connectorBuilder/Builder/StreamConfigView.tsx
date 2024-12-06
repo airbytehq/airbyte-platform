@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
@@ -10,6 +11,13 @@ import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
+import {
+  GzipJsonDecoderType,
+  IterableDecoderType,
+  JsonDecoderType,
+  JsonlDecoderType,
+  XmlDecoderType,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
@@ -19,7 +27,6 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
-import { AssistButton } from "./AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
@@ -37,7 +44,7 @@ import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { BUILDER_DECODER_TYPES, BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
@@ -90,6 +97,21 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               path={streamFieldPath("httpMethod")}
               options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
+            />
+            <BuilderField
+              type="enum"
+              label={formatMessage({ id: "connectorBuilder.decoder.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
+              path={streamFieldPath("decoder")}
+              options={[...BUILDER_DECODER_TYPES]}
+              manifestPath="SimpleRetriever.properties.decoder"
+              manifestOptionPaths={[
+                JsonDecoderType.JsonDecoder,
+                XmlDecoderType.XmlDecoder,
+                JsonlDecoderType.JsonlDecoder,
+                IterableDecoderType.IterableDecoder,
+                GzipJsonDecoderType.GzipJsonDecoder,
+              ]}
             />
             <BuilderField
               type="array"
@@ -195,7 +217,7 @@ const StreamControls = ({
         onAddStream={(addedStreamNum) => {
           setValue("view", addedStreamNum);
         }}
-        initialValues={streams[streamNum]}
+        streamToDuplicate={streams[streamNum]}
         button={
           <button className={styles.controlButton} type="button" disabled={permission === "readOnly"}>
             <Icon type="copy" />

@@ -8,10 +8,10 @@ import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
-import { ResourceType, UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
+import { ResourceType, UnifiedUserModel } from "./util";
 
 interface RemoveRoleMenuItemProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   resourceType: ResourceType;
 }
 
@@ -34,11 +34,42 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
   const nameToDisplay = user.userName || user.userEmail;
   const { mutateAsync: removePermission } = useDeletePermissions();
 
-  const onClick = () =>
+  const openRemoveUserModal = () =>
     openConfirmationModal({
-      text: formatMessage(
-        { id: "settings.accessManagement.removePermissions" },
-        { user: nameToDisplay, resource: resourceName }
+      text: (
+        <>
+          <FormattedMessage
+            id="settings.accessManagement.removePermissions"
+            values={{
+              user: (
+                <Text as="span" italicized>
+                  {nameToDisplay}
+                </Text>
+              ),
+              resource: (
+                <Text as="span" italicized>
+                  {resourceName}
+                </Text>
+              ),
+            }}
+          />
+          {resourceType === "organization" && (
+            <Box pt="md">
+              <Text color="grey400">
+                <FormattedMessage
+                  id="settings.accessManagement.removePermissions.orgWarning"
+                  values={{
+                    resource: (
+                      <Text as="span" color="grey400" italicized>
+                        {resourceName}
+                      </Text>
+                    ),
+                  }}
+                />
+              </Text>
+            </Box>
+          )}
+        </>
       ),
       title: formatMessage({ id: "settings.accessManagement.removeUser" }),
       submitButtonText: formatMessage({ id: "settings.accessManagement.removeUser" }),
@@ -51,13 +82,18 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
 
   return (
     <button
-      onClick={onClick}
+      onClick={openRemoveUserModal}
       disabled={currentUserId === user.id || permissionToRemove.length === 0}
       className={styles.removeRoleMenuItem__button}
     >
       <Box py="lg" px="md">
         <Text color={currentUserId === user.id || permissionToRemove.length === 0 ? "red200" : "red"}>
-          <FormattedMessage id="settings.accessManagement.removeUser" />
+          <FormattedMessage
+            id="settings.accessManagement.removeUserFrom"
+            values={{
+              scope: resourceType,
+            }}
+          />
         </Text>
       </Box>
     </button>

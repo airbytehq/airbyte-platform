@@ -62,3 +62,8 @@ class InvitationStatusUnexpectedException(message: String) : Exception(message)
  * the same email and scope as an existing pending invitation.
  */
 class InvitationDuplicateException(message: String) : Exception(message)
+
+/**
+ * Exception thrown when trying to create an invitation for a scope where the user already has permission for that scope.
+ */
+class InvitationPermissionOverlapException(message: String) : Exception(message)

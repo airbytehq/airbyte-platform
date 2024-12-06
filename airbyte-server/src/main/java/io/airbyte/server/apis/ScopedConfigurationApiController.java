@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.ScopedConfigurationReadRequestBody;
 import io.airbyte.api.model.generated.ScopedConfigurationReadResponse;
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateRequestBody;
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateResponse;
-import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.ScopedConfigurationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -46,7 +45,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/create")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -63,7 +61,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/delete")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -78,7 +75,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/list")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -91,7 +87,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/get")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -106,7 +101,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/get_context")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -116,7 +110,6 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
   @SuppressWarnings("LineLength")
   @Post("/update")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

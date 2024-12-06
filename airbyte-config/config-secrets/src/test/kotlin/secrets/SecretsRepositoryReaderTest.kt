@@ -7,10 +7,8 @@ package io.airbyte.config.secrets
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
-import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.config.secrets.hydration.SecretsHydrator
-import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
 import java.util.UUID
 
@@ -38,13 +36,11 @@ private val DESTINATION_WITH_FULL_CONFIG =
     .withConfiguration(FULL_CONFIG)
 
 class SecretsRepositoryReaderTest {
-  private lateinit var configRepository: ConfigRepository
   private lateinit var secretsRepositoryReader: SecretsRepositoryReader
   private lateinit var secretPersistence: MemorySecretPersistence
 
   @BeforeEach
   fun setup() {
-    configRepository = mockk()
     secretPersistence = MemorySecretPersistence()
     val secretsHydrator: SecretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)

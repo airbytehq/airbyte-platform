@@ -54,8 +54,12 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
   }
 
   @Override
-  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) {
-    throw new UnsupportedOperationException("Not implemented - use OrganizationServiceDataImpl instead");
+  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) throws IOException {
+    final Result<Record> result = database
+        .query(ctx -> ctx.select(ORGANIZATION.asterisk()).from(ORGANIZATION).innerJoin(WORKSPACE).on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+            .where(WORKSPACE.ID.eq(workspaceId)))
+        .fetch();
+    return result.stream().findFirst().map(DbConverter::buildOrganization);
   }
 
   /**

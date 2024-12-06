@@ -4,6 +4,7 @@ import io.airbyte.initContainer.InputFetcherTest.Fixtures.WORKLOAD_ID
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
@@ -27,6 +28,9 @@ class InputFetcherTest {
   @MockK
   lateinit var systemClient: SystemClient
 
+  @MockK(relaxed = true)
+  lateinit var metricClient: MetricClient
+
   private lateinit var fetcher: InputFetcher
 
   @BeforeEach
@@ -36,6 +40,8 @@ class InputFetcherTest {
         workloadApiClient,
         inputProcessor,
         systemClient,
+        metricClient,
+        WORKLOAD_ID,
       )
   }
 
@@ -44,7 +50,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) }
     verify { inputProcessor.process(workload) }
@@ -56,7 +62,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -69,7 +75,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
     verify { systemClient.exitProcess(1) }
@@ -81,7 +87,7 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadFailure(any()) } throws Exception("bang 1")
     every { systemClient.exitProcess(1) } returns Unit
 
-    fetcher.fetch(WORKLOAD_ID)
+    fetcher.fetch()
 
     verify { systemClient.exitProcess(1) }
   }

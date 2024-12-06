@@ -29,6 +29,7 @@ import java.io.Serializable
 data class ConfiguredAirbyteStream
   @JvmOverloads
   constructor(
+    // TODO Deprecate this
     @JsonProperty("stream")
     var stream: AirbyteStream,
     @JsonProperty("sync_mode")
@@ -47,6 +48,9 @@ data class ConfiguredAirbyteStream
     var minimumGenerationId: Long? = null,
     @JsonProperty("sync_id")
     var syncId: Long? = null,
+    // TODO this should become required, for backwards compat, generate from stream?
+    var fields: List<Field>? = null,
+    var mappers: List<MapperConfig> = listOf(),
   ) : Serializable {
     fun withStream(stream: AirbyteStream): ConfiguredAirbyteStream {
       this.stream = stream
@@ -109,6 +113,8 @@ data class ConfiguredAirbyteStream
       var minimumGenerationId: Long? = null,
       @JsonProperty("sync_id")
       var syncId: Long? = null,
+      var fields: List<Field>? = null,
+      var mappers: List<MapperConfig> = listOf(),
     ) {
       fun stream(stream: AirbyteStream) = apply { this.stream = stream }
 
@@ -126,6 +132,10 @@ data class ConfiguredAirbyteStream
 
       fun syncId(syncId: Long?) = apply { this.syncId = syncId }
 
+      fun fields(fields: List<Field>?) = apply { this.fields = fields }
+
+      fun mappers(mappers: List<MapperConfig>) = apply { this.mappers = mappers }
+
       fun build(): ConfiguredAirbyteStream =
         ConfiguredAirbyteStream(
           stream = stream ?: throw IllegalArgumentException("stream cannot be null"),
@@ -136,6 +146,8 @@ data class ConfiguredAirbyteStream
           generationId = generationId,
           minimumGenerationId = minimumGenerationId,
           syncId = syncId,
+          fields = fields,
+          mappers = mappers,
         )
     }
 

@@ -6,7 +6,7 @@ import { FormattedMessage } from "react-intl";
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
-import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
+import { ComboBox, OptionsConfig, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
@@ -46,12 +46,13 @@ interface BaseFieldProps {
   path: string;
   label?: string;
   manifestPath?: string;
+  manifestOptionPaths?: string[];
   tooltip?: React.ReactNode;
   readOnly?: boolean;
   optional?: boolean;
   pattern?: string;
   adornment?: ReactNode;
-  preview?: (arg0: string) => ReactNode;
+  preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
   omitInterpolationContext?: boolean;
@@ -66,6 +67,7 @@ export type BuilderFieldProps = BaseFieldProps &
         onBlur?: (value: string) => void;
         step?: number;
         min?: number;
+        placeholder?: string;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabledTooltip?: string }
@@ -83,7 +85,7 @@ export type BuilderFieldProps = BaseFieldProps &
         onChange?: (newValue: string) => void;
         options: string[] | Array<{ label: string; value: string }>;
       }
-    | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
+    | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[]; optionsConfig?: OptionsConfig }
     | { type: "multicombobox"; onChange?: (newValue: string[]) => void; options: Option[] }
   );
 
@@ -138,6 +140,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   adornment,
   preview,
   manifestPath,
+  manifestOptionPaths,
   omitInterpolationContext,
   labelAction,
   ...props
@@ -155,7 +158,8 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     manifestPath,
     path,
     false,
-    omitInterpolationContext
+    omitInterpolationContext,
+    manifestOptionPaths
   );
 
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
@@ -214,28 +218,26 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
-        <>
-          <Input
-            {...field}
-            onChange={(e) => {
-              setValue(e.target.value);
-            }}
-            className={props.className}
-            type={props.type}
-            value={(fieldValue as string | number | undefined) ?? ""}
-            error={hasError}
-            readOnly={readOnly}
-            adornment={adornment}
-            disabled={isDisabled}
-            step={props.step}
-            min={props.min}
-            onBlur={(e) => {
-              field.onBlur();
-              props.onBlur?.(e.target.value);
-            }}
-          />
-          {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
-        </>
+        <Input
+          {...field}
+          onChange={(e) => {
+            setValue(e.target.value);
+          }}
+          placeholder={props.placeholder}
+          className={props.className}
+          type={props.type}
+          value={(fieldValue as string | number | undefined) ?? ""}
+          error={hasError}
+          readOnly={readOnly}
+          adornment={adornment}
+          disabled={isDisabled}
+          step={props.step}
+          min={props.min}
+          onBlur={(e) => {
+            field.onBlur();
+            props.onBlur?.(e.target.value);
+          }}
+        />
       )}
       {(props.type === "date" || props.type === "date-time") && (
         <DatePicker
@@ -304,7 +306,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <ComboBox
           options={props.options}
           value={fieldValue as string}
-          onChange={setValue}
+          onChange={(value) => setValue(value ?? "")}
           error={hasError}
           adornment={adornment}
           data-testid={path}
@@ -318,6 +320,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           filterOptions={false}
           disabled={isDisabled}
           allowCustomValue
+          optionsConfig={props.optionsConfig}
         />
       )}
       {props.type === "multicombobox" && (
@@ -342,6 +345,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           />
         </Text>
       )}
+      {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
     </ControlLabels>
   );
 };

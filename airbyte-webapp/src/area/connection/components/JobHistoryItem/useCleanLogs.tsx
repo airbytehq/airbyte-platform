@@ -1,10 +1,13 @@
 import Anser from "anser";
+import dayjs from "dayjs";
 import { useMemo } from "react";
 
-import { AttemptInfoRead } from "core/api/types/AirbyteClient";
+import { attemptHasFormattedLogs, attemptHasStructuredLogs } from "core/api";
+import { AttemptInfoRead, LogEvent, LogLevel, LogSource } from "core/api/types/AirbyteClient";
 
 export interface CleanedLogs {
-  origins: JobLogOrigins[];
+  sources: LogSource[];
+  levels: LogLevel[];
   logLines: CleanedLogLines;
 }
 
@@ -12,57 +15,87 @@ export type CleanedLogLines = Array<{
   lineNumber: number;
   original: string;
   text: string;
-  domain?: JobLogOrigins;
+  level?: LogLevel;
+  source?: LogSource;
+  timestamp?: string;
 }>;
 
-export enum JobLogOrigins {
-  Destination = "destination",
-  Platform = "platform",
-  Other = "other",
-  ReplicationOrchestrator = "replication-orchestrator",
-  Source = "source",
-}
-
-export const KNOWN_LOG_ORIGINS = [
+// This can be removed once we switch over entirely to structured logs
+// https://github.com/airbytehq/airbyte-internal-issues/issues/10658
+export const LOG_SOURCE_REGEX_MAP = [
   {
-    key: JobLogOrigins.ReplicationOrchestrator,
+    key: LogSource["replication-orchestrator"],
     regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} replication-orchestrator/,
   },
-  { key: JobLogOrigins.Source, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} source/ },
-  { key: JobLogOrigins.Destination, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} destination/ },
-  { key: JobLogOrigins.Platform, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} platform/ },
-  // If the log starts with a timestamp but then doesn't match any of the above, it's considered not matching any domain
-  // which is helpful to start a new block of log lines that does not have any color-coding
-  { key: JobLogOrigins.Other, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} / },
+  { key: LogSource.source, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} source/ },
+  { key: LogSource.destination, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} destination/ },
+  { key: LogSource.platform, regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} platform/ },
 ];
+
+export const LOG_LEVELS: LogLevel[] = ["info", "warn", "error", "debug", "trace"];
 
 /**
  * useCleanLogs iterates through each log line of each attempt and transforms it to be more easily consumed by the UI.
  */
 export const useCleanLogs = (attempt: AttemptInfoRead): CleanedLogs => {
   return useMemo(() => {
-    const origins: JobLogOrigins[] = [];
-    // Some logs are multi-line, so we want to associate those lines (which might not have the correct prefix) with the last domain that was detected
-    let lastDomain: JobLogOrigins | undefined;
-    const logLines = attempt.logs.logLines.map((line, index) => {
-      const text = Anser.ansiToText(line);
-      const domain = KNOWN_LOG_ORIGINS.find((domain) => domain.regex.test(text))?.key;
-      if (domain) {
-        lastDomain = domain;
-        if (!origins.includes(domain)) {
-          origins.push(domain);
+    const levels = new Set<LogLevel>();
+    const sources = new Set<LogSource>();
+
+    if (attemptHasFormattedLogs(attempt)) {
+      const logLines = attempt.logs.logLines.map((line, index) => {
+        const text = Anser.ansiToText(line);
+        const source = LOG_SOURCE_REGEX_MAP.find((source) => source.regex.test(text))?.key;
+        if (source) {
+          sources.add(source);
         }
-      }
+        return {
+          lineNumber: index + 1,
+          original: line,
+          text,
+          source,
+        };
+      });
       return {
-        lineNumber: index + 1,
-        original: line,
-        text,
-        domain: domain ?? lastDomain,
+        sources: [...sources],
+        levels: [...levels],
+        logLines,
       };
-    });
-    return {
-      origins,
-      logLines,
-    };
+    }
+
+    if (attemptHasStructuredLogs(attempt)) {
+      const logLines = attempt.logs.events.map((event, index) => {
+        levels.add(event.level);
+        const messageWithoutLogLevel = event.message.replace(beginsWithLogLevel, "");
+        return {
+          lineNumber: index + 1,
+          original: formatLogEvent({ ...event, message: messageWithoutLogLevel }),
+          text: messageWithoutLogLevel,
+          source: event.logSource,
+          level: event.level,
+          timestamp: formatLogEventTimestamp(event.timestamp),
+        };
+      });
+      return {
+        sources: [...sources],
+        levels: [...levels],
+        logLines,
+      };
+    }
+
+    throw new Error("Log format unsupported. Only formatted or structured logs are supported.");
   }, [attempt]);
 };
+
+// Filters out the log level from the beginning of the log message, because connector logs hard-code this as part of
+// the log message. Structured logs from the platform (using logback) do not have this issue.
+const beginsWithLogLevel = new RegExp(`^(${LOG_LEVELS.map((level) => level.toUpperCase()).join("|")})\\s*`);
+
+export function formatLogEvent(event: LogEvent): string {
+  return `${formatLogEventTimestamp(event.timestamp)} ${event.level} ${event.message}`;
+}
+
+function formatLogEventTimestamp(unixTimestamp: number): string {
+  // Intentionally not internationalized to match expectations for log timestamps
+  return dayjs(unixTimestamp).format("YYYY-MM-DD HH:mm:ss");
+}

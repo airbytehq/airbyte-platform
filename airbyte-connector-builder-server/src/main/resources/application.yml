@@ -73,9 +73,6 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   role: ${AIRBYTE_ROLE:}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
@@ -87,6 +84,13 @@ airbyte:
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
+
+  # minimal configuration to authenticate internal service accounts w/ keycloak
+  keycloak:
+    host: ${KEYCLOAK_HOST:}
+    protocol: ${KEYCLOAK_PROTOCOL:http}
+    base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
+    internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
 
 endpoints:
   beans:
@@ -128,6 +132,11 @@ jackson:
 
 logger:
   levels:
-    io.airbyte.bootloader: DEBUG
-    # Uncomment to help resolve issues with conditional beans
-    # io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

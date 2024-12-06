@@ -1,8 +1,8 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
-import { PageViewContainer } from "components/common/PageViewContainer";
+import { HeadTitle } from "components/HeadTitle";
+import { PageViewContainer } from "components/PageViewContainer";
 import { SetupForm } from "components/settings/SetupForm";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";

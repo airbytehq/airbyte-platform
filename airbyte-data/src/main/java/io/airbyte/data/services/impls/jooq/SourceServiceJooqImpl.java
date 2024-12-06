@@ -89,6 +89,7 @@ public class SourceServiceJooqImpl implements SourceService {
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
+  // TODO: This has too many dependencies.
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
@@ -147,6 +148,8 @@ public class SourceServiceJooqImpl implements SourceService {
   @Override
   public StandardSourceDefinition getSourceDefinitionFromConnection(final UUID connectionId) {
     try {
+      // TODO: This should be refactored to use the repository. Services should not depend on other
+      // services.
       final StandardSync sync = connectionService.getStandardSync(connectionId);
       return getSourceDefinitionFromSource(sync.getSourceId());
     } catch (final Exception e) {

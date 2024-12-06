@@ -1033,6 +1033,7 @@ describe("Conversion successfully results in", () => {
           },
         ],
       },
+      decoder: "JSON",
       session_token_path: ["id"],
       expiration_duration: "P2W",
       request_authentication: {

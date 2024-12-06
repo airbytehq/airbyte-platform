@@ -16,14 +16,12 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Custom Micronaut {@link PropertySourceLoader} that loads the airbyte.yml file and prefixes all
  * properties within with "airbyte-yml.". Micronaut registers this property loader via the
  * resources/META-INF/services/io.micronaut.context.env.PropertySourceLoader file.
  */
-@Slf4j
 public class AirbytePropertySourceLoader implements PropertySourceLoader {
 
   static final String AIRBYTE_YML_PATH = "/app/configs/airbyte.yml";

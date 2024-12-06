@@ -32,6 +32,7 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
+  convertProjectDetailsReadToBuilderProject,
   HttpError,
   NewVersionBody,
   StreamReadTransformedSlices,
@@ -114,6 +115,7 @@ interface FormStateContext {
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
+  assistSessionId: string;
   setAssistEnabled: (enabled: boolean) => void;
 }
 
@@ -222,23 +224,22 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
 
   const currentProject: BuilderProject = useMemo(
-    () => ({
-      name: builderProject.builderProject.name,
-      version: builderProject.builderProject.activeDeclarativeManifestVersion
-        ? builderProject.builderProject.activeDeclarativeManifestVersion
-        : "draft",
-      id: builderProject.builderProject.builderProjectId,
-      hasDraft: builderProject.builderProject.hasDraft,
-      sourceDefinitionId: builderProject.builderProject.sourceDefinitionId,
-    }),
+    () => convertProjectDetailsReadToBuilderProject(builderProject.builderProject),
     [builderProject.builderProject]
   );
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
-  const { setStoredMode, checkAssistEnabled, setAssistEnabledById } = useConnectorBuilderLocalStorage();
+  const { setStoredMode, isAssistProjectEnabled, setAssistProjectEnabled, getAssistProjectSessionId } =
+    useConnectorBuilderLocalStorage();
 
-  const assistEnabled = checkAssistEnabled(projectId);
-  const setAssistEnabled = setAssistEnabledById(projectId);
+  const assistEnabled = isAssistProjectEnabled(projectId);
+  const setAssistEnabled = useCallback(
+    (enabled: boolean) => {
+      setAssistProjectEnabled(projectId, enabled);
+    },
+    [projectId, setAssistProjectEnabled]
+  );
+  const assistSessionId = getAssistProjectSessionId(projectId);
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
@@ -422,7 +423,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       }
 
       if (displayedVersion === undefined && version !== undefined) {
-        setPreviousManifestDraft(jsonManifest);
+        setPreviousManifestDraft(resolvedManifest);
       } else if (version === undefined) {
         setPreviousManifestDraft(undefined);
       }
@@ -444,7 +445,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       setDisplayedVersion(version);
       setStateKey((key) => key + 1);
     },
-    [currentProject.name, displayedVersion, getValues, jsonManifest, setStateKey, setValue]
+    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue]
   );
 
   const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();
@@ -570,6 +571,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     updateYamlCdkVersion,
     setAssistEnabled,
     assistEnabled,
+    assistSessionId,
   };
 
   return (

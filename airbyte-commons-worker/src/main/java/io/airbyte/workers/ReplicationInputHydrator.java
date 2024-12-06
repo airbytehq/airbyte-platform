@@ -4,8 +4,15 @@
 
 package io.airbyte.workers;
 
+import static io.airbyte.metrics.lib.MetricTags.CONNECTION_ID;
+import static io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE;
+import static io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.function.CheckedSupplier;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
@@ -22,6 +29,7 @@ import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
+import io.airbyte.api.client.model.generated.SyncInput;
 import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.StateConverter;
@@ -29,6 +37,8 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.SourceActorConfig;
+import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
@@ -36,18 +46,21 @@ import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.AutoBackfillOnNewColumns;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
+import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.input.ReplicationInputMapper;
+import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +69,7 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import secrets.persistence.SecretCoordinateException;
 
 public class ReplicationInputHydrator {
 
@@ -64,16 +78,65 @@ public class ReplicationInputHydrator {
   private final AirbyteApiClient airbyteApiClient;
   private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
   private final SecretsRepositoryReader secretsRepositoryReader;
-  private final FeatureFlagClient featureFlagClient;
+  private final MapperSecretHydrationHelper mapperSecretHydrationHelper;
+  private final ReplicationInputMapper mapper;
+  private final Boolean useRuntimeSecretPersistence;
+
+  private final BackfillHelper backfillHelper;
+  private final CatalogClientConverters catalogClientConverters;
+  private final MetricClient metricClient;
+
+  static final String FILE_TRANSFER_DELIVERY_TYPE = "use_file_transfer";
 
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
                                   final SecretsRepositoryReader secretsRepositoryReader,
-                                  final FeatureFlagClient featureFlagClient) {
+                                  final MapperSecretHydrationHelper mapperSecretHydrationHelper,
+                                  final BackfillHelper backfillHelper,
+                                  final CatalogClientConverters catalogClientConverters,
+                                  final ReplicationInputMapper mapper,
+                                  final MetricClient metricClient,
+                                  final Boolean useRuntimeSecretPersistence) {
     this.airbyteApiClient = airbyteApiClient;
+    this.backfillHelper = backfillHelper;
+    this.catalogClientConverters = catalogClientConverters;
     this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
     this.secretsRepositoryReader = secretsRepositoryReader;
-    this.featureFlagClient = featureFlagClient;
+    this.mapperSecretHydrationHelper = mapperSecretHydrationHelper;
+    this.mapper = mapper;
+    this.metricClient = metricClient;
+    this.useRuntimeSecretPersistence = useRuntimeSecretPersistence;
+  }
+
+  private <T> T retry(final CheckedSupplier<T> supplier) {
+    return Failsafe.with(
+        RetryPolicy.builder()
+            .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
+            .withMaxRetries(5)
+            .build())
+        .get(supplier);
+  }
+
+  private void refreshSecretsReferences(final ReplicationActivityInput parsed) {
+    final Object jobInput = retry(() -> airbyteApiClient.getJobsApi().getJobInput(
+        new SyncInput(
+            Long.parseLong(parsed.getJobRunConfig().getJobId()),
+            parsed.getJobRunConfig().getAttemptId().intValue())));
+
+    if (jobInput != null) {
+      final JobInput apiResult = Jsons.convertValue(jobInput, JobInput.class);
+      if (apiResult != null && apiResult.getSyncInput() != null) {
+        final StandardSyncInput syncInput = apiResult.getSyncInput();
+
+        if (syncInput.getSourceConfiguration() != null) {
+          parsed.setSourceConfiguration(syncInput.getSourceConfiguration());
+        }
+
+        if (syncInput.getDestinationConfiguration() != null) {
+          parsed.setDestinationConfiguration(syncInput.getDestinationConfiguration());
+        }
+      }
+    }
   }
 
   /**
@@ -88,11 +151,23 @@ public class ReplicationInputHydrator {
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
     ApmTraceUtils.addTagsToTrace(Map.of("api_base_url", airbyteApiClient.getDestinationApi().getBaseUrl()));
+    refreshSecretsReferences(replicationActivityInput);
     final var destination =
         airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
     final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
     final var resolvedDestinationVersion = airbyteApiClient.getActorDefinitionVersionApi().resolveActorDefinitionVersionByTag(
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
+
+    final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
+    final boolean useFileTransfer = sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
+        && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType()));
+
+    if (useFileTransfer && !resolvedDestinationVersion.getSupportFileTransfer()) {
+      final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
+          + resolvedDestinationVersion.getDockerImageTag();
+      LOGGER.error(errorMessage);
+      throw new WorkerException(errorMessage);
+    }
 
     // Retrieve the connection, which we need in a few places.
     final long jobId = Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId());
@@ -109,10 +184,8 @@ public class ReplicationInputHydrator {
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
     List<StreamDescriptor> streamsToBackfill = null;
-    final boolean backfillEnabledForWorkspace =
-        featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(replicationActivityInput.getWorkspaceId()));
-    if (backfillEnabledForWorkspace && BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
-      streamsToBackfill = BackfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
+    if (backfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+      streamsToBackfill = backfillHelper.getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), catalog);
       state =
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
     }
@@ -132,12 +205,15 @@ public class ReplicationInputHydrator {
     final JsonNode fullDestinationConfig;
     final JsonNode fullSourceConfig;
     final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+
+    // If the organization is configured to use "run time secrets management" aka "bring your own
+    // secrets manager", then we must look up their secrets config and hydrate from there.
+    // TODO: The runtime secrets client and the default secrets client should implement the same
+    // interface, so we can avoid this conditional look up and delegation in the hydrator itself and do
+    // it at the injection layer.
+    if (useRuntimeSecretPersistence && organizationId != null) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence = new RuntimeSecretPersistence(
-            fromApiSecretPersistenceConfig(secretPersistenceConfig));
+        final RuntimeSecretPersistence runtimeSecretPersistence = getRuntimeSecretPersistence(organizationId);
         fullSourceConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getSourceConfiguration(),
             runtimeSecretPersistence);
         fullDestinationConfig =
@@ -146,37 +222,47 @@ public class ReplicationInputHydrator {
       } catch (final IOException e) {
         throw new RuntimeException(e);
       }
-    } else {
-      fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
-      fullDestinationConfig =
-          secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
+    } else { // use default configured persistence
+      try {
+        fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
+      } catch (final SecretCoordinateException e) {
+        metricClient.count(
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
+            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getSourceLauncherConfig().getDockerImage()),
+            new MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
+            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getSourceLauncherConfig().getConnectionId().toString()));
+        throw e;
+      }
+      try {
+        fullDestinationConfig =
+            secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
+      } catch (final SecretCoordinateException e) {
+        metricClient.count(
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
+            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getDestinationLauncherConfig().getDockerImage()),
+            new MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
+            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getDestinationLauncherConfig().getConnectionId().toString()));
+        throw e;
+      }
     }
-    return mapActivityInputToReplInput(replicationActivityInput)
+
+    // Hydrate mapper secrets
+    final ConfiguredAirbyteCatalog hydratedCatalog =
+        mapperSecretHydrationHelper.hydrateMapperSecrets(catalog, useRuntimeSecretPersistence, organizationId);
+
+    return mapper.toReplicationInput(replicationActivityInput)
         .withSourceConfiguration(fullSourceConfig)
         .withDestinationConfiguration(fullDestinationConfig)
-        .withCatalog(catalog)
+        .withCatalog(hydratedCatalog)
         .withState(state)
         .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
   }
 
-  /**
-   * Converts ReplicationActivityInput to ReplicationInput by mapping basic files. Does NOT perform
-   * any hydration. Does not copy unhydrated config.
-   */
-  public ReplicationInput mapActivityInputToReplInput(final ReplicationActivityInput replicationActivityInput) {
-    return new ReplicationInput()
-        .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
-        .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
-        .withPrefix(replicationActivityInput.getPrefix())
-        .withSourceId(replicationActivityInput.getSourceId())
-        .withDestinationId(replicationActivityInput.getDestinationId())
-        .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
-        .withWorkspaceId(replicationActivityInput.getWorkspaceId())
-        .withConnectionId(replicationActivityInput.getConnectionId())
-        .withIsReset(replicationActivityInput.getIsReset())
-        .withJobRunConfig(replicationActivityInput.getJobRunConfig())
-        .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
-        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig());
+  private RuntimeSecretPersistence getRuntimeSecretPersistence(final UUID organizationId) throws IOException {
+    final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
+        new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
+    return new RuntimeSecretPersistence(
+        fromApiSecretPersistenceConfig(secretPersistenceConfig));
   }
 
   @VisibleForTesting
@@ -211,9 +297,9 @@ public class ReplicationInputHydrator {
                                            final ConfiguredAirbyteCatalog catalog)
       throws Exception {
     if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
-      final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
+      final var streamsToBackfill = backfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
       LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
-      final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
+      final State resetState = backfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
       if (resetState != null) {
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the
         // backfill process.
@@ -232,7 +318,8 @@ public class ReplicationInputHydrator {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
-    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
+    final ConfiguredAirbyteCatalog catalog =
+        catalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog());
     return catalog;
   }
 

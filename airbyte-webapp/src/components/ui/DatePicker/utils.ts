@@ -4,6 +4,7 @@ export const ISO8601_NO_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss[Z]";
 export const ISO8601_WITH_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss.SSS[Z]";
 export const ISO8601_WITH_MICROSECONDS = "YYYY-MM-DDTHH:mm:ss.SSSSSS[Z]";
 export const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
+export const YEAR_MONTH_FORMAT = "YYYY-MM";
 export const MONTH_DAY = "MMMM D";
 
 /**

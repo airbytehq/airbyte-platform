@@ -25,7 +25,7 @@ export const determineRecommendRefresh = (formSyncCatalog: AirbyteCatalog, store
       lookupConnectionValuesStreamById[`${formStream.stream?.namespace ?? ""}-${formStream.stream?.name}`]
     );
 
-    return (
+    const promptBecauseOfSyncModes =
       // if we changed the stream to incremental from full refresh overwrite
       (formStream.config?.syncMode === "incremental" &&
         connectionStream.config?.syncMode === "full_refresh" &&
@@ -35,8 +35,11 @@ export const determineRecommendRefresh = (formSyncCatalog: AirbyteCatalog, store
         // if it was + is incremental but we change the selected fields, pk, or cursor
         (!equal(formStream.config?.selectedFields, connectionStream.config?.selectedFields) ||
           !equal(formStream.config?.primaryKey, connectionStream.config?.primaryKey) ||
-          !equal(formStream.config?.cursorField, connectionStream.config?.cursorField)))
-    );
+          !equal(formStream.config?.cursorField, connectionStream.config?.cursorField)));
+
+    const promptBecauseOfHashing = !equal(formStream.config?.hashedFields, connectionStream.config?.hashedFields);
+
+    return promptBecauseOfSyncModes || promptBecauseOfHashing;
   });
 };
 

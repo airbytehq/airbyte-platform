@@ -20,7 +20,7 @@ import java.util.Optional
 val mockRoles = setOf("role-1", "role-2")
 
 @MicronautTest
-class IntentSecurityRuleTest {
+internal class IntentSecurityRuleTest {
   private lateinit var intentSecurityRule: IntentSecurityRule
   private lateinit var routeMatch: RouteMatch<*>
   private lateinit var request: HttpRequest<*>
@@ -48,7 +48,7 @@ class IntentSecurityRuleTest {
 
   @Test
   fun `order is below micronaut security @Secured annotation`() {
-    assert(intentSecurityRule.getOrder() < SecuredAnnotationRule.ORDER)
+    assert(intentSecurityRule.order < SecuredAnnotationRule.ORDER)
   }
 
   @Test
@@ -56,7 +56,8 @@ class IntentSecurityRuleTest {
     every { routeMatch.isAnnotationPresent(RequiresIntent::class.java) } returns false
 
     val result = intentSecurityRule.check(request, authentication)
-    StepVerifier.create(result)
+    StepVerifier
+      .create(result)
       .expectNext(SecurityRuleResult.UNKNOWN)
       .verifyComplete()
   }
@@ -66,7 +67,8 @@ class IntentSecurityRuleTest {
     every { authentication.roles } returns null
 
     val result = intentSecurityRule.check(request, authentication)
-    StepVerifier.create(result)
+    StepVerifier
+      .create(result)
       .expectNext(SecurityRuleResult.UNKNOWN)
       .verifyComplete()
   }
@@ -76,7 +78,8 @@ class IntentSecurityRuleTest {
     every { Intent.UploadCustomConnector.roles } returns emptySet()
 
     val result = intentSecurityRule.check(request, authentication)
-    StepVerifier.create(result)
+    StepVerifier
+      .create(result)
       .expectNext(SecurityRuleResult.REJECTED)
       .verifyComplete()
   }
@@ -87,7 +90,8 @@ class IntentSecurityRuleTest {
     every { authentication.roles } returns listOf(validRole)
 
     val result = intentSecurityRule.check(request, authentication)
-    StepVerifier.create(result)
+    StepVerifier
+      .create(result)
       .expectNext(SecurityRuleResult.ALLOWED)
       .verifyComplete()
   }
@@ -97,8 +101,20 @@ class IntentSecurityRuleTest {
     every { authentication.roles } returns listOf("useless-role-1", "useless-role-2")
 
     val result = intentSecurityRule.check(request, authentication)
-    StepVerifier.create(result)
+    StepVerifier
+      .create(result)
       .expectNext(SecurityRuleResult.REJECTED)
+      .verifyComplete()
+  }
+
+  @Test
+  internal fun `check returns UNKNOWN if no route match attribute`() {
+    every { request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java) } returns Optional.empty()
+
+    val result = intentSecurityRule.check(request, authentication)
+    StepVerifier
+      .create(result)
+      .expectNext(SecurityRuleResult.UNKNOWN)
       .verifyComplete()
   }
 }

@@ -3,9 +3,9 @@ import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/common/HeadTitle";
 import { DefineDestination } from "components/connection/CreateConnection/DefineDestination";
 import { DefineSource } from "components/connection/CreateConnection/DefineSource";
+import { HeadTitle } from "components/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";

@@ -10,7 +10,6 @@ import { Text } from "components/ui/Text";
 
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { SimplfiedSchemaChangesFormField } from "./SimplfiedSchemaChangesFormField";
 import { SimplifiedBackfillFormField } from "./SimplifiedBackfillFormField";
@@ -25,6 +24,7 @@ import { SimplifiedSchemaChangeNotificationFormField } from "./SimplifiedSchemaC
 interface SimplifiedConnectionsSettingsCardProps {
   title: string;
   isCreating: boolean;
+  hasConfiguredGeography?: boolean;
   source: SourceRead;
   destination: DestinationRead;
   isDeprecated?: boolean;
@@ -33,13 +33,13 @@ interface SimplifiedConnectionsSettingsCardProps {
 export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSettingsCardProps> = ({
   title,
   isCreating,
+  hasConfiguredGeography = false,
   source,
   destination,
   isDeprecated = false,
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const canBackfillNewColumns = useExperiment("platform.auto-backfill-on-new-columns", true);
 
   return (
     <Card title={title} className={styles.hideOverflow}>
@@ -80,7 +80,9 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
         {/* so always render, making the geography request as part of the initial page load */}
         <Box mt="xl">
           <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
-            {canEditDataGeographies && <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />}
+            {canEditDataGeographies && hasConfiguredGeography && (
+              <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />
+            )}
             {!isCreating && (
               <SimplifiedDestinationNamespaceFormField
                 isCreating={isCreating}
@@ -92,7 +94,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
             {!isCreating && <SimplifiedDestinationStreamPrefixNameFormField disabled={isDeprecated} />}
             <SimplfiedSchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
             <SimplifiedSchemaChangeNotificationFormField disabled={isDeprecated} />
-            {canBackfillNewColumns && <SimplifiedBackfillFormField disabled={isDeprecated} />}
+            <SimplifiedBackfillFormField disabled={isDeprecated} />
           </FlexContainer>
         </Box>
 

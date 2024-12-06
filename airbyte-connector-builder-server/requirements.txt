@@ -4,14 +4,16 @@
 #
 #    pip-compile
 #
-airbyte-cdk==4.5.4
+airbyte-cdk==6.7.2
     # via -r requirements.in
-airbyte-protocol-models-pdv2==0.12.2
+airbyte-protocol-models-dataclasses==0.14.1
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyio==4.4.0
+anyio==4.6.2.post1
     # via httpx
+attributes-doc==0.4.0
+    # via serpyco-rs
 attrs==24.2.0
     # via
     #   cattrs
@@ -19,42 +21,44 @@ attrs==24.2.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-bracex==2.5
+bracex==2.5.post1
     # via wcmatch
 cachetools==5.5.0
     # via airbyte-cdk
-cattrs==23.2.3
+cattrs==24.1.2
     # via requests-cache
-certifi==2024.7.4
+certifi==2024.8.30
     # via
     #   httpcore
     #   httpx
     #   requests
-cffi==1.17.0
+cffi==1.17.1
     # via cryptography
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via requests
 click==8.1.7
     # via nltk
-cryptography==42.0.8
+cryptography==43.0.3
     # via airbyte-cdk
-deprecated==1.2.14
+deprecated==1.2.15
     # via airbyte-cdk
 dpath==2.2.0
+    # via airbyte-cdk
+dunamai==1.23.0
     # via airbyte-cdk
 exceptiongroup==1.2.2
     # via
     #   anyio
     #   cattrs
-genson==1.2.2
+genson==1.3.0
     # via airbyte-cdk
 h11==0.14.0
     # via httpcore
-httpcore==1.0.5
+httpcore==1.0.7
     # via httpx
-httpx==0.27.0
+httpx==0.28.0
     # via langsmith
-idna==3.7
+idna==3.10
     # via
     #   anyio
     #   httpx
@@ -71,35 +75,46 @@ jsonpointer==3.0.0
     # via jsonpatch
 jsonref==0.2
     # via airbyte-cdk
-jsonschema==3.2.0
+jsonschema==4.17.3
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.103
+langsmith==0.1.147
     # via langchain-core
-markupsafe==2.1.5
+markupsafe==3.0.2
     # via jinja2
-nltk==3.8.1
+nltk==3.9.1
     # via airbyte-cdk
-orjson==3.10.7
-    # via langsmith
-packaging==23.2
-    # via langchain-core
-pendulum==2.1.2
-    # via airbyte-cdk
-platformdirs==4.2.2
-    # via requests-cache
-pycparser==2.22
-    # via cffi
-pydantic==2.8.2
+numpy==1.26.4
     # via
     #   airbyte-cdk
-    #   airbyte-protocol-models-pdv2
+    #   pandas
+orjson==3.10.12
+    # via
+    #   airbyte-cdk
+    #   langsmith
+packaging==23.2
+    # via
+    #   dunamai
+    #   langchain-core
+pandas==2.2.2
+    # via airbyte-cdk
+pendulum==2.1.2
+    # via airbyte-cdk
+platformdirs==4.3.6
+    # via requests-cache
+psutil==6.1.0
+    # via airbyte-cdk
+pycparser==2.22
+    # via cffi
+pydantic==2.10.3
+    # via
+    #   airbyte-cdk
     #   langchain-core
     #   langsmith
-pydantic-core==2.20.1
+pydantic-core==2.27.1
     # via pydantic
-pyjwt==2.9.0
+pyjwt==2.10.1
     # via airbyte-cdk
 pyrate-limiter==3.1.1
     # via airbyte-cdk
@@ -108,37 +123,46 @@ pyrsistent==0.20.0
 python-dateutil==2.9.0.post0
     # via
     #   airbyte-cdk
+    #   pandas
     #   pendulum
-pytz==2024.1
+python-ulid==3.0.0
     # via airbyte-cdk
+pytz==2024.1
+    # via
+    #   airbyte-cdk
+    #   pandas
 pytzdata==2020.1
     # via pendulum
 pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-regex==2024.7.24
+rapidfuzz==3.10.1
+    # via airbyte-cdk
+regex==2024.11.6
     # via nltk
 requests==2.32.3
     # via
     #   airbyte-cdk
     #   langsmith
     #   requests-cache
+    #   requests-toolbelt
 requests-cache==1.2.1
+    # via airbyte-cdk
+requests-toolbelt==1.0.0
+    # via langsmith
+serpyco-rs==1.11.0
     # via airbyte-cdk
 six==1.16.0
     # via
     #   isodate
-    #   jsonschema
     #   python-dateutil
     #   url-normalize
 sniffio==1.3.1
-    # via
-    #   anyio
-    #   httpx
+    # via anyio
 tenacity==8.5.0
     # via langchain-core
-tqdm==4.66.5
+tqdm==4.67.1
     # via nltk
 typing-extensions==4.12.2
     # via
@@ -146,16 +170,18 @@ typing-extensions==4.12.2
     #   cattrs
     #   pydantic
     #   pydantic-core
+    #   serpyco-rs
+tzdata==2024.2
+    # via pandas
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.2.2
+urllib3==2.2.3
     # via
     #   requests
     #   requests-cache
-wcmatch==8.4
+wcmatch==10.0
     # via airbyte-cdk
-wrapt==1.16.0
+wrapt==1.17.0
     # via deprecated
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
+xmltodict==0.13.0
+    # via airbyte-cdk

@@ -25,7 +25,7 @@ import java.time.Duration
 class TemporalQueueBeanFactory {
   @Singleton
   fun createMetricClient(): MetricClient {
-    MetricClientFactory.initialize(MetricEmittingApps.SERVER)
+    MetricClientFactory.initialize(MetricEmittingApps.WORKLOAD_API)
     return MetricClientFactory.getMetricClient()
   }
 

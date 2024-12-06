@@ -3,6 +3,7 @@ package io.airbyte.workers.internal.bookkeeping
 import com.google.common.hash.HashFunction
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.FileTransferInformations
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
@@ -38,6 +39,8 @@ import java.util.concurrent.atomic.LongAccumulator
  */
 data class StreamStatsCounters(
   val emittedRecordsCount: AtomicLong = AtomicLong(),
+  val filteredOutRecords: AtomicLong = AtomicLong(),
+  val filteredOutBytesCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
   val committedRecordsCount: AtomicLong = AtomicLong(),
   val committedBytesCount: AtomicLong = AtomicLong(),
@@ -62,6 +65,8 @@ data class StreamStatsCounters(
 data class EmittedStatsCounters(
   val remittedRecordsCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
+  val filteredOutRecords: AtomicLong = AtomicLong(),
+  val filteredOutBytesCount: AtomicLong = AtomicLong(),
 )
 
 /**
@@ -94,6 +99,7 @@ private val logger = KotlinLogging.logger { }
 class StreamStatsTracker(
   val nameNamespacePair: AirbyteStreamNameNamespacePair,
   private val metricClient: MetricClient,
+  private val useFileTransfer: Boolean,
 ) {
   val streamStats = StreamStatsCounters()
   private val stateIds = ConcurrentHashMap.newKeySet<Int>()
@@ -101,6 +107,19 @@ class StreamStatsTracker(
   private var emittedStats = EmittedStatsCounters()
   private var previousEmittedStats = EmittedStatsCounters()
   private var previousStateMessageReceivedAt: LocalDateTime? = null
+
+  fun updateFilteredOutRecordsStats(recordMessage: AirbyteRecordMessage) {
+    val emittedStatsToUpdate = emittedStats
+    val filteredOutByteSize = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+    with(emittedStatsToUpdate) {
+      filteredOutRecords.incrementAndGet()
+      filteredOutBytesCount.addAndGet(filteredOutByteSize)
+    }
+    with(streamStats) {
+      filteredOutRecords.incrementAndGet()
+      filteredOutBytesCount.addAndGet(filteredOutByteSize)
+    }
+  }
 
   /**
    * Bookkeeping for when a record message is read.
@@ -110,7 +129,17 @@ class StreamStatsTracker(
    * avoid having to traverse the map to get the global count.
    */
   fun trackRecord(recordMessage: AirbyteRecordMessage) {
-    val estimatedBytesSize: Long = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+    // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
+    val estimatedBytesSize: Long =
+      if (!useFileTransfer) {
+        Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+      } else {
+        recordMessage.additionalProperties["file"]?.let {
+          logger.info { "Received a file transfer record: $it" }
+          val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
+          fileTransferInformations.bytes
+        } ?: Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+      }
 
     // Update the current emitted stats
     // We do a local copy of the reference to emittedStats to ensure all the stats are
@@ -241,8 +270,12 @@ class StreamStatsTracker(
       stateIds.remove(stagedStats.stateId)
 
       // Increment committed stats as we are un-staging stats
-      streamStats.committedBytesCount.addAndGet(stagedStats.emittedStatsCounters.emittedBytesCount.get())
-      streamStats.committedRecordsCount.addAndGet(stagedStats.emittedStatsCounters.remittedRecordsCount.get())
+      streamStats.committedBytesCount.addAndGet(
+        stagedStats.emittedStatsCounters.emittedBytesCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+      )
+      streamStats.committedRecordsCount.addAndGet(
+        stagedStats.emittedStatsCounters.remittedRecordsCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+      )
 
       if (stagedStats.stateId == stateId) {
         break
@@ -275,13 +308,22 @@ class StreamStatsTracker(
     return previousEmittedStats.remittedRecordsCount.get()
   }
 
-  fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+  fun getTrackedEmittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
     val stateId = stateMessage.getStateIdForStatsTracking()
     val stagedStats: StagedStats? = stagedStatsList.find { it.stateId == stateId }
     if (stagedStats == null) {
       logger.warn { "Could not find the state message with id $stateId in the stagedStatsList" }
     }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
+  }
+
+  fun getTrackedFilteredOutRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+    val stateId = stateMessage.getStateIdForStatsTracking()
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateId == stateId }
+    if (stagedStats == null) {
+      logger.warn { "Could not find the state message with id $stateId in the stagedStatsList" }
+    }
+    return stagedStats?.emittedStatsCounters?.filteredOutRecords?.get() ?: 0
   }
 
   fun areStreamStatsReliable(): Boolean {

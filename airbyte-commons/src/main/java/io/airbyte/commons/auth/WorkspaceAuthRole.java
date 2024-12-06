@@ -13,8 +13,9 @@ import java.util.stream.Stream;
 
 public enum WorkspaceAuthRole implements AuthRoleInterface {
 
-  WORKSPACE_ADMIN(400, AuthRoleConstants.WORKSPACE_ADMIN),
-  WORKSPACE_EDITOR(300, AuthRoleConstants.WORKSPACE_EDITOR),
+  WORKSPACE_ADMIN(500, AuthRoleConstants.WORKSPACE_ADMIN),
+  WORKSPACE_EDITOR(400, AuthRoleConstants.WORKSPACE_EDITOR),
+  WORKSPACE_RUNNER(300, AuthRoleConstants.WORKSPACE_RUNNER),
   WORKSPACE_READER(200, AuthRoleConstants.WORKSPACE_READER),
   NONE(0, AuthRoleConstants.NONE);
 

@@ -66,6 +66,7 @@ create table "public"."actor_definition_breaking_change" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "scoped_impact" jsonb,
+  "deadline_action" varchar(256),
   constraint "actor_definition_breaking_change_pkey" primary key ("actor_definition_id", "version")
 );
 create table "public"."actor_definition_config_injection" (
@@ -101,6 +102,7 @@ create table "public"."actor_definition_version" (
   "last_published" timestamp(6) with time zone,
   "internal_support_level" bigint not null,
   "language" varchar(256),
+  "supports_file_transfer" boolean not null default false,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
@@ -209,6 +211,28 @@ create table "public"."connector_builder_project" (
   "contribution_actor_definition_id" uuid,
   constraint "connector_builder_project_pkey" primary key ("id")
 );
+create table "public"."connector_rollout" (
+  "id" uuid not null,
+  "actor_definition_id" uuid not null,
+  "release_candidate_version_id" uuid not null,
+  "initial_version_id" uuid,
+  "state" varchar(32) not null,
+  "initial_rollout_pct" int,
+  "current_target_rollout_pct" int,
+  "final_target_rollout_pct" int,
+  "has_breaking_changes" boolean not null,
+  "max_step_wait_time_mins" int,
+  "updated_by" uuid,
+  "created_at" timestamp(6) not null default current_timestamp,
+  "updated_at" timestamp(6) not null default current_timestamp,
+  "completed_at" timestamp(6),
+  "expires_at" timestamp(6),
+  "error_msg" varchar(1024),
+  "failed_reason" varchar(1024),
+  "rollout_strategy" varchar(256),
+  "workflow_run_id" varchar(64),
+  constraint "pk_connector_rollout" primary key ("id")
+);
 create table "public"."declarative_manifest" (
   "actor_definition_id" uuid not null,
   "description" varchar(256) not null,
@@ -276,6 +300,7 @@ create table "public"."organization_payment_config" (
   "usage_category_override" "public"."usage_category_override",
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "subscription_status" "public"."subscription_status" not null default cast('pre_subscription' as subscription_status),
   constraint "organization_payment_config_pkey" primary key ("organization_id"),
   constraint "organization_payment_config_payment_provider_id_key" unique ("payment_provider_id")
 );
@@ -303,8 +328,8 @@ create table "public"."schema_management" (
 create table "public"."scoped_configuration" (
   "id" uuid not null,
   "key" varchar(256) not null,
-  "resource_type" "public"."config_resource_type" not null,
-  "resource_id" uuid not null,
+  "resource_type" "public"."config_resource_type",
+  "resource_id" uuid,
   "scope_type" "public"."config_scope_type" not null,
   "scope_id" uuid not null,
   "value" varchar(256) not null,
@@ -431,6 +456,7 @@ create table "public"."workload" (
   "termination_reason" text,
   "auto_id" uuid,
   "deadline" timestamp(6) with time zone,
+  "signal_input" text,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (
@@ -487,6 +513,8 @@ create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create unique index "actor_definition_id_state_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc)
+where (((state)::text = ANY ((ARRAY['errored'::character varying, 'finalizing'::character varying, 'in_progress'::character varying, 'initialized'::character varying, 'paused'::character varying, 'workflow_started'::character varying])::text[])));
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);
@@ -538,6 +566,10 @@ alter table "public"."connection_operation" add constraint "connection_operation
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."connector_builder_project" add constraint "connector_builder_project_base_adv_id_fkey" foreign key ("base_actor_definition_version_id") references "public"."actor_definition_version" ("id");
+alter table "public"."connector_rollout" add constraint "fk_actor_definition_id" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
+alter table "public"."connector_rollout" add constraint "fk_initial_version_id" foreign key ("initial_version_id") references "public"."actor_definition_version" ("id");
+alter table "public"."connector_rollout" add constraint "fk_release_candidate_version_id" foreign key ("release_candidate_version_id") references "public"."actor_definition_version" ("id");
+alter table "public"."connector_rollout" add constraint "fk_updated_by" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");

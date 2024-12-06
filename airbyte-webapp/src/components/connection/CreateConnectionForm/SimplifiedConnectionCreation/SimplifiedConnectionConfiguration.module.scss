@@ -2,10 +2,6 @@
 @use "scss/variables";
 @use "scss/mixins";
 
-.container {
-  height: 100%;
-}
-
 .nextLink {
   @include mixins.base-button;
 

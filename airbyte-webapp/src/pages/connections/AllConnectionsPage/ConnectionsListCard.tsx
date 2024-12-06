@@ -97,15 +97,19 @@ export const ConnectionsListCard = () => {
 
   return (
     <Card noPadding className={styles.connections}>
-      <ConnectionsFilters
-        connections={connections}
-        searchFilter={filterValues.search}
-        setSearchFilter={(search) => setFilterValue("search", search)}
-        filterValues={filterValues}
-        setFilterValue={setFilterValue}
-        resetFilters={resetFilters}
-      />
-      <ConnectionsTable connections={filteredConnections} variant="white" />
+      <div className={styles.filters}>
+        <ConnectionsFilters
+          connections={connections}
+          searchFilter={filterValues.search}
+          setSearchFilter={(search) => setFilterValue("search", search)}
+          filterValues={filterValues}
+          setFilterValue={setFilterValue}
+          resetFilters={resetFilters}
+        />
+      </div>
+      <div className={styles.table}>
+        <ConnectionsTable connections={filteredConnections} variant="white" />
+      </div>
       {filteredConnections.length === 0 && (
         <Box pt="xl" pb="lg">
           <Text bold color="grey" align="center">

@@ -141,6 +141,8 @@ class NotificationTest {
                                      "bytesEmitted":1000,
                                      "bytesCommitted":90,
                                      "recordsEmitted":89,
+                                     "recordsFilteredOut":0,
+                                     "bytesFilteredOut":0,
                                      "recordsCommitted":45,
                                      "errorMessage":"Something failed",
                                      "bytesEmittedFormatted": "1000 B",

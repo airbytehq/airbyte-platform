@@ -52,7 +52,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-connector-builder-server
-        image: {{ printf "%s:%s" .Values.image.repository (include "connector-builder-server.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}

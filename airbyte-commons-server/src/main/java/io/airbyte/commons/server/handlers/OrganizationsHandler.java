@@ -16,10 +16,10 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -101,15 +101,6 @@ public class OrganizationsHandler {
     boolean hasChanged = false;
     if (!organization.getName().equals(organizationUpdateRequestBody.getOrganizationName())) {
       organization.setName(organizationUpdateRequestBody.getOrganizationName());
-      hasChanged = true;
-    }
-    if (organizationUpdateRequestBody.getPba() != null && !organization.getPba().equals(organizationUpdateRequestBody.getPba())) {
-      organization.setPba(organizationUpdateRequestBody.getPba());
-      hasChanged = true;
-    }
-    if (organizationUpdateRequestBody.getOrgLevelBilling() != null && !organization.getOrgLevelBilling()
-        .equals(organizationUpdateRequestBody.getOrgLevelBilling())) {
-      organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
       hasChanged = true;
     }
     if (organizationUpdateRequestBody.getEmail() != null && !organizationUpdateRequestBody.getEmail()

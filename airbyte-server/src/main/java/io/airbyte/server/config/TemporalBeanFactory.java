@@ -9,12 +9,11 @@ import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.server.scheduler.DefaultSynchronousSchedulerClient;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -31,10 +30,12 @@ import jakarta.inject.Singleton;
 public class TemporalBeanFactory {
 
   @Singleton
-  public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository,
-                                                 final TrackingClient trackingClient,
-                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper);
+  public OAuthConfigSupplier oAuthConfigSupplier(final TrackingClient trackingClient,
+                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                                 final OAuthService oauthService,
+                                                 final SourceService sourceService,
+                                                 final DestinationService destinationService) {
+    return new OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oauthService, sourceService, destinationService);
   }
 
   @Singleton
@@ -42,10 +43,9 @@ public class TemporalBeanFactory {
                                                                final JobTracker jobTracker,
                                                                final JobErrorReporter jobErrorReporter,
                                                                final OAuthConfigSupplier oAuthConfigSupplier,
-                                                               final RouterService routerService,
                                                                final ConfigInjector configInjector,
                                                                final ContextBuilder contextBuilder) {
-    return new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, routerService,
+    return new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier,
         configInjector, contextBuilder);
   }
 

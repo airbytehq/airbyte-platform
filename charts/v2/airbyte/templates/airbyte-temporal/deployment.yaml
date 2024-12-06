@@ -1,0 +1,139 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-temporal
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.temporal.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.temporal.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.temporal.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.temporal.extraLabels }}
+      {{ toYaml (mergeOverwrite .Values.temporal.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.temporal.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.temporal.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.temporal.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.temporal.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.temporal.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.temporal.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.temporal.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.temporal.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.temporal.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.affinity "context" $) | nindent 8 }}
+      {{- end }}
+{{- if .Values.temporal.extraInitContainers }}
+      initContainers:
+{{- toYaml .Values.temporal.extraInitContainers | nindent 6 }}
+{{- end }}
+      containers:
+      - name: airbyte-temporal
+        image: {{ include "imageUrl" (list .Values.temporal.image $) }}
+        imagePullPolicy: {{ .Values.temporal.image.pullPolicy }}
+        env:
+
+          {{- include "airbyte.temporal.envs" . | nindent 10 }}
+
+        {{- if .Values.temporal.extraEnv }}
+        {{ .Values.temporal.extraEnv | toYaml | nindent 10 }}
+        {{- end }}
+        # Values from secret
+        {{- if .Values.temporal.secrets }}
+        {{- range $k, $v := .Values.temporal.secrets }}
+          - name: {{ $k }}
+            valueFrom:
+              secretKeyRef:
+                name: temporal-secrets
+                key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.temporal.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.temporal.env_vars .Values.global.env_vars }}
+          - name: {{ $k }}
+            value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+        ports:
+        - containerPort: 7233
+        {{- if .Values.temporal.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.temporal.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: airbyte-temporal-dynamicconfig
+          mountPath: "/etc/temporal/config/dynamicconfig/"
+        {{- if .Values.temporal.extraVolumeMounts }}
+  {{ toYaml .Values.temporal.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.temporal.resources }}
+        resources: {{- toYaml .Values.temporal.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.temporal.livenessProbe.enabled }}
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - 'test $(ps -ef | grep -v grep | grep temporal-server | wc -l) -eq 1'
+          initialDelaySeconds: {{ .Values.temporal.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.temporal.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.temporal.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.temporal.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.temporal.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.temporal.readinessProbe.enabled }}
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - 'test $(ps -ef | grep -v grep | grep temporal-server | wc -l) -eq 1'
+          initialDelaySeconds: {{ .Values.temporal.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.temporal.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.temporal.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.temporal.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.temporal.readinessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.temporal.extraContainers }}
+        {{ toYaml .Values.temporal.extraContainers | nindent 6 }}
+        {{- end }}
+        {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
+        {{- end }}
+      securityContext: {{- toYaml .Values.temporal.podSecurityContext | nindent 8 }}
+      volumes:
+      - name: airbyte-temporal-dynamicconfig
+        configMap:
+          name: {{ .Release.Name }}-temporal-dynamicconfig
+          items:
+          - key: development.yaml
+            path: development.yaml
+      {{- if .Values.temporal.extraVolumes }}
+      {{ toYaml .Values.temporal.extraVolumes | nindent 6 }}
+      {{- end }}

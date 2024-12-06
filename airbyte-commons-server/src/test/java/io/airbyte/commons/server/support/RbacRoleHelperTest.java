@@ -86,6 +86,7 @@ class RbacRoleHelperTest {
       expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_EDITOR));
       // org editor role also grants workspace editor and workspace reader roles
       expectedRoles.add(PermissionType.WORKSPACE_READER.name());
+      expectedRoles.add(PermissionType.WORKSPACE_RUNNER.name());
       expectedRoles.add(PermissionType.WORKSPACE_EDITOR.name());
     }
     if (userMatchesTargetUser) {
@@ -218,9 +219,11 @@ class RbacRoleHelperTest {
         AuthRole.AUTHENTICATED_USER.getLabel(),
         WorkspaceAuthRole.WORKSPACE_ADMIN.getLabel(),
         WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
         WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_ADMIN.getLabel(),
         OrganizationAuthRole.ORGANIZATION_EDITOR.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_RUNNER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_READER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_MEMBER.getLabel());
 
@@ -244,9 +247,11 @@ class RbacRoleHelperTest {
         WorkspaceAuthRole.WORKSPACE_ADMIN.getLabel(),
         WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),
         WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_ADMIN.getLabel(),
         OrganizationAuthRole.ORGANIZATION_EDITOR.getLabel(),
         OrganizationAuthRole.ORGANIZATION_READER.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_RUNNER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_MEMBER.getLabel());
     Assertions.assertEquals(expectedRoles, actualRoles);
   }

@@ -41,6 +41,7 @@ private val logger = KotlinLogging.logger {}
 class ConnectorMessageProcessor(
   private val connectorConfigUpdater: ConnectorConfigUpdater,
   private val airbyteApiClient: AirbyteApiClient,
+  private val catalogClientConverters: CatalogClientConverters,
 ) {
   data class OperationResult(
     val connectionStatus: AirbyteConnectionStatus? = null,
@@ -213,7 +214,7 @@ class ConnectorMessageProcessor(
     catalog: AirbyteCatalog,
   ): SourceDiscoverSchemaWriteRequestBody {
     return SourceDiscoverSchemaWriteRequestBody(
-      catalog = CatalogClientConverters.toAirbyteCatalogClientApi(catalog),
+      catalog = catalogClientConverters.toAirbyteCatalogClientApi(catalog),
       sourceId = if (discoverSchemaInput.sourceId == null) null else UUID.fromString(discoverSchemaInput.sourceId),
       connectorVersion = if (discoverSchemaInput.connectorVersion == null) "" else discoverSchemaInput.connectorVersion,
       configurationHash = discoverSchemaInput.configHash,

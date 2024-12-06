@@ -12,8 +12,6 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimelineEvent, UUID> {
-  fun findByConnectionId(connectionId: UUID): List<ConnectionTimelineEvent>
-
   @Query(
     """
         SELECT * FROM connection_timeline_event
@@ -34,4 +32,21 @@ interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimel
     pageSize: Int,
     rowOffset: Int,
   ): List<ConnectionTimelineEvent>
+
+  @Query(
+    """
+        SELECT user_id FROM connection_timeline_event
+        WHERE connection_id = :connectionId
+        AND (summary->>'jobId')::bigint = :jobId
+        AND (:eventType IS NULL OR event_type = :eventType)
+        AND (CAST(:createdAtStart AS timestamptz) IS NULL OR created_at >= CAST(:createdAtStart AS timestamptz))
+        ORDER BY created_at
+    """,
+  )
+  fun findAssociatedUserForAJob(
+    connectionId: UUID,
+    jobId: Long,
+    eventType: ConnectionEvent.Type?,
+    createdAtStart: OffsetDateTime?,
+  ): List<UUID?>
 }

@@ -10,6 +10,7 @@ import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ScopeType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
@@ -72,7 +73,7 @@ class StateCheckSumCountEventHandler(
 
   private val deployment: Deployment by lazy { retry { deploymentFetcher.get() } }
 
-  private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId) } }
+  private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId, ScopeType.WORKSPACE) } }
 
   private fun shouldEmitStateStatsToSegment(): Boolean = emitStatsCounterFlag
 
@@ -191,6 +192,7 @@ class StateCheckSumCountEventHandler(
     checksumValidationEnabled: Boolean,
     includeStreamInLogs: Boolean = true,
     streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long> = emptyMap(),
+    filteredOutRecords: Double = 0.0,
   ) {
     if (!isStateTypeSupported(stateMessage)) {
       return
@@ -203,7 +205,13 @@ class StateCheckSumCountEventHandler(
           val sourceStats: AirbyteStateStats? = stateMessage.sourceStats
           if (sourceStats != null) {
             sourceStats.recordCount?.let { sourceRecordCount ->
-              if (sourceRecordCount != stateRecordCount || platformRecordCount != stateRecordCount) {
+              if ((
+                  sourceRecordCount.minus(
+                    filteredOutRecords,
+                  )
+                ) != stateRecordCount ||
+                (platformRecordCount.minus(filteredOutRecords)) != stateRecordCount
+              ) {
                 misMatchWhenAllThreeCountsArePresent(
                   origin,
                   sourceRecordCount,
@@ -442,8 +450,8 @@ class StateCheckSumCountEventHandler(
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
       streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
-    ): String {
-      return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
+    ): String =
+      "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
         "record count $stateRecordCount does not equal platform tracked record count $platformRecordCount" +
         if (includeStreamInLogs) {
           " for stream ${getNameNamespacePair(stateMessage)}."
@@ -456,14 +464,14 @@ class StateCheckSumCountEventHandler(
           " Hash collisions were observed so count comparison result may be wrong."
         } +
         if (includeStreamInLogs) {
-          " Observed the following record counts per stream: \n" +
-            streamPlatformRecordCounts.forEach { (name, count) ->
-              " $name : $count\n"
-            }
+          val namesAndCounts =
+            streamPlatformRecordCounts.map { (name, count) ->
+              " $name : $count"
+            }.joinToString("\n")
+          " Observed the following record counts per stream: \n$namesAndCounts"
         } else {
           ""
         }
-    }
 
     private fun misMatchMessageWhenAllCountsThreeArePresent(
       origin: AirbyteMessageOrigin,
@@ -473,8 +481,8 @@ class StateCheckSumCountEventHandler(
       includeStreamInLogs: Boolean,
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
-    ): String {
-      return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
+    ): String =
+      "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
         "source record count $sourceRecordCount , destination record count " +
         "$destinationRecordCount and platform record count $platformRecordCount does not equal each other" +
         if (includeStreamInLogs) {
@@ -487,7 +495,6 @@ class StateCheckSumCountEventHandler(
         } else {
           " Hash collisions were observed so count comparison result may be wrong."
         }
-    }
 
     private fun checksumIsValid(
       origin: AirbyteMessageOrigin,
@@ -534,20 +541,19 @@ class StateCheckSumCountEventHandler(
             AirbyteStreamState()
               .withStreamState(Jsons.jsonNode(mapOf("cursor" to "value")))
               .withStreamDescriptor(StreamDescriptor().withNamespace("dummy-namespace").withName("dummy-name")),
-          )
-          .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
+          ).withSourceStats(AirbyteStateStats().withRecordCount(1.0))
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0)),
       )
 
-    private fun <T> retry(supplier: CheckedSupplier<T>): T {
-      return Failsafe.with(
-        RetryPolicy.builder<T>()
-          .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
-          .withMaxRetries(5)
-          .build(),
-      )
-        .get(supplier)
-    }
+    private fun <T> retry(supplier: CheckedSupplier<T>): T =
+      Failsafe
+        .with(
+          RetryPolicy
+            .builder<T>()
+            .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
+            .withMaxRetries(5)
+            .build(),
+        ).get(supplier)
   }
 
   enum class EventType {

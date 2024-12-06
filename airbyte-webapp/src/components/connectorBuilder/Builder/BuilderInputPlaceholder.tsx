@@ -2,7 +2,6 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
@@ -28,7 +27,17 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
         </FlexContainer>
       </FlexItem>
-      <Tooltip control={<Icon type="user" className={styles.tooltipTrigger} />}>
+      <Tooltip
+        control={
+          <Button
+            icon="user"
+            variant="link"
+            onClick={() => setTestingValuesInputOpen(true)}
+            className={styles.tooltipTrigger}
+            iconClassName={styles.tooltipIcon}
+          />
+        }
+      >
         <FormattedMessage id="connectorBuilder.placeholder.label" />
         <br />
         <Button

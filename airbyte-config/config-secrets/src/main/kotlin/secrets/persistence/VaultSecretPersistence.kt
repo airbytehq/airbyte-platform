@@ -34,6 +34,7 @@ class VaultSecretPersistence(
       val isErrorResponse = responseCode / 100 != 2
       if (isErrorResponse) {
         logger.error { "Vault failed on read. Response code: $responseCode" }
+        logger.error { String(restResponse.body) }
         return ""
       }
       val data = response.data

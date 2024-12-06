@@ -1,5 +1,5 @@
 package io.airbyte.workers.exception
 
-class WorkloadLauncherException : RuntimeException {
-  constructor(message: String?) : super(message)
-}
+class WorkloadLauncherException(
+  message: String?,
+) : RuntimeException(message)

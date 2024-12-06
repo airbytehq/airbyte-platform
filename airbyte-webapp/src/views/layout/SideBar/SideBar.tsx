@@ -12,8 +12,6 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
 
@@ -38,7 +36,6 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   bottomSlot,
   settingHighlight,
 }) => {
-  const isBillingInArrearsActive = useExperiment("billing.organizationBillingPage", false);
   const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
@@ -87,16 +84,6 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
           />
-          {!isBillingInArrearsActive && (
-            <IfFeatureEnabled feature={FeatureItem.Billing}>
-              <NavItem
-                icon="credits"
-                label={<FormattedMessage id="sidebar.billing" />}
-                to={CloudRoutes.Billing}
-                testId="creditsButton"
-              />
-            </IfFeatureEnabled>
-          )}
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon="gear"

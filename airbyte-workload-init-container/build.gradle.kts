@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
@@ -10,6 +8,20 @@ configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
+  exclude(group = "io.micronaut.http")
+  exclude(group = "io.micronaut.jaxrs")
+  exclude(group = "io.micronaut.email")
+  exclude(group = "io.micronaut.validation")
+  exclude(group = "io.micronaut.cache")
+  exclude(group = "io.micronaut.reactor")
+  exclude(group = "io.micronaut.kotlin")
+  exclude(group = "io.micronaut.acme")
+  exclude(group = "io.micronaut.aws")
+  exclude(group = "io.micronaut.azure")
+  exclude(group = "io.micronaut.cassandra")
+  exclude(group = "io.micronaut.chatbots")
+  exclude(group = "io.micronaut.coherence")
+  exclude(group = "io.micronaut.controlpanel")
 }
 
 dependencies {
@@ -17,7 +29,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
-  implementation(libs.bundles.micronaut.light)
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
@@ -26,11 +37,16 @@ dependencies {
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
-  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
   implementation(project(":oss:airbyte-commons-protocol"))
+
+  runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
@@ -43,19 +59,13 @@ dependencies {
   testImplementation(libs.assertj.core)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
-
 airbyte {
   application {
     mainClass.set("io.airbyte.initContainer.ApplicationKt")
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-    @Suppress("UNCHECKED_CAST")
-    localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_VERSION" to env["VERSION"].toString(),
+        "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
         "MICRONAUT_ENVIRONMENTS" to "test"
       )

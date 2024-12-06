@@ -2,19 +2,18 @@ package io.airbyte.data.repositories.entities
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType
-import io.micronaut.data.annotation.AutoPopulated
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.annotation.event.PrePersist
 import io.micronaut.data.model.DataType
 import java.util.UUID
 
 @MappedEntity("workspace")
 open class Workspace(
   @field:Id
-  @AutoPopulated
   var id: UUID? = null,
   var customerId: UUID? = null,
   var name: String,
@@ -39,4 +38,13 @@ open class Workspace(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
-)
+) {
+  // Use @PrePersist instead of @AutoPopulated so that we can set the id field
+  // if desired prior to insertion.
+  @PrePersist
+  fun prePersist() {
+    if (id == null) {
+      id = UUID.randomUUID()
+    }
+  }
+}

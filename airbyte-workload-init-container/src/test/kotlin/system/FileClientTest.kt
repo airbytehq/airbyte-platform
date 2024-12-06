@@ -5,12 +5,16 @@
 package io.airbyte.initContainer.system
 
 import io.airbyte.initContainer.system.FileClient.Companion.pipePermissions
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDIN_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDOUT_PIPE_FILE
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.ExperimentalPathApi
@@ -20,12 +24,16 @@ import kotlin.io.path.exists
 import kotlin.io.path.getPosixFilePermissions
 import kotlin.io.path.listDirectoryEntries
 
+@ExtendWith(MockKExtension::class)
 internal class FileClientTest {
+  @MockK(relaxed = true)
+  lateinit var metricClient: MetricClient
+
   private lateinit var fileClient: FileClient
 
   @BeforeEach
   internal fun setUp() {
-    fileClient = FileClient()
+    fileClient = FileClient(metricClient)
   }
 
   @Test

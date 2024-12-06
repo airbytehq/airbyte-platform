@@ -5,12 +5,12 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.json.JsonSerde;
+import io.airbyte.commons.storage.DocumentType;
+import io.airbyte.commons.storage.StorageClient;
+import io.airbyte.commons.storage.StorageClientFactory;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.workers.storage.DocumentType;
-import io.airbyte.workers.storage.StorageClient;
-import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Factory;
@@ -24,22 +24,16 @@ import jakarta.inject.Singleton;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
 
-  // @Singleton
-  // @Named("logStorageConfigs")
-  // public StorageConfig logStorageConfigs(final StorageConfig storageConfig) {
-  // return storageConfig;
-  // }
-
   @Singleton
   @Named("logDocumentStore")
   public StorageClient logStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.LOGS);
+    return factory.create(DocumentType.LOGS);
   }
 
   @Singleton
   @Named("stateDocumentStore")
   public StorageClient stateStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.STATE);
+    return factory.create(DocumentType.STATE);
   }
 
   @SuppressWarnings("LineLength")
@@ -47,13 +41,13 @@ public class CloudStorageBeanFactory {
   @Singleton
   @Named("outputDocumentStore")
   public StorageClient workloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.WORKLOAD_OUTPUT);
+    return factory.create(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Singleton
   @Named("payloadDocumentStore")
   public StorageClient payloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.ACTIVITY_PAYLOADS);
+    return factory.create(DocumentType.ACTIVITY_PAYLOADS);
   }
 
   @Singleton

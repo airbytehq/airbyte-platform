@@ -39,7 +39,6 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.WorkflowStateConverter;
@@ -56,6 +55,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.JobService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
 import io.airbyte.featureflag.Workspace;
@@ -99,6 +99,8 @@ public class JobHistoryHandler {
   private final AirbyteVersion airbyteVersion;
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
+  private final JobService jobService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final ConnectionService connectionService,
@@ -109,9 +111,12 @@ public class JobHistoryHandler {
                            final AirbyteVersion airbyteVersion,
                            final TemporalClient temporalClient,
                            final FeatureFlagClient featureFlagClient,
-                           final LogClientManager logClientManager) {
+                           final JobConverter jobConverter,
+                           final JobService jobService,
+                           final ApiPojoConverters apiPojoConverters) {
     this.featureFlagClient = featureFlagClient;
-    jobConverter = new JobConverter(logClientManager);
+    this.jobConverter = jobConverter;
+    this.jobService = jobService;
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
     this.connectionService = connectionService;
@@ -121,6 +126,7 @@ public class JobHistoryHandler {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.airbyteVersion = airbyteVersion;
     this.temporalClient = temporalClient;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   @SuppressWarnings("UnstableApiUsage")
@@ -153,9 +159,9 @@ public class JobHistoryHandler {
           request.getIncludingJobId(),
           pageSize);
     } else {
-      jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
+      jobs = jobService.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+          CollectionUtils.isEmpty(request.getStatuses()) ? Collections.emptyList() : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
@@ -323,7 +329,7 @@ public class JobHistoryHandler {
   }
 
   public JobDebugInfoRead getJobDebugInfo(final JobIdRequestBody jobIdRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
     final JobInfoRead jobinfoRead = jobConverter.getJobInfoRead(job);
 
@@ -344,6 +350,7 @@ public class JobHistoryHandler {
     return jobDebugInfoRead;
   }
 
+  @Trace
   public Optional<JobRead> getLatestRunningSyncJob(final UUID connectionId) throws IOException {
     final List<Job> nonTerminalSyncJobsForConnection = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
@@ -426,47 +433,51 @@ public class JobHistoryHandler {
         .streams(finalStreamsWithStats);
   }
 
+  @Trace
   public Optional<JobRead> getLatestSyncJob(final UUID connectionId) throws IOException {
     return jobPersistence.getLastSyncJob(connectionId).map(JobConverter::getJobRead);
   }
 
+  @Trace
   public List<JobStatusSummary> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getLastSyncJobForConnections(connectionIds);
   }
 
+  @Trace
   public List<JobRead> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getRunningSyncJobForConnections(connectionIds).stream()
         .map(JobConverter::getJobRead)
         .collect(Collectors.toList());
   }
 
-  private SourceRead getSourceRead(final ConnectionRead connectionRead) throws JsonValidationException, IOException, ConfigNotFoundException {
+  private SourceRead getSourceRead(final ConnectionRead connectionRead)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(connectionRead.getSourceId());
     return sourceHandler.getSource(sourceIdRequestBody);
   }
 
   private DestinationRead getDestinationRead(final ConnectionRead connectionRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(connectionRead.getDestinationId());
     return destinationHandler.getDestination(destinationIdRequestBody);
   }
 
   private SourceDefinitionRead getSourceDefinitionRead(final SourceRead sourceRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceRead.getSourceDefinitionId());
     return sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody);
   }
 
   private DestinationDefinitionRead getDestinationDefinitionRead(final DestinationRead destinationRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
         new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationRead.getDestinationDefinitionId());
     return destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody);
   }
 
   private JobDebugInfoRead buildJobDebugInfoRead(final JobInfoRead jobInfoRead)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String configId = jobInfoRead.getJob().getConfigId();
     final StandardSync standardSync;
     try {
@@ -475,7 +486,7 @@ public class JobHistoryHandler {
       throw new ConfigNotFoundException(e.getType(), e.getMessage());
     }
 
-    final ConnectionRead connection = ApiPojoConverters.internalToConnectionRead(standardSync);
+    final ConnectionRead connection = apiPojoConverters.internalToConnectionRead(standardSync);
     final SourceRead source = getSourceRead(connection);
     final DestinationRead destination = getDestinationRead(connection);
     final SourceDefinitionRead sourceDefinitionRead = getSourceDefinitionRead(source);

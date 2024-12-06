@@ -6,7 +6,6 @@ package io.airbyte.commons.workers.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.config.TolerationPOJO;
@@ -49,20 +48,13 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     // Command specific resources
     CHECK("check"),
     DISCOVER("discover"),
-    NORMALIZATION("normalization"),
     REPLICATION("replication"),
     SPEC("spec"),
 
     // Sync related resources
     DESTINATION("destination"),
-    DESTINATION_STDERR("destination-stderr"),
-    DESTINATION_STDIN("destination-stdin"),
-    DESTINATION_STDOUT("destination-stdout"),
-    HEARTBEAT("heartbeat"),
     ORCHESTRATOR("orchestrator"),
-    SOURCE("source"),
-    SOURCE_STDERR("source-stderr"),
-    SOURCE_STDOUT("source-stdout");
+    SOURCE("source");
 
     private final String value;
     private static final Map<String, ResourceType> CONSTANTS = new HashMap<>();
@@ -154,29 +146,18 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   static {
     RSS_REQ_MAPPING = Map.of(
         ResourceRequirementsType.DESTINATION, ResourceType.DESTINATION,
-        ResourceRequirementsType.DESTINATION_STDERR, ResourceType.DESTINATION_STDERR,
-        ResourceRequirementsType.DESTINATION_STDIN, ResourceType.DESTINATION_STDIN,
-        ResourceRequirementsType.DESTINATION_STDOUT, ResourceType.DESTINATION_STDOUT,
-        ResourceRequirementsType.HEARTBEAT, ResourceType.HEARTBEAT,
         ResourceRequirementsType.ORCHESTRATOR, ResourceType.ORCHESTRATOR,
-        ResourceRequirementsType.SOURCE, ResourceType.SOURCE,
-        ResourceRequirementsType.SOURCE_STDERR, ResourceType.SOURCE_STDERR,
-        ResourceRequirementsType.SOURCE_STDOUT, ResourceType.SOURCE_STDOUT);
+        ResourceRequirementsType.SOURCE, ResourceType.SOURCE);
   }
 
   @Singleton
-  record WorkerConfigsDefaults(WorkerEnvironment workerEnvironment,
+  record WorkerConfigsDefaults(
                                @Named("default") KubeResourceConfig defaultKubeResourceConfig,
-                               List<TolerationPOJO> jobKubeTolerations,
+                               @Value("${airbyte.worker.job.kube.tolerations}") String jobKubeTolerations,
                                @Value("${airbyte.worker.isolated.kube.node-selectors}") String isolatedNodeSelectors,
                                @Value("${airbyte.worker.isolated.kube.use-custom-node-selector}") boolean useCustomNodeSelector,
                                @Value("${airbyte.worker.job.kube.main.container.image-pull-secret}") List<String> mainContainerImagePullSecret,
-                               @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") String mainContainerImagePullPolicy,
-                               @Value("${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") String sidecarContainerImagePullPolicy,
-                               @Value("${airbyte.worker.job.kube.images.socat}") String socatImage,
-                               @Value("${airbyte.worker.job.kube.images.busybox}") String busyboxImage,
-                               @Value("${airbyte.worker.job.kube.images.curl}") String curlImage,
-                               @Named("jobDefaultEnvMap") Map<String, String> jobDefaultEnvMap) {
+                               @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") String mainContainerImagePullPolicy) {
 
   }
 
@@ -242,20 +223,14 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     }
 
     return new WorkerConfigs(
-        workerConfigsDefaults.workerEnvironment(),
         getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
-        workerConfigsDefaults.jobKubeTolerations(),
+        TolerationPOJO.getJobKubeTolerations(workerConfigsDefaults.jobKubeTolerations()),
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         annotations,
         splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
         workerConfigsDefaults.mainContainerImagePullSecret(),
-        workerConfigsDefaults.mainContainerImagePullPolicy(),
-        workerConfigsDefaults.sidecarContainerImagePullPolicy(),
-        workerConfigsDefaults.socatImage(),
-        workerConfigsDefaults.busyboxImage(),
-        workerConfigsDefaults.curlImage(),
-        workerConfigsDefaults.jobDefaultEnvMap());
+        workerConfigsDefaults.mainContainerImagePullPolicy());
   }
 
   @Override
@@ -375,7 +350,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .withCpuLimit(useDefaultIfEmpty(kubeResourceConfig.getCpuLimit(), defaultConfig.getCpuLimit()))
         .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
         .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
-        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
+        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()))
+        .withEphemeralStorageLimit(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageLimit(), defaultConfig.getEphemeralStorageLimit()))
+        .withEphemeralStorageRequest(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageRequest(), defaultConfig.getEphemeralStorageRequest()));
   }
 
   private static String useDefaultIfEmpty(final String value, final String defaultValue) {

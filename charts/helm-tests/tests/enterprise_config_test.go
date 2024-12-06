@@ -1,6 +1,4 @@
-//go:build template || enterprise
-
-package test
+package tests
 
 import (
 	"fmt"
@@ -13,7 +11,7 @@ import (
 
 func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	t.Run("require global.enterprise.secretName", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		// set to empty string since it has a default value
 		helmOpts.SetValues["global.enterprise.secretName"] = ""
@@ -24,7 +22,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.enterprise.licenseKeySecretKey", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		// set to empty string since it has a default value
 		helmOpts.SetValues["global.enterprise.licenseKeySecretKey"] = ""
@@ -35,7 +33,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.instanceAdmin.secretName", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		// set to empty string since it has a default value
 		helmOpts.SetValues["global.auth.instanceAdmin.secretName"] = ""
@@ -46,7 +44,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.instanceAdmin.firstName", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = ""
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -55,7 +53,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.instanceAdmin.lastName", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = ""
@@ -64,7 +62,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.instanceAdmin.emailSecretKey", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -75,7 +73,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.instanceAdmin.passwordSecretKey", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -86,7 +84,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.secretName when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -96,7 +94,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.type when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -111,7 +109,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.oidc.domain when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -126,7 +124,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.oidc.appName when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -141,7 +139,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.oidc.clientIdSecretKey when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -156,7 +154,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("require global.auth.identityProvider.oidc.clientSecretSecretKey when enabling SSO", func(t *testing.T) {
-		helmOpts := baseHelmOptions()
+		helmOpts := BaseHelmOptions()
 		helmOpts.SetValues["global.edition"] = "enterprise"
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
@@ -171,7 +169,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 
 	t.Run("should set enterprise config env vars", func(t *testing.T) {
-		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts := BaseHelmOptionsForEnterpriseWithValues()
 		helmOpts.SetValues["global.enterprise.secretName"] = "airbyte-license"
 		helmOpts.SetValues["global.auth.instanceAdmin.secretName"] = "sso-secrets"
 		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
@@ -181,9 +179,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
 
-		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
-		require.NotNil(t, chartYaml)
-		require.NoError(t, err)
+		chartYaml := renderChart(t, helmOpts)
 
 		t.Run("should set required env vars for keycloak setup job", func(t *testing.T) {
 			expectedEnvVarKeys := map[string]expectedEnvVar{
@@ -200,9 +196,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			}
 
 			// Verify that the keycloak setup job has the correct vars
-			keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
-			assert.NotNil(t, keycloakSetupJob)
-			assert.NoError(t, err)
+			keycloakSetupJob := getJob(chartYaml, "airbyte-keycloak-setup")
 
 			keycloakEnvVars := envVarMap(keycloakSetupJob.Spec.Template.Spec.Containers[0].Env)
 			for k, expected := range expectedEnvVarKeys {
@@ -228,13 +222,26 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			}
 
 			// Verify that the airbyte server deployment has the correct vars
-			airbyteServerDep, err := getDeployment(chartYaml, "airbyte-server")
-			assert.NotNil(t, airbyteServerDep)
-			assert.NoError(t, err)
+			airbyteServerDep := getDeployment(chartYaml, "airbyte-server")
 
 			airbyteServerEnvVars := envVarMap(airbyteServerDep.Spec.Template.Spec.Containers[0].Env)
 			for k, expected := range expectedEnvVarKeys {
 				actual, ok := airbyteServerEnvVars[k]
+				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
+				verifyEnvVar(t, expected, actual)
+			}
+		})
+
+		t.Run("should configure keycloak to use the 'KEYCLOAK_DATABASE_URL'", func(t *testing.T) {
+			expectedEnvVarKeys := map[string]expectedEnvVar{
+				"KEYCLOAK_DATABASE_URL": expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+			}
+
+			keycloakSS := getStatefulSet(chartYaml, "airbyte-keycloak")
+
+			keycloakEnvVars := envVarMap(keycloakSS.Spec.Template.Spec.Containers[0].Env)
+			for k, expected := range expectedEnvVarKeys {
+				actual, ok := keycloakEnvVars[k]
 				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
 				verifyEnvVar(t, expected, actual)
 			}
@@ -244,7 +251,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 
 func TestKeycloakInitContainerOverride(t *testing.T) {
 	t.Run("default keycloak readiness image is curlimages/curl", func(t *testing.T) {
-		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts := BaseHelmOptionsForEnterpriseWithValues()
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
 		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
@@ -253,16 +260,10 @@ func TestKeycloakInitContainerOverride(t *testing.T) {
 		helmOpts.SetValues["global.auth.identityProvider.oidc.appName"] = "example-app"
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
-		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
-		assert.NoError(t, err)
 
-		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
-		assert.NoError(t, err)
-		assert.NotNil(t, keycloakSetupJob)
-
-		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
-		assert.NoError(t, err)
-		assert.NotNil(t, keycloakStatefulSet)
+		chartYaml := renderChart(t, helmOpts)
+		keycloakSetupJob := getJob(chartYaml, "airbyte-keycloak-setup")
+		keycloakStatefulSet := getStatefulSet(chartYaml, "airbyte-keycloak")
 
 		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
 		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers
@@ -271,7 +272,7 @@ func TestKeycloakInitContainerOverride(t *testing.T) {
 	})
 
 	t.Run("override init container image ", func(t *testing.T) {
-		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts := BaseHelmOptionsForEnterpriseWithValues()
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
 		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
@@ -282,16 +283,10 @@ func TestKeycloakInitContainerOverride(t *testing.T) {
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
 		helmOpts.SetValues["keycloak-setup.initContainers.keycloakReadinessCheck.image"] = "airbyte/custom-curl-image"
 		helmOpts.SetValues["keycloak.initContainers.initDb.image"] = "airbyte/custom-postgres-image"
-		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
-		assert.NoError(t, err)
 
-		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
-		assert.NotNil(t, keycloakSetupJob)
-		assert.NoError(t, err)
-
-		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
-		assert.NotNil(t, keycloakStatefulSet)
-		assert.NoError(t, err)
+		chartYaml := renderChart(t, helmOpts)
+		keycloakSetupJob := getJob(chartYaml, "airbyte-keycloak-setup")
+		keycloakStatefulSet := getStatefulSet(chartYaml, "airbyte-keycloak")
 
 		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
 		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers

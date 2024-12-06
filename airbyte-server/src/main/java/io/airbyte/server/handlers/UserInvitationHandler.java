@@ -28,6 +28,7 @@ import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.InvitationDuplicateException;
+import io.airbyte.data.services.InvitationPermissionOverlapException;
 import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
@@ -127,7 +128,7 @@ public class UserInvitationHandler {
         response = new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
         trackUserInvited(req, currentUser);
         return response;
-      } catch (final InvitationDuplicateException e) {
+      } catch (final InvitationDuplicateException | InvitationPermissionOverlapException e) {
         throw new ConflictException(e.getMessage());
       }
     }
@@ -160,6 +161,7 @@ public class UserInvitationHandler {
                                            final String workspaceName,
                                            final PermissionType permissionType) {
     trackingClient.track(workspaceId,
+        ScopeType.WORKSPACE,
         USER_INVITED,
         ImmutableMap.<String, Object>builder()
             .put("email", email)
@@ -261,7 +263,7 @@ public class UserInvitationHandler {
    * a User inside the relevant organization.
    */
   private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final AuthenticatedUser currentUser)
-      throws InvitationDuplicateException {
+      throws InvitationDuplicateException, InvitationPermissionOverlapException {
     final UserInvitation model = mapper.toDomain(req);
 
     model.setInviterUserId(currentUser.getUserId());
@@ -311,7 +313,7 @@ public class UserInvitationHandler {
   public UserInvitationRead accept(final InviteCodeRequestBody req, final AuthenticatedUser currentUser) {
     final UserInvitation invitation = service.getUserInvitationByInviteCode(req.getInviteCode());
 
-    if (!invitation.getInvitedEmail().equals(currentUser.getEmail())) {
+    if (!invitation.getInvitedEmail().equalsIgnoreCase(currentUser.getEmail())) {
       throw new OperationNotAllowedException("Invited email does not match current user email.");
     }
 

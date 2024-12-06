@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
@@ -8,13 +7,19 @@ import { trackError } from "core/utils/datadog";
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
   createCustomSourceDefinition,
+  deleteSourceDefinition,
   getSourceDefinitionForWorkspace,
   listLatestSourceDefinitions,
   listSourceDefinitionsForWorkspace,
   updateSourceDefinition,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { SourceDefinitionCreate, SourceDefinitionRead, SourceDefinitionReadList } from "../types/AirbyteClient";
+import {
+  SourceDefinitionCreate,
+  SourceDefinitionIdRequestBody,
+  SourceDefinitionRead,
+  SourceDefinitionReadList,
+} from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -53,19 +58,6 @@ export const useSourceDefinitionList = (): SourceDefinitions => {
     },
     { suspense: true, staleTime: Infinity }
   ).data as SourceDefinitions;
-};
-
-export const useSourceDefinitionMap = (): Map<string, SourceDefinitionRead> => {
-  const sourceDefinitions = useSourceDefinitionList();
-
-  return useMemo(() => {
-    const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
-    sourceDefinitions.sourceDefinitions.forEach((sourceDefinition) => {
-      sourceDefinitionMap.set(sourceDefinition.sourceDefinitionId, sourceDefinition);
-    });
-
-    return sourceDefinitionMap;
-  }, [sourceDefinitions]);
 };
 
 /**
@@ -148,4 +140,34 @@ export const useUpdateSourceDefinition = () => {
       trackError(error);
     },
   });
+};
+
+export const useDeleteSourceDefinition = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  const { mutateAsync } = useMutation(
+    (body: SourceDefinitionIdRequestBody) => deleteSourceDefinition(body, requestOptions).then(() => body),
+    {
+      onSuccess: (body) => {
+        queryClient.setQueryData(sourceDefinitionKeys.detail(body.sourceDefinitionId), undefined);
+        queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
+          const newMap = new Map(oldData?.sourceDefinitionMap);
+          newMap.delete(body.sourceDefinitionId);
+          return {
+            sourceDefinitions:
+              oldData?.sourceDefinitions.filter(
+                ({ sourceDefinitionId }) => sourceDefinitionId !== body.sourceDefinitionId
+              ) ?? [],
+            sourceDefinitionMap: newMap,
+          };
+        });
+        queryClient.invalidateQueries(connectorDefinitionKeys.count());
+      },
+    }
+  );
+
+  return {
+    deleteSourceDefinition: mutateAsync,
+  };
 };

@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.AttemptInfoRead;
+import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -30,10 +30,8 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GlobalState;
 import io.airbyte.api.model.generated.InternalOperationResult;
-import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
-import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.api.model.generated.StreamAttemptMetadata;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -41,6 +39,7 @@ import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -71,6 +70,7 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
@@ -86,12 +86,14 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Nested;
@@ -118,6 +120,8 @@ class AttemptHandlerTest {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
   private final StreamAttemptMetadataService streamAttemptMetadataService = mock(StreamAttemptMetadataService.class);
 
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
+
   private final AttemptHandler handler = new AttemptHandler(jobPersistence,
       statePersistence,
       jobConverter,
@@ -128,7 +132,8 @@ class AttemptHandlerTest {
       connectionService,
       destinationService,
       actorDefinitionVersionHelper,
-      streamAttemptMetadataService);
+      streamAttemptMetadataService,
+      apiPojoConverters);
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -147,57 +152,6 @@ class AttemptHandlerTest {
       .withFailures(Collections.singletonList(
           new FailureReason()
               .withFailureOrigin(FailureOrigin.SOURCE)));
-
-  @Test
-  void testInternalWorkerHandlerSetsTemporalWorkflowId() throws Exception {
-    final String workflowId = UUID.randomUUID().toString();
-
-    final ArgumentCaptor<Integer> attemptNumberCapture = ArgumentCaptor.forClass(Integer.class);
-    final ArgumentCaptor<Long> jobIdCapture = ArgumentCaptor.forClass(Long.class);
-    final ArgumentCaptor<String> workflowIdCapture = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<String> queueCapture = ArgumentCaptor.forClass(String.class);
-
-    final SetWorkflowInAttemptRequestBody requestBody =
-        new SetWorkflowInAttemptRequestBody().attemptNumber(ATTEMPT_NUMBER).jobId(JOB_ID).workflowId(workflowId)
-            .processingTaskQueue(PROCESSING_TASK_QUEUE);
-
-    assertTrue(handler.setWorkflowInAttempt(requestBody).getSucceeded());
-
-    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
-        queueCapture.capture());
-
-    assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
-    assertEquals(JOB_ID, jobIdCapture.getValue());
-    assertEquals(workflowId, workflowIdCapture.getValue());
-    assertEquals(PROCESSING_TASK_QUEUE, queueCapture.getValue());
-  }
-
-  @Test
-  void testInternalWorkerHandlerSetsTemporalWorkflowIdThrows() throws Exception {
-    final String workflowId = UUID.randomUUID().toString();
-
-    doThrow(IOException.class).when(jobPersistence).setAttemptTemporalWorkflowInfo(anyLong(), anyInt(),
-        any(), any());
-
-    final ArgumentCaptor<Integer> attemptNumberCapture = ArgumentCaptor.forClass(Integer.class);
-    final ArgumentCaptor<Long> jobIdCapture = ArgumentCaptor.forClass(Long.class);
-    final ArgumentCaptor<String> workflowIdCapture = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<String> queueCapture = ArgumentCaptor.forClass(String.class);
-
-    final SetWorkflowInAttemptRequestBody requestBody =
-        new SetWorkflowInAttemptRequestBody().attemptNumber(ATTEMPT_NUMBER).jobId(JOB_ID).workflowId(workflowId)
-            .processingTaskQueue(PROCESSING_TASK_QUEUE);
-
-    assertFalse(handler.setWorkflowInAttempt(requestBody).getSucceeded());
-
-    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
-        queueCapture.capture());
-
-    assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
-    assertEquals(JOB_ID, jobIdCapture.getValue());
-    assertEquals(workflowId, workflowIdCapture.getValue());
-    assertEquals(PROCESSING_TASK_QUEUE, queueCapture.getValue());
-  }
 
   @Test
   @SuppressWarnings("PMD")
@@ -227,7 +181,7 @@ class AttemptHandlerTest {
 
     verify(jobPersistence).writeAttemptSyncConfig(jobIdCapture.capture(), attemptNumberCapture.capture(), attemptSyncConfigCapture.capture());
 
-    final io.airbyte.config.AttemptSyncConfig expectedAttemptSyncConfig = ApiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig);
+    final io.airbyte.config.AttemptSyncConfig expectedAttemptSyncConfig = apiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig);
 
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
     assertEquals(JOB_ID, jobIdCapture.getValue());
@@ -556,7 +510,7 @@ class AttemptHandlerTest {
         Instant.now().getEpochSecond(),
         Instant.now().getEpochSecond());
 
-    final var logs = new LogRead();
+    final var logs = new AttemptInfoReadLogs();
     logs.addLogLinesItem("log line 1");
     logs.addLogLinesItem("log line 2");
     final var infoRead = new AttemptInfoRead();
@@ -675,6 +629,60 @@ class AttemptHandlerTest {
         .attemptNumber(attemptNumber)
         .streamMetadata(List.of(new StreamAttemptMetadata().streamName("s").wasBackfilled(false).wasResumed(false))));
     assertEquals(new InternalOperationResult().succeeded(false), result);
+  }
+
+  private static final String STREAM_INCREMENTAL = "incremental";
+  private static final String STREAM_INCREMENTAL_NOT_RESUMABLE = "incremental not resumable";
+  private static final String STREAM_FULL_REFRESH_RESUMABLE = "full refresh resumable";
+  private static final String STREAM_FULL_REFRESH_NOT_RESUMABLE = "full refresh not resumable";
+
+  private static Stream<Arguments> testStateClearingLogic() {
+    return Stream.of(
+        // streams are STREAM_INCREMENTAL, STREAM_INCREMENTAL_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE,
+        // STREAM_FULL_REFRESH_NOT_RESUMABLE
+        // AttemptNumber, SupportsRefresh, streams to clear
+        Arguments.of(0, false, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(0, true, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(1, false, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE)),
+        Arguments.of(1, true, streamDescriptorsFromNames(STREAM_FULL_REFRESH_NOT_RESUMABLE)));
+  }
+
+  @ParameterizedTest
+  @MethodSource
+  void testStateClearingLogic(final int attemptNumber, final boolean supportsRefresh, final Set<StreamDescriptor> expectedStreamsToClear)
+      throws Exception {
+    when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(true);
+    var configuredCatalog = new ConfiguredAirbyteCatalog(
+        List.of(
+            buildStreamForClearStateTest(STREAM_INCREMENTAL_NOT_RESUMABLE, SyncMode.INCREMENTAL, false),
+            buildStreamForClearStateTest(STREAM_INCREMENTAL, SyncMode.INCREMENTAL, true),
+            buildStreamForClearStateTest(STREAM_FULL_REFRESH_NOT_RESUMABLE, SyncMode.FULL_REFRESH, false),
+            buildStreamForClearStateTest(STREAM_FULL_REFRESH_RESUMABLE, SyncMode.FULL_REFRESH, true)));
+
+    final long jobId = 123L;
+    final UUID connectionId = UUID.randomUUID();
+    var job = mock(Job.class);
+    when(job.getId()).thenReturn(jobId);
+    when(job.getScope()).thenReturn(connectionId.toString());
+    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
+    when(job.getConfig())
+        .thenReturn(new JobConfig().withConfigType(ConfigType.SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(configuredCatalog)));
+
+    if (attemptNumber == 0) {
+      handler.updateGenerationAndStateForFirstAttempt(job, connectionId, supportsRefresh);
+    } else {
+      handler.updateGenerationAndStateForSubsequentAttempts(job, supportsRefresh);
+    }
+    verify(statePersistence).bulkDelete(connectionId, expectedStreamsToClear);
+  }
+
+  private static ConfiguredAirbyteStream buildStreamForClearStateTest(final String streamName, final SyncMode syncMode, final boolean isResumable) {
+    return new ConfiguredAirbyteStream(new AirbyteStream(streamName, Jsons.emptyObject(), List.of(syncMode)).withIsResumable(isResumable))
+        .withSyncMode(syncMode);
+  }
+
+  private static Set<StreamDescriptor> streamDescriptorsFromNames(final String... streamNames) {
+    return Arrays.stream(streamNames).map(n -> new StreamDescriptor().withName(n)).collect(Collectors.toSet());
   }
 
   private static Stream<Arguments> randomObjects() {

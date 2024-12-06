@@ -28,7 +28,7 @@ const hasValidRightSideUrl = (url?: string): boolean => {
 
 export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
-  const rightSideUrl = useExperiment("authPage.rightSideUrl", undefined);
+  const rightSideUrl = useExperiment("authPage.rightSideUrl");
 
   return (
     <FlexContainer className={styles.container}>

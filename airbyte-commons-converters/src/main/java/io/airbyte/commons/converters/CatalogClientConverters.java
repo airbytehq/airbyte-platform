@@ -7,37 +7,55 @@ package io.airbyte.commons.converters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConfiguredMapper;
+import io.airbyte.config.MapperConfig;
+import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.mappers.transformations.Mapper;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
+import jakarta.inject.Singleton;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Utilities to convert Catalog protocol to Catalog API client. This class was similar to existing
- * logic in CatalogConverter.java; But code can't be shared because the protocol model is
- * essentially converted to two different api models. Thus, if we need to change logic on either
- * place we have to take care of the other one too.
+ * Utilities to convert Catalog protocol to Catalog API client. This class is similar to the
+ * existing logic in CatalogConverter.java; however, code can't be shared because the protocol model
+ * is essentially converted to two different API models. Thus, if we need to change logic in either
+ * place, we have to take care of the other one too.
  */
+@Singleton
 public class CatalogClientConverters {
 
+  private final FieldGenerator fieldGenerator;
+  private final Map<String, Mapper<? extends MapperConfig>> mappers;
+
+  public CatalogClientConverters(final FieldGenerator fieldGenerator, final List<Mapper<? extends MapperConfig>> mappers) {
+    this.fieldGenerator = fieldGenerator;
+    this.mappers = mappers.stream().collect(Collectors.toMap(Mapper::getName, c -> c));
+  }
+
   /**
-   * Convert to api model to airbyte protocol model.
+   * Convert API model to Airbyte protocol model.
    *
-   * @param catalog api model
-   * @return catalog protocol model
+   * @param catalog API model
+   * @return Airbyte protocol model
    */
-  public static io.airbyte.protocol.models.AirbyteCatalog toAirbyteProtocol(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
+  public io.airbyte.protocol.models.AirbyteCatalog toAirbyteProtocol(
+                                                                     final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
 
     final io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
         new io.airbyte.protocol.models.AirbyteCatalog();
-    final var airbyteStream = catalog.getStreams().stream().map(stream -> {
+    final var airbyteStreams = catalog.getStreams().stream().map(stream -> {
       try {
         return toStreamProtocol(stream.getStream(), stream.getConfig());
       } catch (final JsonValidationException e) {
@@ -45,7 +63,7 @@ public class CatalogClientConverters {
       }
     }).collect(Collectors.toList());
 
-    protoCatalog.withStreams(airbyteStream);
+    protoCatalog.withStreams(airbyteStreams);
     return protoCatalog;
   }
 
@@ -56,10 +74,11 @@ public class CatalogClientConverters {
    * @return the protocol catalog
    */
   @SuppressWarnings("checkstyle:LineLength") // the auto-formatter produces a format that conflicts with checkstyle
-  public static io.airbyte.config.ConfiguredAirbyteCatalog toConfiguredAirbyteInternal(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
+  public io.airbyte.config.ConfiguredAirbyteCatalog toConfiguredAirbyteInternal(
+                                                                                final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
     final io.airbyte.config.ConfiguredAirbyteCatalog protoCatalog =
         new io.airbyte.config.ConfiguredAirbyteCatalog();
-    final var airbyteStream = catalog.getStreams().stream().map(stream -> {
+    final var airbyteStreams = catalog.getStreams().stream().map(stream -> {
       try {
         return toConfiguredStreamInternal(stream.getStream(), stream.getConfig());
       } catch (final JsonValidationException e) {
@@ -67,13 +86,14 @@ public class CatalogClientConverters {
       }
     }).collect(Collectors.toList());
 
-    protoCatalog.withStreams(airbyteStream);
+    protoCatalog.withStreams(airbyteStreams);
     return protoCatalog;
   }
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private static io.airbyte.protocol.models.AirbyteStream toStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
-                                                                           final AirbyteStreamConfiguration config)
+  private io.airbyte.protocol.models.AirbyteStream toStreamProtocol(
+                                                                    final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                                    final AirbyteStreamConfiguration config)
       throws JsonValidationException {
     if (config.getFieldSelectionEnabled() != null && config.getFieldSelectionEnabled()) {
       // Validate the selected field paths.
@@ -131,8 +151,9 @@ public class CatalogClientConverters {
   }
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private static io.airbyte.config.AirbyteStream toStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
-                                                                  final AirbyteStreamConfiguration config)
+  private io.airbyte.config.AirbyteStream toStreamInternal(
+                                                           final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                           final AirbyteStreamConfiguration config)
       throws JsonValidationException {
     if (config.getFieldSelectionEnabled() != null && config.getFieldSelectionEnabled()) {
       // Validate the selected field paths.
@@ -187,36 +208,55 @@ public class CatalogClientConverters {
             .withIsResumable(stream.isResumable());
   }
 
-  private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
-                                                                    final AirbyteStreamConfiguration config)
+  private List<MapperConfig> toConfiguredMappers(final @Nullable List<ConfiguredStreamMapper> mapperConfigs) {
+    if (mapperConfigs == null) {
+      return Collections.emptyList();
+    }
+    return mapperConfigs.stream()
+        .map(mapperConfig -> {
+          final String mapperName = mapperConfig.getType().toString();
+          final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
+          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration(), mapperConfig.getId()));
+        })
+        .collect(Collectors.toList());
+  }
+
+  private ConfiguredAirbyteStream toConfiguredStreamInternal(
+                                                             final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                             final AirbyteStreamConfiguration config)
       throws JsonValidationException {
-    return new ConfiguredAirbyteStream(
-        toStreamInternal(stream, config),
-        Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class),
-        Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
-            .withPrimaryKey(config.getPrimaryKey())
-            .withCursorField(config.getCursorField())
-            .withGenerationId(config.getGenerationId())
-            .withMinimumGenerationId(config.getMinimumGenerationId())
-            .withSyncId(config.getSyncId());
+    final var convertedStream = toStreamInternal(stream, config);
+    final ConfiguredAirbyteStream.Builder builder = new ConfiguredAirbyteStream.Builder()
+        .stream(convertedStream)
+        .syncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class))
+        .destinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
+        .primaryKey(config.getPrimaryKey())
+        .cursorField(config.getCursorField())
+        .generationId(config.getGenerationId())
+        .minimumGenerationId(config.getMinimumGenerationId())
+        .syncId(config.getSyncId())
+        .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()))
+        .mappers(toConfiguredMappers(config.getMappers()));
+
+    return builder.build();
   }
 
   /**
    * Converts a protocol AirbyteCatalog to an OpenAPI client versioned AirbyteCatalog.
    */
   @SuppressWarnings("LineLength")
-  public static io.airbyte.api.client.model.generated.AirbyteCatalog toAirbyteCatalogClientApi(
-                                                                                               final io.airbyte.protocol.models.AirbyteCatalog catalog) {
+  public io.airbyte.api.client.model.generated.AirbyteCatalog toAirbyteCatalogClientApi(
+                                                                                        final io.airbyte.protocol.models.AirbyteCatalog catalog) {
     return new io.airbyte.api.client.model.generated.AirbyteCatalog(catalog.getStreams()
         .stream()
-        .map(CatalogClientConverters::toAirbyteStreamClientApi)
+        .map(this::toAirbyteStreamClientApi)
         .map(s -> new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration(s, generateDefaultConfiguration(s)))
         .toList());
   }
 
   @SuppressWarnings("LineLength")
-  private static io.airbyte.api.client.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(
-                                                                                                               final io.airbyte.api.client.model.generated.AirbyteStream stream) {
+  private io.airbyte.api.client.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(
+                                                                                                        final io.airbyte.api.client.model.generated.AirbyteStream stream) {
     return new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         !stream.getSupportedSyncModes().isEmpty() ? Enums.convertTo(stream.getSupportedSyncModes().get(0),
             io.airbyte.api.client.model.generated.SyncMode.class) : io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
@@ -230,10 +270,13 @@ public class CatalogClientConverters {
         null,
         null,
         null,
+        null,
+        null,
         null);
   }
 
-  private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(final io.airbyte.protocol.models.AirbyteStream stream) {
+  private io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(
+                                                                                       final io.airbyte.protocol.models.AirbyteStream stream) {
     return new io.airbyte.api.client.model.generated.AirbyteStream(
         stream.getName(),
         stream.getJsonSchema(),

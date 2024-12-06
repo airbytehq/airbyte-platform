@@ -80,7 +80,7 @@ internal class SecretsHelpersTest {
 
     // check every key for the pattern and max length
     splitConfig.getCoordinateToPayload().keys.forEach(
-      Consumer<SecretCoordinate> { key: SecretCoordinate ->
+      Consumer { key: SecretCoordinate ->
         Assertions.assertTrue(
           gsmKeyCharacterPattern.matcher(key.fullCoordinate).matches(),
           "Invalid character in key: $key",
@@ -263,7 +263,8 @@ internal class SecretsHelpersTest {
   fun testSecretPath(testCase: SecretsTestCase) {
     val spec: JsonNode = testCase.spec.connectionSpecification
     val secretsPaths: List<String> = SecretsHelpers.getSortedSecretPaths(spec)
-    org.assertj.core.api.Assertions.assertThat(secretsPaths)
+    org.assertj.core.api.Assertions
+      .assertThat(secretsPaths)
       .containsExactlyElementsOf(testCase.expectedSecretsPaths)
   }
 
@@ -273,22 +274,22 @@ internal class SecretsHelpersTest {
      * intended to let you treat most of the JSON involved in the tests as static files.
      */
     @JvmStatic
-    fun provideTestCases(): Stream<Arguments> {
-      return Stream.of(
-        OptionalPasswordTestCase(),
-        SimpleTestCase(),
-        NestedObjectTestCase(),
-        OneOfTestCase(),
-        OneOfSecretTestCase(),
-        ArrayTestCase(),
-        ArrayOneOfTestCase(),
-        NestedOneOfTestCase(),
-        PostgresSshKeyTestCase(),
-      ).map { arguments: SecretsTestCase? ->
-        Arguments.of(
-          arguments,
-        )
-      }
-    }
+    fun provideTestCases(): Stream<Arguments> =
+      Stream
+        .of(
+          OptionalPasswordTestCase(),
+          SimpleTestCase(),
+          NestedObjectTestCase(),
+          OneOfTestCase(),
+          OneOfSecretTestCase(),
+          ArrayTestCase(),
+          ArrayOneOfTestCase(),
+          NestedOneOfTestCase(),
+          PostgresSshKeyTestCase(),
+        ).map { arguments: SecretsTestCase? ->
+          Arguments.of(
+            arguments,
+          )
+        }
   }
 }

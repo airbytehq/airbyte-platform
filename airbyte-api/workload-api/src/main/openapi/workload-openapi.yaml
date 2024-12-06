@@ -417,6 +417,9 @@ components:
         autoId:
           type: string
           format: uuid
+        signalInput:
+          type: string
+          nullable: true
     WorkloadCancelRequest:
       required:
       - reason
@@ -478,6 +481,9 @@ components:
           nullable: true
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+        signalInput:
+          type: string
+          nullable: true
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -554,6 +560,7 @@ components:
       enum:
       - high
       - default
+      x-type: String
     WorkloadRunningRequest:
       required:
       - workloadId
@@ -575,6 +582,7 @@ components:
       - success
       - failure
       - cancelled
+      x-type: String
     WorkloadSuccessRequest:
       required:
       - workloadId
@@ -589,3 +597,4 @@ components:
       - check
       - discover
       - spec
+      x-type: String

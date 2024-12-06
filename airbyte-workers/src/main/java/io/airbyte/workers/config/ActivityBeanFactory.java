@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.config;
 
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.TemporalConstants;
-import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
@@ -21,16 +21,17 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
+import io.airbyte.workers.temporal.sync.AsyncReplicationActivity;
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
-import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
+import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity;
+import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -58,7 +59,14 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Named("uiCommandsActivities")
+  public List<Object> uiCommandsActivities(
+                                           final ConnectorCommandActivity connectorCommandActivity) {
+    return List.of(connectorCommandActivity);
+  }
+
+  @Singleton
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("connectionManagerActivities")
   public List<Object> connectionManagerActivities(
                                                   final GenerateInputActivity generateInputActivity,
@@ -69,7 +77,6 @@ public class ActivityBeanFactory {
                                                   final StreamResetActivity streamResetActivity,
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
-                                                  final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
                                                   final CheckRunProgressActivity checkRunProgressActivity,
                                                   final RetryStatePersistenceActivity retryStatePersistenceActivity,
@@ -82,7 +89,6 @@ public class ActivityBeanFactory {
         streamResetActivity,
         recordMetricActivity,
         workflowConfigActivity,
-        routeToTaskQueueActivity,
         featureFlagFetchActivity,
         checkRunProgressActivity,
         retryStatePersistenceActivity,
@@ -103,7 +109,7 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("specActivities")
   public List<Object> specActivities(
                                      final SpecActivity specActivity) {
@@ -115,14 +121,35 @@ public class ActivityBeanFactory {
   public List<Object> syncActivities(final ReplicationActivity replicationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
-                                     final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
-                                     final InvokeOperationsActivity invokeOperationsActivity) {
+                                     final InvokeOperationsActivity invokeOperationsActivity,
+                                     final AsyncReplicationActivity asyncReplicationActivity,
+                                     final WorkloadStatusCheckActivity workloadStatusCheckActivity,
+                                     final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
     return List.of(replicationActivity, configFetchActivity, refreshSchemaActivity,
-        workloadFeatureFlagActivity, reportRunTimeActivity, syncFeatureFlagFetcherActivity,
-        routeToSyncTaskQueueActivity, invokeOperationsActivity);
+        reportRunTimeActivity, syncFeatureFlagFetcherActivity,
+        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity, discoverCatalogHelperActivity);
+  }
+
+  @Singleton
+  @Named("asyncActivityOptions")
+  public ActivityOptions asyncActivityOptions(@Property(name = "airbyte.activity.async-timeout") final Integer asyncTimeoutSeconds) {
+    return ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
+  @Named("workloadStatusCheckActivityOptions")
+  public ActivityOptions workloadStatusCheckActivityOptions(@Property(name = "airbyte.activity.async-timeout") final Integer asyncTimeoutSeconds) {
+    return ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds))
+        .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
+        .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
+        .build();
   }
 
   @Singleton
@@ -195,7 +222,7 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Requires(env = EnvConstants.CONTROL_PLANE)
   @Named("specActivityOptions")
   public ActivityOptions specActivityOptions() {
     return ActivityOptions.newBuilder()
@@ -205,21 +232,11 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
-  @Requires(property = "airbyte.container.orchestrator.enabled",
-            value = "true")
   @Named("longRunActivityRetryOptions")
   public RetryOptions containerOrchestratorRetryOptions() {
     return RetryOptions.newBuilder()
         .setDoNotRetry(RuntimeException.class.getName(), WorkerException.class.getName())
         .build();
-  }
-
-  @Singleton
-  @Requires(property = "airbyte.container.orchestrator.enabled",
-            notEquals = "true")
-  @Named("longRunActivityRetryOptions")
-  public RetryOptions noRetryOptions() {
-    return TemporalConstants.NO_RETRY;
   }
 
   @Singleton

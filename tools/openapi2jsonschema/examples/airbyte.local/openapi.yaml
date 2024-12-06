@@ -2347,6 +2347,10 @@ components:
           type: string
         memory_request:
           type: string
+        ephemeral_storage_limit:
+          type: string
+        ephemeral_storage_request:
+          type: string
       type: object
     SlackNotificationConfiguration:
       properties:

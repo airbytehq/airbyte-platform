@@ -18,6 +18,8 @@ import {
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
   getDeclarativeManifestBaseImage,
+  createForkedConnectorBuilderProject,
+  getConnectorBuilderProjectIdForDefinitionId,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -34,6 +36,11 @@ import {
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
   DeclarativeManifestRequestBody,
   DeclarativeManifestBaseImageRead,
+  BaseActorDefinitionVersionInfo,
+  ContributionInfo,
+  ConnectorBuilderProjectDetailsRead,
+  SourceDefinitionId,
+  BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -49,6 +56,8 @@ const connectorBuilderProjectsKeys = {
   read: (projectId?: string, streamName?: string) =>
     [...connectorBuilderProjectsKeys.all, "read", projectId, streamName] as const,
   getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
+  getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
+    [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
 };
 
 export interface BuilderProject {
@@ -57,33 +66,48 @@ export interface BuilderProject {
   sourceDefinitionId?: string;
   id: string;
   hasDraft?: boolean;
+  baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
+  contributionInfo?: ContributionInfo;
 }
 
 export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  contributionPullRequestUrl?: string;
+  contributionActorDefinitionId?: string;
 }
 
 export const useListBuilderProjects = () => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-      (projectDetails): BuilderProject => ({
-        name: projectDetails.name,
-        version:
-          typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
-            ? projectDetails.activeDeclarativeManifestVersion
-            : "draft",
-        sourceDefinitionId: projectDetails.sourceDefinitionId,
-        id: projectDetails.builderProjectId,
-        hasDraft: projectDetails.hasDraft,
-      })
-    )
+  return useSuspenseQuery(
+    connectorBuilderProjectsKeys.list(workspaceId),
+    async () =>
+      (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
+        convertProjectDetailsReadToBuilderProject
+      ),
+    {
+      refetchOnMount: "always",
+    }
   );
 };
+
+export const convertProjectDetailsReadToBuilderProject = (
+  projectDetails: ConnectorBuilderProjectDetailsRead
+): BuilderProject => ({
+  name: projectDetails.name,
+  version:
+    typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+      ? projectDetails.activeDeclarativeManifestVersion
+      : "draft",
+  sourceDefinitionId: projectDetails.sourceDefinitionId,
+  id: projectDetails.builderProjectId,
+  hasDraft: projectDetails.hasDraft,
+  baseActorDefinitionVersionInfo: projectDetails.baseActorDefinitionVersionInfo,
+  contributionInfo: projectDetails.contributionInfo,
+});
 
 export const useListBuilderProjectVersions = (project?: BuilderProject) => {
   const requestOptions = useRequestOptions();
@@ -100,8 +124,8 @@ export const useListBuilderProjectVersions = (project?: BuilderProject) => {
 };
 
 export type CreateProjectContext =
-  | { name: string; manifest?: DeclarativeComponentSchema }
-  | { name: string; forkProjectId: string; version?: "draft" | number };
+  | { name: string; assistSessionId?: string; manifest?: DeclarativeComponentSchema }
+  | { name: string; assistSessionId?: string; forkProjectId: string; version?: "draft" | number };
 
 export const useCreateBuilderProject = () => {
   const requestOptions = useRequestOptions();
@@ -144,6 +168,27 @@ export const useCreateBuilderProject = () => {
             },
           ]
         );
+      },
+    }
+  );
+};
+
+export const useCreateSourceDefForkedBuilderProject = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<ConnectorBuilderProjectIdWithWorkspaceId, Error, SourceDefinitionId>(
+    async (sourceDefinitionId) => {
+      return createForkedConnectorBuilderProject(
+        { workspaceId, baseActorDefinitionId: sourceDefinitionId },
+        requestOptions
+      );
+    },
+    {
+      onSuccess: () => {
+        // invalidate cached projects list
+        queryClient.invalidateQueries(connectorBuilderProjectsKeys.list(workspaceId));
       },
     }
   );
@@ -225,9 +270,19 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest }) =>
+    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
       updateConnectorBuilderProject(
-        { workspaceId, builderProjectId: projectId, builderProject: { name, draftManifest: manifest, yamlManifest } },
+        {
+          workspaceId,
+          builderProjectId: projectId,
+          builderProject: {
+            name,
+            draftManifest: manifest,
+            yamlManifest,
+            contributionActorDefinitionId,
+            contributionPullRequestUrl,
+          },
+        },
         requestOptions
       ),
     {
@@ -454,6 +509,7 @@ const transformSlices = (
   // on each page. This way, the user can still see the unique state of each page in the `State` tab, and will also
   // always see the page selection controls when pagination is configured.
   if (
+    stream.retriever.type === "SimpleRetriever" &&
     stream.retriever?.paginator &&
     stream.retriever?.paginator?.type !== NoPaginationType.NoPagination &&
     !stream.incremental_sync &&
@@ -520,5 +576,25 @@ export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequest
   return useQuery<DeclarativeManifestBaseImageRead>(
     connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
     () => getDeclarativeManifestBaseImage(params, requestOptions)
+  );
+};
+
+export const useGetBuilderProjectIdByDefinitionId = (sourceDefinitionId: string | undefined) => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useQuery<BuilderProjectForDefinitionResponse>(
+    connectorBuilderProjectsKeys.getProjectForDefinition(sourceDefinitionId),
+    () => {
+      if (sourceDefinitionId) {
+        return getConnectorBuilderProjectIdForDefinitionId(
+          { workspaceId, actorDefinitionId: sourceDefinitionId },
+          requestOptions
+        );
+      }
+      return {
+        builderProjectId: null,
+      };
+    }
   );
 };

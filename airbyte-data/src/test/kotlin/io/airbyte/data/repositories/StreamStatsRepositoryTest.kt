@@ -12,19 +12,19 @@ import java.util.UUID
 @MicronautTest
 internal class StreamStatsRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
-    private val job1Attempt1Id = 1L
-    private val job1Attempt2Id = 2L
+    private const val ATTEMPT_1 = 1L
+    private const val ATTEMPT_2 = 2L
 
-    private val connectionId = UUID.randomUUID()
-    private val streamNameFoo = "foo"
-    private val streamNameBar = "bar"
-    private val streamNamespace1 = "ns1"
+    private val connectionId: UUID = UUID.randomUUID()
+    private const val STREAM_NAME_FOO = "foo"
+    private const val STREAM_NAME_BAR = "bar"
+    private const val STREAM_NAMESPACE_1 = "ns1"
 
     private val streamStats1 =
       StreamStats(
-        attemptId = job1Attempt1Id,
-        streamName = streamNameFoo,
-        streamNamespace = streamNamespace1,
+        attemptId = ATTEMPT_1,
+        streamName = STREAM_NAME_FOO,
+        streamNamespace = STREAM_NAMESPACE_1,
         recordsEmitted = 10,
         bytesEmitted = 100,
         connectionId = connectionId,
@@ -32,9 +32,9 @@ internal class StreamStatsRepositoryTest : AbstractConfigRepositoryTest() {
 
     private val streamStats2 =
       StreamStats(
-        attemptId = job1Attempt2Id,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace1,
+        attemptId = ATTEMPT_2,
+        streamName = STREAM_NAME_BAR,
+        streamNamespace = STREAM_NAMESPACE_1,
         recordsEmitted = 20,
         bytesEmitted = 200,
         connectionId = connectionId,
@@ -44,9 +44,11 @@ internal class StreamStatsRepositoryTest : AbstractConfigRepositoryTest() {
     @JvmStatic
     fun setup() {
       // so we don't have to deal with making attempts as well
-      jooqDslContext.alterTable(
-        Tables.STREAM_STATS,
-      ).dropForeignKey(Keys.STREAM_STATS__STREAM_STATS_ATTEMPT_ID_FKEY.constraint()).execute()
+      jooqDslContext
+        .alterTable(
+          Tables.STREAM_STATS,
+        ).dropForeignKey(Keys.STREAM_STATS__STREAM_STATS_ATTEMPT_ID_FKEY.constraint())
+        .execute()
     }
   }
 

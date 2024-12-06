@@ -1,6 +1,7 @@
 package io.airbyte.workers.workload
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.State
@@ -8,7 +9,6 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.workload.exception.DocStoreAccessException
 import io.mockk.every
 import io.mockk.impl.annotations.MockK

@@ -61,8 +61,6 @@ import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceAc
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateOutput;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistOutput;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
-import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionDestinationSystemErrorWorkflow;
@@ -72,7 +70,6 @@ import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionS
 import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSystemErrorWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.CancelledSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.EmptySyncWorkflow;
-import io.airbyte.workers.temporal.scheduling.testsyncworkflow.PersistFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.ReplicateFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SleepingSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SourceAndDestinationFailureSyncWorkflow;
@@ -157,8 +154,6 @@ class ConnectionManagerWorkflowTest {
       mock(RecordMetricActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final WorkflowConfigActivity mWorkflowConfigActivity =
       mock(WorkflowConfigActivity.class, Mockito.withSettings().withoutAnnotations());
-  private static final RouteToSyncTaskQueueActivity mRouteToSyncTaskQueueActivity =
-      mock(RouteToSyncTaskQueueActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final FeatureFlagFetchActivity mFeatureFlagFetchActivity =
       mock(FeatureFlagFetchActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final CheckRunProgressActivity mCheckRunProgressActivity =
@@ -195,7 +190,6 @@ class ConnectionManagerWorkflowTest {
     Mockito.reset(mStreamResetActivity);
     Mockito.reset(mRecordMetricActivity);
     Mockito.reset(mWorkflowConfigActivity);
-    Mockito.reset(mRouteToSyncTaskQueueActivity);
     Mockito.reset(mCheckRunProgressActivity);
     Mockito.reset(mRetryStatePersistenceActivity);
     Mockito.reset(mAppendToAttemptLogActivity);
@@ -231,13 +225,6 @@ class ConnectionManagerWorkflowTest {
 
     when(mWorkflowConfigActivity.getWorkflowRestartDelaySeconds())
         .thenReturn(WORKFLOW_FAILURE_RESTART_DELAY);
-
-    when(mRouteToSyncTaskQueueActivity.route(Mockito.any()))
-        .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
-    when(mRouteToSyncTaskQueueActivity.routeToSync(Mockito.any()))
-        .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
-    when(mRouteToSyncTaskQueueActivity.routeToCheckConnection(Mockito.any()))
-        .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.CHECK_CONNECTION.name()));
     when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
         .thenReturn(new FeatureFlagFetchOutput(Map.of()));
     when(mCheckRunProgressActivity.checkProgress(Mockito.any()))
@@ -1281,53 +1268,6 @@ class ConnectionManagerWorkflowTest {
           .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.DESTINATION)));
     }
 
-    @Test
-    @Timeout(value = 10,
-             unit = TimeUnit.SECONDS)
-    @DisplayName("Test that persistence failure is recorded")
-    void testPersistenceFailureRecorded() throws Exception {
-      returnTrueForLastJobOrAttemptFailure();
-      final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
-      syncWorker.registerWorkflowImplementationTypes(PersistFailureSyncWorkflow.class);
-      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
-      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
-
-      testEnv.start();
-
-      final UUID testId = UUID.randomUUID();
-      final TestStateListener testStateListener = new TestStateListener();
-      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
-      final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
-          .connectionId(UUID.randomUUID())
-          .jobId(JOB_ID)
-          .attemptId(ATTEMPT_ID)
-          .fromFailure(false)
-          .attemptNumber(1)
-          .workflowState(workflowState)
-          .build();
-
-      startWorkflowAndWaitUntilReady(workflow, input);
-
-      // wait for workflow to initialize
-      testEnv.sleep(Duration.ofMinutes(1));
-
-      workflow.submitManualSync();
-
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
-          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.PERSISTENCE)));
-    }
-
-    @Test
-    @Timeout(value = 10,
-             unit = TimeUnit.SECONDS)
-    @DisplayName("Test that replication worker failure is recorded")
-    void testReplicationFailureRecorded() throws Exception {
-      setupReplicationFailure();
-
-      Mockito.verify(mJobCreationAndStatusUpdateActivity)
-          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOrigin(FailureOrigin.REPLICATION)));
-    }
-
   }
 
   @Nested
@@ -1557,7 +1497,6 @@ class ConnectionManagerWorkflowTest {
       return Stream.of(
           Arguments.of(SourceAndDestinationFailureSyncWorkflow.class),
           Arguments.of(ReplicateFailureSyncWorkflow.class),
-          Arguments.of(PersistFailureSyncWorkflow.class),
           Arguments.of(SyncWorkflowFailingOutputWorkflow.class));
     }
 
@@ -1906,8 +1845,7 @@ class ConnectionManagerWorkflowTest {
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
     managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mGenerateInputActivityImpl,
         mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
-        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity,
-        mAppendToAttemptLogActivity);
+        mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity, mAppendToAttemptLogActivity);
 
     client = testEnv.getWorkflowClient();
     testEnv.start();
@@ -1987,10 +1925,6 @@ class ConnectionManagerWorkflowTest {
     setupFailureCase(SourceAndDestinationFailureSyncWorkflow.class, input);
   }
 
-  private void setupReplicationFailure() throws Exception {
-    setupFailureCase(ReplicateFailureSyncWorkflow.class);
-  }
-
   /**
    * Does all the legwork for setting up a workflow for simple runs. NOTE: Don't forget to add your
    * mock activity below.
@@ -2002,8 +1936,7 @@ class ConnectionManagerWorkflowTest {
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
     managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mGenerateInputActivityImpl,
         mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
-        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity,
-        mAppendToAttemptLogActivity);
+        mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity, mAppendToAttemptLogActivity);
 
     client = testEnv.getWorkflowClient();
     workflow = client.newWorkflowStub(ConnectionManagerWorkflow.class,

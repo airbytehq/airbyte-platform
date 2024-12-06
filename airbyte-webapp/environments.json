@@ -1,8 +1,4 @@
 {
-  "oss-docker-compose": {
-    "name": "docker compose",
-    "group": "OSS Community"
-  },
   "oss-k8s": {
     "name": "Local K8s",
     "group": "OSS Community",

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
+import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
@@ -12,6 +13,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.protocol.models.AirbyteCatalog
 import io.airbyte.protocol.models.AirbyteConnectionStatus
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage
@@ -58,10 +60,12 @@ class ConnectorMessageProcessorTest {
 
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
+  private val catalogClientConverters = CatalogClientConverters(FieldGenerator(), emptyList())
+
   @BeforeEach
   fun init() {
     every { airbyteApiClient.sourceApi } returns sourceApi
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient)
+    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient, catalogClientConverters)
   }
 
   @Test
@@ -76,8 +80,8 @@ class ConnectorMessageProcessorTest {
     val messageByType = ConnectorMessageProcessor.getMessagesByType(InputStream.nullInputStream(), streamFactory)
 
     assertEquals(2, messageByType.size)
-    assertEquals(1, messageByType.get(AirbyteMessage.Type.CONTROL)!!.size)
-    assertEquals(2, messageByType.get(AirbyteMessage.Type.RECORD)!!.size)
+    assertEquals(1, messageByType[AirbyteMessage.Type.CONTROL]!!.size)
+    assertEquals(2, messageByType[AirbyteMessage.Type.RECORD]!!.size)
   }
 
   @Test
@@ -86,7 +90,8 @@ class ConnectorMessageProcessorTest {
       mapOf(
         AirbyteMessage.Type.TRACE to
           listOf(
-            AirbyteMessage().withType(AirbyteMessage.Type.TRACE)
+            AirbyteMessage()
+              .withType(AirbyteMessage.Type.TRACE)
               .withTrace(
                 AirbyteTraceMessage()
                   .withType(AirbyteTraceMessage.Type.ERROR)
@@ -117,7 +122,8 @@ class ConnectorMessageProcessorTest {
       mapOf(
         AirbyteMessage.Type.CONNECTION_STATUS to
           listOf(
-            AirbyteMessage().withType(AirbyteMessage.Type.CONNECTION_STATUS)
+            AirbyteMessage()
+              .withType(AirbyteMessage.Type.CONNECTION_STATUS)
               .withConnectionStatus(
                 AirbyteConnectionStatus()
                   .withStatus(AirbyteConnectionStatus.Status.SUCCEEDED),
@@ -135,7 +141,8 @@ class ConnectorMessageProcessorTest {
       mapOf(
         AirbyteMessage.Type.CONNECTION_STATUS to
           listOf(
-            AirbyteMessage().withType(AirbyteMessage.Type.CONNECTION_STATUS)
+            AirbyteMessage()
+              .withType(AirbyteMessage.Type.CONNECTION_STATUS)
               .withConnectionStatus(
                 AirbyteConnectionStatus()
                   .withStatus(AirbyteConnectionStatus.Status.FAILED),
@@ -162,7 +169,8 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `test find catalog discovery`() {
     val catalog =
-      AirbyteMessage().withType(AirbyteMessage.Type.CATALOG)
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.CATALOG)
         .withCatalog(
           AirbyteCatalog()
             .withStreams(
@@ -196,7 +204,8 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `test find specs`() {
     val specsMessage =
-      AirbyteMessage().withType(AirbyteMessage.Type.SPEC)
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.SPEC)
         .withSpec(
           ConnectorSpecification()
             .withProtocolVersion("test"),
@@ -234,9 +243,8 @@ class ConnectorMessageProcessorTest {
   private fun getConnectorUpdateInputWithRandomInputConfig(
     actorType: ActorType,
     airbyteControlConnectorConfigMessage: AirbyteControlConnectorConfigMessage,
-  ): ConnectorUpdateInput {
-    return getConnectorUpdateInput(actorType, airbyteControlConnectorConfigMessage, Jsons.jsonNode(mapOf("random" to UUID.randomUUID().toString())))
-  }
+  ): ConnectorUpdateInput =
+    getConnectorUpdateInput(actorType, airbyteControlConnectorConfigMessage, Jsons.jsonNode(mapOf("random" to UUID.randomUUID().toString())))
 
   private fun getConnectorUpdateInput(
     actorType: ActorType,
@@ -247,7 +255,8 @@ class ConnectorMessageProcessorTest {
       mapOf(
         AirbyteMessage.Type.CONTROL to
           listOf(
-            AirbyteMessage().withType(AirbyteMessage.Type.CONTROL)
+            AirbyteMessage()
+              .withType(AirbyteMessage.Type.CONTROL)
               .withControl(
                 AirbyteControlMessage()
                   .withType(AirbyteControlMessage.Type.CONNECTOR_CONFIG)
@@ -408,7 +417,8 @@ class ConnectorMessageProcessorTest {
   fun `properly make connection successful`() {
     every { streamFactory.create(any()) } returns
       Stream.of(
-        AirbyteMessage().withType(AirbyteMessage.Type.CONNECTION_STATUS)
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.CONNECTION_STATUS)
           .withConnectionStatus(
             AirbyteConnectionStatus()
               .withStatus(AirbyteConnectionStatus.Status.SUCCEEDED)
@@ -438,7 +448,8 @@ class ConnectorMessageProcessorTest {
   fun `properly make connection failed`() {
     every { streamFactory.create(any()) } returns
       Stream.of(
-        AirbyteMessage().withType(AirbyteMessage.Type.CONNECTION_STATUS)
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.CONNECTION_STATUS)
           .withConnectionStatus(
             AirbyteConnectionStatus()
               .withStatus(AirbyteConnectionStatus.Status.FAILED)
@@ -467,7 +478,8 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `properly discover schema`() {
     val catalog =
-      AirbyteMessage().withType(AirbyteMessage.Type.CATALOG)
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.CATALOG)
         .withCatalog(
           AirbyteCatalog()
             .withStreams(
@@ -505,7 +517,8 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `properly spec connector`() {
     val specMessage =
-      AirbyteMessage().withType(AirbyteMessage.Type.SPEC)
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.SPEC)
         .withSpec(
           ConnectorSpecification()
             .withProtocolVersion("test"),

@@ -1,0 +1,37 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  width: 100%;
+
+  &--full {
+    height: 260px;
+  }
+
+  &--minimized {
+    width: 100px;
+    height: 30px;
+  }
+}
+
+.tooltipWrapper {
+  background-color: colors.$foreground !important;
+  color: colors.$dark-blue span {
+    color: colors.$dark-blue;
+  }
+}
+
+.recentCreditUsage {
+  margin-top: variables.$spacing-md;
+  max-width: 150px;
+  white-space: normal;
+}
+
+:export {
+  white: colors.$foreground;
+  green: colors.$green;
+  grey: colors.$grey-500;
+  grey100: colors.$grey-100;
+  darkBlue: colors.$dark-blue;
+  blue400: colors.$blue-400;
+}

@@ -1,8 +1,12 @@
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
+import { useEffectOnce } from "react-use";
 
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
+import { FlexItem } from "components/ui/Flex";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
+import { Text } from "components/ui/Text";
 
 import styles from "./FormSubmissionButtons.module.scss";
 
@@ -30,10 +34,25 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   // get isSubmitting from useFormState to avoid re-rendering of whole form if they change
   // reset is a stable function so it's fine to get it from useFormContext
   const { reset } = useFormContext();
-  const { isValid, isDirty, isSubmitting } = useFormState();
+  const { isValid, isDirty, isSubmitting, errors } = useFormState<FormConnectionFormValues>();
+
+  // need to trigger validation on mount to make error message exist
+  const { trigger } = useFormContext();
+  useEffectOnce(() => {
+    trigger("syncCatalog.streams");
+  });
+  const hashOtherMappersDefinedError =
+    errors?.syncCatalog?.streams?.message === "connectionForm.streams.existingMappers";
 
   return (
     <FlexContainer justifyContent={justify} className={reversed ? styles.reversed : undefined}>
+      {hashOtherMappersDefinedError && (
+        <FlexItem alignSelf="center">
+          <Text color="red">
+            <FormattedMessage id="connectionForm.streams.existingMappers" />
+          </Text>
+        </FlexItem>
+      )}
       {!noCancel && (
         <Button
           type="button"

@@ -17,7 +17,6 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -43,12 +42,6 @@ class WorkerConfigProviderMicronautTest {
   @MockBean(List.class)
   public List<TolerationPOJO> mmJobKubeTolerations() {
     return List.of();
-  }
-
-  @Named("jobDefaultEnvMap")
-  @MockBean(Map.class)
-  public Map<String, String> jobDefaultEnvMap() {
-    return Map.of();
   }
 
   @Test
@@ -168,24 +161,6 @@ class WorkerConfigProviderMicronautTest {
         ResourceRequirementsType.ORCHESTRATOR,
         Optional.of("api"));
     assertEquals("11", orchestratorApi.getCpuRequest());
-  }
-
-  @Test
-  void testResourceTypeMapping() {
-    final String variant = "mappingtest";
-
-    assertEquals("101",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, Optional.empty(), variant).getMemoryLimit());
-    assertEquals("102",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, Optional.empty(), variant).getMemoryLimit());
-    assertEquals("103",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, Optional.empty(), variant).getMemoryLimit());
-    assertEquals("104",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, Optional.empty(), variant).getMemoryLimit());
-    assertEquals("105",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, Optional.empty(), variant).getMemoryLimit());
-    assertEquals("106",
-        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, Optional.empty(), variant).getMemoryLimit());
   }
 
 }

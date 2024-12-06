@@ -6,10 +6,21 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.Geography;
+import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.support.CurrentUserService;
@@ -32,8 +43,13 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
+import io.airbyte.data.services.shared.ConnectionEvent.Type;
+import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
+import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
 import io.airbyte.persistence.job.JobPersistence;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +58,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class ConnectionTimelineEventHelperTest {
 
@@ -213,6 +230,58 @@ class ConnectionTimelineEventHelperTest {
       assertEquals(userName, userRead.getName());
     }
 
+  }
+
+  @Test
+  void testLogConnectionSettingsChangedEvent() {
+    connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
+        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+    final UUID connectionId = UUID.randomUUID();
+    final ConnectionRead originalConnectionRead = new ConnectionRead()
+        .connectionId(connectionId)
+        .name("old name")
+        .prefix("old prefix")
+        .notifySchemaChanges(false)
+        .geography(Geography.AUTO)
+        .notifySchemaChangesByEmail(false);
+    final ConnectionUpdate patch = new ConnectionUpdate()
+        .connectionId(connectionId)
+        .name("new name")
+        .prefix("new prefix")
+        .geography(Geography.AUTO)
+        .notifySchemaChanges(true);
+    final Map<String, Map<String, Object>> expectedPatches = new HashMap<>();
+    expectedPatches.put("name", Map.of("from", "old name", "to", "new name"));
+    expectedPatches.put("prefix", Map.of("from", "old prefix", "to", "new prefix"));
+    expectedPatches.put("notifySchemaChanges", Map.of("from", false, "to", true));
+    connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, originalConnectionRead, patch, null, true);
+    ArgumentCaptor<ConnectionSettingsChangedEvent> eventCaptor = ArgumentCaptor.forClass(ConnectionSettingsChangedEvent.class);
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull());
+    ConnectionSettingsChangedEvent capturedEvent = eventCaptor.getValue();
+
+    assertNotNull(capturedEvent);
+    assertEquals(expectedPatches, capturedEvent.getPatches());
+    assertNull(capturedEvent.getUpdateReason());
+    assertEquals(Type.CONNECTION_SETTINGS_UPDATE, capturedEvent.getEventType());
+
+  }
+
+  @Test
+  void testLogSchemaChangeAutoPropagationEvent() {
+    connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
+        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+    final UUID connectionId = UUID.randomUUID();
+    final CatalogDiff diff = new CatalogDiff().addTransformsItem(new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM));
+
+    connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, diff);
+    ArgumentCaptor<SchemaChangeAutoPropagationEvent> eventCaptor = ArgumentCaptor.forClass(SchemaChangeAutoPropagationEvent.class);
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull());
+    SchemaChangeAutoPropagationEvent capturedEvent = eventCaptor.getValue();
+
+    assertNotNull(capturedEvent);
+    assertEquals(diff, capturedEvent.getCatalogDiff());
+    assertEquals(ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name(), capturedEvent.getUpdateReason());
+    assertEquals(Type.SCHEMA_UPDATE, capturedEvent.getEventType());
   }
 
 }
