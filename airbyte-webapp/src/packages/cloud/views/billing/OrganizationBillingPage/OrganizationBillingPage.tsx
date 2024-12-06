@@ -27,6 +27,7 @@ import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
 import { PaymentMethod } from "./PaymentMethod";
+import { Subscription } from "./Subscription";
 import { useRedirectToCustomerPortal } from "../../../area/billing/utils/useRedirectToCustomerPortal";
 
 export const OrganizationBillingPage: React.FC = () => {
@@ -70,6 +71,8 @@ export const OrganizationBillingPage: React.FC = () => {
           <BillingBanners />
 
           <BorderedTiles>
+            {!noSubscriptionExists && <Subscription />}
+
             {!hideAccountBalance && <AccountBalance />}
 
             <BorderedTile>
