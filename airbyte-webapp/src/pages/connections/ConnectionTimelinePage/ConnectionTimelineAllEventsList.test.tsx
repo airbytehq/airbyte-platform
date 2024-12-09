@@ -39,6 +39,24 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
+      id: "2",
+      createdAt: 1728936015,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "INVALID_PAYMENT_METHOD",
+      },
+    },
+    {
+      id: "2",
+      createdAt: 1728936015,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "INVOICE_MARKED_UNCOLLECTIBLE",
+      },
+    },
+    {
       id: "3",
       createdAt: 1728936020,
       eventType: ConnectionEventType.SYNC_STARTED,
@@ -79,7 +97,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = validTimelineEvents
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
   });
   it("removes invalid events from list and triggers error tracking", () => {
     const eventsWithInvalidEvent = [
@@ -108,7 +126,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = eventsWithInvalidEvent
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
     expect(trackError).toHaveBeenCalledTimes(1);
   });
   it("removes events with only resourceRequirement patches but does not trigger error handling", () => {
@@ -139,7 +157,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = eventsWithResourceUpdate
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
     expect(trackError).toHaveBeenCalledTimes(0);
   });
 });
