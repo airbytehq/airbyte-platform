@@ -179,17 +179,13 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withUserId(UUID.randomUUID())
         .withOrganizationId(UUID.randomUUID())
         .withName("Org")
-        .withEmail("test@org.com")
-        .withPba(false)
-        .withOrgLevelBilling(false);
+        .withEmail("test@org.com");
 
     private static final Organization ORG_2 = new Organization()
         .withUserId(UUID.randomUUID())
         .withOrganizationId(UUID.randomUUID())
         .withName("Org 2")
-        .withEmail("test@org.com")
-        .withPba(false)
-        .withOrgLevelBilling(false);
+        .withEmail("test@org.com");
 
     private static final StandardWorkspace WORKSPACE_1_ORG_1 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())

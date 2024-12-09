@@ -33,8 +33,6 @@ jest.mock("core/api", () => ({
       email: `${id}@example.com`,
       organizationId: id,
       organizationName: `Org ${id}`,
-      orgLevelBilling: false,
-      pba: false,
     })),
 }));
 

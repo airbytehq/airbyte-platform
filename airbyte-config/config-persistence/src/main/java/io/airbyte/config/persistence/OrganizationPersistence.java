@@ -269,8 +269,6 @@ public class OrganizationPersistence {
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
         .set(ORGANIZATION.USER_ID, organization.getUserId())
-        .set(ORGANIZATION.PBA, organization.getPba())
-        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
         .execute();
@@ -291,8 +289,6 @@ public class OrganizationPersistence {
         .set(ORGANIZATION.USER_ID, organization.getUserId())
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
-        .set(ORGANIZATION.PBA, organization.getPba())
-        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.CREATED_AT, timestamp)
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .execute();
@@ -324,9 +320,7 @@ public class OrganizationPersistence {
         .withName(record.get(ORGANIZATION.NAME))
         .withEmail(record.get(ORGANIZATION.EMAIL))
         .withUserId(record.get(ORGANIZATION.USER_ID))
-        .withSsoRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM))
-        .withPba(record.get(ORGANIZATION.PBA))
-        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+        .withSsoRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM));
   }
 
   private static SsoConfig createSsoConfigFromRecord(final Record record) {

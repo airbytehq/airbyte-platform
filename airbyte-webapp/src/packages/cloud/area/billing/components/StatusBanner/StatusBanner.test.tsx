@@ -34,7 +34,6 @@ const mockOrgInfo = (billing: WorkspaceOrganizationInfoReadBilling | undefined) 
     organizationId: "org-1",
     organizationName: "org name",
     sso: false,
-    pba: false,
     billing,
   });
 };

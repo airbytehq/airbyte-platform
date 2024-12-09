@@ -95,8 +95,6 @@ open class ResourceBootstrapHandler(
         this.userId = user.userId
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
-        this.orgLevelBilling = true
-        this.pba = false
       }
     organizationService.writeOrganization(organization)
 
@@ -145,29 +143,27 @@ open class ResourceBootstrapHandler(
   private fun buildDefaultWorkspacePermission(
     userId: UUID,
     workspaceId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.workspaceId = workspaceId
       this.permissionType = DEFAULT_WORKSPACE_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
   private fun buildDefaultOrganizationPermission(
     userId: UUID,
     organizationId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.organizationId = organizationId
       this.permissionType = DEFAULT_ORGANIZATION_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
-  private fun getDefaultOrganizationName(user: AuthenticatedUser): String {
-    return when {
+  private fun getDefaultOrganizationName(user: AuthenticatedUser): String =
+    when {
       user.companyName != null -> {
         "${user.companyName}'s Organization"
       }
@@ -180,5 +176,4 @@ open class ResourceBootstrapHandler(
         "${user.email.split("@").first()}'s Organization"
       }
     }
-  }
 }

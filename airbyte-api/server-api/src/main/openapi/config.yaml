@@ -8286,7 +8286,6 @@ components:
       required:
         - organizationId
         - organizationName
-        - pba
         - sso
       properties:
         organizationId:
@@ -8294,8 +8293,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
         sso:
           type: boolean
         billing:
@@ -11377,10 +11374,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         email:
           type: string
     OrganizationCreateRequestBody:
@@ -11396,18 +11389,12 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
     OrganizationRead:
       type: object
       required:
         - organizationId
         - organizationName
         - email
-        - pba
-        - orgLevelBilling
       properties:
         organizationId:
           type: string
@@ -11416,10 +11403,6 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         ssoRealm:
           type: string
         organizationLimits:

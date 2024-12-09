@@ -204,9 +204,7 @@ public class DbConverter {
         .withOrganizationId(record.get(ORGANIZATION.ID))
         .withName(record.get(ORGANIZATION.NAME))
         .withUserId(record.get(ORGANIZATION.USER_ID))
-        .withEmail(record.get(ORGANIZATION.EMAIL))
-        .withPba(record.get(ORGANIZATION.PBA))
-        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+        .withEmail(record.get(ORGANIZATION.EMAIL));
   }
 
   /**

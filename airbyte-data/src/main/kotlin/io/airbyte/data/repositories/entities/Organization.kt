@@ -14,8 +14,6 @@ open class Organization(
   var name: String,
   var userId: UUID? = null,
   var email: String,
-  var pba: Boolean = false,
-  var orgLevelBilling: Boolean = false,
   var tombstone: Boolean = false,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,

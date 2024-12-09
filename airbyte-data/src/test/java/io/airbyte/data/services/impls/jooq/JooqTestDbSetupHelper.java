@@ -237,9 +237,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     return new Organization()
         .withOrganizationId(ORGANIZATION_ID)
         .withName("organization")
-        .withEmail("org@airbyte.io")
-        .withPba(false)
-        .withOrgLevelBilling(false);
+        .withEmail("org@airbyte.io");
   }
 
   private StandardWorkspace createBaseWorkspace() {
