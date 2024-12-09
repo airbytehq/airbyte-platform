@@ -326,7 +326,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getPrefix(),
         refreshSchemaOutput,
         syncInput.getConnectionContext(),
-        signalInput);
+        signalInput,
+        syncInput.getNetworkSecurityTokens());
   }
 
 }

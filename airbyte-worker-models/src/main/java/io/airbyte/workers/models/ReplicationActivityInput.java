@@ -11,6 +11,7 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -65,5 +66,6 @@ public class ReplicationActivityInput {
   // Replication context object containing relevant IDs
   private ConnectionContext connectionContext;
   private String signalInput;
+  private List<String> networkSecurityTokens;
 
 }

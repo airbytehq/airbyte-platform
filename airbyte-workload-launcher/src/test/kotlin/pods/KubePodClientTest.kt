@@ -6,6 +6,8 @@ package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -44,7 +46,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import java.lang.RuntimeException
 import java.util.UUID
 import java.util.concurrent.TimeoutException
 
@@ -103,8 +104,6 @@ class KubePodClientTest {
         checkPodFactory = checkPodFactory,
         discoverPodFactory = discoverPodFactory,
         specPodFactory = specPodFactory,
-        featureFlagClient = featureFlagClient,
-        contexts = listOf(),
       )
 
     replInput =
@@ -127,14 +126,14 @@ class KubePodClientTest {
       CheckConnectionInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
-        null,
+        StandardCheckConnectionInput(),
       )
 
     discoverInput =
       DiscoverCatalogInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
-        null,
+        StandardDiscoverCatalogInput(),
       )
 
     specInput =
@@ -143,7 +142,7 @@ class KubePodClientTest {
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
       )
 
-    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
+    every { labeler.getSharedLabels(any(), any(), any(), any(), any(), any()) } returns sharedLabels
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput

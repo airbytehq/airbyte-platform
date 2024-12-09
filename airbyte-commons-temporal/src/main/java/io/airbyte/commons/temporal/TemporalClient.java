@@ -481,7 +481,7 @@ public class TemporalClient {
         .withConnectionConfiguration(config.getConnectionConfiguration())
         .withResourceRequirements(config.getResourceRequirements())
         .withActorContext(context)
-        .withPodLabels(getPodLabelValues(workspaceId));
+        .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId));
 
     if (!featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(workspaceId))) {
       return execute(jobRunConfig,
@@ -520,7 +520,7 @@ public class TemporalClient {
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
         .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true)
-        .withPodLabels(getPodLabelValues(workspaceId));
+        .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId));
 
     if (!featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(workspaceId))) {
       return execute(jobRunConfig,
@@ -694,7 +694,7 @@ public class TemporalClient {
     return workflowNames.contains(workflowName);
   }
 
-  private @NotNull List<String> getPodLabelValues(final UUID workspaceId) {
+  private @NotNull List<String> getNetworkSecurityTokens(final UUID workspaceId) {
     final Map<ConfigScopeType, UUID> scopes = Map.of(ConfigScopeType.WORKSPACE, workspaceId);
     try {
       final List<ScopedConfiguration> podLabelConfigurations =

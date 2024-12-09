@@ -12,3 +12,6 @@ micronaut:
             enabled: true
           openid:
             issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
+airbyte:
+  workload-launcher:
+    network-policy-introspection: true

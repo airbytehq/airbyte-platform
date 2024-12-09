@@ -19,7 +19,10 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
-
+  caches:
+    network-policy-label-cache:
+      expire-after-write: 10m
+      maximum-size: 100_000
 airbyte:
   connector:
     source:
@@ -78,6 +81,7 @@ airbyte:
       high-priority-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    network-policy-introspection: false
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:

@@ -59,6 +59,7 @@ import io.temporal.common.RetryOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -441,7 +442,8 @@ class SyncWorkflowTest {
         syncInput.getPrefix(),
         refreshSchemaOutput,
         new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID),
-        null));
+        null,
+        Collections.emptyList()));
   }
 
   private static void verifyShouldRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity) {

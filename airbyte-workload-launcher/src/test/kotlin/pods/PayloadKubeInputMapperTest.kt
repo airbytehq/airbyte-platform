@@ -25,6 +25,7 @@ import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
+import io.airbyte.workers.pod.PodNetworkSecurityLabeler
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
@@ -512,7 +513,8 @@ class PayloadKubeInputMapperTest {
   fun `prefixes images with a custom image registry`() {
     val ffClient = TestClient()
     val envVarFactory: RuntimeEnvVarFactory = mockk()
-    val labeler = PodLabeler()
+    val podNetworkSecurityLabeler: PodNetworkSecurityLabeler = mockk()
+    val labeler = PodLabeler(podNetworkSecurityLabeler)
     val podNameGenerator = PodNameGenerator("test-ns")
     val orchestratorContainerInfo = KubeContainerInfo("orch-img", "Always")
     val reqs = ResourceRequirements()
@@ -530,6 +532,8 @@ class PayloadKubeInputMapperTest {
     every { envVarFactory.discoverConnectorEnvVars(any(), any(), any()) } returns emptyList()
     every { envVarFactory.orchestratorEnvVars(any(), any()) } returns emptyList()
     every { envVarFactory.replicationConnectorEnvVars(any(), any(), any()) } returns emptyList()
+
+    every { podNetworkSecurityLabeler.getLabels(any(), any()) } returns emptyMap()
 
     val testConfig =
       IntegrationLauncherConfig().apply {

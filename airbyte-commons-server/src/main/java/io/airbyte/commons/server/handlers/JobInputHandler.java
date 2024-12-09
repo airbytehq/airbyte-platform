@@ -236,7 +236,7 @@ public class JobInputHandler {
           .withConnectionContext(connectionContext)
           .withUseAsyncReplicate(useAsyncReplicate)
           .withUseAsyncActivities(useAsyncActivities)
-          .withPodLabels(getPodLabelValues(config.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -304,7 +304,7 @@ public class JobInputHandler {
           .withConnectionConfiguration(sourceConfiguration)
           .withResourceRequirements(sourceCheckResourceRequirements)
           .withActorContext(sourceContext)
-          .withPodLabels(getPodLabelValues(jobSyncConfig.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
 
       final ResourceRequirements destinationCheckResourceRequirements =
           getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION);
@@ -317,7 +317,7 @@ public class JobInputHandler {
           .withConnectionConfiguration(destinationConfiguration)
           .withResourceRequirements(destinationCheckResourceRequirements)
           .withActorContext(destinationContext)
-          .withPodLabels(getPodLabelValues(jobSyncConfig.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
       return new SyncJobCheckConnectionInputs(
           sourceLauncherConfig,
           destinationLauncherConfig,
@@ -463,7 +463,7 @@ public class JobInputHandler {
         destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
 
-  private @NotNull List<String> getPodLabelValues(final UUID workspaceId) {
+  private @NotNull List<String> getNetworkSecurityTokens(final UUID workspaceId) {
     final Map<ConfigScopeType, UUID> scopes = Map.of(ConfigScopeType.WORKSPACE, workspaceId);
     try {
       final List<ScopedConfiguration> podLabelConfigurations =
