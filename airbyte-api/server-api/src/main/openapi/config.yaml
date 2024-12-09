@@ -11144,6 +11144,7 @@ components:
           enum:
             - portal
             - payment_method
+            - setup
           default: portal
     CustomerPortalRead:
       type: object
