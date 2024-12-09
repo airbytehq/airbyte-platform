@@ -289,7 +289,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const streams = useBuilderWatch("formValues.streams");
   const streamNames =
-    mode === "ui" ? streams.map((stream) => stream.name) : resolvedManifest.streams.map((stream) => stream.name ?? "");
+    mode === "ui"
+      ? streams.map((stream) => stream.name)
+      : resolvedManifest.streams?.map((stream) => stream.name ?? "") ?? [];
 
   useEffect(() => {
     if (name !== currentProject.name) {
@@ -326,7 +328,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setValue("mode", "yaml");
       } else {
         const confirmDiscard = (errorMessage: string) => {
-          if (isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) && jsonManifest.streams.length > 0) {
+          if (
+            isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) &&
+            (!jsonManifest.streams || jsonManifest.streams.length > 0)
+          ) {
             openNoUiValueModal(errorMessage);
           } else {
             openConfirmationModal({
@@ -417,7 +422,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       };
 
       const view = getValues("view");
-      if (typeof view === "number" && manifest.streams.length <= view) {
+      if (typeof view === "number" && manifest.streams && manifest.streams.length <= view) {
         // switch back to global view if the selected stream does not exist anymore
         setValue("view", "global");
       }
@@ -672,6 +677,9 @@ export function useInitializedBuilderProject() {
  * With this, we will only require testing streams that the user changes.
  */
 function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedManifest: ConnectorManifest) {
+  if (!persistedManifest.streams || !resolvedManifest.streams) {
+    return;
+  }
   if (persistedManifest.streams.length !== resolvedManifest.streams.length) {
     // this should never happen, since resolving a manifest should never affect the number of streams
     throw new Error("Persisted manifest streams length doesn't match resolved streams length");
@@ -787,7 +795,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const testStream = resolvedManifest.streams[testStreamIndex];
+  const testStream = resolvedManifest.streams?.[testStreamIndex];
   const filteredManifest = {
     ...resolvedManifest,
     streams: [testStream],
@@ -837,6 +845,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     },
     testStream,
     (result) => {
+      if (!testStream) {
+        return;
+      }
+
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);
       }
@@ -855,6 +867,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
         // Set the schema_loader on the test stream to the inferred schema as well, so
         // that it is included in the stream when generating the test result stream hash.
+
         testStream.schema_loader = {
           type: "InlineSchemaLoader",
           schema: result.inferred_schema,

@@ -466,20 +466,20 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream,
+  testStream: DeclarativeStream | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
 
   return useQuery<StreamReadTransformedSlices>(
     connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
-    () =>
-      readConnectorBuilderProjectStream(params, requestOptions).then((streamRead) =>
-        transformSlices(streamRead, testStream)
-      ),
+    async () => {
+      const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
+      return transformSlices(streamRead, testStream!);
+    },
     {
       refetchOnWindowFocus: false,
-      enabled: false,
+      enabled: !!testStream,
       onSuccess,
     }
   );
