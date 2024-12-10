@@ -33,7 +33,7 @@
     "validate-lock": "node ./scripts/validate-lock-files.js",
     "preanalyze-lowcode": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "analyze-lowcode": "ts-node --skip-project ./scripts/analyze-low-code-manifests.ts",
-    "cypress:open": "CYPRESS_AIRBYTE_SERVER_BASE_URL=${CYPRESS_AIRBYTE_SERVER_BASE_URL:-http://localhost:8001} cypress open --config-file cypress/cypress.config.ts",
+    "cypress:open": "CYPRESS_AIRBYTE_SERVER_BASE_URL=${CYPRESS_AIRBYTE_SERVER_BASE_URL:-https://local.airbyte.dev} cypress open --config-file cypress/cypress.config.ts",
     "precypress:run": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "cypress:run": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-http://localhost:8000} CYPRESS_AIRBYTE_SERVER_BASE_URL=${CYPRESS_AIRBYTE_SERVER_BASE_URL:-http://localhost:8001} cypress run --config-file cypress/cypress.config.ts",
     "createdbsource": "docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=secret_password -e POSTGRES_DB=airbyte_ci_source --name airbyte_ci_pg_source postgres",

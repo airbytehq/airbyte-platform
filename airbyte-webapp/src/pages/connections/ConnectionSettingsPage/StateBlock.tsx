@@ -126,7 +126,6 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, disabled }
           value={stateDraft ?? existingStateString}
           height={styles.stateEditorHeight}
           language="json"
-          automaticLayout
           showSuggestions={false}
           onChange={(value) => {
             setStateDraft(value ?? "");

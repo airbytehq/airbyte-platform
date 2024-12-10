@@ -27,7 +27,6 @@ import {
 } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamResponse {
@@ -315,9 +314,9 @@ const AddStreamForm = ({
             />
           )}
           {showUrlPath && (
-            <BuilderFieldWithInputs
+            <BuilderField
               path="urlPath"
-              type="string"
+              type="jinja"
               label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
               tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
             />

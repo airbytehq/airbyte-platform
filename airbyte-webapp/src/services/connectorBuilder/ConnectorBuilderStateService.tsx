@@ -4,6 +4,7 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";
 import toPath from "lodash/toPath";
+import { editor, Position } from "monaco-editor";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
@@ -155,6 +156,13 @@ interface FormManagementStateContext {
   setScrollToField: (field: string | undefined) => void;
   stateKey: number;
   setStateKey: React.Dispatch<React.SetStateAction<number>>;
+  newUserInputContext: NewUserInputContext | undefined;
+  setNewUserInputContext: (context: NewUserInputContext | undefined) => void;
+}
+
+interface NewUserInputContext {
+  model: editor.ITextModel;
+  position: Position;
 }
 
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
@@ -1025,6 +1033,7 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   const [isTestReadSettingsOpen, setTestReadSettingsOpen] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [stateKey, setStateKey] = useState(0);
+  const [newUserInputContext, setNewUserInputContext] = useState<NewUserInputContext | undefined>(undefined);
 
   const handleScrollToField = useCallback(
     (ref: React.RefObject<HTMLDivElement>, path: string) => {
@@ -1046,8 +1055,10 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
       setScrollToField,
       stateKey,
       setStateKey,
+      newUserInputContext,
+      setNewUserInputContext,
     }),
-    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey, newUserInputContext]
   );
 
   return (

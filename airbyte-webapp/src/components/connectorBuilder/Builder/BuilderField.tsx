@@ -19,6 +19,7 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";
+import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
 import { useWatchWithPreview } from "../preview";
 
@@ -55,12 +56,12 @@ interface BaseFieldProps {
   preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
-  omitInterpolationContext?: boolean;
   disabled?: boolean;
 }
 
 export type BuilderFieldProps = BaseFieldProps &
   (
+    | { type: "jinja"; onChange?: (newValue: string) => void; onBlur?: (value: string) => void }
     | {
         type: "string" | "number" | "integer";
         onChange?: (newValue: string) => void;
@@ -141,7 +142,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   preview,
   manifestPath,
   manifestOptionPaths,
-  omitInterpolationContext,
   labelAction,
   ...props
 }) => {
@@ -158,7 +158,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     manifestPath,
     path,
     false,
-    omitInterpolationContext,
     manifestOptionPaths
   );
 
@@ -217,7 +216,22 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       optional={optional}
       ref={elementRef}
     >
-      {(props.type === "number" || props.type === "string" || props.type === "integer") && (
+      {props.type === "jinja" && (
+        <JinjaInput
+          key={path}
+          name={field.name}
+          value={fieldValue || ""}
+          onChange={setValue}
+          onBlur={(value) => {
+            field.onBlur();
+            props.onBlur?.(value);
+          }}
+          disabled={isDisabled}
+          manifestPath={manifestPath}
+          error={hasError}
+        />
+      )}
+      {(props.type === "string" || props.type === "number" || props.type === "integer") && (
         <Input
           {...field}
           onChange={(e) => {
@@ -267,7 +281,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <div className={classNames(props.className, styles.jsonEditor)}>
           <CodeEditor
             key={path}
-            automaticLayout
             value={fieldValue || ""}
             language="json"
             onChange={(val: string | undefined) => {

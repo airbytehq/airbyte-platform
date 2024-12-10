@@ -78,7 +78,6 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({
     <CodeEditor
       value={value}
       language="yaml"
-      automaticLayout
       onChange={onChange}
       onMount={(editor) => {
         yamlEditorRef.current = editor;

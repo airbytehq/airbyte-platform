@@ -1,16 +1,18 @@
 import { selectFromDropdown } from "@cy/commands/common";
+import { focusAndType } from "@cy/commands/connectorBuilder";
 
 const startFromScratchButton = "[data-testid='start-from-scratch']";
 const nameLabel = "[data-testid='connector-name-label']";
 const nameInput = "[data-testid='connector-name-input']";
-const urlBaseInput = "input[name='formValues.global.urlBase']";
+const urlBaseInput = "[name='formValues.global.urlBase']";
 const addStreamButton = "[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const togglePaginationInput = "[data-testid='toggle-formValues.streams.0.paginator']";
 const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.streams.0.parameterizedRequests']";
+const parameterizedRequestsCursorInput = "[name='formValues.streams.0.parameterizedRequests.0.cursor_field']";
 const streamNameInput = "input[name='streamName']";
-const streamUrlPathFromModal = "input[name='urlPath']";
-const streamUrlPathFromForm = "input[name='formValues.streams.0.urlPath']";
+const streamUrlPathFromModal = "[name='urlPath']";
+const streamUrlPathFromForm = "[name='formValues.streams.0.urlPath']";
 const recordSelectorToggle = "[data-testid='toggle-formValues.streams.0.recordSelector']";
 const recordSelectorFieldPathInput = "[data-testid='tag-input-formValues.streams.0.recordSelector.fieldPath'] input";
 const authType = "[data-testid='formValues.global.authenticator.type']";
@@ -38,7 +40,7 @@ export const editProjectBuilder = (name: string) => {
 };
 
 export const startFromScratch = () => {
-  cy.get(startFromScratchButton).click();
+  cy.get(startFromScratchButton, { timeout: 20000 }).click();
 };
 
 export const enterName = (name: string) => {
@@ -48,7 +50,7 @@ export const enterName = (name: string) => {
 };
 
 export const enterUrlBase = (urlBase: string) => {
-  cy.get(urlBaseInput).type(urlBase);
+  focusAndType(urlBaseInput, urlBase);
 };
 
 export const enterRecordSelector = (recordSelector: string) => {
@@ -67,7 +69,7 @@ export const selectActiveVersion = (name: string, version: number) => {
 };
 
 export const goToView = (view: string) => {
-  cy.get(`button[data-testid=navbutton-${view}]`).click();
+  cy.get(`button[data-testid=navbutton-${view}]`, { timeout: 20000 }).click();
 };
 
 export const openTestInputs = () => {
@@ -96,9 +98,9 @@ export const configureLimitOffsetPagination = (
 ) => {
   cy.get(limitInput).type(limit);
   selectFromDropdown(injectLimitInto, limitInto);
-  cy.get(injectLimitFieldName).type(limitFieldName);
+  focusAndType(injectLimitFieldName, limitFieldName);
   selectFromDropdown(injectOffsetInto, offsetInto);
-  cy.get(injectOffsetFieldName).type(offsetFieldName);
+  focusAndType(injectOffsetFieldName, offsetFieldName);
 };
 
 export const enableParameterizedRequests = () => {
@@ -110,7 +112,7 @@ export const configureParameters = (values: string, cursor_field: string) => {
   cy.get('[data-testid="tag-input-formValues.streams.0.parameterizedRequests.0.values.value"] input[type="text"]').type(
     values
   );
-  cy.get("[name='formValues.streams.0.parameterizedRequests.0.cursor_field']").type(cursor_field);
+  focusAndType(parameterizedRequestsCursorInput, cursor_field);
 };
 
 export const getSlicesFromDropdown = () => {
@@ -139,7 +141,7 @@ export const enterStreamName = (streamName: string) => {
 };
 
 export const enterUrlPathFromForm = (urlPath: string) => {
-  cy.get(streamUrlPathFromModal).type(urlPath);
+  focusAndType(streamUrlPathFromModal, urlPath);
 };
 
 export const getUrlPathInput = () => {
@@ -147,9 +149,8 @@ export const getUrlPathInput = () => {
 };
 
 export const enterUrlPath = (urlPath: string) => {
-  cy.get('[name="formValues.streams.0.urlPath"]').focus();
-  cy.get('[name="formValues.streams.0.urlPath"]').clear();
-  cy.get('[name="formValues.streams.0.urlPath"]').type(urlPath);
+  focusAndType(streamUrlPathFromForm, "{selectAll}{backspace}");
+  cy.get(streamUrlPathFromForm).type(urlPath);
 };
 
 export const submitForm = () => {

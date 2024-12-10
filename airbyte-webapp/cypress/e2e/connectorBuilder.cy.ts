@@ -78,10 +78,7 @@ describe("Connector builder", { testIsolation: false, tags: "@builder" }, () => 
 
   it("Read - With pagination", () => {
     configurePagination();
-    enterUrlPath("items/");
-
     testStream();
-
     assertMultiPageReadItems();
   });
 
