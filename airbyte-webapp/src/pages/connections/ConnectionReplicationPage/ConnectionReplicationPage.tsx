@@ -41,15 +41,12 @@ import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 const SchemaChangeMessage: React.FC = () => {
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(isDirty);
-
   const { refreshSchema } = useConnectionFormService();
   const { connection, schemaHasBeenRefreshed, schemaRefreshing, connectionUpdating } = useConnectionEditService();
   const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-
   if (schemaHasBeenRefreshed) {
     return null;
   }
-
   if (hasNonBreakingSchemaChange && !schemaRefreshing) {
     return (
       <Message
@@ -62,7 +59,6 @@ const SchemaChangeMessage: React.FC = () => {
       />
     );
   }
-
   if (hasBreakingSchemaChange && !schemaRefreshing) {
     return (
       <Message
@@ -76,7 +72,6 @@ const SchemaChangeMessage: React.FC = () => {
   }
   return null;
 };
-
 const relevantConnectionKeys = [
   "syncCatalog" as const,
   "namespaceDefinition" as const,
@@ -212,7 +207,6 @@ export const ConnectionReplicationPage: React.FC = () => {
   useUnmount(() => {
     discardRefreshedSchema();
   });
-
   const { state } = useLocation();
   useEffect(() => {
     if (typeof state === "object" && state && "triggerRefreshSchema" in state && state.triggerRefreshSchema) {

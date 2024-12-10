@@ -5,25 +5,85 @@
   min-width: variables.$width-extra-wide-menu;
   border-radius: variables.$border-radius-md;
 
-  &:not(:focus-within) {
-    background-color: colors.$blue;
-    color: colors.$white;
+  &--secondary {
+    border: variables.$border-thin solid colors.$grey-100;
+    width: 150px;
 
     input {
-      cursor: pointer;
+      color: colors.$grey-400;
+
+      &:hover {
+        color: colors.$grey-400;
+      }
+
+      &::placeholder {
+        color: colors.$grey-300;
+      }
     }
 
-    button svg {
-      color: colors.$white;
+    &:not(:focus-within) {
+      background-color: colors.$white;
+      color: colors.$grey-400;
+
+      input {
+        cursor: pointer;
+      }
+
+      button svg {
+        color: colors.$white;
+      }
+    }
+
+    &:not(.disabled):hover {
+      border-color: colors.$grey-400;
+      color: colors.$grey-600;
+    }
+
+    input:not(:focus-within) {
+      font-weight: 600;
+      color: colors.$grey-400;
+
+      &::placeholder {
+        color: colors.$grey-400;
+        text-align: center;
+      }
+    }
+
+    &.disabled {
+      input:not(:focus-within) {
+        font-weight: 600;
+        color: colors.$grey-100;
+
+        &::placeholder {
+          color: colors.$grey-100;
+          text-align: center;
+        }
+      }
     }
   }
 
-  input:not(:focus) {
-    color: colors.$white;
-
-    &::placeholder {
+  &:not(&--secondary) {
+    &:not(:focus-within) {
+      background-color: colors.$blue;
       color: colors.$white;
-      text-align: center;
+
+      input {
+        cursor: pointer;
+      }
     }
+
+    input:not(:focus-within) {
+      color: colors.$white;
+
+      &::placeholder {
+        color: colors.$white;
+        text-align: center;
+      }
+    }
+  }
+
+  .disabled {
+    background-color: colors.$grey-300;
+    color: colors.$white;
   }
 }

@@ -62,7 +62,7 @@ export const ConnectionPageHeader = () => {
         ? [
             {
               id: ConnectionRoutePaths.Mappings,
-              name: <FormattedMessage id="connection.mappings.title" />,
+              name: <FormattedMessage id="connections.mappings.title" />,
               to: `${basePath}/${ConnectionRoutePaths.Mappings}`,
               disabled: schemaRefreshing,
             },

@@ -21,9 +21,10 @@ import { Icon } from "../Icon";
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
   isDisabled?: boolean;
+  placeholder?: string;
 }
 
-const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
+const DefaultControlButton = <T,>({ placeholder, selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -41,7 +42,7 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
         </Text>
       ) : (
         <Text as="span" size="lg" color="grey" className={styles.defaultControlButton}>
-          {formatMessage({ id: "form.selectValue" })}
+          {placeholder ?? formatMessage({ id: "form.selectValue" })}
         </Text>
       )}
 
@@ -81,6 +82,7 @@ export interface ListBoxProps<T> {
    */
   controlButtonAs?: ComponentPropsWithoutRef<typeof OriginalListboxButton>["as"];
   hasError?: boolean;
+  placeholder?: string;
   /**
    * Floating menu placement
    */

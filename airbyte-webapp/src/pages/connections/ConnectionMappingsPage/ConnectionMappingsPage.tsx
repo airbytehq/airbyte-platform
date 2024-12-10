@@ -3,26 +3,33 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
 
+import { ConnectionMappingsList } from "./ConnectionMappingsList";
+import { MappingContextProvider, useMappingContext } from "./MappingContext";
 import { MappingsEmptyState } from "./MappingsEmptyState";
 import { MappingsUpsellEmptyState } from "./MappingsUpsellEmptyState";
 
 export const ConnectionMappingsPage = () => {
-  const existingMappings = [];
-
   return (
     <ScrollParent>
       <PageContainer centered>
-        {existingMappings.length === 0 && (
-          <>
-            <IfFeatureDisabled feature={FeatureItem.MappingsUI}>
-              <MappingsUpsellEmptyState />
-            </IfFeatureDisabled>
-            <IfFeatureEnabled feature={FeatureItem.MappingsUI}>
-              <MappingsEmptyState />
-            </IfFeatureEnabled>
-          </>
-        )}
+        <MappingContextProvider>
+          <ConnectionMappingsPageContent />
+        </MappingContextProvider>
       </PageContainer>
     </ScrollParent>
+  );
+};
+
+const ConnectionMappingsPageContent = () => {
+  const { streamsWithMappings } = useMappingContext();
+  return (
+    <>
+      <IfFeatureEnabled feature={FeatureItem.MappingsUI}>
+        {Object.entries(streamsWithMappings).length > 0 ? <ConnectionMappingsList /> : <MappingsEmptyState />}
+      </IfFeatureEnabled>
+      <IfFeatureDisabled feature={FeatureItem.MappingsUI}>
+        <MappingsUpsellEmptyState />
+      </IfFeatureDisabled>
+    </>
   );
 };

@@ -1,0 +1,63 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/z-indices";
+
+.comboboxInput {
+  padding: variables.$spacing-md;
+  border-radius: variables.$border-radius-xs;
+  font-size: variables.$font-size-md;
+  line-height: 1.2;
+  cursor: pointer;
+
+  &:focus {
+    background-color: colors.$white;
+
+    &::placeholder {
+      color: colors.$grey-300;
+      text-align: left;
+      font-weight: 400;
+    }
+  }
+}
+
+.caretButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-300;
+  padding-inline: 8px;
+}
+
+.comboboxOptions {
+  z-index: z-indices.$listBox;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: variables.$box-shadow-raised;
+  padding: 0;
+  margin-top: variables.$spacing-sm;
+  width: variables.$width-extra-wide-menu;
+  max-height: variables.$height-long-listbox-options-list;
+  list-style-type: none;
+  overflow-y: auto;
+}
+
+.comboboxOption {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  cursor: pointer;
+  word-break: break-all;
+
+  &:hover,
+  &:focus-within {
+    background-color: colors.$grey-50;
+    height: 100%;
+    width: 100%;
+  }
+}
+
+.selected {
+  background-color: colors.$blue-50;
+}
