@@ -128,7 +128,12 @@ Renders the jobs.kube.images.curl environment variable
 Renders the global.jobs.kube.main_container_image_pull_secret value
 */}}
 {{- define "airbyte.jobs.kube.main_container_image_pull_secret" }}
-    {{- .Values.global.jobs.kube.main_container_image_pull_secret }}
+  {{- $imagePullSecrets := (list) }}
+  {{- range $.Values.global.imagePullSecrets -}}{{- $imagePullSecrets = append $imagePullSecrets .name -}}{{- end }}
+  {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
+  {{- $imagePullSecrets = append $imagePullSecrets $.Values.global.jobs.kube.main_container_image_pull_secret }}
+  {{- end }}
+  {{ join "," $imagePullSecrets }}
 {{- end }}
 
 {{/*
