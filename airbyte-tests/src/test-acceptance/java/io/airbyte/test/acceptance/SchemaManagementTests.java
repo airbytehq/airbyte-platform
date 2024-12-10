@@ -10,7 +10,6 @@ import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
@@ -159,8 +158,8 @@ class SchemaManagementTests {
 
   /**
    * Verify that if we call web_backend/connections/get with some connection id and
-   * refreshSchema=true, then: - We'll detect schema changes for the given connection. - We'll detect
-   * schema changes for any connections sharing the same source.
+   * refreshSchema=true, then: - We'll detect schema changes for the given connection. - We do not
+   * evaluate schema changes for other connections.
    */
   @Test
   void detectBreakingSchemaChangeViaWebBackendGetConnection() throws Exception {
@@ -174,9 +173,8 @@ class SchemaManagementTests {
     assertEquals(ConnectionStatus.INACTIVE, currentConnection.getStatus());
 
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
-    assertTrue(currentConnectionWithSameSource.getBreakingChange());
-    assertEquals(createdConnectionWithSameSource.getSyncCatalog(), currentConnectionWithSameSource.getSyncCatalog());
-    assertEquals(ConnectionStatus.INACTIVE, currentConnectionWithSameSource.getStatus());
+    assertFalse(currentConnectionWithSameSource.getBreakingChange());
+    assertEquals(ConnectionStatus.ACTIVE, currentConnectionWithSameSource.getStatus());
   }
 
   @Test

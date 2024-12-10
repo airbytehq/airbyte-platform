@@ -153,6 +153,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -974,6 +975,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void whenDiscoverPostprocessInTemporalEnabledDiffAndDisablingIsNotPerformed(final boolean enabled)
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
@@ -1049,6 +1051,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1110,6 +1113,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlag()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1174,6 +1178,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn()
       throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException,
       io.airbyte.config.persistence.ConfigNotFoundException {
@@ -1240,6 +1245,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlagNoDiff()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1301,6 +1307,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaForSourceMultipleConnectionsFeatureFlagOn()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1390,6 +1397,7 @@ class SchedulerHandlerTest {
   }
 
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionUpdateNonSuccessResponse()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());

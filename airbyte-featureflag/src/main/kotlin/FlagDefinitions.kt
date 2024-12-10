@@ -158,7 +158,7 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
-object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
+object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = true)
 
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
@@ -172,9 +172,9 @@ object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable
 
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
-object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
+object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = true)
 
-object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = false)
+object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = true)
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 

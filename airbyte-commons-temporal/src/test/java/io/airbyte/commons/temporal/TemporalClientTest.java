@@ -8,6 +8,7 @@ import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.NON_RUNNING_JOB_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,11 +27,13 @@ import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException;
-import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
+import io.airbyte.commons.temporal.scheduling.CheckCommandInput;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation;
-import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
-import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput;
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow;
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput;
+import io.airbyte.commons.temporal.scheduling.SpecCommandInput;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ConnectorJobOutput;
@@ -39,8 +42,6 @@ import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.RefreshStream.RefreshType;
-import io.airbyte.config.StandardCheckConnectionInput;
-import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
@@ -89,6 +90,7 @@ public class TemporalClientTest {
 
   private static final String CHECK_TASK_QUEUE = "CHECK_CONNECTION";
   private static final String DISCOVER_TASK_QUEUE = "DISCOVER_SCHEMA";
+  private static final String UI_COMMANDS_TASK_QUEUE = "ui-commands-queue";
   private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID);
@@ -236,52 +238,62 @@ public class TemporalClientTest {
 
     @Test
     void testSubmitGetSpec() {
-      final SpecWorkflow specWorkflow = mock(SpecWorkflow.class);
-      when(workflowClient.newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC, JOB_UUID)))
+      final ConnectorCommandWorkflow specWorkflow = mock(ConnectorCommandWorkflow.class);
+      when(workflowClient.newWorkflowStub(eq(ConnectorCommandWorkflow.class), any(WorkflowOptions.class)))
           .thenReturn(specWorkflow);
       final JobGetSpecConfig getSpecConfig = new JobGetSpecConfig().withDockerImage(IMAGE_NAME1);
 
       temporalClient.submitGetSpec(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, getSpecConfig);
-      specWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG);
-      verify(workflowClient).newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC, JOB_UUID));
+
+      final ArgumentCaptor<WorkflowOptions> workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions.class);
+      verify(workflowClient).newWorkflowStub(eq(ConnectorCommandWorkflow.class), workflowOptionsCaptor.capture());
+      assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue().getTaskQueue());
+
+      final ArgumentCaptor<ConnectorCommandInput> connectorCommandInputCaptor = ArgumentCaptor.forClass(ConnectorCommandInput.class);
+      verify(specWorkflow).run(connectorCommandInputCaptor.capture());
+      assertInstanceOf(SpecCommandInput.class, connectorCommandInputCaptor.getValue());
     }
 
     @Test
     void testSubmitCheckConnection() {
-      final CheckConnectionWorkflow checkConnectionWorkflow = mock(CheckConnectionWorkflow.class);
+      final ConnectorCommandWorkflow checkConnectionWorkflow = mock(ConnectorCommandWorkflow.class);
       when(
-          workflowClient.newWorkflowStub(CheckConnectionWorkflow.class,
-              TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION, JOB_UUID)))
-                  .thenReturn(checkConnectionWorkflow);
+          workflowClient.newWorkflowStub(eq(ConnectorCommandWorkflow.class), any(WorkflowOptions.class)))
+              .thenReturn(checkConnectionWorkflow);
       final JobCheckConnectionConfig checkConnectionConfig = new JobCheckConnectionConfig()
           .withDockerImage(IMAGE_NAME1)
           .withConnectionConfiguration(Jsons.emptyObject());
-      final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
-          .withConnectionConfiguration(checkConnectionConfig.getConnectionConfiguration());
 
       temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig, new ActorContext());
-      checkConnectionWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
-      verify(workflowClient).newWorkflowStub(CheckConnectionWorkflow.class,
-          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION, JOB_UUID));
+
+      final ArgumentCaptor<WorkflowOptions> workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions.class);
+      verify(workflowClient).newWorkflowStub(eq(ConnectorCommandWorkflow.class), workflowOptionsCaptor.capture());
+      assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue().getTaskQueue());
+
+      final ArgumentCaptor<ConnectorCommandInput> connectorCommandInputCaptor = ArgumentCaptor.forClass(ConnectorCommandInput.class);
+      verify(checkConnectionWorkflow).run(connectorCommandInputCaptor.capture());
+      assertInstanceOf(CheckCommandInput.class, connectorCommandInputCaptor.getValue());
     }
 
     @Test
     void testSubmitDiscoverSchema() {
-      final DiscoverCatalogWorkflow discoverCatalogWorkflow = mock(DiscoverCatalogWorkflow.class);
-      when(workflowClient.newWorkflowStub(DiscoverCatalogWorkflow.class,
-          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA, JOB_UUID)))
-              .thenReturn(discoverCatalogWorkflow);
+      final ConnectorCommandWorkflow discoverCatalogWorkflow = mock(ConnectorCommandWorkflow.class);
+      when(workflowClient.newWorkflowStub(eq(ConnectorCommandWorkflow.class), any(WorkflowOptions.class)))
+          .thenReturn(discoverCatalogWorkflow);
       final JobDiscoverCatalogConfig checkConnectionConfig = new JobDiscoverCatalogConfig()
           .withDockerImage(IMAGE_NAME1)
           .withConnectionConfiguration(Jsons.emptyObject());
-      final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput()
-          .withConnectionConfiguration(checkConnectionConfig.getConnectionConfiguration());
 
       temporalClient.submitDiscoverSchema(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, DISCOVER_TASK_QUEUE, checkConnectionConfig, new ActorContext(),
           WorkloadPriority.DEFAULT);
-      discoverCatalogWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
-      verify(workflowClient).newWorkflowStub(DiscoverCatalogWorkflow.class,
-          TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA, JOB_UUID));
+
+      final ArgumentCaptor<WorkflowOptions> workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions.class);
+      verify(workflowClient).newWorkflowStub(eq(ConnectorCommandWorkflow.class), workflowOptionsCaptor.capture());
+      assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue().getTaskQueue());
+
+      final ArgumentCaptor<ConnectorCommandInput> connectorCommandInputCaptor = ArgumentCaptor.forClass(ConnectorCommandInput.class);
+      verify(discoverCatalogWorkflow).run(connectorCommandInputCaptor.capture());
+      assertInstanceOf(DiscoverCommandInput.class, connectorCommandInputCaptor.getValue());
     }
 
   }

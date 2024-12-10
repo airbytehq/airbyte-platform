@@ -15,9 +15,11 @@ import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority.Companion.decode
 import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 @Singleton
@@ -25,6 +27,7 @@ class DiscoverCommand(
   @Named("workspaceRoot") private val workspaceRoot: Path,
   airbyteApiClient: AirbyteApiClient,
   workloadClient: WorkloadClient,
+  @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
 ) : WorkloadCommandBase<DiscoverCatalogInput>(
@@ -32,10 +35,37 @@ class DiscoverCommand(
     workloadClient = workloadClient,
   ) {
   companion object {
-    val DiscoverCatalogSnapDuration = 15.minutes.inWholeMilliseconds
+    val NOOP_DISCOVER_PLACEHOLDER_ID = "auto-refresh-disabled"
   }
 
+  private val discoverAutoRefreshWindow: Duration =
+    if (discoverAutoRefreshWindowMinutes > 0) discoverAutoRefreshWindowMinutes.minutes else Duration.INFINITE
+
   override val name: String = "discover"
+
+  override fun start(
+    input: DiscoverCatalogInput,
+    signalPayload: String?,
+  ): String {
+    if (isAutoRefresh(input) && discoverAutoRefreshWindow == Duration.INFINITE) {
+      return NOOP_DISCOVER_PLACEHOLDER_ID
+    }
+    return super.start(input, signalPayload)
+  }
+
+  override fun isTerminal(id: String): Boolean {
+    if (isNoopDiscover(id)) {
+      return true
+    }
+    return super.isTerminal(id)
+  }
+
+  override fun cancel(id: String) {
+    if (isNoopDiscover(id)) {
+      return
+    }
+    super.cancel(id)
+  }
 
   override fun buildWorkloadCreateRequest(
     input: DiscoverCatalogInput,
@@ -55,7 +85,7 @@ class DiscoverCommand(
         workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(
           input.discoverCatalogInput.actorContext.actorId,
           System.currentTimeMillis(),
-          DiscoverCatalogSnapDuration,
+          discoverAutoRefreshWindow.inWholeMilliseconds,
         )
       }
 
@@ -82,11 +112,21 @@ class DiscoverCommand(
     )
   }
 
-  override fun getOutput(id: String): ConnectorJobOutput =
-    workloadClient.getConnectorJobOutput(id) { failureReason ->
+  override fun getOutput(id: String): ConnectorJobOutput {
+    if (isNoopDiscover(id)) {
+      return ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+        .withDiscoverCatalogId(null)
+    }
+    return workloadClient.getConnectorJobOutput(id) { failureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
         .withDiscoverCatalogId(null)
         .withFailureReason(failureReason)
     }
+  }
+
+  private fun isAutoRefresh(input: DiscoverCatalogInput): Boolean = !input.discoverCatalogInput.manual
+
+  private fun isNoopDiscover(id: String): Boolean = NOOP_DISCOVER_PLACEHOLDER_ID == id
 }

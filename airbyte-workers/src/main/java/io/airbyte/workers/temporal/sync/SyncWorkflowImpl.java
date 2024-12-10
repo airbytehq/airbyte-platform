@@ -49,7 +49,6 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
-import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.failure.ActivityFailure;
@@ -114,8 +113,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
     final var sendRunTimeMetrics = shouldReportRuntime();
-    final var shouldRunAsChildWorkflow = shouldRunAsAChildWorkflow(connectionId, syncInput.getWorkspaceId(),
-        syncInput.getConnectionContext().getSourceDefinitionId(), syncInput.getIsReset());
+    final var shouldRunAsChildWorkflow = true;
 
     ApmTraceUtils
         .addTagsToTrace(Map.of(
@@ -130,13 +128,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final Optional<UUID> sourceId = getSourceId(syncInput);
     RefreshSchemaActivityOutput refreshSchemaOutput = null;
     final boolean shouldRefreshSchema = sourceId.isPresent() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
-    if (sourceId.isPresent() && (shouldRefreshSchema || shouldRunAsChildWorkflow)) {
+    if (shouldRunAsChildWorkflow || (sourceId.isPresent() && shouldRefreshSchema)) {
       try {
         if (shouldRunAsChildWorkflow) {
           final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
           final String discoverTaskQueue = TemporalTaskQueueUtils.getTaskQueue(TemporalJobType.DISCOVER_SCHEMA);
           refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig, discoverTaskQueue);
-        } else if (shouldRefreshSchema) {
+        } else {
           refreshSchemaOutput =
               refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
         }
@@ -166,7 +164,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       final String workloadId = asyncReplicationActivity.startReplication(replicationActivityInput);
 
       try {
-        shouldBlock = true;
+        shouldBlock = !workloadStatusCheckActivity.isTerminal(workloadId);
         while (shouldBlock) {
           Workflow.await(Duration.ofMinutes(15), () -> !shouldBlock);
           shouldBlock = !workloadStatusCheckActivity.isTerminal(workloadId);
@@ -268,26 +266,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       LOGGER.error("error", e);
       throw new RuntimeException(e);
     }
-  }
-
-  private boolean shouldRunAsAChildWorkflow(final UUID connectionId, final UUID workspaceId, final UUID sourceDefinitionId, final boolean isReset) {
-    final int shouldRunAsChildWorkflowVersion = Workflow.getVersion("SHOULD_RUN_AS_CHILD", Workflow.DEFAULT_VERSION, 2);
-    final int versionWithoutResetCheck = 1;
-    if (shouldRunAsChildWorkflowVersion == Workflow.DEFAULT_VERSION) {
-      return false;
-    } else if (shouldRunAsChildWorkflowVersion == versionWithoutResetCheck) {
-      return syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
-          Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
-          sourceDefinitionId,
-          workspaceId));
-    } else {
-      return !isReset
-          && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
-              Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
-              sourceDefinitionId,
-              workspaceId));
-    }
-
   }
 
   private boolean shouldReportRuntime() {
