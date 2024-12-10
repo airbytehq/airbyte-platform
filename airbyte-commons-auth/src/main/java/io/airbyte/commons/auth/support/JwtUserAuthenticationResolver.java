@@ -13,15 +13,18 @@ import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Resolves JWT into UserRead object.
  */
 @Singleton
-@Slf4j
 public class JwtUserAuthenticationResolver implements UserAuthenticationResolver {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final Optional<SecurityService> securityService;
 

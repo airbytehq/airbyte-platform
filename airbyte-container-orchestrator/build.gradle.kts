@@ -27,8 +27,6 @@ plugins {
 val airbyteProtocol: Configuration by configurations.creating
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   ksp(libs.bundles.micronaut.annotation.processor)

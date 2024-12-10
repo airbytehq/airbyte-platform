@@ -23,12 +23,10 @@ import io.airbyte.workers.models.SpecInput;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * SpecActivityImpl.
  */
-@Slf4j
 @Singleton
 @Requires(env = EnvConstants.CONTROL_PLANE)
 public class SpecActivityImpl implements SpecActivity {

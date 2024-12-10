@@ -24,7 +24,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.Result;
@@ -34,7 +33,6 @@ import org.jooq.Result;
  * <p>
  * Handle persisting Permission to the Config Database and perform all SQL queries.
  */
-@Slf4j
 public class OrganizationPersistence {
 
   private final ExceptionWrappingDatabase database;

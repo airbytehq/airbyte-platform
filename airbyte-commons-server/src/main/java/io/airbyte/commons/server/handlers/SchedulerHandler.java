@@ -105,12 +105,12 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,10 +119,10 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("ParameterName")
 @Singleton
-@Slf4j
 public class SchedulerHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
   private static final Set<ErrorCode> VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET =
@@ -499,10 +499,10 @@ public class SchedulerHandler {
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
-    LOGGER.info("Applying schema changes for source '{}' in workspace '{}'",
+    log.info("Applying schema changes for source '{}' in workspace '{}'",
         sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId());
     if (sourceAutoPropagateChange.getSourceId() == null) {
-      LOGGER.warn("Missing required field sourceId for applying schema change.");
+      log.warn("Missing required field sourceId for applying schema change.");
       return;
     }
 
@@ -511,7 +511,7 @@ public class SchedulerHandler {
         || sourceAutoPropagateChange.getCatalog() == null) {
       MetricClientFactory.getMetricClient().count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT, 1,
           new MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.getSourceId().toString()));
-      LOGGER.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
+      log.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
           sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId(), sourceAutoPropagateChange.getCatalogId(),
           sourceAutoPropagateChange.getCatalog());
       return;

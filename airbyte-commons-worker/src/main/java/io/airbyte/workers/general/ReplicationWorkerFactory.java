@@ -70,13 +70,15 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for the BufferedReplicationWorker.
@@ -86,8 +88,9 @@ import lombok.extern.slf4j.Slf4j;
  * dependencies of the DefaultReplicationWorker were stateless.
  */
 @Singleton
-@Slf4j
 public class ReplicationWorkerFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;

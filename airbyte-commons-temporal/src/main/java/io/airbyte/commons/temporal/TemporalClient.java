@@ -63,6 +63,7 @@ import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
@@ -79,18 +80,20 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Airbyte's interface over temporal.
  */
-@Slf4j
 @Singleton
 @SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.CompareObjectsWithEquals"})
 public class TemporalClient {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   /**
    * This is used to sleep between 2 temporal queries. The query is needed to ensure that the cancel

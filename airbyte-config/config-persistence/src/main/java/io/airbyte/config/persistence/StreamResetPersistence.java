@@ -46,7 +46,7 @@ public class StreamResetPersistence {
         .where(STREAM_RESET.CONNECTION_ID.eq(connectionId))
         .fetch(getStreamResetRecordMapper())
         .stream()
-        .flatMap(row -> Stream.of(new StreamDescriptor().withName(row.streamName()).withNamespace(row.streamNamespace())))
+        .flatMap(row -> Stream.of(new StreamDescriptor().withName(row.getStreamName()).withNamespace(row.getStreamNamespace())))
         .toList();
   }
 

@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Getter;
 
 public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
@@ -52,21 +51,13 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
   private final String DOCKER_IMAGE_TAG = "0.0.1";
-  @Getter
   private Organization organization;
-  @Getter
   private StandardWorkspace workspace;
-  @Getter
   private StandardSourceDefinition sourceDefinition;
-  @Getter
   private StandardDestinationDefinition destinationDefinition;
-  @Getter
   private ActorDefinitionVersion sourceDefinitionVersion;
-  @Getter
   private ActorDefinitionVersion destinationDefinitionVersion;
-  @Getter
   private SourceConnection source;
-  @Getter
   private DestinationConnection destination;
 
   public JooqTestDbSetupHelper() {
@@ -261,6 +252,38 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withInternalSupportLevel(200L)
         .withSpec(new ConnectorSpecification()
             .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value1"))).withProtocolVersion("1.0.0"));
+  }
+
+  public SourceConnection getSource() {
+    return source;
+  }
+
+  public DestinationConnection getDestination() {
+    return destination;
+  }
+
+  public Organization getOrganization() {
+    return organization;
+  }
+
+  public StandardWorkspace getWorkspace() {
+    return workspace;
+  }
+
+  public StandardSourceDefinition getSourceDefinition() {
+    return sourceDefinition;
+  }
+
+  public StandardDestinationDefinition getDestinationDefinition() {
+    return destinationDefinition;
+  }
+
+  public ActorDefinitionVersion getSourceDefinitionVersion() {
+    return sourceDefinitionVersion;
+  }
+
+  public ActorDefinitionVersion getDestinationDefinitionVersion() {
+    return destinationDefinitionVersion;
   }
 
 }

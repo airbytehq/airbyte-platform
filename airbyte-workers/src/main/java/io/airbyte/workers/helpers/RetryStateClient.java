@@ -28,20 +28,22 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Business and request logic for retrieving and persisting retry state data.
  */
-@Slf4j
 @Singleton
 public class RetryStateClient {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   final AirbyteApiClient airbyteApiClient;
   final FeatureFlagClient featureFlagClient;
@@ -83,23 +85,28 @@ public class RetryStateClient {
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
-  @SneakyThrows
   public RetryManager hydrateRetryState(final Long jobId, final UUID workspaceId) throws RetryableException {
-    final var organizationId = fetchOrganizationId(workspaceId);
+    try {
+      final var organizationId = fetchOrganizationId(workspaceId);
 
-    final var manager = initializeBuilder(workspaceId, organizationId);
+      final var manager = initializeBuilder(workspaceId, organizationId);
 
-    final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
+      final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
-    // if there is retry state we hydrate
-    // otherwise we will build with default 0 values
-    state.ifPresent(s -> manager
-        .totalCompleteFailures(s.getTotalCompleteFailures())
-        .totalPartialFailures(s.getTotalPartialFailures())
-        .successiveCompleteFailures(s.getSuccessiveCompleteFailures())
-        .successivePartialFailures(s.getSuccessivePartialFailures()));
+      // if there is retry state we hydrate
+      // otherwise we will build with default 0 values
+      state.ifPresent(s -> manager
+          .totalCompleteFailures(s.getTotalCompleteFailures())
+          .totalPartialFailures(s.getTotalPartialFailures())
+          .successiveCompleteFailures(s.getSuccessiveCompleteFailures())
+          .successivePartialFailures(s.getSuccessivePartialFailures()));
 
-    return manager.build();
+      return manager.build();
+    } catch (final RetryableException e) {
+      throw e;
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

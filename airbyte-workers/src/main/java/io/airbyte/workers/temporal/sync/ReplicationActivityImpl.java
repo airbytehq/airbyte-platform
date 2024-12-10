@@ -161,7 +161,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     final TracingContext tracingContext = buildTracingContext(replicationActivityInput);
     ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
 
-    if (replicationActivityInput.getIsReset()) {
+    if (replicationActivityInput.isReset()) {
       metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
     }
     final ActivityExecutionContext context = Activity.getExecutionContext();

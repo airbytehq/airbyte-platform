@@ -77,13 +77,11 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * JobHistoryHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
 @Singleton
-@Slf4j
 @SuppressWarnings("PMD.PreserveStackTrace")
 public class JobHistoryHandler {
 

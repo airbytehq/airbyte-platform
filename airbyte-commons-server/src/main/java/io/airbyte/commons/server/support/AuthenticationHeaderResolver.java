@@ -33,6 +33,7 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,14 +41,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Resolves organization or workspace IDs from HTTP headers.
  */
-@Slf4j
 @Singleton
 public class AuthenticationHeaderResolver {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final WorkspaceHelper workspaceHelper;
   private final PermissionHandler permissionHandler;

@@ -7,17 +7,11 @@ package io.airbyte.commons.temporal.scheduling.state;
 import io.airbyte.config.FailureReason;
 import java.util.HashSet;
 import java.util.Set;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * Internal state of workflow.
  */
 // todo (cgardens) - how is this different from WorkflowState.
-@Getter
-@Setter
-@NoArgsConstructor
 public class WorkflowInternalState {
 
   private Long jobId = null;
@@ -30,5 +24,39 @@ public class WorkflowInternalState {
   // StandardSyncOutput standardSyncOutput = null;
   private Set<FailureReason> failures = new HashSet<>();
   private Boolean partialSuccess = null;
+
+  public WorkflowInternalState() {}
+
+  public Long getJobId() {
+    return jobId;
+  }
+
+  public void setJobId(Long jobId) {
+    this.jobId = jobId;
+  }
+
+  public Integer getAttemptNumber() {
+    return attemptNumber;
+  }
+
+  public void setAttemptNumber(Integer attemptNumber) {
+    this.attemptNumber = attemptNumber;
+  }
+
+  public Set<FailureReason> getFailures() {
+    return failures;
+  }
+
+  public void setFailures(Set<FailureReason> failures) {
+    this.failures = failures;
+  }
+
+  public Boolean getPartialSuccess() {
+    return partialSuccess;
+  }
+
+  public void setPartialSuccess(Boolean partialSuccess) {
+    this.partialSuccess = partialSuccess;
+  }
 
 }

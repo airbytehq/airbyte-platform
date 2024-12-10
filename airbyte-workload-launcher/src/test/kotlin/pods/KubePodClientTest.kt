@@ -222,8 +222,21 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
-        any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -238,8 +251,21 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
-        any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -299,8 +325,18 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
-        any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -315,8 +351,18 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
-        any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -467,10 +513,14 @@ class KubePodClientTest {
         "orchestrator-image",
         "source-image",
         "destination-image",
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
         emptyList(),
         emptyList(),
         emptyList(),
@@ -483,8 +533,10 @@ class KubePodClientTest {
         mapOf("test-selector" to "val3"),
         KubePodInfo("test-namespace", "test-name", null),
         mapOf("test-annotation" to "val5"),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
         listOf(EnvVar("extra-env", "val6", null)),
         workspaceId,
       )

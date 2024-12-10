@@ -27,21 +27,23 @@ import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import javax.sql.DataSource;
-import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DataSourceConnectionProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Micronaut bean factory for database-related singletons.
  */
 @Factory
-@Slf4j
-
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength"})
 public class DatabaseBeanFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";
   private static final Boolean BASELINE_ON_MIGRATION = true;

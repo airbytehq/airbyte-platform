@@ -177,7 +177,7 @@ public class ReplicationInputHydrator {
         : airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
 
     final ConfiguredAirbyteCatalog catalog = retrieveCatalog(connectionInfo);
-    if (replicationActivityInput.getIsReset()) {
+    if (replicationActivityInput.isReset()) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.
       updateCatalogForReset(replicationActivityInput, catalog);
     }

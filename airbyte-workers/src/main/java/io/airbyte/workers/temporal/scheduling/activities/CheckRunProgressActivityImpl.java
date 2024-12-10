@@ -8,12 +8,10 @@ import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.helpers.ProgressChecker;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Concrete CheckRunProgressActivity.
  */
-@Slf4j
 @Singleton
 public class CheckRunProgressActivityImpl implements CheckRunProgressActivity {
 

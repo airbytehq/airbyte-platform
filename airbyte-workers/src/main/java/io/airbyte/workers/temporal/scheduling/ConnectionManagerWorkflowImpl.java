@@ -95,6 +95,7 @@ import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
 import jakarta.annotation.Nullable;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -104,14 +105,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ConnectionManagerWorkflowImpl.
  */
-@Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
@@ -477,7 +480,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private boolean isWithinRetryLimit(final int attemptNumber) {
     if (useAttemptCountRetries()) {
-      final int maxAttempt = configFetchActivity.getMaxAttempt().getMaxAttempt();
+      final int maxAttempt = configFetchActivity.getMaxAttempt().maxAttempt();
 
       return maxAttempt > attemptNumber;
     }

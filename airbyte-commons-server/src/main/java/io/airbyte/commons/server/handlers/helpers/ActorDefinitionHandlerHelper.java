@@ -35,14 +35,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * A helper class for server code that is the shared for actor definitions (source definitions and
  * destination definitions).
  */
 @Singleton
-@Slf4j
 public class ActorDefinitionHandlerHelper {
 
   private final SynchronousSchedulerClient synchronousSchedulerClient;

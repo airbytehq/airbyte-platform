@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)

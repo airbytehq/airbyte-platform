@@ -7,9 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-
   api(libs.bundles.micronaut.annotation)
 
   implementation(libs.bundles.jackson)
@@ -37,12 +34,13 @@ airbyte {
   }
 }
 
-val downloadSpecSecretMask = tasks.register<Download>("downloadSpecSecretMask") {
-  src("https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml")
-  dest(File(projectDir, "src/main/resources/seed/specs_secrets_mask.yaml"))
-  overwrite(true)
-  onlyIfModified(true)
-}
+val downloadSpecSecretMask =
+  tasks.register<Download>("downloadSpecSecretMask") {
+    src("https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml")
+    dest(File(projectDir, "src/main/resources/seed/specs_secrets_mask.yaml"))
+    overwrite(true)
+    onlyIfModified(true)
+  }
 
 tasks.named("processResources") {
   dependsOn(downloadSpecSecretMask)
@@ -53,6 +51,6 @@ tasks.named<Test>("test") {
     mapOf(
       "Z_TESTING_PURPOSES_ONLY_1" to "value-defined",
       "Z_TESTING_PURPOSES_ONLY_2" to "  ",
-    )
+    ),
   )
 }

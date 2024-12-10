@@ -40,6 +40,7 @@ import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -51,14 +52,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to handle and track job creation and status updates.
  */
-@Slf4j
 @Singleton
 public class JobCreationAndStatusUpdateHelper {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String JOB_ID_METADATA_KEY = "jobId";
   private static final String ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber";

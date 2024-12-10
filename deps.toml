@@ -24,7 +24,6 @@ kotest = "5.9.1"
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.12.1"
 logback = "1.5.12"
-lombok = "1.18.36"
 micronaut = "4.7.1"
 micronaut-cache = "5.1.0"
 micronaut-core = "4.7.6"
@@ -153,7 +152,6 @@ kubernetes-httpclient-okhttp = { module = "io.fabric8:kubernetes-httpclient-okht
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "7.2.6" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
-lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }

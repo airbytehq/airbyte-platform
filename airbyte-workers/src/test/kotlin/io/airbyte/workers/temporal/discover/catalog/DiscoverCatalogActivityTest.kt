@@ -99,25 +99,27 @@ class DiscoverCatalogActivityTest {
     val workloadId = "789"
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
-    val input = DiscoverCatalogInput()
-    input.jobRunConfig =
-      JobRunConfig()
-        .withJobId(jobId)
-        .withAttemptId(attemptNumber.toLong())
-    input.discoverCatalogInput =
-      StandardDiscoverCatalogInput()
-        .withActorContext(
-          ActorContext()
-            .withWorkspaceId(workspaceId)
-            .withActorDefinitionId(actorDefinitionId)
-            .withActorId(actorId),
-        )
-        .withManual(!runAsPartOfSync)
-    input.launcherConfig =
-      IntegrationLauncherConfig().withConnectionId(
-        connectionId,
-      ).withWorkspaceId(workspaceId).withPriority(WorkloadPriority.DEFAULT)
-
+    val input =
+      DiscoverCatalogInput(
+        jobRunConfig =
+          JobRunConfig()
+            .withJobId(jobId)
+            .withAttemptId(attemptNumber.toLong()),
+        discoverCatalogInput =
+          StandardDiscoverCatalogInput()
+            .withActorContext(
+              ActorContext()
+                .withWorkspaceId(workspaceId)
+                .withActorDefinitionId(actorDefinitionId)
+                .withActorId(actorId),
+            ).withManual(!runAsPartOfSync),
+        launcherConfig =
+          IntegrationLauncherConfig()
+            .withConnectionId(
+              connectionId,
+            ).withWorkspaceId(workspaceId)
+            .withPriority(WorkloadPriority.DEFAULT),
+      )
     if (runAsPartOfSync) {
       every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DiscoverCatalogSnapDuration)) }.returns(workloadId)
     } else {
@@ -126,7 +128,8 @@ class DiscoverCatalogActivityTest {
     every { discoverCommand.getGeography(connectionId, workspaceId) }.returns(Geography.AUTO)
 
     val output =
-      ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
         .withDiscoverCatalogId(UUID.randomUUID())
     every { workloadClient.getConnectorJobOutput(workloadId, any()) } returns output
 

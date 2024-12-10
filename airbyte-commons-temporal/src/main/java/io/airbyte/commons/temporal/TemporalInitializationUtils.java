@@ -11,16 +11,19 @@ import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utils for verifying that temporal is running and available. Used at the startup of an
  * application.
  */
 @Singleton
-@Slf4j
 public class TemporalInitializationUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Inject
   private WorkflowServiceStubs temporalService;

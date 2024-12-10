@@ -109,7 +109,8 @@ class CheckConnectionActivityTest {
   fun `runWithWorkload missing output`() {
     val input = checkInput
     every { workloadClient.getConnectorJobOutput(WORKLOAD_ID, any()) } returns
-      ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
         .withCheckConnection(
           StandardCheckConnectionOutput()
             .withStatus(StandardCheckConnectionOutput.Status.FAILED)
@@ -135,16 +136,19 @@ class CheckConnectionActivityTest {
 
     private val checkInput: CheckConnectionInput
       get() {
-        val input = CheckConnectionInput()
-        input.jobRunConfig = JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_NUMBER)
-        input.checkConnectionInput =
-          StandardCheckConnectionInput()
-            .withActorType(ActorType.SOURCE)
-            .withActorContext(
-              ActorContext().withActorDefinitionId(ACTOR_DEFINITION_ID)
-                .withWorkspaceId(WORKSPACE_ID),
-            )
-        input.launcherConfig = IntegrationLauncherConfig().withConnectionId(CONNECTION_ID).withPriority(WorkloadPriority.DEFAULT)
+        val input =
+          CheckConnectionInput(
+            jobRunConfig = JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_NUMBER),
+            checkConnectionInput =
+              StandardCheckConnectionInput()
+                .withActorType(ActorType.SOURCE)
+                .withActorContext(
+                  ActorContext()
+                    .withActorDefinitionId(ACTOR_DEFINITION_ID)
+                    .withWorkspaceId(WORKSPACE_ID),
+                ),
+            launcherConfig = IntegrationLauncherConfig().withConnectionId(CONNECTION_ID).withPriority(WorkloadPriority.DEFAULT),
+          )
         return input
       }
   }

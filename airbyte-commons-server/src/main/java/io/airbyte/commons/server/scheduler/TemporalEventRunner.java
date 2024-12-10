@@ -12,15 +12,17 @@ import io.airbyte.config.StreamDescriptor;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
 
 /**
  * Temporal event client. For triggering events on connections.
  */
-@AllArgsConstructor
 public class TemporalEventRunner implements EventRunner {
 
   private final TemporalClient temporalClient;
+
+  public TemporalEventRunner(TemporalClient temporalClient) {
+    this.temporalClient = temporalClient;
+  }
 
   @Override
   @Trace

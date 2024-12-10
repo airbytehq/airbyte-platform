@@ -37,18 +37,21 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Refresh schema temporal activity impl.
  */
-@Slf4j
 @Singleton
 public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;

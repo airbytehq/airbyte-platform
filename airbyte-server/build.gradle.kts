@@ -6,8 +6,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -85,8 +83,6 @@ dependencies {
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)

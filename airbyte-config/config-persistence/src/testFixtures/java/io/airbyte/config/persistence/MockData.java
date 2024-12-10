@@ -69,10 +69,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.Data;
 
 @SuppressWarnings("LineLength")
 public class MockData {
@@ -890,11 +890,45 @@ public class MockData {
 
   }
 
-  @Data
   public static class ActorCatalogFetchEventWithCreationDate {
 
     private final ActorCatalogFetchEvent actorCatalogFetchEvent;
     private final OffsetDateTime createdAt;
+
+    public ActorCatalogFetchEventWithCreationDate(ActorCatalogFetchEvent actorCatalogFetchEvent, OffsetDateTime createdAt) {
+      this.actorCatalogFetchEvent = actorCatalogFetchEvent;
+      this.createdAt = createdAt;
+    }
+
+    public ActorCatalogFetchEvent getActorCatalogFetchEvent() {
+      return actorCatalogFetchEvent;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+      return createdAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ActorCatalogFetchEventWithCreationDate that = (ActorCatalogFetchEventWithCreationDate) o;
+      return Objects.equals(actorCatalogFetchEvent, that.actorCatalogFetchEvent) && Objects.equals(createdAt, that.createdAt);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(actorCatalogFetchEvent, createdAt);
+    }
+
+    @Override
+    public String toString() {
+      return "ActorCatalogFetchEventWithCreationDate{"
+          + "actorCatalogFetchEvent=" + actorCatalogFetchEvent
+          + ", createdAt=" + createdAt
+          + '}';
+    }
 
   }
 

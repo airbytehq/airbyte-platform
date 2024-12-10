@@ -25,17 +25,20 @@ import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Ensures that the databases are migrated to the appropriate level.
  */
 @Singleton
-@Slf4j
 public class Bootloader {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   // Ordered list of version upgrades that must be completed before upgrading to latest.
   private static final List<AirbyteVersion> REQUIRED_VERSION_UPGRADES = List.of(

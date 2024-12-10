@@ -33,17 +33,20 @@ import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JobCreationAndStatusUpdateActivityImpl.
  */
-@Slf4j
 @Singleton
 @Requires(env = EnvConstants.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;

@@ -301,7 +301,7 @@ class ReplicationInputHydratorTest {
     // Verify that if the sync is a reset, we retrieve the job info and handle the streams accordingly.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
-    input.setIsReset(true);
+    input.setReset(true);
     when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
         new JobOptionalRead(new JobRead(
             JOB_ID,

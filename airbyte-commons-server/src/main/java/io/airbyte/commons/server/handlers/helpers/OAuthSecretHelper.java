@@ -18,12 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Holds helpers to handle OAuth secrets.
  */
-@Slf4j
 public class OAuthSecretHelper {
 
   /**

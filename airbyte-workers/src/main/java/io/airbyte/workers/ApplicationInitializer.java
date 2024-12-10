@@ -38,6 +38,7 @@ import io.temporal.worker.WorkflowImplementationOptions;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -47,15 +48,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs any required initialization logic on application context start.
  */
 @Singleton
 @Requires(notEnv = {Environment.TEST})
-@Slf4j
 public class ApplicationInitializer implements ApplicationEventListener<ServiceReadyEvent> {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Inject
   @Named("checkConnectionActivities")

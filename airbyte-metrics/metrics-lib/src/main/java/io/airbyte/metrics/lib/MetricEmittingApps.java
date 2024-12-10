@@ -4,8 +4,6 @@
 
 package io.airbyte.metrics.lib;
 
-import lombok.AllArgsConstructor;
-
 /**
  * Enum containing all applications metrics are emitted for. Used to initialize
  * MetricClientFactory.initialize(...).
@@ -21,7 +19,6 @@ import lombok.AllArgsConstructor;
  * Note: These names are used as metric name prefixes. Changing these names will affect
  * dashboard/alerts and our public Datadog integration. Please consult the platform teams if unsure.
  */
-@AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
 
   BILLING("billing"),
@@ -37,6 +34,10 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   WORKLOAD_LAUNCHER("workload-launcher");
 
   private final String applicationName;
+
+  MetricEmittingApps(final String applicationName) {
+    this.applicationName = applicationName;
+  }
 
   @Override
   public String getApplicationName() {

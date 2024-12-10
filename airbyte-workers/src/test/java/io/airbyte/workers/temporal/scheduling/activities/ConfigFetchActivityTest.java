@@ -465,7 +465,7 @@ class ConfigFetchActivityTest {
       configFetchActivity =
           new ConfigFetchActivityImpl(mAirbyteApiClient, maxAttempt, () -> Instant.now().getEpochSecond(), mFeatureFlagClient,
               mScheduleJitterHelper);
-      Assertions.assertThat(configFetchActivity.getMaxAttempt().getMaxAttempt())
+      Assertions.assertThat(configFetchActivity.getMaxAttempt().maxAttempt())
           .isEqualTo(maxAttempt);
     }
 
