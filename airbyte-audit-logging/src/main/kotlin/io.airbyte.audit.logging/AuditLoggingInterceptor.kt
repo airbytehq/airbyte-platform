@@ -2,6 +2,8 @@ package io.airbyte.audit.logging
 
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
+import io.airbyte.commons.storage.AUDIT_LOGGING
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
@@ -13,10 +15,10 @@ import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.http.server.netty.NettyHttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
 import jakarta.inject.Singleton
+import org.slf4j.MDC
 import java.util.UUID
 
-// Todo: change this to a named logger
-private val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger { AUDIT_LOGGING }
 
 /**
  * Interceptor that logs the requests and stores the log entries.
@@ -25,6 +27,7 @@ private val logger = KotlinLogging.logger {}
 @InterceptorBean(AuditLogging::class)
 class AuditLoggingInterceptor(
   @Value("\${airbyte.audit.logging.enabled}") private val auditLoggingEnabled: Boolean,
+  @Value("\${airbyte.cloud.storage.bucket.audit-logging:}") private val auditLoggingBucket: String?,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
 ) : MethodInterceptor<Any, Any> {
@@ -122,6 +125,17 @@ class AuditLoggingInterceptor(
         success = success,
         errorMessage = error,
       )
-    logger.info { "Logging audit entry: $auditLogEntry" }
+    if (auditLoggingBucket.isNullOrBlank()) {
+      // Common log to console only
+      logger.info { "Logging audit entry: $auditLogEntry" }
+    } else {
+      // Log to both cloud storage (via MDC routing) and also console
+      MDC.put(DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY, AUDIT_LOGGING)
+      try {
+        logger.info { "Logging audit entry: $auditLogEntry" }
+      } finally {
+        MDC.remove(DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY)
+      }
+    }
   }
 }

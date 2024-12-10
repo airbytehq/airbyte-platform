@@ -44,7 +44,7 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should only proceed the request without logging the result if it is not enabled`() {
-    interceptor = AuditLoggingInterceptor(false, applicationContext, auditLoggingHelper)
+    interceptor = AuditLoggingInterceptor(false, null, applicationContext, auditLoggingHelper)
 
     every { context.methodName } returns "createPermission"
 
@@ -62,7 +62,7 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should proceed the request and log the result`() {
-    interceptor = spyk(AuditLoggingInterceptor(true, applicationContext, auditLoggingHelper))
+    interceptor = spyk(AuditLoggingInterceptor(true, "test-audit-log-bucket", applicationContext, auditLoggingHelper))
     val request = mockk<NettyHttpRequest<Any>>()
     val headers = mockk<HttpHeaders>()
 

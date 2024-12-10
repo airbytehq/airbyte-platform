@@ -29,7 +29,14 @@ import software.amazon.awssdk.services.s3.model.NoSuchBucketException
  * When upgrading to Micronaut 4, the `@get:Primary` and `@get:Bean` annotations might be replaceable with @MockBean.
  */
 
-private val bucket = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
+private val bucket =
+  StorageBucketConfig(
+    log = "log",
+    state = "state",
+    workloadOutput = "workload",
+    activityPayload = "payload",
+    auditLogging = null,
+  )
 
 @MicronautTest
 @Property(name = STORAGE_TYPE, value = "local")
@@ -46,7 +53,14 @@ class LocalStorageClientFactoryTest {
   val localStorageConfig: LocalStorageConfig =
     mockk {
       every { root } returns "/tmp/test"
-      every { buckets } returns StorageBucketConfig(log = "log", state = "state", workloadOutput = "wo", activityPayload = "ap")
+      every { buckets } returns
+        StorageBucketConfig(
+          log = "log",
+          state = "state",
+          workloadOutput = "wo",
+          activityPayload = "ap",
+          auditLogging = null,
+        )
     }
 
   @Test
