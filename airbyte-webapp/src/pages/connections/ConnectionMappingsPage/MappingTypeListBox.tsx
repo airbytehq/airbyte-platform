@@ -10,7 +10,7 @@ import { StreamMapperType } from "core/api/types/AirbyteClient";
 import { useMappingContext } from "./MappingContext";
 import { SupportedMappingTypes } from "./MappingRow";
 import styles from "./MappingRow.module.scss";
-import { OperationType } from "./RowFilterRow";
+import { OperationType } from "./RowFilteringMapperForm";
 
 interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;

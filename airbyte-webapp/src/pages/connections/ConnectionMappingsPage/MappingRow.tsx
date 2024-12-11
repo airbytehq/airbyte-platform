@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useMemo } from "react";
+import { PropsWithChildren, useMemo } from "react";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -13,7 +13,7 @@ import { FieldRenamingRow } from "./FieldRenamingRow";
 import { HashFieldRow } from "./HashFieldRow";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
-import { RowFilteringRow } from "./RowFilterRow";
+import { RowFilteringMapperForm } from "./RowFilteringMapperForm";
 
 export const SupportedMappingTypes = [
   StreamMapperType.hashing,
@@ -45,7 +45,7 @@ export const MappingRow: React.FC<{
       return <FieldRenamingRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
     }
     if (mapping?.type === StreamMapperType["row-filtering"]) {
-      return <RowFilteringRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+      return <RowFilteringMapperForm streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
     }
     if (mapping?.type === StreamMapperType.encryption) {
       return <EncryptionRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
@@ -78,4 +78,16 @@ export const MappingRow: React.FC<{
       </FlexContainer>
     </div>
   );
+};
+
+export const MappingRowContent: React.FC<PropsWithChildren> = ({ children }) => {
+  return (
+    <FlexContainer direction="row" alignItems="center" className={styles.rowContent}>
+      {children}
+    </FlexContainer>
+  );
+};
+
+export const MappingRowInputWrapper: React.FC<PropsWithChildren> = ({ children }) => {
+  return <div className={styles.input}>{children}</div>;
 };
