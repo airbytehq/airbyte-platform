@@ -280,6 +280,16 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("spotTolerations")
+  fun spotTolerations(): List<Toleration> =
+    listOf(
+      Toleration().apply {
+        key = "airbyte/spot"
+        value = "true"
+      },
+    )
+
+  @Singleton
   @Named("replicationImagePullSecrets")
   fun replicationImagePullSecrets(
     @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,

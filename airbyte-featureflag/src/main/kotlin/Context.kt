@@ -268,6 +268,17 @@ data class Priority(override val key: String) : Context {
   }
 }
 
+/**
+ * Context for representing an attempt number.
+ *
+ * For example: 0
+ *
+ * @param [key] the number of the attempt.
+ */
+data class Attempt(override val key: String) : Context {
+  override val kind = "attempt"
+}
+
 data class UserAgent(override val key: String) : Context {
   override val kind: String = "user-agent"
 }

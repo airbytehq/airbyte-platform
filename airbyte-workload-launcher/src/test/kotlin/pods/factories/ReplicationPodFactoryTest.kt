@@ -3,6 +3,8 @@ package pods.factories
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
+import io.airbyte.featureflag.AllowSpotInstances
+import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.KubeContainerInfo
@@ -15,9 +17,13 @@ import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.fabric8.kubernetes.api.model.Toleration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class ReplicationPodFactoryTest {
@@ -92,6 +98,21 @@ class ReplicationPodFactoryTest {
     assertEquals(VolumeFactory.LOCAL_VOLUME_MOUNT, destSpec.volumeMounts[destLocalIdx].mountPath)
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `create pod with spot tolerations`(useSpotTolerations: Boolean) {
+    val featureFlagClient = TestClient(mapOf(AllowSpotInstances.key to useSpotTolerations))
+    val fac =
+      Fixtures.defaultReplicationPodFactory.copy(
+        featureFlagClient = featureFlagClient,
+      )
+
+    val pod = Fixtures.createPodWithDefaults(fac)
+
+    assertTrue(pod.spec.tolerations.containsAll(Fixtures.defaultTolerations))
+    assertEquals(useSpotTolerations, pod.spec.tolerations.containsAll(Fixtures.spotTolerations))
+  }
+
   object Fixtures {
     val workloadSecurityContextProvider = WorkloadSecurityContextProvider(rootlessWorkload = true)
     val featureFlagClient = TestClient()
@@ -123,6 +144,9 @@ class ReplicationPodFactoryTest {
         localVolumeEnabled = false,
       )
 
+    val defaultTolerations = listOf(Toleration().apply { key = "configuredByUser" })
+    val spotTolerations = listOf(Toleration().apply { key = "spotToleration" })
+
     val defaultReplicationPodFactory =
       ReplicationPodFactory(
         featureFlagClient = featureFlagClient,
@@ -144,7 +168,9 @@ class ReplicationPodFactoryTest {
         volumeFactory = defaultVolumeFactory,
         workloadSecurityContextProvider = workloadSecurityContextProvider,
         imagePullSecrets = emptyList(),
-        tolerations = emptyList(),
+        tolerations = defaultTolerations,
+        infraFlagContexts = listOf(PlaneName("test")),
+        spotTolerations = spotTolerations,
       )
 
     fun createPodWithDefaults(

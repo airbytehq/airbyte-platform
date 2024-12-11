@@ -185,3 +185,5 @@ object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-on
 object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
 
 object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)
+
+object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
