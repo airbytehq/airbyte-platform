@@ -6,7 +6,7 @@ import { Form } from "components/forms";
 import { useCurrentWorkspace } from "core/api";
 import {
   ConnectorDefinition,
-  ConnectorDefinitionSpecification,
+  ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
 import { removeEmptyProperties } from "core/utils/form";
@@ -25,7 +25,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
    * Definition of the connector might not be available if it's not released but only exists in frontend heap
    */
   selectedConnectorDefinition?: ConnectorDefinition;
-  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecification | SourceDefinitionSpecificationDraft;
+  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   onSubmit: (values: ConnectorFormValues) => Promise<void>;
   isEditMode?: boolean;
   formValues?: Partial<ConnectorFormValues>;

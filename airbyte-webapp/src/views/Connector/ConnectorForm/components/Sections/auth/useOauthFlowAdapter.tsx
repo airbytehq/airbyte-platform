@@ -7,7 +7,7 @@ import { FieldPath, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -21,7 +21,7 @@ interface Credentials {
 }
 
 function useFormOauthAdapter(
-  connector: ConnectorDefinitionSpecification,
+  connector: ConnectorDefinitionSpecificationRead,
   connectorDefinition?: ConnectorDefinition
 ): {
   loading: boolean;

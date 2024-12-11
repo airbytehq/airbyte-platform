@@ -4,7 +4,7 @@ import { useIntl } from "react-intl";
 import { AnySchema } from "yup";
 
 import {
-  ConnectorDefinitionSpecification,
+  ConnectorDefinitionSpecificationRead,
   ConnectorSpecification,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
@@ -73,7 +73,7 @@ export function useBuildForm(
   isEditMode: boolean,
   formType: "source" | "destination",
   selectedConnectorDefinitionSpecification:
-    | ConnectorDefinitionSpecification
+    | ConnectorDefinitionSpecificationRead
     | SourceDefinitionSpecificationDraft
     | undefined,
   initialValues?: Partial<ConnectorFormValues>

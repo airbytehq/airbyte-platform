@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
-import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 
 import styles from "./AuthButton.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -52,7 +52,7 @@ function getAuthenticateMessageId(connectorDefinitionId: string): string {
 }
 
 export const AuthButton: React.FC<{
-  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
+  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecificationRead;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
 

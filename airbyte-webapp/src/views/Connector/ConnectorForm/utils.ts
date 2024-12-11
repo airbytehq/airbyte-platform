@@ -4,7 +4,7 @@ import { AdvancedAuth } from "core/api/types/AirbyteClient";
 import { FormBlock } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
-import { ConnectorDefinitionSpecification } from "../../../core/domain/connector";
+import { ConnectorDefinitionSpecificationRead } from "../../../core/domain/connector";
 
 export function makeConnectionConfigurationPath(path: string[] = []): string {
   return ["connectionConfiguration", ...path].join(".");
@@ -26,7 +26,7 @@ export function authPredicateMatchesPath(path: string, spec?: { advancedAuth?: A
 type OAuthOutputSpec = { properties: Record<string, { type: string; path_in_connector_config: string[] }> } | undefined;
 
 export function serverProvidedOauthPaths(
-  connector?: ConnectorDefinitionSpecification
+  connector?: ConnectorDefinitionSpecificationRead
 ): Record<string, { path_in_connector_config: string[] }> {
   return {
     ...((connector?.advancedAuth?.oauthConfigSpecification?.completeOAuthOutputSpecification as OAuthOutputSpec)

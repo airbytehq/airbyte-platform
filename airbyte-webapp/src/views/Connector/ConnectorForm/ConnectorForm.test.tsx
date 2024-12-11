@@ -10,7 +10,7 @@ import { render, useMockIntersectionObserver } from "test-utils/testutils";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
@@ -291,7 +291,7 @@ describe("Connector form", () => {
   }: {
     disableOAuth?: boolean;
     formValuesOverride?: Record<string, unknown>;
-    specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+    specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
   } = {}) {
     const renderResult = await render(
@@ -953,7 +953,7 @@ describe("Connector form", () => {
       props: {
         disableOAuth?: boolean;
         formValuesOverride?: Record<string, unknown>;
-        specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+        specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
       } = {}
     ) {
       return renderForm({

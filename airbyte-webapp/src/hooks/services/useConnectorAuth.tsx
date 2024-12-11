@@ -13,7 +13,11 @@ import {
   DestinationOauthConsentRequest,
   SourceOauthConsentRequest,
 } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import {
+  ConnectorDefinition,
+  ConnectorDefinitionSpecificationRead,
+  ConnectorSpecification,
+} from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { trackError } from "core/utils/datadog";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
@@ -63,7 +67,7 @@ function openWindow(url: string): Window | null {
 
 export function useConnectorAuth(): {
   getConsentUrl: (
-    connector: ConnectorDefinitionSpecification,
+    connector: ConnectorDefinitionSpecificationRead,
     oAuthInputConfiguration: Record<string, unknown>
   ) => Promise<{
     payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
@@ -83,7 +87,7 @@ export function useConnectorAuth(): {
 
   return {
     getConsentUrl: async (
-      connector: ConnectorDefinitionSpecification,
+      connector: ConnectorDefinitionSpecificationRead,
       oAuthInputConfiguration: Record<string, unknown>
     ): Promise<{
       payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
@@ -163,7 +167,7 @@ export function useRunOauthFlow({
   connectorDefinition,
   onDone,
 }: {
-  connector: ConnectorDefinitionSpecification;
+  connector: ConnectorDefinitionSpecificationRead;
   connectorDefinition?: ConnectorDefinition;
   onDone?: (values: CompleteOAuthResponseAuthPayload) => void;
 }): {

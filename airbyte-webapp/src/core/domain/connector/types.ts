@@ -25,7 +25,7 @@ export type SourceDefinitionSpecificationDraft = Pick<
   "documentationUrl" | "connectionSpecification" | "advancedAuth"
 >;
 
-export type ConnectorDefinitionSpecification =
+export type ConnectorDefinitionSpecificationRead =
   | DestinationDefinitionSpecificationRead
   | SourceDefinitionSpecificationRead;
 
