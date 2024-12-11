@@ -10,6 +10,7 @@ import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.ConnectorBuilderProjectApi
 import io.airbyte.api.client.generated.ConnectorRolloutApi
+import io.airbyte.api.client.generated.DataplaneApi
 import io.airbyte.api.client.generated.DeploymentMetadataApi
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.DestinationDefinitionApi
@@ -71,6 +72,7 @@ class AirbyteApiClient(
   val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
   val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
   val connectorRolloutApi = ConnectorRolloutApi(basePath = basePath, client = httpClient, policy = policy)
+  val dataplaneApi = DataplaneApi(basePath = basePath, client = httpClient, policy = policy)
   val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)

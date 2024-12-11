@@ -58,11 +58,13 @@ class CheckCommand(
     return WorkloadCreateRequest(
       workloadId = workloadId,
       labels =
-        listOf(
+        listOfNotNull(
           WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
           WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, attemptNumber.toString()),
           WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
           WorkloadLabel(Metadata.ACTOR_TYPE, input.checkConnectionInput.actorType.toString()),
+          // Can be null if this is the first check that gets run
+          input.checkConnectionInput.actorId?.let { WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, it.toString()) },
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),

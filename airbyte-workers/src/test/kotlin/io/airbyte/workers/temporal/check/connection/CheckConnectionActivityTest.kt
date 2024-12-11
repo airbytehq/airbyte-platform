@@ -124,6 +124,25 @@ class CheckConnectionActivityTest {
     assertEquals(StandardCheckConnectionOutput.Status.FAILED, output.checkConnection.status)
   }
 
+  @Test
+  fun `runWithWorkload with source ID present`() {
+    val input = checkInputWithActorId
+    every { workloadClient.getConnectorJobOutput(WORKLOAD_ID, any()) } returns
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
+        .withCheckConnection(
+          StandardCheckConnectionOutput()
+            .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+            .withMessage("missing output"),
+        )
+    val output = checkConnectionActivity.runWithWorkload(input)
+    verify { workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT) }
+    assertEquals(WORKLOAD_ID, createReqSlot.captured.workloadId)
+    assertEquals(WorkloadType.CHECK, createReqSlot.captured.type)
+    assertEquals(ConnectorJobOutput.OutputType.CHECK_CONNECTION, output.outputType)
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, output.checkConnection.status)
+  }
+
   companion object {
     private val ACTOR_DEFINITION_ID = UUID.randomUUID()
     private const val ATTEMPT_NUMBER = 42L
@@ -147,6 +166,25 @@ class CheckConnectionActivityTest {
                     .withActorDefinitionId(ACTOR_DEFINITION_ID)
                     .withWorkspaceId(WORKSPACE_ID),
                 ),
+            launcherConfig = IntegrationLauncherConfig().withConnectionId(CONNECTION_ID).withPriority(WorkloadPriority.DEFAULT),
+          )
+        return input
+      }
+
+    private val checkInputWithActorId: CheckConnectionInput
+      get() {
+        val input =
+          CheckConnectionInput(
+            jobRunConfig = JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_NUMBER),
+            checkConnectionInput =
+              StandardCheckConnectionInput()
+                .withActorType(ActorType.SOURCE)
+                .withActorContext(
+                  ActorContext()
+                    .withActorDefinitionId(ACTOR_DEFINITION_ID)
+                    .withWorkspaceId(WORKSPACE_ID),
+                )
+                .withActorId(UUID.randomUUID()),
             launcherConfig = IntegrationLauncherConfig().withConnectionId(CONNECTION_ID).withPriority(WorkloadPriority.DEFAULT),
           )
         return input

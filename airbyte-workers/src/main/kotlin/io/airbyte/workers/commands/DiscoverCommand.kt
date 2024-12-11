@@ -102,6 +102,7 @@ class DiscoverCommand(
           WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, attemptNumber.toString()),
           WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
           WorkloadLabel(Metadata.ACTOR_TYPE, ActorType.SOURCE.toString().toString()),
+          WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, input.discoverCatalogInput.actorContext.actorId.toString()),
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),

@@ -5639,6 +5639,29 @@ paths:
           description: Successful operation
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/get_dataplane_id:
+    post:
+      summary: Get a dataplane ID given the provided request body params
+      tags:
+        - dataplane
+      operationId: getDataplaneId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGetIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -15655,6 +15678,29 @@ components:
           type: string
         workflowId:
           type: string
+    DataplaneGetIdRequestBody:
+      type: object
+      required:
+        - workloadPriority
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorId:
+          $ref: "#/components/schemas/ActorId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        workloadPriority:
+          $ref: "#/components/schemas/WorkloadPriority"
+    DataplaneRead:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+
   responses:
     NotFoundResponse:
       description: Object with given id was not found.
