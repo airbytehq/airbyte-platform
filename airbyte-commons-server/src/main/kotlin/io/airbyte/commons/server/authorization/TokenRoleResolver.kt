@@ -32,7 +32,11 @@ class RbacTokenRoleResolver(
     }
 
     return mutableSetOf(AuthRole.AUTHENTICATED_USER.name).apply {
-      addAll(rbacRoleHelper.getRbacRoles(authUserId, httpRequest))
+      try {
+        addAll(rbacRoleHelper.getRbacRoles(authUserId, httpRequest))
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to resolve roles for authUserId $authUserId" }
+      }
     }
   }
 }
