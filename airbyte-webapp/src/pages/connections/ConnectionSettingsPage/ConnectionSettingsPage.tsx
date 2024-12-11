@@ -93,6 +93,7 @@ export const ConnectionSettingsPage: React.FC = () => {
           onSubmit={(values: FormConnectionFormValues) => {
             const connectionUpdates: WebBackendConnectionUpdate = {
               connectionId: connection.connectionId,
+              skipReset: true,
               ...values,
             };
 
