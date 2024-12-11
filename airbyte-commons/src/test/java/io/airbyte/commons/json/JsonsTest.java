@@ -225,8 +225,7 @@ class JsonsTest {
   @Test
   void testToPrettyString() {
     final JsonNode jsonNode = Jsons.jsonNode(ImmutableMap.of(TEST, ABC));
-    final String expectedOutput = ""
-        + "{\n"
+    final String expectedOutput = "{\n"
         + "  \"test\" : \"abc\"\n"
         + "}\n";
     assertEquals(expectedOutput, Jsons.toPrettyString(jsonNode));
@@ -344,6 +343,42 @@ class JsonsTest {
     Jsons.setNestedValue(node, List.of("nest", "key"), TextNode.valueOf("value"));
     assertEquals(expected, node);
 
+  }
+
+  @Test
+  void testGetNodeOrEmptyObject() {
+    final JsonNode root = Jsons.deserialize("{\"child\": {\"key\": \"value\"}}");
+    final JsonNode result = Jsons.getNodeOrEmptyObject(root);
+    assertEquals(root, result);
+  }
+
+  @Test
+  void testGetNodeOrEmptyObjectNested() {
+    final JsonNode root = Jsons.deserialize("{\"nested\": {\"key\": \"value\"}}");
+    final JsonNode result = Jsons.getNodeOrEmptyObject(root, "nested", "key");
+    assertEquals(TextNode.valueOf("value"), result);
+  }
+
+  @Test
+  void testGetNodeOrEmptyObjectNonexistentNestedKey() {
+    final JsonNode root = Jsons.deserialize("{\"emptyObjectKey\": {}}");
+
+    final JsonNode result = Jsons.getNodeOrEmptyObject(root, "emptyObjectKey", "foo");
+    assertEquals(Jsons.emptyObject(), result);
+  }
+
+  @Test
+  void testGetNodeOrEmptyObjectFromNullRootNode() {
+    final JsonNode root = Jsons.deserialize("null");
+    final JsonNode result = Jsons.getNodeOrEmptyObject(root, "child");
+    assertEquals(Jsons.emptyObject(), result);
+  }
+
+  @Test
+  void testGetNodeOrEmptyObjectPathToNullValue() {
+    final JsonNode root = Jsons.deserialize("{\"nullValueKey\": null}");
+    final JsonNode result = Jsons.getNodeOrEmptyObject(root, "nullValueKey");
+    assertEquals(Jsons.emptyObject(), result);
   }
 
   private static class ToClass {

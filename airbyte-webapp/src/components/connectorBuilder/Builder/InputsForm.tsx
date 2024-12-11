@@ -116,7 +116,8 @@ export const InputForm = ({
           .notOneOf(
             inputInEditing?.isNew ? usedKeys : usedKeys.filter((key) => key !== inputInEditing?.key),
             "connectorBuilder.duplicateFieldID"
-          ),
+          )
+          .required("form.empty.error"),
         required: yup.bool(),
         definition: yup.object().shape({
           title: yup.string().required("form.empty.error"),
@@ -279,7 +280,9 @@ const InputModal = ({
   const { formatMessage } = useIntl();
   useEffectOnce(() => {
     // key input is always touched so errors are shown right away as it will be auto-set by the user changing the title
-    setValue("key", inputInEditing.key, { shouldValidate: true });
+    if (inputInEditing.key) {
+      setValue("key", inputInEditing.key, { shouldValidate: true });
+    }
   });
 
   return (

@@ -7,9 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
   implementation(project(":oss:airbyte-commons"))
@@ -29,4 +26,8 @@ jsonSchema2Pojo {
   generateBuilders = true
   includeConstructors = false
   includeSetters = true
+}
+
+tasks.named("compileKotlin") {
+  dependsOn(tasks.named("generateJsonSchema2Pojo"))
 }

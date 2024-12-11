@@ -26,8 +26,10 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.ScopedConfigurationService
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
@@ -111,6 +113,14 @@ internal class ConnectorRolloutHandlerTest {
     @JvmStatic
     fun workflowStartedInProgress() =
       listOf(ConnectorEnumRolloutState.WORKFLOW_STARTED, ConnectorEnumRolloutState.IN_PROGRESS, ConnectorEnumRolloutState.PAUSED)
+
+    @JvmStatic
+    fun provideConnectorRolloutStateTerminalNonCanceled(): List<ConnectorRolloutStateTerminal> {
+      return listOf(
+        ConnectorRolloutStateTerminal.SUCCEEDED,
+        ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
+      )
+    }
   }
 
   @BeforeEach
@@ -125,14 +135,18 @@ internal class ConnectorRolloutHandlerTest {
 
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns expectedRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
 
     val rolloutRead = connectorRolloutHandler.getConnectorRollout(rolloutId)
 
-    assertEquals(connectorRolloutHandler.buildConnectorRolloutRead(expectedRollout), rolloutRead)
+    assertEquals(connectorRolloutHandler.buildConnectorRolloutRead(expectedRollout, true), rolloutRead)
 
     verify {
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
@@ -214,6 +228,142 @@ internal class ConnectorRolloutHandlerTest {
         rolloutStrategy = rolloutStrategy,
         errorMsg = errorMsg,
         failedReason = failedReason,
+        retainPinsOnCancellation = true,
+      )
+    every { connectorRolloutService.getConnectorRollout(any()) } returns initialRollout
+    every { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) } returns Unit
+
+    val finalizedRollout = connectorRolloutHandler.getAndValidateFinalizeRequest(connectorRolloutFinalizeRequestBody)
+
+    verify {
+      actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any())
+    }
+
+    assertEquals(state.toString(), finalizedRollout.state.toString())
+    assertEquals(rolloutStrategy.toString(), finalizedRollout.rolloutStrategy.toString())
+    assertEquals(errorMsg, finalizedRollout.errorMsg)
+    assertEquals(failedReason, finalizedRollout.failedReason)
+    assertTrue(
+      finalizedRollout.updatedAt >= initialRollout.updatedAt,
+      "updatedAt from finalizedRollout should be more recent than updatedAt from initialRollout",
+    )
+  }
+
+  @Test
+  fun `test finalizeConnectorRollout with retainPinsOnCancellation and canceled`() {
+    val rolloutId = UUID.randomUUID()
+    val state = ConnectorRolloutStateTerminal.CANCELED
+    val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
+    val errorMsg = "error"
+    val failedReason = "failure"
+    val actorDefinitionId = UUID.randomUUID()
+    val releaseCandidateVersionId = UUID.randomUUID()
+
+    val initialRollout =
+      createMockConnectorRollout(
+        id = rolloutId,
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = releaseCandidateVersionId,
+      )
+
+    val connectorRolloutFinalizeRequestBody =
+      createMockConnectorRolloutFinalizeRequestBody(
+        rolloutId = rolloutId,
+        state = state,
+        rolloutStrategy = rolloutStrategy,
+        errorMsg = errorMsg,
+        failedReason = failedReason,
+        retainPinsOnCancellation = true,
+      )
+    every { connectorRolloutService.getConnectorRollout(any()) } returns initialRollout
+    every { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) } returns Unit
+
+    val finalizedRollout = connectorRolloutHandler.getAndValidateFinalizeRequest(connectorRolloutFinalizeRequestBody)
+
+    verify(exactly = 0) {
+      actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any())
+    }
+
+    assertEquals(state.toString(), finalizedRollout.state.toString())
+    assertEquals(rolloutStrategy.toString(), finalizedRollout.rolloutStrategy.toString())
+    assertEquals(errorMsg, finalizedRollout.errorMsg)
+    assertEquals(failedReason, finalizedRollout.failedReason)
+    assertTrue(
+      finalizedRollout.updatedAt >= initialRollout.updatedAt,
+      "updatedAt from finalizedRollout should be more recent than updatedAt from initialRollout",
+    )
+  }
+
+  @Test
+  fun `test finalizeConnectorRollout without retainPinsOnCancellation and canceled`() {
+    val rolloutId = UUID.randomUUID()
+    val state = ConnectorRolloutStateTerminal.CANCELED
+    val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
+    val errorMsg = "error"
+    val failedReason = "failure"
+    val actorDefinitionId = UUID.randomUUID()
+    val releaseCandidateVersionId = UUID.randomUUID()
+
+    val initialRollout =
+      createMockConnectorRollout(
+        id = rolloutId,
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = releaseCandidateVersionId,
+      )
+
+    val connectorRolloutFinalizeRequestBody =
+      createMockConnectorRolloutFinalizeRequestBody(
+        rolloutId = rolloutId,
+        state = state,
+        rolloutStrategy = rolloutStrategy,
+        errorMsg = errorMsg,
+        failedReason = failedReason,
+        retainPinsOnCancellation = false,
+      )
+    every { connectorRolloutService.getConnectorRollout(any()) } returns initialRollout
+    every { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) } returns Unit
+
+    val finalizedRollout = connectorRolloutHandler.getAndValidateFinalizeRequest(connectorRolloutFinalizeRequestBody)
+
+    verify {
+      actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any())
+    }
+
+    assertEquals(state.toString(), finalizedRollout.state.toString())
+    assertEquals(rolloutStrategy.toString(), finalizedRollout.rolloutStrategy.toString())
+    assertEquals(errorMsg, finalizedRollout.errorMsg)
+    assertEquals(failedReason, finalizedRollout.failedReason)
+    assertTrue(
+      finalizedRollout.updatedAt >= initialRollout.updatedAt,
+      "updatedAt from finalizedRollout should be more recent than updatedAt from initialRollout",
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideConnectorRolloutStateTerminalNonCanceled")
+  fun `test finalizeConnectorRollout with retainPinsOnCancellation and not canceled is ignored`(state: ConnectorRolloutStateTerminal) {
+    val rolloutId = UUID.randomUUID()
+    val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
+    val errorMsg = "error"
+    val failedReason = "failure"
+    val actorDefinitionId = UUID.randomUUID()
+    val releaseCandidateVersionId = UUID.randomUUID()
+
+    val initialRollout =
+      createMockConnectorRollout(
+        id = rolloutId,
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = releaseCandidateVersionId,
+      )
+
+    val connectorRolloutFinalizeRequestBody =
+      createMockConnectorRolloutFinalizeRequestBody(
+        rolloutId = rolloutId,
+        state = state,
+        rolloutStrategy = rolloutStrategy,
+        errorMsg = errorMsg,
+        failedReason = failedReason,
+        retainPinsOnCancellation = true,
       )
     every { connectorRolloutService.getConnectorRollout(any()) } returns initialRollout
     every { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) } returns Unit
@@ -255,7 +405,7 @@ internal class ConnectorRolloutHandlerTest {
 
     val rolloutReads = connectorRolloutHandler.listConnectorRollouts(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
 
-    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it) }, rolloutReads)
+    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it, false) }, rolloutReads)
 
     verify {
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
@@ -277,7 +427,7 @@ internal class ConnectorRolloutHandlerTest {
 
     val rolloutReads = connectorRolloutHandler.listConnectorRollouts(ACTOR_DEFINITION_ID)
 
-    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it) }, rolloutReads)
+    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it, false) }, rolloutReads)
 
     verify {
       connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID)
@@ -303,7 +453,7 @@ internal class ConnectorRolloutHandlerTest {
 
     val rolloutReads = connectorRolloutHandler.listConnectorRollouts()
 
-    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it) }, rolloutReads)
+    assertEquals(expectedRollouts.map { connectorRolloutHandler.buildConnectorRolloutRead(it, false) }, rolloutReads)
 
     verify {
       connectorRolloutService.listConnectorRollouts()
@@ -359,6 +509,71 @@ internal class ConnectorRolloutHandlerTest {
     verify { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG) }
   }
 
+  @Test
+  fun `test startConnectorRollout with pin migration`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRollout = createMockConnectorRollout(rolloutId).apply { this.state = state }
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { connectorRolloutService.listConnectorRollouts(any()) } returns emptyList()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { actorDefinitionVersionUpdater.migrateReleaseCandidatePins(any(), any(), any(), any()) } just Runs
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
+
+    connectorRolloutHandler.startConnectorRollout(
+      ConnectorRolloutStartRequestBody()
+        .id(rolloutId)
+        .workflowRunId(UUID.randomUUID().toString())
+        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
+        .migratePins(true),
+    )
+
+    verify {
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionVersionUpdater.migrateReleaseCandidatePins(any(), any(), any(), any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      actorDefinitionService.getActorDefinitionVersion(any())
+      connectorRolloutService.listConnectorRollouts(any())
+      connectorRolloutService.writeConnectorRollout(any())
+    }
+  }
+
+  @Test
+  fun `test startConnectorRollout without pin migration`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRollout = createMockConnectorRollout(rolloutId).apply { this.state = state }
+
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { connectorRolloutService.listConnectorRollouts(any()) } returns emptyList()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
+
+    connectorRolloutHandler.startConnectorRollout(
+      ConnectorRolloutStartRequestBody()
+        .id(rolloutId)
+        .workflowRunId(UUID.randomUUID().toString())
+        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
+        .migratePins(false),
+    )
+
+    verify(exactly = 0) {
+      actorDefinitionVersionUpdater.migrateReleaseCandidatePins(any(), any(), any(), any())
+      connectorRolloutService.listConnectorRollouts(any())
+    }
+    verify {
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      actorDefinitionService.getActorDefinitionVersion(any())
+      connectorRolloutService.writeConnectorRollout(any())
+    }
+  }
+
   @ParameterizedTest
   @MethodSource("validStartStates")
   fun `test getAndValidateStartRequest with initialized state`(state: ConnectorEnumRolloutState) {
@@ -384,8 +599,10 @@ internal class ConnectorRolloutHandlerTest {
 
   @ParameterizedTest
   @MethodSource("invalidStartStates")
-  fun `test getAndValidateStartRequest with invalid state throws exception`(state: ConnectorEnumRolloutState) {
+  fun `test getAndValidateStartRequest adds new information to existing rollout`(state: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
+    val runId = UUID.randomUUID().toString()
+    val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
         this.state = state
@@ -393,10 +610,16 @@ internal class ConnectorRolloutHandlerTest {
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns connectorRollout
 
-    assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getAndValidateStartRequest(createMockConnectorRolloutStartRequestBody())
-    }
+    val result =
+      connectorRolloutHandler.getAndValidateStartRequest(
+        ConnectorRolloutStartRequestBody()
+          .id(rolloutId)
+          .workflowRunId(runId)
+          .rolloutStrategy(rolloutStrategy),
+      )
 
+    assertEquals(connectorRollout.workflowRunId, result.workflowRunId)
+    assertEquals(rolloutStrategy.toString(), result.rolloutStrategy.toString())
     verify {
       connectorRolloutService.getConnectorRollout(any())
     }
@@ -598,6 +821,7 @@ internal class ConnectorRolloutHandlerTest {
           ConnectorRolloutStrategy.MANUAL,
           "No error",
           "No failure",
+          true,
         ),
       )
 
@@ -628,6 +852,7 @@ internal class ConnectorRolloutHandlerTest {
           ConnectorRolloutStrategy.MANUAL,
           "No error",
           "No failure",
+          true,
         ),
       )
     }
@@ -706,6 +931,7 @@ internal class ConnectorRolloutHandlerTest {
         actorDefinitionId = ACTOR_DEFINITION_ID
         updatedBy = UPDATED_BY
         rolloutStrategy = ConnectorRolloutStrategy.MANUAL
+        migratePins = false
       }
     val connectorRollout = createMockConnectorRollout(rolloutId)
 
@@ -719,6 +945,8 @@ internal class ConnectorRolloutHandlerTest {
     every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(createMockActorDefinitionVersion())
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
 
     val result = connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutWorkflowStart)
 
@@ -730,6 +958,8 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
@@ -787,6 +1017,8 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.IN_PROGRESS)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
 
     val result = connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutWorkflowUpdate)
 
@@ -796,6 +1028,8 @@ internal class ConnectorRolloutHandlerTest {
       connectorRolloutClient.doRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
@@ -819,6 +1053,8 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
       every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+      every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+      every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
     every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
 
@@ -829,6 +1065,48 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
         connectorRolloutClient.startRollout(any())
+        rolloutActorFinder.getActorSelectionInfo(any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      }
+      connectorRolloutClient.finalizeRollout(any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("validFinalizeStates")
+  fun `test manualFinalizeConnectorRollout with pin retention`(initialState: ConnectorEnumRolloutState) {
+    val rolloutId = UUID.randomUUID()
+    val rollout = createMockConnectorRollout(rolloutId)
+    rollout.apply { state = initialState }
+    val state = ConnectorRolloutStateTerminal.SUCCEEDED
+    val connectorRolloutFinalizeWorkflowUpdate =
+      ConnectorRolloutManualFinalizeRequestBody().apply {
+        dockerRepository = "airbyte/source-faker"
+        dockerImageTag = "0.1"
+        actorDefinitionId = UUID.randomUUID()
+        id = rolloutId
+        this.state = state
+        retainPinsOnCancellation = true
+      }
+
+    every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
+      every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+      every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0, 0)
+      every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
+    }
+    every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
+
+    connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
+
+    verifyAll {
+      connectorRolloutService.getConnectorRollout(any())
+      actorDefinitionService.getActorDefinitionVersion(any())
+      if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
+        connectorRolloutClient.startRollout(any())
+        rolloutActorFinder.getActorSelectionInfo(any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
       }
       connectorRolloutClient.finalizeRollout(any())
     }
@@ -859,6 +1137,8 @@ internal class ConnectorRolloutHandlerTest {
         dockerImageTag,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
 
     assertEquals(connectorRollout.id, result.id)
@@ -894,6 +1174,8 @@ internal class ConnectorRolloutHandlerTest {
         dockerImageTag,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
   }
@@ -919,6 +1201,8 @@ internal class ConnectorRolloutHandlerTest {
       DOCKER_IMAGE_TAG,
       UPDATED_BY,
       ConnectorRolloutStrategy.MANUAL,
+      null,
+      null,
     )
 
     verifyAll {
@@ -940,6 +1224,8 @@ internal class ConnectorRolloutHandlerTest {
         DOCKER_IMAGE_TAG,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
 
@@ -960,6 +1246,8 @@ internal class ConnectorRolloutHandlerTest {
         DOCKER_IMAGE_TAG,
         UPDATED_BY,
         ConnectorRolloutStrategy.MANUAL,
+        null,
+        null,
       )
     }
 
@@ -1013,6 +1301,7 @@ internal class ConnectorRolloutHandlerTest {
     rolloutStrategy: ConnectorRolloutStrategy,
     errorMsg: String,
     failedReason: String,
+    retainPinsOnCancellation: Boolean,
   ): ConnectorRolloutFinalizeRequestBody =
     ConnectorRolloutFinalizeRequestBody()
       .id(rolloutId)
@@ -1020,6 +1309,7 @@ internal class ConnectorRolloutHandlerTest {
       .rolloutStrategy(rolloutStrategy)
       .errorMsg(errorMsg)
       .failedReason(failedReason)
+      .retainPinsOnCancellation(retainPinsOnCancellation)
 
   private fun createMockActorDefinitionVersion(): ActorDefinitionVersion =
     ActorDefinitionVersion()

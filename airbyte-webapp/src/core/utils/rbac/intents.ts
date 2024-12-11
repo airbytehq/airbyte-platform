@@ -10,7 +10,6 @@ export const intentToRbacQuery = {
   ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
 
   // workspace
-  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
   DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
   DownloadDiagnostics: { resourceType: "WORKSPACE", role: "READER" },
   UpdateWorkspace: [

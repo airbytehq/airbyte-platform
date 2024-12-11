@@ -3,8 +3,6 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
-import io.airbyte.featureflag.Context
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.KubeClientException
@@ -44,8 +42,6 @@ class KubePodClient(
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
-  private val featureFlagClient: FeatureFlagClient,
-  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
@@ -56,7 +52,15 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+    val sharedLabels =
+      labeler.getSharedLabels(
+        launcherInput.workloadId,
+        launcherInput.mutexKey,
+        launcherInput.labels,
+        launcherInput.autoId,
+        replicationInput.workspaceId,
+        replicationInput.networkSecurityTokens,
+      )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
     var pod =
@@ -107,7 +111,15 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+    val sharedLabels =
+      labeler.getSharedLabels(
+        launcherInput.workloadId,
+        launcherInput.mutexKey,
+        launcherInput.labels,
+        launcherInput.autoId,
+        replicationInput.workspaceId,
+        replicationInput.networkSecurityTokens,
+      )
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
 
     var pod =
@@ -160,8 +172,9 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        workspaceId = checkInput.launcherConfig.workspaceId,
+        networkSecurityTokens = checkInput.checkConnectionInput.networkSecurityTokens,
       )
-
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
@@ -178,6 +191,8 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        workspaceId = discoverCatalogInput.launcherConfig.workspaceId,
+        networkSecurityTokens = discoverCatalogInput.discoverCatalogInput.networkSecurityTokens,
       )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
@@ -196,6 +211,8 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        null,
+        emptyList(),
       )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)

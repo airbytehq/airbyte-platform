@@ -18,6 +18,9 @@ properties:
   payment_provider_id:
     description: ID of the external payment provider (ex. a Stripe Customer ID)
     type: string
+  subscription_status:
+    description: Subscription status for the organization
+    $ref: SubscriptionStatus.yaml
   payment_status:
     description: Payment status for the organization
     $ref: PaymentStatus.yaml

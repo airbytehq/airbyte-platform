@@ -9,17 +9,20 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for setting up the Keycloak server. It initializes and configures the
  * server according to the provided specifications.
  */
 @Singleton
-@Slf4j
 @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
 public class KeycloakSetup {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final HttpClient httpClient;
   private final KeycloakServer keycloakServer;

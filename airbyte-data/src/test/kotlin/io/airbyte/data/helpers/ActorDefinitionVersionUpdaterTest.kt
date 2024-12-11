@@ -21,8 +21,10 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseBreakingChangeScopes
 import io.airbyte.featureflag.Workspace
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -723,6 +725,45 @@ internal class ActorDefinitionVersionUpdaterTest {
     }
     verify(exactly = 0) {
       scopedConfigurationService.deleteScopedConfigurations(any())
+    }
+  }
+
+  @Test
+  fun testMigrateReleaseCandidatePins() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1", "origin2")
+    val newOrigin = "origin3"
+    val newReleaseCandidateVersionId = UUID.randomUUID()
+
+    every {
+      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+        newOrigin,
+        newReleaseCandidateVersionId.toString(),
+      )
+    } just Runs
+
+    actorDefinitionVersionUpdater.migrateReleaseCandidatePins(
+      actorDefinitionId,
+      origins,
+      newOrigin,
+      newReleaseCandidateVersionId,
+    )
+
+    verify {
+      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+        newOrigin,
+        newReleaseCandidateVersionId.toString(),
+      )
     }
   }
 

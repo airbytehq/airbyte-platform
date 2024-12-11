@@ -6,18 +6,12 @@ import { matchPath, useLocation } from "react-router-dom";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
 import { ThemeToggle } from "components/ui/ThemeToggle";
-import { Tooltip } from "components/ui/Tooltip";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList";
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
-import { links } from "core/utils/links";
-import { useExperiment } from "hooks/services/Experiment";
-import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
 
@@ -36,43 +30,6 @@ interface SideBarProps {
 const HIDDEN_SIDEBAR_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
 ];
-
-const BillingPageLink: React.FC = () => {
-  const showBillingPageV2 = useShowBillingPageV2();
-  const isBillingMigrationMaintenance = useExperiment("billing.migrationMaintenance");
-
-  if (showBillingPageV2) {
-    return null;
-  }
-
-  return (
-    <Tooltip
-      containerClassName={styles.sidebar__tooltip}
-      placement="right"
-      control={
-        <NavItem
-          icon="credits"
-          disabled={isBillingMigrationMaintenance}
-          label={<FormattedMessage id="sidebar.billing" />}
-          to={CloudRoutes.Billing}
-          testId="creditsButton"
-        />
-      }
-      disabled={!isBillingMigrationMaintenance}
-    >
-      <FormattedMessage
-        id="sidebar.billingMigrationMaintenance"
-        values={{
-          statusPage: (node: React.ReactNode) => (
-            <ExternalLink href={links.statusLink} opensInNewTab>
-              {node}
-            </ExternalLink>
-          ),
-        }}
-      />
-    </Tooltip>
-  );
-};
 
 export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   workspaceFetcher,
@@ -127,9 +84,6 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
           />
-          <IfFeatureEnabled feature={FeatureItem.Billing}>
-            <BillingPageLink />
-          </IfFeatureEnabled>
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon="gear"

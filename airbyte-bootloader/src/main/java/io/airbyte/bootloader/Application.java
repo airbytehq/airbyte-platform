@@ -6,14 +6,17 @@ package io.airbyte.bootloader;
 
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.runtime.Micronaut;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main application entry point responsible for starting the server and invoking the bootstrapping
  * of the Airbyte environment.
  */
-@Slf4j
 public class Application {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static void main(final String[] args) {
     try {

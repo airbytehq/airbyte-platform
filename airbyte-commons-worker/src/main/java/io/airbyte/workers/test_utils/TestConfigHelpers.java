@@ -66,7 +66,9 @@ public class TestConfigHelpers {
         .withWorkspaceId(replicationInput.getWorkspaceId())
         .withConnectionContext(new ConnectionContext()
             .withOrganizationId(organizationId)
-            .withSourceDefinitionId(sourceDefinitionId)));
+            .withSourceDefinitionId(sourceDefinitionId))
+        .withUseAsyncActivities(true)
+        .withUseAsyncReplicate(true));
   }
 
   public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {

@@ -44,6 +44,8 @@ import org.junit.jupiter.api.Test;
           value = "workload")
 @Property(name = "airbyte.cloud.storage.bucket.activity-payload",
           value = "payload")
+// @Property(name = "airbyte.cloud.storage.bucket.audit-logging",
+// value = "audit")
 class DataPlaneActivityInitializationMicronautTest {
 
   // Ideally this should be broken down into different tests to get a clearer view of which bean

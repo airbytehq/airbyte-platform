@@ -9,10 +9,9 @@
 export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
-  "billing.autoRecharge": boolean;
-  "billing.migrationMaintenance": boolean;
   "connection.columnSelection": boolean;
   "connection.hashingUI": boolean;
+  "connection.mappingsUI": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
@@ -21,7 +20,6 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "connectorBuilder.aiAssist.enabled": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
-  "logs.structured-logs-ui": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
@@ -31,11 +29,10 @@ export interface Experiments {
 
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
-  "billing.autoRecharge": false,
   "billing.early-sync-enabled": false,
-  "billing.migrationMaintenance": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
+  "connection.mappingsUI": false,
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,
@@ -45,7 +42,6 @@ export const defaultExperimentValues: Experiments = {
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
-  "logs.structured-logs-ui": false,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": false,

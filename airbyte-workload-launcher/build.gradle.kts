@@ -21,6 +21,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.guava)
   implementation(libs.kotlin.logging)
+  implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.micronaut.jooq)
   implementation(libs.bundles.micronaut.kotlin)

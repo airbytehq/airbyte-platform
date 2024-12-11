@@ -1,7 +1,13 @@
 import dayjs from "dayjs";
 
 import { useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
-import { ConnectionSyncStatus, FailureReason } from "core/api/types/AirbyteClient";
+import {
+  ConnectionStatusesRead,
+  ConnectionSyncStatus,
+  FailureOrigin,
+  FailureReason,
+  FailureType,
+} from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 
 export interface UIConnectionStatus {
@@ -21,7 +27,7 @@ export interface UIConnectionStatus {
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
   const connectionStatuses = useListConnectionsStatuses([connectionId]);
-  const connectionStatus = connectionStatuses[0];
+  const connectionStatus = selectConnectionStatus(connectionStatuses);
 
   const {
     connectionSyncStatus: status,
@@ -56,4 +62,22 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     recordsExtracted: syncProgress?.recordsCommitted,
     recordsLoaded: syncProgress?.recordsEmitted,
   };
+};
+
+const selectConnectionStatus = (connectionStatusReads: ConnectionStatusesRead) => {
+  const configErrors = connectionStatusReads.filter(
+    (status) => status.failureReason?.failureType === FailureType.config_error
+  );
+  if (configErrors.length > 0) {
+    return configErrors[0];
+  }
+
+  const sourceErrors = connectionStatusReads.filter(
+    (status) => status.failureReason?.failureOrigin === FailureOrigin.source
+  );
+  if (sourceErrors.length > 0) {
+    return sourceErrors[0];
+  }
+
+  return connectionStatusReads[0];
 };

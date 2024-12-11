@@ -1,0 +1,51 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.row {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-xs;
+  border: variables.$border-thin solid colors.$grey-300;
+  padding: variables.$spacing-md;
+  min-width: variables.$width-modal-md;
+
+  input {
+    font-size: variables.$font-size-md;
+
+    ::placeholder {
+      font-size: variables.$font-size-md;
+    }
+  }
+}
+
+.input {
+  width: variables.$width-extra-wide-menu;
+}
+
+.controlButton {
+  padding: 7px 8px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.rowContent {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.form {
+  display: flex;
+  gap: variables.$spacing-md;
+  align-items: center;
+  flex-wrap: wrap;
+
+  p {
+    white-space: nowrap;
+  }
+}

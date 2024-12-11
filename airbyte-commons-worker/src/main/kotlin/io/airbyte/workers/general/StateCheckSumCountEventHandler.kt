@@ -464,10 +464,11 @@ class StateCheckSumCountEventHandler(
           " Hash collisions were observed so count comparison result may be wrong."
         } +
         if (includeStreamInLogs) {
-          " Observed the following record counts per stream: \n" +
-            streamPlatformRecordCounts.forEach { (name, count) ->
-              " $name : $count\n"
-            }
+          val namesAndCounts =
+            streamPlatformRecordCounts.map { (name, count) ->
+              " $name : $count"
+            }.joinToString("\n")
+          " Observed the following record counts per stream: \n$namesAndCounts"
         } else {
           ""
         }

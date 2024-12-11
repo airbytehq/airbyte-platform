@@ -10,6 +10,7 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.spyk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -63,8 +64,7 @@ class ResourceRequirementsFactoryTest {
         .withSyncResourceRequirements(
           SyncResourceRequirements()
             .withSource(reqs),
-        )
-        .withUseFileTransfer(false)
+        ).withUseFileTransfer(false)
 
     val result = factory.replSource(input)
 
@@ -79,8 +79,7 @@ class ResourceRequirementsFactoryTest {
         .withSyncResourceRequirements(
           SyncResourceRequirements()
             .withSource(reqs),
-        )
-        .withUseFileTransfer(true)
+        ).withUseFileTransfer(true)
 
     val result = factory.replSource(input)
 
@@ -119,8 +118,8 @@ class ResourceRequirementsFactoryTest {
   fun `builds check connector reqs from input if provided`(reqs: AirbyteResourceRequirements) {
     val input =
       CheckConnectionInput(
-        null,
-        null,
+        mockk(),
+        mockk(),
         StandardCheckConnectionInput()
           .withResourceRequirements(reqs),
       )
@@ -136,8 +135,8 @@ class ResourceRequirementsFactoryTest {
   fun `builds check connector reqs from defaults if not provided`() {
     val input =
       CheckConnectionInput(
-        null,
-        null,
+        mockk(),
+        mockk(),
         StandardCheckConnectionInput(),
       )
 
@@ -151,8 +150,8 @@ class ResourceRequirementsFactoryTest {
   fun `builds discover connector reqs from input if provided`(reqs: AirbyteResourceRequirements) {
     val input =
       DiscoverCatalogInput(
-        null,
-        null,
+        mockk(),
+        mockk(),
         StandardDiscoverCatalogInput()
           .withResourceRequirements(reqs),
       )
@@ -168,8 +167,8 @@ class ResourceRequirementsFactoryTest {
   fun `builds discover connector reqs from defaults if not provided`() {
     val input =
       DiscoverCatalogInput(
-        null,
-        null,
+        mockk(),
+        mockk(),
         StandardDiscoverCatalogInput(),
       )
 
@@ -203,7 +202,12 @@ class ResourceRequirementsFactoryTest {
   @ParameterizedTest
   @MethodSource("nonNullRequirementsMatrix")
   fun `builds check init reqs from sum of connector and sidecar config`(reqs: AirbyteResourceRequirements) {
-    val input = CheckConnectionInput()
+    val input =
+      CheckConnectionInput(
+        jobRunConfig = mockk(),
+        launcherConfig = mockk(),
+        checkConnectionInput = mockk(),
+      )
     val spy = spyk(factory)
     every { spy.checkConnector(input) } returns reqs
 
@@ -217,7 +221,12 @@ class ResourceRequirementsFactoryTest {
   @ParameterizedTest
   @MethodSource("nonNullRequirementsMatrix")
   fun `builds discover init reqs from sum of connector and sidecar config`(reqs: AirbyteResourceRequirements) {
-    val input = DiscoverCatalogInput()
+    val input =
+      DiscoverCatalogInput(
+        jobRunConfig = mockk(),
+        launcherConfig = mockk(),
+        discoverCatalogInput = mockk(),
+      )
     val spy = spyk(factory)
     every { spy.discoverConnector(input) } returns reqs
 

@@ -18,17 +18,17 @@ import { syncFailEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface SyncFailEventItemProps {
-  syncEvent: InferType<typeof syncFailEventSchema>;
+  event: InferType<typeof syncFailEventSchema>;
 }
 
-export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent }) => {
+export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   const { formatMessage } = useIntl();
-  const titleId = titleIdMap[syncEvent.eventType];
+  const titleId = titleIdMap[event.eventType];
 
-  const failureUiDetails = failureUiDetailsFromReason(syncEvent.summary.failureReason, formatMessage);
-  const jobStatus = getStatusByEventType(syncEvent.eventType);
+  const failureUiDetails = failureUiDetailsFromReason(event.summary.failureReason, formatMessage);
+  const jobStatus = getStatusByEventType(event.eventType);
 
   return (
     <ConnectionTimelineEventItem>
@@ -37,7 +37,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
-        <JobStats {...syncEvent.summary} />
+        <JobStats {...event.summary} />
         {failureUiDetails && (
           <Box pt="xs" className={styles.details}>
             <JobFailureDetails failureUiDetails={failureUiDetails} />
@@ -45,15 +45,11 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
         )}
         {!failureUiDetails && showExtendedStats && (
           <Text as="span" color="grey400" size="sm">
-            <FormattedMessage id="jobs.jobId" values={{ id: syncEvent.summary.jobId }} />
+            <FormattedMessage id="jobs.jobId" values={{ id: event.summary.jobId }} />
           </Text>
         )}
       </ConnectionTimelineEventSummary>
-      <ConnectionTimelineEventActions
-        createdAt={syncEvent.createdAt}
-        jobId={syncEvent.summary.jobId}
-        eventId={syncEvent.id}
-      />
+      <ConnectionTimelineEventActions createdAt={event.createdAt} jobId={event.summary.jobId} eventId={event.id} />
     </ConnectionTimelineEventItem>
   );
 };

@@ -24,8 +24,8 @@ data class ScopedConfiguration(
   var scopeType: ConfigScopeType,
   var scopeId: UUID,
   @field:TypeDef(type = DataType.OBJECT)
-  var resourceType: ConfigResourceType,
-  var resourceId: UUID,
+  var resourceType: ConfigResourceType? = null,
+  var resourceId: UUID? = null,
   @field:TypeDef(type = DataType.OBJECT)
   var originType: ConfigOriginType,
   var origin: String,

@@ -13,7 +13,6 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.token.validator.TokenValidator;
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 
@@ -24,7 +23,6 @@ import reactor.core.publisher.Flux;
  * is making the internal request. The webapp proxy unsets the X-Airbyte-Auth header, so this header
  * will only be present on internal requests.
  **/
-@Slf4j
 @Singleton
 @Requires(property = "micronaut.security.enabled",
           value = "true")

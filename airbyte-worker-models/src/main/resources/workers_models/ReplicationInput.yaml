@@ -91,3 +91,8 @@ properties:
     default: false
   connectionContext:
     existingJavaType: io.airbyte.config.ConnectionContext
+  networkSecurityTokens:
+    description: Workload launcher will use these to grant pods additional network access
+    type: array
+    items:
+      type: string

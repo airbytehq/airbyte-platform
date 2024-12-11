@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
+import java.util.UUID
 
 data class FieldRenamingMapperConfig(
   @JsonProperty("name")
@@ -18,6 +19,7 @@ data class FieldRenamingMapperConfig(
   @JsonProperty("config")
   @field:NotNull
   val config: FieldRenamingConfig,
+  val id: UUID? = null,
 ) : MapperConfig {
   override fun name(): String {
     return name
@@ -25,6 +27,10 @@ data class FieldRenamingMapperConfig(
 
   override fun documentationUrl(): String? {
     return documentationUrl
+  }
+
+  override fun id(): UUID? {
+    return id
   }
 
   override fun config(): Any {

@@ -80,6 +80,7 @@ import LinkIcon from "./icons/linkIcon.svg?react";
 import LoadingIcon from "./icons/loadingIcon.svg?react";
 import LocationIcon from "./icons/locationIcon.svg?react";
 import LockIcon from "./icons/lockIcon.svg?react";
+import MappingIcon from "./icons/mappingIcon.svg?react";
 import MenuIcon from "./icons/menuIcon.svg?react";
 import MetricSuccessHighIcon from "./icons/metricSuccessHighIcon.svg?react";
 import MetricSuccessLowIcon from "./icons/metricSuccessLowIcon.svg?react";
@@ -247,6 +248,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   loading: LoadingIcon,
   location: LocationIcon,
   lock: LockIcon,
+  mapping: MappingIcon,
   menu: MenuIcon,
   metricSuccessHigh: MetricSuccessHighIcon,
   metricSuccessLow: MetricSuccessLowIcon,

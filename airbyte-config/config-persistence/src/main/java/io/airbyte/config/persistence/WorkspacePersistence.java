@@ -18,12 +18,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Persistence Interface for Workspace table.
  */
-@Slf4j
 public class WorkspacePersistence {
 
   public static final String DEFAULT_WORKSPACE_NAME = "Default Workspace";

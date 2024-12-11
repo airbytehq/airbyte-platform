@@ -5,6 +5,7 @@ import { MainPageWithScroll } from "components";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
 
@@ -43,7 +44,9 @@ export const ConnectorBuilderListPage: React.FC = () => {
         />
       }
     >
-      <ConnectorBuilderProjectTable projects={projects} />
+      <FlexContainer direction="column" gap="2xl">
+        <ConnectorBuilderProjectTable projects={projects} />
+      </FlexContainer>
     </MainPageWithScroll>
   ) : (
     <Navigate to={ConnectorBuilderRoutePaths.Create} />

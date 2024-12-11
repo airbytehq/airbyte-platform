@@ -19,8 +19,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     organizationRepository.save(organization)
 
@@ -41,8 +39,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
 
     organizationRepository.save(organization)
@@ -62,8 +58,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     organizationRepository.save(organization)
 
@@ -105,8 +99,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     val savedOrg = organizationRepository.save(organization)
 

@@ -19,7 +19,10 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
-
+  caches:
+    network-policy-label-cache:
+      expire-after-write: 10m
+      maximum-size: 100_000
 airbyte:
   connector:
     source:
@@ -78,6 +81,7 @@ airbyte:
       high-priority-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    network-policy-introspection: false
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -132,6 +136,7 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
+        connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -142,7 +147,6 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
-        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
         tolerations: ${JOB_KUBE_TOLERATIONS:}
         sidecar:
           container:
@@ -236,6 +240,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:

@@ -1,5 +1,6 @@
 package io.airbyte.config
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.JsonNode
@@ -13,6 +14,7 @@ import io.airbyte.config.mapper.configs.HashingMapperConfig
 import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
 import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
 import io.airbyte.config.mapper.configs.TestMapperConfig
+import java.util.UUID
 
 object MapperOperationName {
   const val ENCRYPTION = "encryption"
@@ -40,12 +42,16 @@ object MapperOperationName {
 interface MapperConfig {
   fun name(): String
 
+  fun id(): UUID?
+
   fun documentationUrl(): String?
 
   fun config(): Any
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class ConfiguredMapper(
   val name: String,
   val config: JsonNode,
+  val id: UUID? = null,
 )

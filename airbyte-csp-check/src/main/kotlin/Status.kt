@@ -1,4 +1,4 @@
-package io.airbyte.commons.env
+package io.airbyte.commons.csp
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.commons.annotation.InternalForTesting
@@ -16,25 +16,25 @@ sealed class Status(
 )
 
 @InternalForTesting
-internal const val STATUS_GREEN = "green"
-
-@InternalForTesting
-internal const val STATUS_RED = "red"
+internal const val STATUS_PASS = "pass"
 
 /**
  * Represents a successful status check.
  */
-class GreenStatus : Status(result = STATUS_GREEN) {
+class PassStatus : Status(result = STATUS_PASS) {
   override fun toString(): String = result
 }
+
+@InternalForTesting
+internal const val STATUS_FAIL = "fail"
 
 /**
  * Represents a failed status check.
  *
  * @param throwable the throwable that triggered this failure.
  */
-class RedStatus(
+class FailStatus(
   throwable: Throwable? = null,
-) : Status(result = STATUS_RED, message = throwable?.message) {
+) : Status(result = STATUS_FAIL, message = throwable?.message) {
   override fun toString(): String = "$result ($message)"
 }

@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
+import { CatalogListBox } from "components/connection/SyncCatalogTable/components/CatalogListBox/CatalogListBox";
 import { Option } from "components/ui/ListBox";
-import { InlineListBox } from "components/ui/ListBox/InlineListBox";
 
 import { SyncModeValue } from "./SyncModeCell";
 
@@ -28,7 +28,7 @@ export const SyncModeButton: React.FC<SyncModeSelectProps> = ({ options, value, 
   );
 
   return (
-    <InlineListBox<SyncModeValue>
+    <CatalogListBox<SyncModeValue>
       {...restProps}
       isDisabled={disabled}
       options={syncModeOptions}

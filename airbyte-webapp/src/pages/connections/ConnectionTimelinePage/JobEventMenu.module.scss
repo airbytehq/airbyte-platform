@@ -1,12 +1,11 @@
+@use "scss/variables";
+
 .modalLoading {
   position: relative;
   flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-// fix for "dancing" scrollbar
-.spinnerContainer {
-  overflow: clip;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
 }

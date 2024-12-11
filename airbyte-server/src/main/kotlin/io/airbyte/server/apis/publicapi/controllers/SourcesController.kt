@@ -52,7 +52,7 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacesPermission(
       sourceCreateRequest?.let { listOf(it.workspaceId.toString()) } ?: emptyList(),
       Scope.WORKSPACE,
       userId,
@@ -114,8 +114,8 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteSource(sourceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      sourceId,
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -147,8 +147,8 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetSource(sourceId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      sourceId,
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -180,8 +180,8 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(initiateOauthRequest.workspaceId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      initiateOauthRequest.workspaceId.toString(),
       Scope.WORKSPACE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -197,7 +197,7 @@ open class SourcesController(
     offset: Int,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacesPermission(
       workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -234,8 +234,8 @@ open class SourcesController(
     sourcePatchRequest: SourcePatchRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      sourceId,
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -276,8 +276,8 @@ open class SourcesController(
     sourcePutRequest: SourcePutRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      sourceId,
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_EDITOR,

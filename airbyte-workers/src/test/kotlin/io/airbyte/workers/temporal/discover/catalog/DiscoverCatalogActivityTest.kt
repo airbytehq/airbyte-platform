@@ -18,7 +18,6 @@ import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.commands.DiscoverCommand
-import io.airbyte.workers.commands.DiscoverCommand.Companion.DiscoverCatalogSnapDuration
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.WorkloadIdGenerator
@@ -37,8 +36,12 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
 
 class DiscoverCatalogActivityTest {
+  private val discoverCatalogSnapDuration = 15.minutes
+
   private val workspaceRoot: Path = Path.of("workspace-root")
   private val airbyteApiClient: AirbyteApiClient = mockk()
   private val featureFlagClient: FeatureFlagClient = spyk(TestClient())
@@ -65,6 +68,7 @@ class DiscoverCatalogActivityTest {
           workloadClient = workloadClient,
           workloadIdGenerator = workloadIdGenerator,
           logClientManager = logClientManager,
+          discoverAutoRefreshWindowMinutes = discoverCatalogSnapDuration.toInt(DurationUnit.MINUTES),
         ),
       )
     discoverCatalogActivity =
@@ -99,34 +103,39 @@ class DiscoverCatalogActivityTest {
     val workloadId = "789"
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
-    val input = DiscoverCatalogInput()
-    input.jobRunConfig =
-      JobRunConfig()
-        .withJobId(jobId)
-        .withAttemptId(attemptNumber.toLong())
-    input.discoverCatalogInput =
-      StandardDiscoverCatalogInput()
-        .withActorContext(
-          ActorContext()
-            .withWorkspaceId(workspaceId)
-            .withActorDefinitionId(actorDefinitionId)
-            .withActorId(actorId),
-        )
-        .withManual(!runAsPartOfSync)
-    input.launcherConfig =
-      IntegrationLauncherConfig().withConnectionId(
-        connectionId,
-      ).withWorkspaceId(workspaceId).withPriority(WorkloadPriority.DEFAULT)
-
+    val input =
+      DiscoverCatalogInput(
+        jobRunConfig =
+          JobRunConfig()
+            .withJobId(jobId)
+            .withAttemptId(attemptNumber.toLong()),
+        discoverCatalogInput =
+          StandardDiscoverCatalogInput()
+            .withActorContext(
+              ActorContext()
+                .withWorkspaceId(workspaceId)
+                .withActorDefinitionId(actorDefinitionId)
+                .withActorId(actorId),
+            ).withManual(!runAsPartOfSync),
+        launcherConfig =
+          IntegrationLauncherConfig()
+            .withConnectionId(
+              connectionId,
+            ).withWorkspaceId(workspaceId)
+            .withPriority(WorkloadPriority.DEFAULT),
+      )
     if (runAsPartOfSync) {
-      every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DiscoverCatalogSnapDuration)) }.returns(workloadId)
+      every {
+        workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(discoverCatalogSnapDuration.inWholeMilliseconds))
+      }.returns(workloadId)
     } else {
       every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
     }
     every { discoverCommand.getGeography(connectionId, workspaceId) }.returns(Geography.AUTO)
 
     val output =
-      ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
         .withDiscoverCatalogId(UUID.randomUUID())
     every { workloadClient.getConnectorJobOutput(workloadId, any()) } returns output
 

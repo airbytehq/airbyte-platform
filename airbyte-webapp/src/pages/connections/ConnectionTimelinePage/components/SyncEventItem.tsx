@@ -15,13 +15,13 @@ import { syncEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface SyncEventProps {
-  syncEvent: InferType<typeof syncEventSchema>;
+  event: InferType<typeof syncEventSchema>;
 }
 
-export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
-  const titleId = titleIdMap[syncEvent.eventType];
+export const SyncEventItem: React.FC<SyncEventProps> = ({ event }) => {
+  const titleId = titleIdMap[event.eventType];
 
-  const jobStatus = getStatusByEventType(syncEvent.eventType);
+  const jobStatus = getStatusByEventType(event.eventType);
 
   return (
     <ConnectionTimelineEventItem>
@@ -32,18 +32,12 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
         </Text>
         <Box pt="xs">
           <FlexContainer gap="sm" alignItems="baseline">
-            {jobStatus === "cancelled" && !!syncEvent.user && (
-              <UserCancelledDescription user={syncEvent.user} jobType="sync" />
-            )}
-            <JobStats {...syncEvent.summary} />
+            {jobStatus === "cancelled" && !!event.user && <UserCancelledDescription user={event.user} jobType="sync" />}
+            <JobStats {...event.summary} />
           </FlexContainer>
         </Box>
       </ConnectionTimelineEventSummary>
-      <ConnectionTimelineEventActions
-        createdAt={syncEvent.createdAt}
-        eventId={syncEvent.id}
-        jobId={syncEvent.summary.jobId}
-      />
+      <ConnectionTimelineEventActions createdAt={event.createdAt} eventId={event.id} jobId={event.summary.jobId} />
     </ConnectionTimelineEventItem>
   );
 };

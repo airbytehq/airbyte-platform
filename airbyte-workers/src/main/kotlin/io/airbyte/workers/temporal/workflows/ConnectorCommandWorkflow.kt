@@ -227,7 +227,7 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
     activityInput = activityInput.copy(id = id)
 
     try {
-      shouldBlock = true
+      shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       while (shouldBlock) {
         Workflow.await(1.minutes.toJavaDuration()) { !shouldBlock }
         shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)

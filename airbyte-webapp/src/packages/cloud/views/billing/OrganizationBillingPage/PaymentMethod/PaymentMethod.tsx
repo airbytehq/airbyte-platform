@@ -13,7 +13,7 @@ import { useCurrentWorkspace, useGetPaymentInformation } from "core/api";
 import { PaymentMethodRead } from "core/api/types/AirbyteClient";
 
 import styles from "./PaymentMethod.module.scss";
-import { useRedirectToCustomerPortal } from "../../useRedirectToCustomerPortal";
+import { useRedirectToCustomerPortal } from "../../../../area/billing/utils/useRedirectToCustomerPortal";
 import { CreditCardLogo } from "../CreditCardLogo";
 import LinkLogo from "../logos/link.svg?react";
 import { UpdateButton } from "../UpdateButton";

@@ -14,17 +14,20 @@ import io.airbyte.featureflag.Workspace;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fetches feature flags to be used in temporal workflows.
  */
-@Slf4j
 @Singleton
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;

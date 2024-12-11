@@ -31,6 +31,12 @@ public class CloudStorageBeanFactory {
   }
 
   @Singleton
+  @Named("auditLoggingDocumentStore")
+  public StorageClient auditLoggingStorageClient(final StorageClientFactory factory) {
+    return factory.create(DocumentType.AUDIT_LOGS);
+  }
+
+  @Singleton
   @Named("stateDocumentStore")
   public StorageClient stateStorageClient(final StorageClientFactory factory) {
     return factory.create(DocumentType.STATE);

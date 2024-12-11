@@ -44,5 +44,6 @@ class ReplicationInputMapper {
       .withDestinationConfiguration(replicationActivityInput.destinationConfiguration)
       .withConnectionContext(replicationActivityInput.connectionContext)
       .withUseFileTransfer(useFileTransfer)
+      .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
   }
 }

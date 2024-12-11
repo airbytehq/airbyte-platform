@@ -83,10 +83,6 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
-object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
-
-object BillingInArrearsForNewSignups : Temporary<Boolean>(key = "billing.inArrearsForNewSignups", default = false)
-
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
@@ -162,7 +158,7 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
-object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
+object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = true)
 
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
@@ -176,12 +172,16 @@ object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable
 
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
-object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
+object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = true)
 
-object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = false)
+object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = true)
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
-object StructuredLogs : Temporary<Boolean>(key = "platform.structured-logs", default = false)
+object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = false)
+
+object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
+
+object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)

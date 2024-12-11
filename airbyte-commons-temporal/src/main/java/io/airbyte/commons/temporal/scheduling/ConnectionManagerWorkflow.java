@@ -9,9 +9,7 @@ import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.Objects;
 
 /**
  * Temporal workflow that manages running sync jobs for a connection. It handles scheduling, the
@@ -76,13 +74,52 @@ public interface ConnectionManagerWorkflow {
   /**
    * Job Attempt Information.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   class JobInformation {
 
     private long jobId;
     private int attemptId;
+
+    public JobInformation() {}
+
+    public JobInformation(long jobId, int attemptId) {
+      this.jobId = jobId;
+      this.attemptId = attemptId;
+    }
+
+    public long getJobId() {
+      return jobId;
+    }
+
+    public int getAttemptId() {
+      return attemptId;
+    }
+
+    public void setJobId(long jobId) {
+      this.jobId = jobId;
+    }
+
+    public void setAttemptId(int attemptId) {
+      this.attemptId = attemptId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      JobInformation that = (JobInformation) o;
+      return jobId == that.jobId && attemptId == that.attemptId;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(jobId, attemptId);
+    }
+
+    @Override
+    public String toString() {
+      return "JobInformation{jobId=" + jobId + ", attemptId=" + attemptId + '}';
+    }
 
   }
 

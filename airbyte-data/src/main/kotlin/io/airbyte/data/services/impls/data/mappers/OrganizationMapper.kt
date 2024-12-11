@@ -9,8 +9,6 @@ fun EntityOrganization.toConfigModel(): ModelOrganization =
     .withName(this.name)
     .withUserId(this.userId)
     .withEmail(this.email)
-    .withPba(this.pba)
-    .withOrgLevelBilling(this.orgLevelBilling)
 
 fun ModelOrganization.toEntity(): EntityOrganization =
   EntityOrganization(
@@ -18,6 +16,4 @@ fun ModelOrganization.toEntity(): EntityOrganization =
     name = this.name,
     userId = this.userId,
     email = this.email,
-    pba = this.pba,
-    orgLevelBilling = this.orgLevelBilling,
   )

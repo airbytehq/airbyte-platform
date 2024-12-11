@@ -65,7 +65,7 @@ export const configureParameterizedRequests = (numberOfParameters: number) => {
   goToView("0");
   enableParameterizedRequests();
   configureParameters(Array.from(Array(numberOfParameters).keys()).join(","), "item_id");
-  enterUrlPath("items/{{}{{} stream_slice.item_id }}");
+  enterUrlPath("items/{{}{{} stream_slice.item_id");
 };
 
 export const publishProject = () => {
@@ -170,10 +170,15 @@ export const assertSchemaMismatch = () => {
 };
 
 export const assertUrlPath = (urlPath: string) => {
-  getUrlPathInput().should("have.attr", "value", urlPath);
+  getUrlPathInput().contains(urlPath);
 };
 
 export const acceptSchema = () => {
   openDetectedSchemaTab();
   cy.get("[data-testid='accept-schema']").click();
+};
+
+export const focusAndType = (selector: string, text: string) => {
+  cy.get(selector).click();
+  cy.get(selector).type(text);
 };

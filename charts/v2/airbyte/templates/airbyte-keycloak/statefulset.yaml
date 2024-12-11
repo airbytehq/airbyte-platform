@@ -75,29 +75,9 @@ spec:
           image: {{ include "imageUrl" (list .Values.keycloak.image $)}}
           imagePullPolicy: {{ .Values.keycloak.image.pullPolicy }}
           env:
-            {{- if eq .Values.global.deploymentMode "oss"  }}
-            - name: KEYCLOAK_ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: KEYCLOAK_ADMIN_USER
-            - name: KEYCLOAK_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: KEYCLOAK_ADMIN_PASSWORD
-            - name: KEYCLOAK_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: KEYCLOAK_PORT
-            - name: JAVA_OPTS_APPEND
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: KEYCLOAK_JAVA_OPTS_APPEND
+            {{- include "airbyte.keycloak.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
-            {{- end }} # end if oss
 
             {{- if .Values.keycloak.extraEnv }}
             {{ .Values.keycloak.extraEnv | toYaml | nindent 12 }}

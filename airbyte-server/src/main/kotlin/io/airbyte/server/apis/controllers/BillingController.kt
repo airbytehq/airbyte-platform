@@ -5,8 +5,8 @@ import io.airbyte.api.generated.BillingApi
 import io.airbyte.api.model.generated.CustomerPortalRead
 import io.airbyte.api.model.generated.CustomerPortalRequestBody
 import io.airbyte.api.model.generated.ListInvoicesRead
-import io.airbyte.api.model.generated.OrganizationBalanceRead
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.model.generated.OrganizationSubscriptionInfoRead
 import io.airbyte.api.model.generated.OrganizationTrialStatusRead
 import io.airbyte.api.model.generated.PaymentInformationRead
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
@@ -42,11 +42,11 @@ open class BillingController : BillingApi {
   ): PaymentInformationRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
-  @Post("/organization_balance")
+  @Post("/subscription_info")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getOrganizationBalance(
+  override fun getSubscriptionInfo(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationBalanceRead = throw ApiNotImplementedInOssProblem()
+  ): OrganizationSubscriptionInfoRead = throw ApiNotImplementedInOssProblem()
 
   @Post("/handle_webhook")
   @ExecuteOn(AirbyteTaskExecutors.WEBHOOK)

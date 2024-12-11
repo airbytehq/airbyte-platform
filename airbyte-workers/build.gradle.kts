@@ -34,8 +34,6 @@ configurations.all {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -103,8 +101,6 @@ dependencies {
   runtimeOnly(libs.javax.databind)
   runtimeOnly(libs.bundles.logback)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

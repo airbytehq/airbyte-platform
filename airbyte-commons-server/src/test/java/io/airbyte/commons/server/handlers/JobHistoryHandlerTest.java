@@ -47,6 +47,7 @@ import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogEvents;
 import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -88,7 +89,6 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -215,13 +215,14 @@ class JobHistoryHandlerTest {
   private SourceHandler sourceHandler;
   private DestinationHandler destinationHandler;
   private Attempt testJobAttempt;
+  private JobConverter jobConverter;
   private JobPersistence jobPersistence;
+  private LogClientManager logClientManager;
   private LogUtils logUtils;
   private FeatureFlagClient featureFlagClient;
   private JobHistoryHandler jobHistoryHandler;
   private TemporalClient temporalClient;
   private JobService jobService;
-  private WorkspaceHelper workspaceHelper;
 
   private static JobRead toJobInfo(final Job job) {
     return new JobRead().id(job.getId())
@@ -276,10 +277,11 @@ class JobHistoryHandlerTest {
     sourceHandler = mock(SourceHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     jobPersistence = mock(JobPersistence.class);
+    logClientManager = mock(LogClientManager.class);
     logUtils = mock(LogUtils.class);
     featureFlagClient = mock(TestClient.class);
     temporalClient = mock(TemporalClient.class);
-    workspaceHelper = mock(WorkspaceHelper.class);
+    jobConverter = new JobConverter(logClientManager, logUtils);
     final SourceDefinitionsHandler sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     final DestinationDefinitionsHandler destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
@@ -294,11 +296,9 @@ class JobHistoryHandlerTest {
         airbyteVersion,
         temporalClient,
         featureFlagClient,
-        mock(LogClientManager.class),
+        jobConverter,
         jobService,
-        apiPojoConverters,
-        logUtils,
-        workspaceHelper);
+        apiPojoConverters);
   }
 
   @Nested
@@ -560,6 +560,7 @@ class JobHistoryHandlerTest {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
         CREATED_AT);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
+    when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
 
     final JobIdRequestBody requestBody = new JobIdRequestBody().id(JOB_ID);
     final JobInfoRead jobInfoActual = jobHistoryHandler.getJobInfo(requestBody);
@@ -615,6 +616,7 @@ class JobHistoryHandlerTest {
     when(destinationHandler.getDestination(destinationIdRequestBody)).thenReturn(destinationRead);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(jobPersistence.getAttemptStats(anyLong(), anyInt())).thenReturn(FIRST_ATTEMPT_STATS);
+    when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
 
     final JobIdRequestBody requestBody = new JobIdRequestBody().id(JOB_ID);
     final JobDebugInfoRead jobDebugInfoActual = jobHistoryHandler.getJobDebugInfo(requestBody);

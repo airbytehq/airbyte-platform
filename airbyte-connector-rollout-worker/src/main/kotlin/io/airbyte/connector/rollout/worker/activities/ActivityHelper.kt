@@ -1,5 +1,7 @@
 package io.airbyte.connector.rollout.worker.activities
 
+import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.Constants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.failure.ApplicationFailure
@@ -27,4 +29,8 @@ fun handleAirbyteApiClientException(e: ClientException): Nothing {
     }
 
   throw ApplicationFailure.newFailure(body, Constants.AIRBYTE_API_CLIENT_EXCEPTION)
+}
+
+fun getRolloutStrategyFromInput(rolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorRolloutStrategy {
+  return if (rolloutStrategy == null) ConnectorRolloutStrategy.MANUAL else ConnectorRolloutStrategy.valueOf(rolloutStrategy.toString().uppercase())
 }

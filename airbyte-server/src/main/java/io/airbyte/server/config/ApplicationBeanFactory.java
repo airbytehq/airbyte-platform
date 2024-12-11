@@ -30,6 +30,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
+import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -217,6 +218,12 @@ public class ApplicationBeanFactory {
   @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+  }
+
+  @Singleton
+  @Named("oauthImplementationFactory")
+  public OAuthImplementationFactory oauthImplementationFactory() {
+    return new OAuthImplementationFactory(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build());
   }
 
   @Singleton

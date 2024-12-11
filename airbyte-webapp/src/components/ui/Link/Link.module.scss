@@ -18,6 +18,24 @@
     }
   }
 
+  &--button--primary {
+    @include mixins.base-button;
+
+    // primary
+    color: colors.$white;
+    width: fit-content;
+
+    &:hover {
+      background-color: colors.$blue-500;
+    }
+
+    &:active {
+      background-color: colors.$blue-600;
+    }
+
+    background-color: colors.$blue-400;
+  }
+
   &--button {
     @include mixins.base-button;
 

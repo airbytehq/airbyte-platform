@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { LoadingPage } from "components";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { HeadTitle } from "components/HeadTitle";
-import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -72,9 +71,7 @@ export const AllConnectionsPage: React.FC = () => {
               }
             />
             <ScrollParent props={{ className: styles.pageBody }}>
-              <Box m="xl" mt="none">
-                <ConnectionsListCard />
-              </Box>
+              <ConnectionsListCard />
             </ScrollParent>
           </PageGridContainer>
         ) : (

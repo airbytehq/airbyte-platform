@@ -7,7 +7,7 @@ import { getLinkClassNames } from "./getLinkClassNames";
 export interface LinkProps {
   className?: string;
   opensInNewTab?: boolean;
-  variant?: "default" | "primary" | "button";
+  variant?: "default" | "primary" | "button" | "buttonPrimary";
   onClick?: ComponentProps<typeof ReactRouterLink>["onClick"];
   title?: string;
 }

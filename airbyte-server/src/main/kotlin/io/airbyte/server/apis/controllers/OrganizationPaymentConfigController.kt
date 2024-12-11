@@ -3,18 +3,16 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.OrganizationPaymentConfigApi
 import io.airbyte.api.model.generated.OrganizationPaymentConfigRead
 import io.airbyte.api.problems.ResourceType
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.server.OrganizationId
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.config.OrganizationPaymentConfig.UsageCategoryOverride
-import io.airbyte.data.services.OrganizationPaymentConfigService
-import io.airbyte.data.services.OrganizationService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -28,13 +26,16 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.UUID
+import io.airbyte.data.services.OrganizationPaymentConfigService as OrganizationPaymentConfigRepository
+import io.airbyte.data.services.OrganizationService as OrganizationRepository
 
 private val UTC = ZoneId.of("UTC")
 
 @Controller("/api/v1/organization_payment_config")
 open class OrganizationPaymentConfigController(
-  private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val organizationService: OrganizationService,
+  private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
+  private val organizationRepository: OrganizationRepository,
 ) : OrganizationPaymentConfigApi {
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")
@@ -42,7 +43,7 @@ open class OrganizationPaymentConfigController(
   override fun getOrganizationPaymentConfig(
     @PathVariable("organizationId") organizationId: UUID,
   ): OrganizationPaymentConfigRead =
-    organizationPaymentConfigService.findByOrganizationId(organizationId)?.toApiModel()
+    organizationPaymentConfigRepository.findByOrganizationId(organizationId)?.toApiModel()
       ?: throw ResourceNotFoundProblem(
         ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
       )
@@ -54,12 +55,12 @@ open class OrganizationPaymentConfigController(
   override fun deleteOrganizationPaymentConfig(
     @PathVariable("organizationId") organizationId: UUID,
   ) {
-    if (organizationPaymentConfigService.findByOrganizationId(organizationId) == null) {
+    if (organizationPaymentConfigRepository.findByOrganizationId(organizationId) == null) {
       throw ResourceNotFoundProblem(
         ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
       )
     }
-    organizationPaymentConfigService.deletePaymentConfig(organizationId)
+    organizationPaymentConfigRepository.deletePaymentConfig(organizationId)
   }
 
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
@@ -68,25 +69,7 @@ open class OrganizationPaymentConfigController(
   override fun endGracePeriod(
     @PathVariable("organizationId") organizationId: UUID,
   ) {
-    val orgPaymentConfig =
-      organizationPaymentConfigService.findByOrganizationId(organizationId) ?: throw ResourceNotFoundProblem(
-        ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
-      )
-
-    if (orgPaymentConfig.paymentStatus != PaymentStatus.GRACE_PERIOD) {
-      throw StateConflictProblem(
-        ProblemMessageData().message(
-          "OrganizationPaymentConfig paymentStatus is ${orgPaymentConfig.paymentStatus}, but expected ${PaymentStatus.GRACE_PERIOD}",
-        ),
-      )
-    }
-
-    organizationPaymentConfigService.savePaymentConfig(
-      orgPaymentConfig.apply {
-        paymentStatus = PaymentStatus.DISABLED
-        gracePeriodEndAt = null
-      },
-    )
+    organizationService.handlePaymentGracePeriodEnded(OrganizationId(organizationId))
   }
 
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
@@ -96,10 +79,10 @@ open class OrganizationPaymentConfigController(
     @Body organizationPaymentConfigUpdateRequestBody: OrganizationPaymentConfigRead,
   ): OrganizationPaymentConfigRead {
     val orgId = organizationPaymentConfigUpdateRequestBody.organizationId
-    if (organizationService.getOrganization(orgId).isEmpty) {
+    if (organizationRepository.getOrganization(orgId).isEmpty) {
       throw ResourceNotFoundProblem(ProblemResourceData().resourceId(orgId.toString()).resourceType(ResourceType.ORGANIZATION))
     }
-    organizationPaymentConfigService.savePaymentConfig(organizationPaymentConfigUpdateRequestBody.toConfigModel())
+    organizationPaymentConfigRepository.savePaymentConfig(organizationPaymentConfigUpdateRequestBody.toConfigModel())
     return getOrganizationPaymentConfig(orgId)
   }
 }

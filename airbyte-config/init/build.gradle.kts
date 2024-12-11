@@ -5,9 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -49,10 +46,11 @@ airbyte {
   }
 }
 
-val copyScripts = tasks.register<Copy>("copyScripts") {
-  from("scripts")
-  into("build/airbyte/docker/bin/scripts")
-}
+val copyScripts =
+  tasks.register<Copy>("copyScripts") {
+    from("scripts")
+    into("build/airbyte/docker/bin/scripts")
+  }
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyScripts)

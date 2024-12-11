@@ -8,7 +8,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { BuilderField } from "./BuilderField";
 import { getLabelAndTooltip } from "./manifestHelpers";
 import { useBuilderWatchArrayWithPreview } from "../preview";
 import { BuilderState, concatPath } from "../types";
@@ -23,16 +23,12 @@ const KeyValueInput: React.FC<KeyValueInputProps> = ({ onRemove, path }) => {
   return (
     <FlexContainer gap="xl" alignItems="flex-start">
       <FlexItem grow>
-        <BuilderFieldWithInputs
-          label={formatMessage({ id: "connectorBuilder.key" })}
-          type="string"
-          path={concatPath(path, "0")}
-        />
+        <BuilderField label={formatMessage({ id: "connectorBuilder.key" })} type="jinja" path={concatPath(path, "0")} />
       </FlexItem>
       <FlexItem grow>
-        <BuilderFieldWithInputs
+        <BuilderField
           label={formatMessage({ id: "connectorBuilder.value" })}
-          type="string"
+          type="jinja"
           path={concatPath(path, "1")}
         />
       </FlexItem>
@@ -47,7 +43,6 @@ interface KeyValueListFieldProps {
   tooltip?: ReactNode;
   manifestPath?: string;
   optional?: boolean;
-  omitInterpolationContext?: boolean;
 }
 
 export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
@@ -56,16 +51,8 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
   tooltip,
   manifestPath,
   optional,
-  omitInterpolationContext = false,
 }) => {
-  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
-    label,
-    tooltip,
-    manifestPath,
-    path,
-    false,
-    omitInterpolationContext
-  );
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path, false);
   const { fieldValue: fields, append, remove } = useBuilderWatchArrayWithPreview(path);
 
   return (

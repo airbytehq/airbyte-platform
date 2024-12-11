@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useListCloudWorkspacesInfinite } from "core/api/cloud";
 import { DefaultErrorBoundary } from "core/errors";
-import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner/StatusBanner";
+import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
 import { CloudHelpDropdown } from "./CloudHelpDropdown";

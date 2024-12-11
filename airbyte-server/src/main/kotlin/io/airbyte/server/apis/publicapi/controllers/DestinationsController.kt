@@ -54,8 +54,8 @@ open class DestinationsController(
       destinationCreateRequest?.let { request ->
         val userId: UUID = currentUserService.currentUser.userId
 
-        apiAuthorizationHelper.checkWorkspacePermissions(
-          listOf(destinationCreateRequest.workspaceId.toString()),
+        apiAuthorizationHelper.checkWorkspacePermission(
+          destinationCreateRequest.workspaceId.toString(),
           Scope.WORKSPACE,
           userId,
           PermissionType.WORKSPACE_EDITOR,
@@ -115,8 +115,8 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteDestination(destinationId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      destinationId,
       Scope.DESTINATION,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -147,8 +147,8 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetDestination(destinationId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      destinationId,
       Scope.DESTINATION,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -184,7 +184,7 @@ open class DestinationsController(
     offset: Int,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacesPermission(
       workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -220,8 +220,8 @@ open class DestinationsController(
     destinationPatchRequest: DestinationPatchRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      destinationId,
       Scope.DESTINATION,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -258,8 +258,8 @@ open class DestinationsController(
     destinationPutRequest: DestinationPutRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      destinationId,
       Scope.DESTINATION,
       userId,
       PermissionType.WORKSPACE_EDITOR,

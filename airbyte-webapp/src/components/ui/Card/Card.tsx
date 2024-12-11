@@ -11,7 +11,7 @@ import { Heading } from "../Heading";
 import { Icon } from "../Icon";
 import { InfoTooltip } from "../Tooltip";
 
-interface CardProps {
+export interface CardProps {
   /**
    * The title of the card
    */

@@ -1,0 +1,146 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/fonts";
+
+.container {
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
+
+  &.error {
+    border-color: colors.$red-200;
+  }
+
+  &.disabled {
+    border-color: colors.$grey-100;
+    cursor: not-allowed;
+
+    & div {
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  &:not(.disabled, .readOnly, .focused):hover {
+    border-color: colors.$grey-300;
+
+    &.error {
+      border-color: colors.$red;
+    }
+  }
+
+  &.focused {
+    border-color: colors.$blue;
+  }
+
+  & :global(.monaco-editor) {
+    border-radius: inherit;
+  }
+
+  & :global(.overflow-guard) {
+    border-radius: inherit;
+  }
+}
+
+.editor {
+  & span[title="Close"] {
+    display: none;
+  }
+
+  & h2,
+  h3,
+  h4,
+  h5 {
+    margin: 0;
+  }
+
+  & :global(.monaco-editor) {
+    & :global(.ghost-text-decoration) {
+      color: colors.$grey-400 !important;
+    }
+
+    & :global(.suggest-widget) {
+      background-color: colors.$grey-50;
+      border-color: colors.$grey-200;
+
+      & :global(a.label-name) {
+        color: colors.$dark-blue;
+
+        & :global(.highlight) {
+          color: colors.$blue !important;
+        }
+      }
+
+      & :global(.details-label) {
+        color: colors.$dark-blue;
+      }
+
+      & :global(.monaco-list-row.focused) {
+        background-color: colors.$blue !important;
+
+        & :global(a.label-name) {
+          color: colors.$white;
+
+          & :global(.highlight) {
+            color: colors.$green !important;
+          }
+        }
+
+        & :global(.details-label) {
+          color: colors.$white;
+        }
+      }
+
+      & :global(div.monaco-list-row:hover:not(.selected, .focused)) {
+        background-color: colors.$grey-100 !important;
+      }
+
+      & :global(.codicon.codicon-symbol-field) {
+        color: colors.$blue-400;
+      }
+
+      & :global(.codicon.codicon-symbol-function) {
+        color: colors.$green-500;
+      }
+
+      & :global(.codicon.codicon-symbol-variable) {
+        color: colors.$orange-600;
+      }
+
+      & :global(.codicon.codicon-account) {
+        color: colors.$dark-blue-500;
+      }
+    }
+
+    & :global(.monaco-hover),
+    & :global(.suggest-details-container) :global(.suggest-details) {
+      background-color: colors.$grey-50 !important;
+      border-color: colors.$grey-200 !important;
+
+      & div {
+        font-size: variables.$font-size-md;
+        color: colors.$dark-blue;
+      }
+
+      & p {
+        margin: variables.$spacing-md 0;
+      }
+
+      & pre,
+      code {
+        background-color: colors.$grey-100;
+        border-radius: variables.$border-radius-2xs;
+        padding: variables.$spacing-xs variables.$spacing-sm;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: variables.$font-size-sm;
+      }
+    }
+  }
+}
+
+:export {
+  fontFamily: fonts.$primary;
+  fontSize: variables.$font-size-lg;
+  textForeground: colors.$dark-blue;
+  jinjaForeground: colors.$blue-500;
+}

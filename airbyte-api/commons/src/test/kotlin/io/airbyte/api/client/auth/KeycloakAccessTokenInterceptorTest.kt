@@ -1,6 +1,7 @@
 package io.airbyte.api.client.auth
 
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.client.exceptions.ResponseClosedException
 import io.micronaut.security.oauth2.client.clientcredentials.ClientCredentialsClient
 import io.micronaut.security.oauth2.endpoint.token.response.TokenResponse
 import io.mockk.every
@@ -34,6 +35,46 @@ class KeycloakAccessTokenInterceptorTest {
   fun `test intercept when clientCredentialsClient fails to return token`() {
     every { clientCredentialsClient.requestToken() } returns Mono.error(RuntimeException("Failed to get token"))
     every { chain.request() } returns request
+    every { request.newBuilder() } returns Request.Builder().url("http://localhost")
+    every { chain.proceed(request) } returns response
+
+    val result = interceptor.intercept(chain)
+
+    assertEquals(response, result)
+    verify { chain.proceed(request) }
+  }
+
+  @Test
+  fun `test intercept when clientCredentialsClient has intermittent HTTP error`() {
+    val tokenResponse = mockk<TokenResponse>()
+    every { tokenResponse.accessToken } returns "valid-token"
+
+    every { clientCredentialsClient.requestToken() } returnsMany
+      listOf(
+        Mono.error(ResponseClosedException("HTTP error")),
+        Mono.just(tokenResponse),
+      )
+    every { chain.request() } returns request
+    every { request.newBuilder() } returns Request.Builder().url("http://localhost")
+    every { chain.proceed(any()) } returns response
+
+    val result = interceptor.intercept(chain)
+    assertEquals(response, result)
+    verify {
+      chain.proceed(
+        withArg {
+          val header = it.header(HttpHeaders.AUTHORIZATION)
+          assertEquals("Bearer valid-token", header)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `test intercept when clientCredentialsClient returns persistent HTTP error`() {
+    every { clientCredentialsClient.requestToken() } returns Mono.error(ResponseClosedException("HTTP error"))
+    every { chain.request() } returns request
+    every { request.newBuilder() } returns Request.Builder().url("http://localhost")
     every { chain.proceed(request) } returns response
 
     val result = interceptor.intercept(chain)

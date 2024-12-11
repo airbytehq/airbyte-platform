@@ -3,7 +3,7 @@ openapi: "3.1.0"
 info:
   title: "Workspaces"
   version: "1.0.0"
-  description: "Programatically control Airbyte Cloud, OSS & Enterprise."
+  description: "Programmatically control Airbyte Cloud, OSS & Enterprise."
 servers:
   - url: "https://api.airbyte.com/v1"
     description: "Airbyte API v1"
@@ -319,6 +319,7 @@ components:
         - "hashing"
         - "field-renaming"
         - "row-filtering"
+        - "encryption"
       x-speakeasy-component: true
     MapperConfiguration:
       type: "object"
@@ -678,6 +679,7 @@ components:
         - "schedule"
         - "dataResidency"
         - "configurations"
+        - "createdAt"
       properties:
         connectionId:
           format: "UUID"
@@ -709,6 +711,9 @@ components:
           type: "string"
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+        createdAt:
+          format: "int64"
+          type: "integer"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -826,6 +831,7 @@ components:
         - "definitionId"
         - "workspaceId"
         - "configuration"
+        - "createdAt"
       properties:
         destinationId:
           format: "UUID"
@@ -842,6 +848,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -860,6 +869,7 @@ components:
         - "workspaceId"
         - "configuration"
         - "definitionId"
+        - "createdAt"
       properties:
         sourceId:
           format: "UUID"
@@ -876,6 +886,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1426,6 +1439,21 @@ components:
               description: "The Client Secret of your Drift developer application."
               airbyte_secret: true
       title: null
+    snapchat-marketing:
+      properties:
+        client_id:
+          type: "string"
+          description: "The Client ID of your Snapchat developer application."
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+        client_secret:
+          type: "string"
+          description: "The Client Secret of your Snapchat developer application."
+          order: 1
+          title: "Client Secret"
+          airbyte_secret: true
+      title: null
     gitlab:
       properties:
         credentials:
@@ -1617,9 +1645,9 @@ components:
             "The client ID of your Amazon Ads developer application. See\
             \ the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
             >docs</a> for more information."
+          airbyte_secret: true
           order: 1
           type: "string"
-          airbyte_secret: true
         client_secret:
           title: "Client Secret"
           description:
@@ -1629,7 +1657,7 @@ components:
           airbyte_secret: true
           order: 2
           type: "string"
-      title: "Amazon Ads Spec"
+      title: "Source Amazon Ads"
     github:
       properties:
         credentials:
@@ -1779,20 +1807,6 @@ components:
                 >here</a>."
               airbyte_secret: true
       title: "Google Search Console Spec"
-    retently:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your Retently developer application."
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The Client Secret of your Retently developer application."
-              airbyte_secret: true
-      title: "Retently Api Spec"
     instagram:
       properties:
         client_id:
@@ -1808,21 +1822,6 @@ components:
           airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
-    zendesk-sunshine:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of your OAuth application."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of your OAuth application."
-              airbyte_secret: true
-      title: null
     snowflake:
       properties:
         credentials:
@@ -2157,8 +2156,6 @@ components:
           $ref: "#/components/schemas/pinterest"
         - title: rd-station-marketing
           $ref: "#/components/schemas/rd-station-marketing"
-        - title: retently
-          $ref: "#/components/schemas/retently"
         - title: salesforce
           $ref: "#/components/schemas/salesforce"
         - title: shopify
@@ -2167,6 +2164,8 @@ components:
           $ref: "#/components/schemas/slack"
         - title: smartsheets
           $ref: "#/components/schemas/smartsheets"
+        - title: snapchat-marketing
+          $ref: "#/components/schemas/snapchat-marketing"
         - title: snowflake
           $ref: "#/components/schemas/snowflake"
         - title: surveymonkey
@@ -2181,8 +2180,6 @@ components:
           $ref: "#/components/schemas/youtube-analytics"
         - title: zendesk-chat
           $ref: "#/components/schemas/zendesk-chat"
-        - title: zendesk-sunshine
-          $ref: "#/components/schemas/zendesk-sunshine"
         - title: zendesk-support
           $ref: "#/components/schemas/zendesk-support"
         - title: zendesk-talk
@@ -2266,10 +2263,10 @@ components:
         - notion
         - pinterest
         - rd-station-marketing
-        - retently
         - salesforce
         - slack
         - smartsheets
+        - snapchat-marketing
         - snowflake
         - surveymonkey
         - tiktok-marketing
@@ -2277,7 +2274,6 @@ components:
         - typeform
         - youtube-analytics
         - zendesk-chat
-        - zendesk-sunshine
         - zendesk-support
         - zendesk-talk
   securitySchemes:

@@ -6,6 +6,8 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
+import io.airbyte.config.JobStatus
+import io.airbyte.data.repositories.JobsRepository
 import io.airbyte.data.repositories.JobsWithAttemptsRepository
 import io.airbyte.data.repositories.Specifications
 import io.airbyte.data.services.JobService
@@ -22,6 +24,7 @@ const val DEFAULT_SORT_FIELD = "createdAt"
 @Singleton
 class JobServiceDataImpl(
   private val jobsWithAttemptsRepository: JobsWithAttemptsRepository,
+  private val jobsRepository: JobsRepository,
 ) : JobService {
   override fun listJobs(
     configTypes: Set<JobConfig.ConfigType>,
@@ -37,19 +40,33 @@ class JobServiceDataImpl(
     orderByMethod: String?,
   ): List<Job> {
     val pageable = buildPageable(limit, offset, orderByField, orderByMethod)
-    return jobsWithAttemptsRepository.findAll(
-      Specifications.jobWithAssociatedAttempts(
-        configTypes = configTypes.map { it.toEntity() }.toSet(),
-        scope = scope,
-        statuses = statuses.map { it.toEntity() }.toSet(),
-        createdAtStart = createdAtStart,
-        createdAtEnd = createdAtEnd,
-        updatedAtStart = updatedAtStart,
-        updatedAtEnd = updatedAtEnd,
-      ),
-      pageable,
-    )
-      .toList().map { it.toConfigModel() }.toList()
+    return jobsWithAttemptsRepository
+      .findAll(
+        Specifications.jobWithAssociatedAttempts(
+          configTypes = configTypes.map { it.toEntity() }.toSet(),
+          scope = scope,
+          statuses = statuses.map { it.toEntity() }.toSet(),
+          createdAtStart = createdAtStart,
+          createdAtEnd = createdAtEnd,
+          updatedAtStart = updatedAtStart,
+          updatedAtEnd = updatedAtEnd,
+        ),
+        pageable,
+      ).toList()
+      .map { it.toConfigModel() }
+      .toList()
+  }
+
+  override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
+
+  override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)
+
+  override fun getPriorJobWithStatusForScopeAndJobId(
+    scope: String,
+    jobId: Long,
+    status: JobStatus,
+  ): Job? {
+    return jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
   }
 
   private fun buildPageable(
@@ -67,10 +84,11 @@ class JobServiceDataImpl(
       }
 
     // withoutTotal is used to get a pageable that won't make a count query
-    return Pageable.from(
-      offset / limit,
-      limit,
-      Sort.of(order),
-    ).withoutTotal()
+    return Pageable
+      .from(
+        offset / limit,
+        limit,
+        Sort.of(order),
+      ).withoutTotal()
   }
 }

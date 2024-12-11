@@ -5,10 +5,8 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
-
   api(libs.bundles.micronaut.annotation)
+  api(libs.micronaut.cache.caffeine)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -19,6 +17,7 @@ dependencies {
   implementation(libs.bundles.apache)
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
+  implementation(libs.bundles.datadog)
   implementation(libs.guava)
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
@@ -36,9 +35,6 @@ dependencies {
   // For Keycloak Application Management
   implementation(libs.bundles.keycloak.client)
   implementation(libs.micronaut.security.jwt)
-
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok)
 
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.micronaut.test)

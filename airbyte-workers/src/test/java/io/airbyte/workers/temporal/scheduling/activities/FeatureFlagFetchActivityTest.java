@@ -38,7 +38,7 @@ class FeatureFlagFetchActivityTest {
     final FeatureFlagFetchActivity.FeatureFlagFetchInput input = new FeatureFlagFetchActivity.FeatureFlagFetchInput(CONNECTION_ID);
 
     final FeatureFlagFetchActivity.FeatureFlagFetchOutput output = featureFlagFetchActivity.getFeatureFlags(input);
-    Assertions.assertEquals(Map.of(UseAsyncActivities.INSTANCE.getKey(), false), output.getFeatureFlags());
+    Assertions.assertEquals(Map.of(UseAsyncActivities.INSTANCE.getKey(), true), output.getFeatureFlags());
 
   }
 

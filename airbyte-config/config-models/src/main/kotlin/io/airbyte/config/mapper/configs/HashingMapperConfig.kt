@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
+import java.util.UUID
 
 data class HashingMapperConfig(
   @JsonProperty("name")
@@ -19,6 +20,7 @@ data class HashingMapperConfig(
   @JsonProperty("config")
   @field:NotNull
   val config: HashingConfig,
+  val id: UUID? = null,
 ) : MapperConfig {
   override fun name(): String {
     return name
@@ -26,6 +28,10 @@ data class HashingMapperConfig(
 
   override fun documentationUrl(): String? {
     return documentationUrl
+  }
+
+  override fun id(): UUID? {
+    return id
   }
 
   override fun config(): HashingConfig {

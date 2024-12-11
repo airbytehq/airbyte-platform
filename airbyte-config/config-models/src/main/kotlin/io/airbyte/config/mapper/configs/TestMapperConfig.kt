@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.airbyte.config.MapperConfig
+import java.util.UUID
 
 const val TEST_MAPPER_NAME = "test-mapper"
 
@@ -17,12 +18,17 @@ data class TestMapperConfig(
   @field:SchemaDescription("URL for documentation related to this configuration.")
   @field:SchemaFormat("uri")
   val documentationUrl: String? = null,
+  val id: UUID? = null,
   @JsonProperty("config")
   @field:NotNull
   val config: TestConfig,
 ) : MapperConfig {
   override fun name(): String {
     return name
+  }
+
+  override fun id(): UUID? {
+    return id
   }
 
   override fun documentationUrl(): String? {

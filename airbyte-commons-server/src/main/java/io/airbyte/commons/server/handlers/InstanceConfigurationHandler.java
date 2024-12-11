@@ -42,7 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,6 @@ import org.slf4j.LoggerFactory;
  * InstanceConfigurationHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@Slf4j
 @Singleton
 public class InstanceConfigurationHandler {
 

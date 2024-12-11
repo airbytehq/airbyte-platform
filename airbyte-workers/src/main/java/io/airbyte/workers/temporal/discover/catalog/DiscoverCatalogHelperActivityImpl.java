@@ -47,7 +47,10 @@ public class DiscoverCatalogHelperActivityImpl implements DiscoverCatalogHelperA
   public PostprocessCatalogOutput postprocess(final PostprocessCatalogInput input) {
     try {
       Objects.requireNonNull(input.getConnectionId());
-      Objects.requireNonNull(input.getCatalogId());
+
+      if (input.getCatalogId() == null) {
+        return PostprocessCatalogOutput.Companion.success(null);
+      }
 
       final var reqBody = new PostprocessDiscoveredCatalogRequestBody(
           input.getCatalogId(),

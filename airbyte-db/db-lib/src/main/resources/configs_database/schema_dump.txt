@@ -279,8 +279,6 @@ create table "public"."organization" (
   "email" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "pba" boolean not null default false,
-  "org_level_billing" boolean not null default false,
   "tombstone" boolean not null default false,
   constraint "organization_pkey" primary key ("id")
 );
@@ -300,6 +298,7 @@ create table "public"."organization_payment_config" (
   "usage_category_override" "public"."usage_category_override",
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "subscription_status" "public"."subscription_status" not null default cast('pre_subscription' as subscription_status),
   constraint "organization_payment_config_pkey" primary key ("organization_id"),
   constraint "organization_payment_config_payment_provider_id_key" unique ("payment_provider_id")
 );
@@ -327,8 +326,8 @@ create table "public"."schema_management" (
 create table "public"."scoped_configuration" (
   "id" uuid not null,
   "key" varchar(256) not null,
-  "resource_type" "public"."config_resource_type" not null,
-  "resource_id" uuid not null,
+  "resource_type" "public"."config_resource_type",
+  "resource_id" uuid,
   "scope_type" "public"."config_scope_type" not null,
   "scope_id" uuid not null,
   "value" varchar(256) not null,

@@ -10,7 +10,6 @@ import {
   useBasicFrequencyDropdownData,
 } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "components/connection/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
-import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/ConnectionForm/schema";
 import { FormControlFooterError, FormControlFooter, FormControlFooterInfo } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
@@ -27,6 +26,8 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 
 import { InputContainer } from "./InputContainer";
 import styles from "./SimplifiedConnectionScheduleFormField.module.scss";
+
+export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
 
 export const SimplifiedConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });

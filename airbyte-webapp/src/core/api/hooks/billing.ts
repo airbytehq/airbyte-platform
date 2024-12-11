@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   getCustomerPortalLink,
-  getOrganizationBalance,
+  getSubscriptionInfo,
   getPaymentInformation,
   listPastInvoices,
 } from "../generated/AirbyteClient";
@@ -12,7 +12,7 @@ import { useRequestOptions } from "../useRequestOptions";
 
 export const billingKeys = {
   all: [SCOPE_ORGANIZATION, "billing"] as const,
-  upcomingInvoice: (organizationId: string) => [...billingKeys.all, "upcomingInvoice", organizationId] as const,
+  subscriptionInfo: (organizationId: string) => [...billingKeys.all, "subscriptionInfo", organizationId] as const,
   invoices: (organizationId: string) => [...billingKeys.all, "invoices", organizationId] as const,
   paymentMethod: (organizationId: string) => [...billingKeys.all, "paymentMethod", organizationId] as const,
 };
@@ -47,10 +47,10 @@ export const useGetPaymentInformation = (organizationId: string) => {
   );
 };
 
-export const useGetOrganizationBillingBalance = (organizationId: string) => {
+export const useGetOrganizationSubscriptionInfo = (organizationId: string) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(billingKeys.upcomingInvoice(organizationId), () =>
-    getOrganizationBalance({ organizationId }, requestOptions)
+  return useQuery(billingKeys.subscriptionInfo(organizationId), () =>
+    getSubscriptionInfo({ organizationId }, requestOptions)
   );
 };

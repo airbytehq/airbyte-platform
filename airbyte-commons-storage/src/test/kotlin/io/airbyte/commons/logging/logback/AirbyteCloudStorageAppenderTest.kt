@@ -50,6 +50,7 @@ private class AirbyteCloudStorageAppenderTest {
     assertEquals("", bucketConfig.state)
     assertEquals("", bucketConfig.workloadOutput)
     assertEquals("", bucketConfig.activityPayload)
+    assertEquals("", bucketConfig.auditLogging)
   }
 
   @Test

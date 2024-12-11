@@ -131,6 +131,14 @@ public interface Configs {
   }
 
   /**
+   * Seed definitions provider type.
+   */
+  enum SeedDefinitionsProviderType {
+    LOCAL,
+    REMOTE
+  }
+
+  /**
    * The configured Airbyte edition for the instance. By default, an Airbyte instance is configured as
    * Community edition. If configured as Pro edition, the instance will perform a license check and
    * activate additional features if valid.

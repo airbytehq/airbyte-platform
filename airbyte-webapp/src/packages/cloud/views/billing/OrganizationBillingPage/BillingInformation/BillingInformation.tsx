@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace, useGetPaymentInformation } from "core/api";
 
 import styles from "./BillingInformation.module.scss";
-import { useRedirectToCustomerPortal } from "../../useRedirectToCustomerPortal";
+import { useRedirectToCustomerPortal } from "../../../../area/billing/utils/useRedirectToCustomerPortal";
 import { UpdateButton } from "../UpdateButton";
 
 type CountryCodes = keyof typeof Flags;

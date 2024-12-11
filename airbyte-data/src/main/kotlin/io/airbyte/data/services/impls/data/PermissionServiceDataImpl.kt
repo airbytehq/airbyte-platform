@@ -22,6 +22,12 @@ open class PermissionServiceDataImpl(
   private val workspaceService: WorkspaceService,
   private val permissionRepository: PermissionRepository,
 ) : PermissionService {
+  override fun getPermission(permissionId: UUID): Permission {
+    return permissionRepository.findById(permissionId)
+      .orElseThrow { ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId") }
+      .toConfigModel()
+  }
+
   override fun listPermissions(): List<Permission> {
     return permissionRepository.find().map { it.toConfigModel() }
   }

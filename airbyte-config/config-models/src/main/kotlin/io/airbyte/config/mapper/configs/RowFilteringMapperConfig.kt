@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
 import io.airbyte.config.adapters.AirbyteRecord
+import java.util.UUID
 
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,
@@ -118,6 +119,7 @@ data class RowFilteringMapperConfig(
   @JsonProperty("config")
   @field:NotNull
   val config: RowFilteringConfig,
+  val id: UUID? = null,
 ) : MapperConfig {
   override fun name(): String {
     return name
@@ -125,6 +127,10 @@ data class RowFilteringMapperConfig(
 
   override fun documentationUrl(): String? {
     return documentationUrl
+  }
+
+  override fun id(): UUID? {
+    return id
   }
 
   override fun config(): Any {

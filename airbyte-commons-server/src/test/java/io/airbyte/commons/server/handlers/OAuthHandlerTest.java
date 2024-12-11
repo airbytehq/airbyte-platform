@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -31,9 +33,9 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +50,7 @@ class OAuthHandlerTest {
 
   private OAuthHandler handler;
   private TrackingClient trackingClient;
-  private HttpClient httpClient;
+  private OAuthImplementationFactory oauthImplementationFactory;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
@@ -66,7 +68,7 @@ class OAuthHandlerTest {
   @BeforeEach
   public void init() {
     trackingClient = mock(TrackingClient.class);
-    httpClient = Mockito.mock(HttpClient.class);
+    oauthImplementationFactory = mock(OAuthImplementationFactory.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -77,7 +79,7 @@ class OAuthHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     workspaceService = mock(WorkspaceService.class);
     handler = new OAuthHandler(
-        httpClient,
+        oauthImplementationFactory,
         trackingClient,
         secretsRepositoryWriter,
         actorDefinitionVersionHelper,
@@ -281,12 +283,13 @@ class OAuthHandlerTest {
         .sourceDefinitionId(sourceDefinitionId)
         .workspaceId(workspaceId);
 
-    final OAuthHandler handlerSpy = Mockito.spy(handler);
+    final OAuthHandler handlerSpy = spy(handler);
 
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy).completeSourceOAuth(any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy)
+            .completeSourceOAuth(any());
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
 
     handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest);
 
@@ -313,7 +316,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigNoFeatureFlag()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
@@ -333,7 +336,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigFeatureFlagNoOverride()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()

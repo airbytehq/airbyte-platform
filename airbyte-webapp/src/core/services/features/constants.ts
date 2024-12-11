@@ -4,7 +4,7 @@ export const defaultOssFeatures = [
   FeatureItem.AllowAutoDetectSchema,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
-  FeatureItem.AllowSyncSubOneHourCronExpressions,
+  FeatureItem.EnterpriseUpsell,
 ];
 
 export const defaultEnterpriseFeatures = [
@@ -17,6 +17,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
+  FeatureItem.MappingsUI, // Also governed by connection.mappingsUI experiment.  This flag indicates whether the user has the right level of product.  The experiment indicates whether the UI is "on" overall.
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
 ];
@@ -26,7 +27,7 @@ export const defaultCloudFeatures = [
   FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
-  FeatureItem.Billing,
+  FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.EmailNotifications,
@@ -35,5 +36,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
-  FeatureItem.FieldHashing, // also goverened by connection.hashingUI experiment
+  FeatureItem.FieldHashing, // also governed by connection.hashingUI experiment
 ];

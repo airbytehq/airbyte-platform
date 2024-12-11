@@ -8,10 +8,10 @@
 
 {{/* some images are defined as a string instead of an object (busybox, curl, connector sidecar, etc) */}}
 {{- if (eq (typeOf $img) "string") -}}
-{{- printf "%s%s" $reg (tpl $img $root) | quote -}}
+{{- printf "%s%s" $reg (tpl $img $root) -}}
 {{- else -}}
 {{- $tag := coalesce $img.tag $root.Values.global.image.tag $root.Chart.AppVersion -}}
-{{- printf "%s%s:%s" $reg $img.repository $tag | quote -}}
+{{- printf "%s%s:%s" $reg $img.repository $tag -}}
 {{- end -}}
 
 {{- end -}}

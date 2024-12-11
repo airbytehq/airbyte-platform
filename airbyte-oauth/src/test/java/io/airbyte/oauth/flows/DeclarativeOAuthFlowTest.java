@@ -50,7 +50,7 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
     final String expectedCodeChallenge = "S6aXNcpTdl7WpwnttWxuoja3GTo7KaazkMNG8PQ0Dk4=";
 
     return String.format(
-        "https://some.domain.com/oauth2/authorize?client_id=%s&redirect_uri=%s&scope=%s&state=%s&subdomain=%s&code_challenge=%s",
+        "https://some.domain.com/oauth2/authorize?my_client_id_key=%s&callback_uri=%s&scope=%s&my_state_key=%s&subdomain=%s&code_challenge=%s",
         expectedClientId,
         expectedRedirectUri,
         expectedScope,
@@ -61,19 +61,23 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected JsonNode getInputOAuthConfiguration() {
-    return Jsons.jsonNode(Map.of(
+    return Jsons.jsonNode(Map.ofEntries(
         // the `subdomain` is a custom property passed by the user (test)
-        "subdomain", "test_subdomain",
+        Map.entry("subdomain", "test_subdomain"),
         // these are the part of the spec,
         // not all spec properties are provided, since they provide an override to the default values.
-        "consent_url",
-        "https://some.domain.com/oauth2/authorize?{client_id_key}={{client_id_key}}&{redirect_uri_key}={urlEncoder:{{redirect_uri_key}}}&{scope_key}={urlEncoder:{{scope_key}}}&{state_key}={{state_key}}&subdomain={subdomain}&code_challenge={codeChallengeS256:{{state_key}}}",
-        "scope", "test_scope_1 test_scope_2 test_scope_3",
-        "access_token_url", "https://some.domain.com/oauth2/token/",
-        "access_token_headers", Jsons.jsonNode(Map.of("test_header", "test_value")),
-        // "state", Jsons.jsonNode(Map.of("min", 43, "max", 128)),
-        // "state_key", "my_custom_state_key",
-        "extract_output", Jsons.jsonNode(List.of(ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN))));
+        Map.entry("consent_url",
+            "https://some.domain.com/oauth2/authorize?{client_id_key}={{client_id_key}}&{redirect_uri_key}={urlEncoder:{{redirect_uri_key}}}&{scope_key}={urlEncoder:{{scope_key}}}&{state_key}={{state_key}}&subdomain={subdomain}&code_challenge={codeChallengeS256:{{state_key}}}"),
+        Map.entry("scope", "test_scope_1 test_scope_2 test_scope_3"),
+        Map.entry("access_token_url", "https://some.domain.com/oauth2/token/"),
+        Map.entry("access_token_headers", Jsons.jsonNode(Map.of("test_header", "test_value"))),
+        // Map.entry("state", Jsons.jsonNode(Map.of("min", 43, "max", 128))),
+        Map.entry("state_key", "my_state_key"),
+        Map.entry("client_id_key", "my_client_id_key"),
+        Map.entry("client_secret_key", "my_client_secret_key"),
+        Map.entry("auth_code_key", "my_auth_code_key"),
+        Map.entry("redirect_uri_key", "callback_uri"),
+        Map.entry("extract_output", Jsons.jsonNode(List.of(ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN)))));
   }
 
   @Override
@@ -127,6 +131,10 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected Map<String, Object> getQueryParams() {
     return Map.of(
+        // keys override
+        "my_auth_code_key", "test_code",
+        "my_state_key", getConstantState(),
+        // default test values
         "code", "test_code",
         "state", getConstantState());
   }

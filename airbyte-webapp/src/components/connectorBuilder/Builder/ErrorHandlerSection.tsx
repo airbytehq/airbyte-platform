@@ -74,12 +74,12 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       children: (
         <>
           <BuilderField
-            type="string"
+            type="jinja"
             path={buildPath("backoff_strategy.header")}
             manifestPath="WaitTimeFromHeader.properties.header"
           />
           <BuilderField
-            type="string"
+            type="jinja"
             path={buildPath("backoff_strategy.regex")}
             optional
             manifestPath="WaitTimeFromHeader.properties.regex"
@@ -98,12 +98,12 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       children: (
         <>
           <BuilderField
-            type="string"
+            type="jinja"
             path={buildPath("backoff_strategy.header")}
             manifestPath="WaitUntilTimeFromHeader.properties.header"
           />
           <BuilderField
-            type="string"
+            type="jinja"
             path={buildPath("backoff_strategy.regex")}
             optional
             manifestPath="WaitUntilTimeFromHeader.properties.regex"
@@ -167,13 +167,13 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
               >
                 <>
                   <BuilderField
-                    type="string"
+                    type="jinja"
                     path={buildPath("response_filter.error_message_contains")}
                     optional
                     manifestPath="HttpResponseFilter.properties.error_message_contains"
                   />
                   <BuilderField
-                    type="string"
+                    type="jinja"
                     path={buildPath("response_filter.predicate")}
                     optional
                     pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
@@ -193,7 +193,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
                     manifestPath="HttpResponseFilter.properties.action"
                   />
                   <BuilderField
-                    type="string"
+                    type="jinja"
                     path={buildPath("response_filter.error_message")}
                     optional
                     manifestPath="HttpResponseFilter.properties.error_message"

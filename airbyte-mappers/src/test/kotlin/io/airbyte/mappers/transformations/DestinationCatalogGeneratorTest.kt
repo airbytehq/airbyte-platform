@@ -319,7 +319,7 @@ class DestinationCatalogGeneratorTest {
 
   @Test
   fun `test generateDestinationCatalogMissingMapper`() {
-    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("", TestEnums.ONE, ""))
+    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.ONE, ""))
     val configuredUsersStream =
       ConfiguredAirbyteStream(
         stream =
@@ -353,7 +353,7 @@ class DestinationCatalogGeneratorTest {
 
   @Test
   fun `test generateDestinationCatalogFailedSchema`() {
-    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("field1", TestEnums.ONE, "field2"))
+    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("field1", TestEnums.ONE, "field2"))
     val configuredUsersStream =
       ConfiguredAirbyteStream(
         stream =
@@ -424,8 +424,8 @@ class DestinationCatalogGeneratorTest {
           ),
         mappers =
           listOf(
-            TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("", TestEnums.ONE, "")),
-            TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("", TestEnums.TWO, "")),
+            TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.ONE, "")),
+            TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, "")),
           ),
       )
 
@@ -466,7 +466,7 @@ class DestinationCatalogGeneratorTest {
             Field(name = "field1_1", type = FieldType.STRING),
             Field(name = "field1_2", type = FieldType.DATE),
           ),
-        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("", TestEnums.TWO, ""))),
+        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, ""))),
       )
 
     val configuredUsersStream2 =
@@ -491,7 +491,7 @@ class DestinationCatalogGeneratorTest {
           listOf(
             Field(name = "field2_1", type = FieldType.INTEGER),
           ),
-        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("", TestEnums.TWO, ""))),
+        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, ""))),
       )
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream1, configuredUsersStream2))

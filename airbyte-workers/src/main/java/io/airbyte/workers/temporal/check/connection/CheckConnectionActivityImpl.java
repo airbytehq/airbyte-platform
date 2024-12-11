@@ -23,13 +23,11 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Check connection activity temporal implementation for the control plane.
  */
 @Singleton
-@Slf4j
 @SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 

@@ -1,4 +1,3 @@
-import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jsonschema2pojo.SourceType
 
 plugins {
@@ -8,8 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   ksp(libs.bundles.micronaut.annotation.processor)

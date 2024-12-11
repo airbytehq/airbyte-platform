@@ -313,6 +313,7 @@ object AirbyteCatalogHelper {
 
   private fun configuredMapperConverter(publicApiMappers: ConfiguredStreamMapper): io.airbyte.api.model.generated.ConfiguredStreamMapper =
     io.airbyte.api.model.generated.ConfiguredStreamMapper().apply {
+      id = publicApiMappers.id
       type = mapperTypeConverter(publicApiMappers.type)
       mapperConfiguration = publicApiMappers.mapperConfiguration
     }

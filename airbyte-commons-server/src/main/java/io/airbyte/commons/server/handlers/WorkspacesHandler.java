@@ -485,7 +485,6 @@ public class WorkspacesHandler {
     return new WorkspaceOrganizationInfoRead()
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
-        .pba(organization.getPba())
         .sso(organization.getSsoRealm() != null && !organization.getSsoRealm().isEmpty());
   }
 

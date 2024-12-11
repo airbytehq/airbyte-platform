@@ -108,6 +108,24 @@ spec:
             secretKeyRef:
               name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
               key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        - name: MICRONAUT_ENVIRONMENTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKERS_MICRONAUT_ENVIRONMENTS
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- else if and (eq .Values.global.deploymentMode "oss") .Values.global.auth.enabled }}
+          # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
+          # splitting into two separate blocks for readability.
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- end }}
         # Database
         {{- include "airbyte.database.envs" . | nindent 8 }}
 

@@ -1,1 +1,1 @@
-export * from "./OrganizationBillingPage";
+export { OrganizationBillingPage as default } from "./OrganizationBillingPage";

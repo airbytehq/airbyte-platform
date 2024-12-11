@@ -161,7 +161,6 @@ const AdvancedTestSettingsModal: React.FC<
             <CodeEditor
               value={watch("testState")}
               language="json"
-              automaticLayout
               onChange={(val: string | undefined) => {
                 setValue("testState", val ?? "", {
                   shouldValidate: true,

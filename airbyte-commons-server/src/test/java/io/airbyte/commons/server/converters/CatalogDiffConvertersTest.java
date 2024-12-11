@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.protocol.transform_models.FieldTransformType;
-import io.airbyte.commons.protocol.transform_models.StreamTransformType;
+import io.airbyte.commons.protocol.transformmodels.FieldTransformType;
+import io.airbyte.commons.protocol.transformmodels.StreamTransformType;
 import org.junit.jupiter.api.Test;
 
 class CatalogDiffConvertersTest {

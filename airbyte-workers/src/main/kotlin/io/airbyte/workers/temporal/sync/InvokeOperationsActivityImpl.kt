@@ -43,7 +43,7 @@ class InvokeOperationsActivityImpl(
       .build().use { _ ->
         try {
           logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId))
-          LineGobbler.startSection(SECTION_NAME)
+          logger.info { LineGobbler.formatStartSection(SECTION_NAME) }
 
           if (CollectionUtils.isNotEmpty(operations)) {
             logger.info { "Invoking ${operations.size} post-replication operation(s)..." }
@@ -77,7 +77,7 @@ class InvokeOperationsActivityImpl(
             logger.info { "No post-replication operation(s) to perform." }
           }
         } finally {
-          LineGobbler.endSection(SECTION_NAME)
+          logger.info { LineGobbler.formatEndSection(SECTION_NAME) }
           logClientManager.setJobMdc(null)
         }
       }

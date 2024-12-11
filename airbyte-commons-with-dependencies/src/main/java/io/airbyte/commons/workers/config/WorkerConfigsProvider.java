@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Provide WorkerConfigs.
@@ -34,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
  * `airbyte.worker.kube-job-configs` key.
  */
 @Singleton
-@Slf4j
 public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   /**

@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -58,9 +56,6 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
-
-  integrationTestCompileOnly(libs.lombok)
-  integrationTestAnnotationProcessor(libs.lombok)
 }
 
 airbyte {

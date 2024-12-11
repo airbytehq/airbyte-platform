@@ -157,11 +157,27 @@ public class OAuthImplementationFactory {
    * @return OAuthFlowImplementation
    */
   public OAuthFlowImplementation create(final String imageName, final ConnectorSpecification connectorSpecification) {
-    if (hasDeclarativeOAuthConfigSpecification(connectorSpecification)) {
-      LOGGER.info("Using DeclarativeOAuthFlow for {}", imageName);
-      return new DeclarativeOAuthFlow(httpClient);
+    try {
+      return createDeclarativeOAuthImplementation(connectorSpecification);
+    } catch (final IllegalStateException e) {
+      return createNonDeclarativeOAuthImplementation(imageName);
     }
+  }
 
+  /**
+   * Creates a DeclarativeOAuthFlow for a given connector spec.
+   *
+   * @param connectorSpecification - the spec for the connector
+   * @return DeclarativeOAuthFlow
+   */
+  public DeclarativeOAuthFlow createDeclarativeOAuthImplementation(final ConnectorSpecification connectorSpecification) {
+    if (!hasDeclarativeOAuthConfigSpecification(connectorSpecification)) {
+      throw new IllegalStateException("Cannot create DeclarativeOAuthFlow without a declarative OAuth config spec.");
+    }
+    return new DeclarativeOAuthFlow(httpClient);
+  }
+
+  private OAuthFlowImplementation createNonDeclarativeOAuthImplementation(final String imageName) {
     if (oauthFlowMapping.containsKey(imageName)) {
       LOGGER.info("Using {} for {}", oauthFlowMapping.get(imageName).getClass().getSimpleName(), imageName);
       return oauthFlowMapping.get(imageName);

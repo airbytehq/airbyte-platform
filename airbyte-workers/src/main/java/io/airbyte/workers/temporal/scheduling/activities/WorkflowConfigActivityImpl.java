@@ -12,13 +12,11 @@ import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.time.Duration;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of the {@link WorkflowConfigActivity} that is managed by the application framework
  * and therefore has access to the configuration loaded by the framework.
  */
-@Slf4j
 @Singleton
 @Requires(env = EnvConstants.CONTROL_PLANE)
 public class WorkflowConfigActivityImpl implements WorkflowConfigActivity {

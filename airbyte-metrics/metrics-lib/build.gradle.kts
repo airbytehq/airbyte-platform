@@ -4,9 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
-
   ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.metrics)

@@ -27,6 +27,7 @@ import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest
@@ -99,7 +100,8 @@ class CatalogClientConvertersTest {
 
   @Test
   void testConvertInternalWithMapping() {
-    final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME);
+    final UUID mapperId = UUID.randomUUID();
+    final HashingMapperConfig hashingMapper = MapperHelperKt.createHashingMapper(ID_FIELD_NAME, mapperId);
 
     final var streamConfig = new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
@@ -112,7 +114,7 @@ class CatalogClientConvertersTest {
         null,
         null,
         null,
-        List.of(new ConfiguredStreamMapper(StreamMapperType.HASHING, Jsons.jsonNode(hashingMapper.getConfig()))),
+        List.of(new ConfiguredStreamMapper(StreamMapperType.HASHING, Jsons.jsonNode(hashingMapper.getConfig()), mapperId)),
         null,
         null,
         null);
@@ -129,7 +131,7 @@ class CatalogClientConvertersTest {
     assertEquals(1, stream.getFields().size());
     assertEquals(1, stream.getMappers().size());
     assertEquals(fieldGenerator.getFieldsFromSchema(stream.getStream().getJsonSchema()), stream.getFields());
-    assertEquals(MapperHelperKt.createHashingMapper(ID_FIELD_NAME), stream.getMappers().getFirst());
+    assertEquals(hashingMapper, stream.getMappers().getFirst());
   }
 
   @Test

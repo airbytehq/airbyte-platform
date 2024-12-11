@@ -82,7 +82,7 @@ class LogClient(
   }
 
   fun deleteLogs(logPath: String) {
-    logger.debug { "Deleting logs from path '$logPath' using ${client.storageType()} storage client..." }
+    logger.debug { "Deleting logs from path '$logPath' using ${client.storageType} storage client..." }
     client.delete(id = logPath)
     logger.debug { "Log delete request complete." }
   }
@@ -91,30 +91,30 @@ class LogClient(
     logPath: String,
     numLines: Int,
   ): LogEvents {
-    logger.debug { "Tailing $numLines line(s) from logs from path '$logPath' using ${client.storageType()} storage client..." }
+    logger.debug { "Tailing $numLines line(s) from logs from path '$logPath' using ${client.storageType} storage client..." }
     val files = client.list(id = logPath).filter { it.endsWith(STRUCTURED_LOG_FILE_EXTENSION) }
-    logger.debug { "Found ${files.size} files from path '$logPath' using ${client.storageType()} storage client." }
+    logger.debug { "Found ${files.size} files from path '$logPath' using ${client.storageType} storage client." }
 
     val instrumentedFiles =
       meterRegistry.createGauge(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
         stateObject = files,
       )
     val timer =
       meterRegistry.createTimer(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
     val lineCounter =
       meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
     val byteCounter =
       meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
 
     val events =
@@ -132,20 +132,20 @@ class LogClient(
     logPath: String,
     numLines: Int,
   ): List<String> {
-    logger.debug { "Tailing $numLines line(s) from logs from path '$logPath' using ${client.storageType()} storage client..." }
+    logger.debug { "Tailing $numLines line(s) from logs from path '$logPath' using ${client.storageType} storage client..." }
     val files = client.list(id = logPath)
-    logger.debug { "Found ${files.size} files from path '$logPath' using ${client.storageType()} storage client." }
+    logger.debug { "Found ${files.size} files from path '$logPath' using ${client.storageType} storage client." }
 
     val instrumentedFiles =
       meterRegistry.createGauge(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
         stateObject = files,
       )
     val timer =
       meterRegistry.createTimer(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVAL_TIME_MS.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
 
     return if (timer != null) {
@@ -162,12 +162,12 @@ class LogClient(
     val lineCounter =
       meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_COUNT_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
     val byteCounter =
       meterRegistry.createCounter(
         metricName = OssMetricsRegistry.LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED.metricName,
-        logClientType = client.storageType(),
+        logClientType = client.storageType,
       )
 
     val isStructured = files.all { it.endsWith(suffix = STRUCTURED_LOG_FILE_EXTENSION) }

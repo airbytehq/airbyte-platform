@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -68,6 +69,7 @@ public class ActorDefinitionVersionHandler {
     this.apiPojoConverters = apiPojoConverters;
   }
 
+  @Trace
   public ActorDefinitionVersionRead getActorDefinitionVersionForSourceId(final SourceIdRequestBody sourceIdRequestBody)
       throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
     final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.getSourceId());
@@ -120,6 +122,7 @@ public class ActorDefinitionVersionHandler {
         .supportFileTransfer(resolvedVersion.getSupportsFileTransfer());
   }
 
+  @Trace
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.getDestinationId());

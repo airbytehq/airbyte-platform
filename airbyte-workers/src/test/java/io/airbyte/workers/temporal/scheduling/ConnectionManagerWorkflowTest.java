@@ -87,6 +87,7 @@ import io.temporal.common.RetryOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,7 +96,6 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,6 +114,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the core state machine of the connection manager workflow.
@@ -121,11 +123,12 @@ import org.mockito.verification.VerificationMode;
  * We've had race conditions in this in the past which is why (after addressing them) we have
  * repeated cases, just in case there's a regression where a race condition is added back to a test.
  */
-@Slf4j
 // Forcing SAME_THREAD execution as we seem to face the issues described in
 // https://github.com/mockito/mockito/wiki/FAQ#is-mockito-thread-safe
 @Execution(ExecutionMode.SAME_THREAD)
 class ConnectionManagerWorkflowTest {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final long JOB_ID = 1L;
   private static final int ATTEMPT_ID = 1;

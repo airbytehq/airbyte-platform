@@ -25,7 +25,7 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class PodLabeler {
+class PodLabeler(private val podNetworkSecurityLabeler: PodNetworkSecurityLabeler) {
   fun getSourceLabels(): Map<String, String> {
     return mapOf(
       SYNC_STEP_KEY to READ_STEP,
@@ -113,12 +113,15 @@ class PodLabeler {
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
     autoId: UUID,
+    workspaceId: UUID?,
+    networkSecurityTokens: List<String>,
   ): Map<String, String> {
     return passThroughLabels +
       getMutexLabels(mutexKey) +
       getWorkloadLabels(workloadId) +
       getAutoIdLabels(autoId) +
-      getPodSweeperLabels()
+      getPodSweeperLabels() +
+      podNetworkSecurityLabeler.getLabels(workspaceId, networkSecurityTokens)
   }
 
   fun getReplicationImageLabels(

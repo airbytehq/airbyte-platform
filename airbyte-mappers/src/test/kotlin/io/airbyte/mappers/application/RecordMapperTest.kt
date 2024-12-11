@@ -35,8 +35,8 @@ class RecordMapperTest {
     recordMapper.applyMappers(
       testRecord,
       listOf(
-        TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("field1", TestEnums.ONE, "field2")),
-        TestMapperConfig(TEST_MAPPER_NAME, null, TestConfig("field1_test", TestEnums.ONE, "field2")),
+        TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("field1", TestEnums.ONE, "field2")),
+        TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("field1_test", TestEnums.ONE, "field2")),
       ),
     )
 

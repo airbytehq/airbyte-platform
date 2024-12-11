@@ -3,7 +3,7 @@ openapi: "3.1.0"
 info:
   title: "Destinations"
   version: "1.0.0"
-  description: "Programatically control Airbyte Cloud, OSS & Enterprise."
+  description: "Programmatically control Airbyte Cloud, OSS & Enterprise."
 servers:
   - url: "https://api.airbyte.com/v1"
     description: "Airbyte API v1"
@@ -361,6 +361,7 @@ components:
         - "hashing"
         - "field-renaming"
         - "row-filtering"
+        - "encryption"
       x-speakeasy-component: true
     MapperConfiguration:
       type: "object"
@@ -720,6 +721,7 @@ components:
         - "schedule"
         - "dataResidency"
         - "configurations"
+        - "createdAt"
       properties:
         connectionId:
           format: "UUID"
@@ -751,6 +753,9 @@ components:
           type: "string"
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+        createdAt:
+          format: "int64"
+          type: "integer"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -868,6 +873,7 @@ components:
         - "definitionId"
         - "workspaceId"
         - "configuration"
+        - "createdAt"
       properties:
         destinationId:
           format: "UUID"
@@ -884,6 +890,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -902,6 +911,7 @@ components:
         - "workspaceId"
         - "configuration"
         - "definitionId"
+        - "createdAt"
       properties:
         sourceId:
           format: "UUID"
@@ -918,6 +928,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -14867,29 +14880,34 @@ components:
         - "destinationType"
       properties:
         motherduck_api_key:
-          title: "MotherDuck API Key"
+          title: "MotherDuck Access Token"
           type: "string"
-          description: "API key to use for authentication to a MotherDuck database."
+          description:
+            "API access token to use for authentication to a MotherDuck\
+            \ database."
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
         destination_path:
           title: "Destination DB"
           type: "string"
           description:
-            "Path to the .duckdb file, or the text 'md:' to connect to\
-            \ MotherDuck. The file will be placed inside that local mount. For more\
-            \ information check out our <a href=\"https://docs.airbyte.io/integrations/destinations/motherduck\"\
-            >docs</a>"
+            "Path to a .duckdb file or 'md:<DATABASE_NAME>' to connect\
+            \ to a MotherDuck database. If 'md:' is specified without a database name,\
+            \ the default MotherDuck database name ('my_db') will be used."
           examples:
             - "/local/destination.duckdb"
             - "md:"
-            - "motherduck:"
+            - "md:data_db"
+            - "md:my_db"
           default: "md:"
         schema:
-          title: "Destination Schema"
+          title: "Schema Name"
           type: "string"
-          description: "Database schema name, default for duckdb is 'main'."
-          example: "main"
+          description: "Database schema name, defaults to 'main' if not specified."
+          examples:
+            - "main"
+            - "airbyte_raw"
+            - "my_schema"
         destinationType:
           title: "motherduck"
           const: "motherduck"
@@ -14904,28 +14922,33 @@ components:
         - "motherduck_api_key"
       properties:
         motherduck_api_key:
-          title: "MotherDuck API Key"
+          title: "MotherDuck Access Token"
           type: "string"
-          description: "API key to use for authentication to a MotherDuck database."
+          description:
+            "API access token to use for authentication to a MotherDuck\
+            \ database."
           airbyte_secret: true
         destination_path:
           title: "Destination DB"
           type: "string"
           description:
-            "Path to the .duckdb file, or the text 'md:' to connect to\
-            \ MotherDuck. The file will be placed inside that local mount. For more\
-            \ information check out our <a href=\"https://docs.airbyte.io/integrations/destinations/motherduck\"\
-            >docs</a>"
+            "Path to a .duckdb file or 'md:<DATABASE_NAME>' to connect\
+            \ to a MotherDuck database. If 'md:' is specified without a database name,\
+            \ the default MotherDuck database name ('my_db') will be used."
           examples:
             - "/local/destination.duckdb"
             - "md:"
-            - "motherduck:"
+            - "md:data_db"
+            - "md:my_db"
           default: "md:"
         schema:
-          title: "Destination Schema"
+          title: "Schema Name"
           type: "string"
-          description: "Database schema name, default for duckdb is 'main'."
-          example: "main"
+          description: "Database schema name, defaults to 'main' if not specified."
+          examples:
+            - "main"
+            - "airbyte_raw"
+            - "my_schema"
     destination-s3:
       title: "S3 Destination Spec"
       type: "object"

@@ -63,34 +63,9 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.featureflagServer.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
-        {{- if eq .Values.global.deploymentMode "oss" }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: MICROMETER_METRICS_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_ENABLED
-        - name: MICROMETER_METRICS_STATSD_FLAVOR
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STATSD_FLAVOR
-        - name: STATSD_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_HOST
-        - name: STATSD_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_PORT
 
-        {{- end }}
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
 
         # Values from env
         {{- if or .Values.featureflagServer.env_vars .Values.global.env_vars }}

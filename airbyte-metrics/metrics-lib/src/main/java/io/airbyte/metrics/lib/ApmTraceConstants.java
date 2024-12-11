@@ -47,6 +47,12 @@ public final class ApmTraceConstants {
     public static final String ATTEMPT_NUMBER_KEY = "attempt_number";
 
     /**
+     * Name of the APM trace tag that holds the connector builder project id value associated with the
+     * trace.
+     */
+    public static final String CONNECTOR_BUILDER_PROJECT_ID_KEY = "connector_builder_project_id";
+
+    /**
      * Name of the APM trace tag that holds the destination Docker image value associated with the
      * trace.
      */

@@ -88,7 +88,7 @@ export interface BuilderFormInput {
 
 type BuilderHttpMethod = "GET" | "POST";
 
-export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable"] as const;
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "gzip JSON"] as const;
 export type BuilderDecoder = (typeof BUILDER_DECODER_TYPES)[number];
 
 interface BuilderRequestOptions {
@@ -896,6 +896,8 @@ const builderDecoderToManifest = (decoder: BuilderDecoder): SimpleRetrieverDecod
       return { type: "JsonlDecoder" };
     case "Iterable":
       return { type: "IterableDecoder" };
+    case "gzip JSON":
+      return { type: "GzipJsonDecoder" };
   }
 };
 

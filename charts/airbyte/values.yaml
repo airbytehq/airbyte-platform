@@ -237,16 +237,13 @@ webapp:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=101(nginx)
-    fsGroup: 101
+    fsGroup: 1000
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=101(nginx)
-    runAsUser: 101
-    # gid=101(nginx)
-    runAsGroup: 101
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -464,16 +461,13 @@ pod-sweeper:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=1001(anon)
-    fsGroup: 1001
+    fsGroup: 1000
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1001(anon)
-    runAsUser: 1001
-    # gid=1001(anon)
-    runAsGroup: 1001
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -1768,6 +1762,13 @@ minio:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  resources:
+     requests:
+       memory: 1Gi
+       cpu: 250m
+     limits:
+       cpu: 300m
+       memory: 2Gi
 ## @section cron parameters
 cron:
   enabled: true
@@ -2054,8 +2055,7 @@ keycloak:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=0(root)
-    fsGroup: 0
+    fsGroup: 1000
 
   initContainers:
     initDb:
@@ -2064,10 +2064,8 @@ keycloak:
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=70(postgres)
-    runAsUser: 70
-    # gid=70(postgres)
-    runAsGroup: 70
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -2077,10 +2075,8 @@ keycloak:
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1000(keycloak)
     runAsUser: 1000
-    # gid=0(root)
-    runAsGroup: 0
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -2113,10 +2109,8 @@ keycloak-setup:
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # gid=100(curl_user)
-    runAsUser: 100
-    # gid=101(curl_group)
-    runAsGroup: 101
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]

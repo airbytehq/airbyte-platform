@@ -12,13 +12,11 @@ import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Composes all the business and request logic for checking progress of a run.
  */
-@Slf4j
 @Singleton
 public class ProgressChecker {
 

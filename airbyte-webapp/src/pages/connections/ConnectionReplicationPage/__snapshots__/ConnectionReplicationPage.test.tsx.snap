@@ -497,26 +497,21 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       id="headlessui-listbox-button-:rk:"
                                       type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
@@ -638,26 +633,21 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       id="headlessui-listbox-button-:rn:"
                                       type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
@@ -1296,26 +1286,21 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       id="headlessui-listbox-button-:r1c:"
                                       type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
@@ -1437,26 +1422,21 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       id="headlessui-listbox-button-:r1f:"
                                       type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"

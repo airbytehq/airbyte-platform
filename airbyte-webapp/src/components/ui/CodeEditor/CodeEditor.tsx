@@ -2,24 +2,38 @@ import Editor, { Monaco, useMonaco } from "@monaco-editor/react";
 import { KeyCode, KeyMod, editor } from "monaco-editor/esm/vs/editor/editor.api";
 import React, { useCallback, useEffect } from "react";
 
+import {
+  JINJA_TOKEN,
+  NON_JINJA_TOKEN,
+  JINJA_STRING_TOKEN,
+  JINJA_OTHER_TOKEN,
+  JINJA_CLOSING_BRACKET_TOKEN,
+  JINJA_FIRST_BRACKET_TOKEN,
+} from "components/connectorBuilder/Builder/jinja";
+
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import styles from "./CodeEditor.module.scss";
 import { Spinner } from "../Spinner";
 
 interface CodeEditorProps {
+  className?: string;
   value: string;
+  name?: string;
   language?: string;
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
+  onBlur?: (value: string) => void;
   height?: string;
   lineNumberCharacterWidth?: number;
-  onMount?: (editor: editor.IStandaloneCodeEditor) => void;
-  automaticLayout?: boolean;
+  onMount?: (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => void;
   showSuggestions?: boolean;
   paddingTop?: boolean;
   disabled?: boolean;
   bubbleUpUndoRedo?: boolean;
+  beforeMount?: (monaco: Monaco) => void;
+  options?: editor.IStandaloneEditorConstructionOptions;
+  tabFocusMode?: boolean;
 }
 
 function hslToHex(hue: number, saturation: number, lightness: number) {
@@ -36,24 +50,31 @@ function hslToHex(hue: number, saturation: number, lightness: number) {
   return `#${convertWithOffset(0)}${convertWithOffset(8)}${convertWithOffset(4)}`;
 }
 
-function cssCustomPropToHex(hslString: string) {
+export function cssCustomPropToHex(hslString: string) {
   const [, h, s, l] = /^hsl\(([0-9]+), ([0-9]+)%, ([0-9]+)%\)$/.exec(hslString)?.map(Number) ?? [0, 0, 0, 0];
   return hslToHex(h, s, l);
 }
 
+let isTabFocusModeOn = false;
+
 export const CodeEditor: React.FC<CodeEditorProps> = ({
+  className,
+  name,
   value,
   language,
   readOnly,
   onChange,
+  onBlur,
   height,
   lineNumberCharacterWidth,
   onMount,
-  automaticLayout,
   paddingTop,
   showSuggestions = true,
   bubbleUpUndoRedo,
   disabled,
+  beforeMount,
+  options,
+  tabFocusMode,
 }) => {
   const monaco = useMonaco();
   const { colorValues } = useAirbyteTheme();
@@ -74,6 +95,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           { token: "delimiter", foreground: cssCustomPropToHex(colorValues[styles.delimiter]) },
           { token: "keyword", foreground: cssCustomPropToHex(colorValues[styles.keyword]) },
           { token: "comment", foreground: cssCustomPropToHex(colorValues[styles.comment]) },
+          { token: NON_JINJA_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.string]) },
+          { token: JINJA_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
+          { token: JINJA_STRING_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
+          { token: JINJA_OTHER_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
+          { token: JINJA_FIRST_BRACKET_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
+          { token: JINJA_CLOSING_BRACKET_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
         ],
         colors: {
           "editor.background": "#00000000", // transparent, so that parent background is shown instead
@@ -99,22 +126,60 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   return (
     <Editor
-      beforeMount={setAirbyteTheme}
-      onMount={(editor: editor.IStandaloneCodeEditor) => {
-        // In cases like the Builder, we have our own undo/redo framework in place, so we want to bubble up the
-        // undo/redo keyboard commands to the surrounding page when the user presses those keys, rather than triggering
-        // monaco's internal undo/redo implementation.
-        editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () =>
-          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("undo", editor) : editor.trigger(undefined, "undo", undefined)
-        );
-        editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyY, () =>
-          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined)
-        );
-        editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ, () =>
-          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined)
-        );
+      className={className}
+      wrapperProps={{ name }}
+      beforeMount={(monaco: Monaco) => {
+        setAirbyteTheme(monaco);
+        beforeMount?.(monaco);
+      }}
+      onMount={(editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+        editor.addAction({
+          id: "ctrl-z",
+          label: "Undo (Ctrl + Z)",
+          keybindings: [KeyMod.CtrlCmd | KeyCode.KeyZ],
+          run: () => {
+            bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("undo", editor) : editor.trigger(undefined, "undo", undefined);
+          },
+        });
 
-        onMount?.(editor);
+        editor.addAction({
+          id: "ctrl-y",
+          label: "Redo (Ctrl + Y)",
+          keybindings: [KeyMod.CtrlCmd | KeyCode.KeyY],
+          run: () => {
+            bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined);
+          },
+        });
+
+        editor.addAction({
+          id: "ctrl-shift-z",
+          label: "Redo (Ctrl + Shift + Z)",
+          keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ],
+          run: () => {
+            bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined);
+          },
+        });
+
+        editor.onDidBlurEditorWidget(() => {
+          onBlur?.(editor.getValue());
+        });
+
+        // Triggering editor.action.toggleTabFocusMode is the only working way to maintain the behavior
+        // of focusing the next element when pressing tab instead of inserting a tab character.
+        // Since this is only a "toggle" command, and the state defaults to false, we keep track if its
+        // state through a javascript variable, and toggle it accordingly when the editor is focused,
+        // based on tabFocusMode prop.
+        editor.onDidFocusEditorWidget(() => {
+          if (tabFocusMode && !isTabFocusModeOn) {
+            isTabFocusModeOn = true;
+            editor.trigger("", "editor.action.toggleTabFocusMode", {});
+          } else if (!tabFocusMode && isTabFocusModeOn) {
+            isTabFocusModeOn = false;
+            editor.trigger("", "editor.action.toggleTabFocusMode", {});
+          }
+        });
+
+        onMount?.(editor, monaco);
       }}
       loading={<Spinner />}
       value={value}
@@ -125,7 +190,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       options={{
         lineNumbersMinChars: lineNumberCharacterWidth ?? 2,
         readOnly: (readOnly || disabled) ?? false,
-        automaticLayout,
         matchBrackets: "always",
         minimap: {
           enabled: false,
@@ -137,6 +201,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             }
           : {},
         fixedOverflowWidgets: true,
+        ...options,
       }}
     />
   );

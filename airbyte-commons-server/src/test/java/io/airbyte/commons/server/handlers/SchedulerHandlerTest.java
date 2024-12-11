@@ -67,6 +67,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.commons.logging.LogEvents;
 import io.airbyte.commons.logging.LogUtils;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -129,7 +130,6 @@ import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -148,12 +148,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -284,11 +284,9 @@ class SchedulerHandlerTest {
   private OperationService operationService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
-  private WorkspaceHelper workspaceHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
-    featureFlagClient = new TestClient(Map.of());
     job = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -329,9 +327,9 @@ class SchedulerHandlerTest {
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     logClientManager = mock(LogClientManager.class);
     logUtils = mock(LogUtils.class);
-    workspaceHelper = mock(WorkspaceHelper.class);
 
-    jobConverter = spy(new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper));
+    when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
+    jobConverter = spy(new JobConverter(logClientManager, logUtils));
 
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);
@@ -977,6 +975,7 @@ class SchedulerHandlerTest {
   // TODO: to be removed once we swap to new discover flow
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void whenDiscoverPostprocessInTemporalEnabledDiffAndDisablingIsNotPerformed(final boolean enabled)
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
@@ -1052,6 +1051,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1113,6 +1113,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlag()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1177,6 +1178,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn()
       throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException,
       io.airbyte.config.persistence.ConfigNotFoundException {
@@ -1243,6 +1245,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlagNoDiff()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1304,6 +1307,7 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaForSourceMultipleConnectionsFeatureFlagOn()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1393,6 +1397,7 @@ class SchedulerHandlerTest {
   }
 
   @Test
+  @Disabled("Delete along with the deletion of the pre-async discover code")
   void testDiscoverSchemaFromSourceIdWithConnectionUpdateNonSuccessResponse()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());

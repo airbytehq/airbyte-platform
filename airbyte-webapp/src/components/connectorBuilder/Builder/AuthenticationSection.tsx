@@ -15,7 +15,6 @@ import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
@@ -223,8 +222,8 @@ const OAuthForm = () => {
 
   return (
     <>
-      <BuilderFieldWithInputs
-        type="string"
+      <BuilderField
+        type="jinja"
         path={authPath("token_refresh_endpoint")}
         manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
       />
@@ -272,7 +271,7 @@ const OAuthForm = () => {
             }}
           >
             <BuilderField
-              type="string"
+              type="jinja"
               path={authPath("refresh_token_updater.refresh_token_name")}
               optional
               manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
@@ -287,20 +286,20 @@ const OAuthForm = () => {
           optional
           manifestPath="OAuthAuthenticator.properties.scopes"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("token_expiry_date_format")}
           optional
           manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("expires_in_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.expires_in_name"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("access_token_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.access_token_name"
@@ -328,8 +327,8 @@ const SessionTokenForm = () => {
   return (
     <>
       <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("login_requester.url")}
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.label" })}
           tooltip={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.tooltip" })}
@@ -411,7 +410,7 @@ const SessionTokenForm = () => {
             },
           ]}
         />
-        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} omitInterpolationContext />
+        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} />
         <ToggleGroupField<BuilderErrorHandler[]>
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.errorHandler" })}
           tooltip={getDescriptionByManifest("DefaultErrorHandler")}

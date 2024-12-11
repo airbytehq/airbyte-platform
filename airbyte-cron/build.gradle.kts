@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -26,7 +24,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
   implementation(libs.sentry.java)
-  implementation(libs.lombok)
   implementation(libs.commons.io)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -82,8 +79,11 @@ tasks.withType<Jar>().configureEach {
 
 // Copies the connector <> platform compatibility JSON file for use in tests
 tasks.register<Copy>("copyPlatformCompatibilityMatrix") {
-  val platformCompatibilityFile = project.rootProject.layout.projectDirectory.file("tools/connectors/platform-compatibility/platform-compatibility.json")
-  if(file(platformCompatibilityFile).exists()) {
+  val platformCompatibilityFile =
+    project.rootProject.layout.projectDirectory.file(
+      "tools/connectors/platform-compatibility/platform-compatibility.json",
+    )
+  if (file(platformCompatibilityFile).exists()) {
     from(platformCompatibilityFile)
     into(project.layout.projectDirectory.dir("src/test/resources"))
   }

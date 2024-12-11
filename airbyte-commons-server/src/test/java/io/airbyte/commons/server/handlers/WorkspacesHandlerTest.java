@@ -173,8 +173,6 @@ class WorkspacesHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withName(TEST_ORGANIZATION_NAME)
         .withEmail(TEST_EMAIL)
-        .withPba(false)
-        .withOrgLevelBilling(false)
         .withSsoRealm(ssoRealm);
   }
 
@@ -598,7 +596,6 @@ class WorkspacesHandlerTest {
 
     assertEquals(organization.getOrganizationId(), orgInfo.getOrganizationId());
     assertEquals(organization.getName(), orgInfo.getOrganizationName());
-    assertEquals(organization.getPba(), orgInfo.getPba());
     assertEquals(isSso, orgInfo.getSso()); // sso is true if ssoRealm is set
   }
 

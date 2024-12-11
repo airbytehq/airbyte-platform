@@ -20,7 +20,10 @@ import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_NAME
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -30,9 +33,17 @@ import java.util.stream.Stream
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
 
 class PodLabelerTest {
+  private lateinit var mPodNetworkSecurityLabeler: PodNetworkSecurityLabeler
+
+  @BeforeEach
+  fun setUp() {
+    mPodNetworkSecurityLabeler = mockk()
+    every { mPodNetworkSecurityLabeler.getLabels(any(), any()) } returns emptyMap()
+  }
+
   @Test
   fun getSourceLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getSourceLabels()
 
     assert(
@@ -45,7 +56,7 @@ class PodLabelerTest {
 
   @Test
   fun getDestinationLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getDestinationLabels()
 
     assert(
@@ -58,7 +69,7 @@ class PodLabelerTest {
 
   @Test
   fun getReplicationOrchestratorLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getReplicationOrchestratorLabels(ORCHESTRATOR_IMAGE_NAME)
     val shortImageName = PodUtils.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
     val imageVersion = PodUtils.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
@@ -76,7 +87,7 @@ class PodLabelerTest {
 
   @Test
   fun getCheckLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getCheckLabels()
 
     assert(
@@ -89,7 +100,7 @@ class PodLabelerTest {
 
   @Test
   fun getDiscoverLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getDiscoverLabels()
 
     assert(
@@ -102,7 +113,7 @@ class PodLabelerTest {
 
   @Test
   fun getSpecLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getSpecLabels()
 
     assert(
@@ -116,7 +127,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getWorkloadLabels(workloadId: String) {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getWorkloadLabels(workloadId)
 
     assert(
@@ -130,7 +141,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getMutexLabels(key: String) {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getMutexLabels(key)
 
     assert(
@@ -143,7 +154,7 @@ class PodLabelerTest {
 
   @Test
   fun getAutoIdLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val id = UUID.randomUUID()
     val result = labeler.getAutoIdLabels(id)
 
@@ -163,8 +174,8 @@ class PodLabelerTest {
     passThroughLabels: Map<String, String>,
     autoId: UUID,
   ) {
-    val labeler = PodLabeler()
-    val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId)
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
+    val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId, null, emptyList())
 
     assert(
       result ==
@@ -177,8 +188,33 @@ class PodLabelerTest {
   }
 
   @Test
+  fun getSharedLabelsWithNetworkSecurityLabels() {
+    val podNetworkSecurityLabeler: PodNetworkSecurityLabeler = mockk()
+    val labeler = PodLabeler(podNetworkSecurityLabeler)
+    val workloadId = UUID.randomUUID().toString()
+    val mutexKey = UUID.randomUUID().toString()
+    val passThroughLabels = mapOf("random labels1" to "from input msg1")
+    val autoId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val networkSecurityTokens = listOf("token1")
+
+    every { podNetworkSecurityLabeler.getLabels(workspaceId, networkSecurityTokens) } returns mapOf("networkSecurityTokenHash" to "hashedToken1")
+    val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId, workspaceId, networkSecurityTokens)
+
+    assert(
+      result ==
+        passThroughLabels +
+        labeler.getWorkloadLabels(workloadId) +
+        labeler.getMutexLabels(mutexKey) +
+        labeler.getAutoIdLabels(autoId) +
+        labeler.getPodSweeperLabels() +
+        mapOf("networkSecurityTokenHash" to "hashedToken1"),
+    )
+  }
+
+  @Test
   internal fun testGetReplicationLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val version = "dev"
     val orchestrationImageName = "orchestrator-image-name:$version"
     val sourceImageName = "source-image-name:$version"

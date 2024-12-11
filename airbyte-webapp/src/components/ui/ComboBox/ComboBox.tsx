@@ -54,6 +54,8 @@ export interface ComboBoxProps extends BaseProps {
   allowCustomValue?: boolean;
   optionsConfig?: OptionsConfig;
   "data-testid"?: string;
+  placeholder?: string;
+  className?: string;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -202,6 +204,8 @@ export const ComboBox = ({
   filterOptions = true,
   allowCustomValue,
   "data-testid": testId,
+  placeholder,
+  className,
 }: ComboBoxProps) => {
   // Stores the value that the user types in to filter the options
   const [query, setQuery] = useState("");
@@ -248,6 +252,7 @@ export const ComboBox = ({
       immediate
       as="div"
       data-testid={testId}
+      className={className}
     >
       <Float adaptiveWidth placement="bottom-start" as={React.Fragment}>
         <ComboboxInput as={React.Fragment}>
@@ -280,6 +285,7 @@ export const ComboBox = ({
             onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
             disabled={disabled}
             data-testid={testId ? `${testId}--input` : undefined}
+            placeholder={placeholder}
           />
         </ComboboxInput>
         <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>

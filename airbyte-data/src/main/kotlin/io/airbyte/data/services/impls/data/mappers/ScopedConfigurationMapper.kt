@@ -73,7 +73,7 @@ fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration {
     .withValue(this.value)
     .withScopeType(this.scopeType.toConfigModel())
     .withScopeId(this.scopeId)
-    .withResourceType(this.resourceType.toConfigModel())
+    .withResourceType(this.resourceType?.toConfigModel())
     .withResourceId(this.resourceId)
     .withOriginType(this.originType.toConfigModel())
     .withOrigin(this.origin)

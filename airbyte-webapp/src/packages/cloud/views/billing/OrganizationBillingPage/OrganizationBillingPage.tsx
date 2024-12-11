@@ -12,7 +12,13 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useGetOrganizationBillingBalance } from "core/api";
+import {
+  HttpProblem,
+  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
+  useGetOrganizationSubscriptionInfo,
+} from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 
@@ -21,16 +27,23 @@ import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
 import { PaymentMethod } from "./PaymentMethod";
-import { useRedirectToCustomerPortal } from "../useRedirectToCustomerPortal";
+import { Subscription } from "./Subscription";
+import { useRedirectToCustomerPortal } from "../../../area/billing/utils/useRedirectToCustomerPortal";
 
 export const OrganizationBillingPage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_BILLING);
+
   const { formatMessage } = useIntl();
   const { organizationId } = useCurrentWorkspace();
   const { billing } = useCurrentOrganizationInfo();
   const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("portal");
   const { formatCredits } = useFormatCredits();
 
-  const { data: balance } = useGetOrganizationBillingBalance(organizationId);
+  const { data: subscriptionInfo, isLoading, error } = useGetOrganizationSubscriptionInfo(organizationId);
+
+  const noSubscriptionExists = !isLoading && HttpProblem.isType(error, "error:billing/no-active-subscription");
+
+  const hideAccountBalance = noSubscriptionExists || subscriptionInfo?.balanceHidden;
 
   return (
     <PageContainer>
@@ -58,7 +71,9 @@ export const OrganizationBillingPage: React.FC = () => {
           <BillingBanners />
 
           <BorderedTiles>
-            <AccountBalance />
+            {!noSubscriptionExists && <Subscription />}
+
+            {!hideAccountBalance && <AccountBalance />}
 
             <BorderedTile>
               <BillingInformation />
@@ -75,13 +90,13 @@ export const OrganizationBillingPage: React.FC = () => {
         </FlexContainer>
       ) : (
         <FlexContainer gap="md" direction="column">
-          {!!balance?.credits?.balance && balance?.credits?.balance > 0 && (
+          {!!subscriptionInfo?.credits?.balance && subscriptionInfo?.credits?.balance > 0 && (
             <Message
               text={
                 <FormattedMessage
                   id="settings.organization.billing.remainingCreditsBanner"
                   values={{
-                    amount: formatCredits(balance.credits.balance),
+                    amount: formatCredits(subscriptionInfo.credits.balance),
                   }}
                 />
               }

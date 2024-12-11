@@ -91,7 +91,7 @@ internal class LogClientTest {
       mockk<StorageClient> {
         every { list(any()) } returns listOf(logPath)
         every { read(any()) } returns logFile.toFile().readText()
-        every { storageType() } returns StorageType.LOCAL
+        every { storageType } returns StorageType.LOCAL
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -134,7 +134,7 @@ internal class LogClientTest {
       mockk<StorageClient> {
         every { list(any()) } returns listOf(logPath)
         every { read(any()) } returns logFile.toFile().readText()
-        every { storageType() } returns StorageType.LOCAL
+        every { storageType } returns StorageType.LOCAL
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -171,7 +171,7 @@ internal class LogClientTest {
       mockk<StorageClient> {
         every { list(any()) } returns listOf(logPath)
         every { read(any()) } returns logFile.toFile().readText()
-        every { storageType() } returns StorageType.LOCAL
+        every { storageType } returns StorageType.LOCAL
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -238,7 +238,7 @@ internal class LogClientTest {
         every { read("file2") } returns fileContents2
         every { read("file3") } returns fileContents3
         every { read("file4") } returns fileContents4
-        every { storageType() } returns storageType
+        every { this@mockk.storageType } returns storageType
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -286,7 +286,7 @@ internal class LogClientTest {
         every { read("file2$STRUCTURED_LOG_FILE_EXTENSION") } returns objectMapper.writeValueAsString(logEvents2)
         every { read("file3$STRUCTURED_LOG_FILE_EXTENSION") } returns objectMapper.writeValueAsString(logEvents3)
         every { read("file4$STRUCTURED_LOG_FILE_EXTENSION") } returns objectMapper.writeValueAsString(logEvents4)
-        every { storageType() } returns storageType
+        every { this@mockk.storageType } returns storageType
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -394,7 +394,7 @@ internal class LogClientTest {
       mockk<StorageClient> {
         every { list(any()) } returns listOf(logPath)
         every { read(any()) } returns logFile.toFile().readText()
-        every { storageType() } returns StorageType.LOCAL
+        every { storageType } returns StorageType.LOCAL
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {
@@ -606,7 +606,7 @@ internal class LogClientTest {
       mockk<StorageClient> {
         every { list(any()) } returns listOf(logPath)
         every { read(any()) } returns logFile.toFile().readText()
-        every { storageType() } returns StorageType.LOCAL
+        every { storageType } returns StorageType.LOCAL
       }
     val storageClientFactory =
       mockk<StorageClientFactory> {

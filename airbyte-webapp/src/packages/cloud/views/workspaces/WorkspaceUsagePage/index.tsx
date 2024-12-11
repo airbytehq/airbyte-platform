@@ -1,1 +1,1 @@
-export * from "./WorkspaceUsagePage";
+export { WorkspaceUsagePage as default } from "./WorkspaceUsagePage";

@@ -64,43 +64,38 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
           }
         />
         <ScrollParent props={{ className: styles.pageBody }}>
-          <Box m="xl" mt="none">
-            <Card noPadding className={styles.card}>
-              <div className={styles.filters}>
-                <Box p="lg">
-                  <FlexContainer justifyContent="flex-start" direction="column">
-                    <FlexItem grow>
-                      <SearchInput
-                        value={search}
-                        onChange={({ target: { value } }) => setFilterValue("search", value)}
+          <Card noPadding className={styles.card}>
+            <div className={styles.filters}>
+              <Box p="lg">
+                <FlexContainer justifyContent="flex-start" direction="column">
+                  <FlexItem grow>
+                    <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
+                  </FlexItem>
+                  <FlexContainer gap="sm" alignItems="center">
+                    <FlexItem>
+                      <ListBox
+                        optionTextAs="span"
+                        options={statusFilterOptions}
+                        selectedValue={status}
+                        onSelect={(value) => setFilterValue("status", value)}
                       />
                     </FlexItem>
-                    <FlexContainer gap="sm" alignItems="center">
-                      <FlexItem>
-                        <ListBox
-                          optionTextAs="span"
-                          options={statusFilterOptions}
-                          selectedValue={status}
-                          onSelect={(value) => setFilterValue("status", value)}
-                        />
-                      </FlexItem>
-                    </FlexContainer>
                   </FlexContainer>
-                </Box>
-              </div>
-              <div className={styles.table}>
-                <ImplementationTable
-                  data={filteredSources}
-                  entity="source"
-                  emptyPlaceholder={
-                    <Text bold color="grey" align="center">
-                      <FormattedMessage id="tables.sources.filters.empty" />
-                    </Text>
-                  }
-                />
-              </div>
-            </Card>
-          </Box>
+                </FlexContainer>
+              </Box>
+            </div>
+            <div className={styles.table}>
+              <ImplementationTable
+                data={filteredSources}
+                entity="source"
+                emptyPlaceholder={
+                  <Text bold color="grey" align="center">
+                    <FormattedMessage id="tables.sources.filters.empty" />
+                  </Text>
+                }
+              />
+            </div>
+          </Card>
         </ScrollParent>
       </PageGridContainer>
     </>

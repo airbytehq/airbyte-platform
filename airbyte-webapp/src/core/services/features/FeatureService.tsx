@@ -116,3 +116,11 @@ export const IfFeatureEnabled: React.FC<React.PropsWithChildren<{ feature: Featu
   const hasFeature = useFeature(feature);
   return hasFeature ? <>{children}</> : null;
 };
+
+export const IfFeatureDisabled: React.FC<React.PropsWithChildren<{ feature: FeatureItem }>> = ({
+  feature,
+  children,
+}) => {
+  const hasFeature = useFeature(feature);
+  return !hasFeature ? <>{children}</> : null;
+};

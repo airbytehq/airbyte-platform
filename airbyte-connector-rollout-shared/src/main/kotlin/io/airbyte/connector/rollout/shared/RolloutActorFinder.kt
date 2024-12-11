@@ -14,8 +14,10 @@ import io.airbyte.config.StandardSync
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.JobService
+import io.airbyte.data.services.OrganizationCustomerAttributesService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
@@ -53,6 +55,7 @@ class RolloutActorFinder(
   private val scopedConfigurationService: ScopedConfigurationService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val organizationCustomerAttributesService: OrganizationCustomerAttributesService,
 ) {
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
@@ -88,7 +91,7 @@ class RolloutActorFinder(
     logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
     logger.info { "Rollout ${connectorRollout.id}: ${nEligibleOrAlreadyPinned - candidates.size - nPreviouslyPinned} pinned to a non-RC" }
 
-    if (targetPercent == null) {
+    if (targetPercent == null || targetPercent == 0) {
       return ActorSelectionInfo(
         actorIdsToPin = emptyList(),
         nActors = initialNCandidates,
@@ -100,13 +103,20 @@ class RolloutActorFinder(
 
     // Calculate the number to pin based on the input percentage
     val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
+    val filteredActorDefinitionConnections = filterByConnectionActorId(candidates, sortedActorDefinitionConnections, actorType)
+    logger.info {
+      "Rollout ${connectorRollout.id}: " +
+        "candidates.size=$candidates.size " +
+        "sortedActorDefinitionConnections.size=${sortedActorDefinitionConnections.size} " +
+        "filteredActorDefinitionConnections.size=${filteredActorDefinitionConnections.size}"
+    }
 
     // From the eligible actors, choose the ones with the next sync
     // TODO: filter out those with lots of data
     // TODO: prioritize internal connections
     val actorIdsToPin =
       getUniqueActorIds(
-        sortedActorDefinitionConnections.filter { candidates.map { it.id }.contains(it.sourceId ?: it.destinationId) },
+        filteredActorDefinitionConnections,
         targetTotalToPin - nPreviouslyPinned,
         actorType,
       )
@@ -128,6 +138,25 @@ class RolloutActorFinder(
           ceil((nPreviouslyPinned + actorIdsToPin.size) * 100.0 / nEligibleOrAlreadyPinned).toInt()
         },
     )
+  }
+
+  @VisibleForTesting
+  internal fun filterByConnectionActorId(
+    candidates: Collection<ConfigScopeMapWithId>,
+    sortedActorDefinitionConnections: List<StandardSync>,
+    actorType: ActorType,
+  ): List<StandardSync> {
+    val candidateIds = candidates.map { it.id }.toSet()
+
+    return sortedActorDefinitionConnections.filter { connection ->
+      val relevantId =
+        if (actorType == ActorType.SOURCE) {
+          connection.sourceId
+        } else {
+          connection.destinationId
+        }
+      candidateIds.contains(relevantId)
+    }
   }
 
   fun getSyncInfoForPinnedActors(connectorRollout: ConnectorRollout): Map<UUID, ActorSyncJobInfo> {
@@ -258,26 +287,15 @@ class RolloutActorFinder(
 
   @VisibleForTesting
   fun filterByTier(candidates: Collection<ConfigScopeMapWithId>): Collection<ConfigScopeMapWithId> {
-    // TODO - filter out the ineligible actors (workspace in the list of tier 0/1 customers)
-    // Query from https://airbytehq-team.slack.com/archives/C06AZD64PDJ/p1727885479202429?thread_ts=1727885477.845219&cid=C06AZD64PDJ -
-    // val priorityWorkspaces =
-    // SELECT
-    //  w.workspace_id,
-    //  w.account_id,
-    //  sc.customer_tier
-    // FROM
-    //  airbyte-data-prod.airbyte_warehouse.workspace w
-    // JOIN
-    //  airbyte-data-prod.airbyte_warehouse.support_case sc
-    // ON
-    //  w.account_id = sc.account_id
-    // WHERE
-    //  lower(sc.customer_tier) IN ('tier 1', 'tier 0')
-    //
-    // candidates = candidates.filter {
-    //   !priorityWorkspaces.contains(it.workspaceId)
-    // }
-    return candidates
+    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
+    logger.debug { "RolloutActorFinder.filterByTier: organizationTiers=$organizationTiers" }
+    return candidates.filter { candidate ->
+      val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
+      // Include the candidate if the organization ID is not in the map or if the CustomerTier is not TIER_0 or TIER_1
+      organizationId == null || organizationTiers[organizationId]?.let { tier ->
+        tier != CustomerTier.TIER_0 && tier != CustomerTier.TIER_1
+      } ?: true
+    }
   }
 
   @VisibleForTesting
@@ -339,7 +357,7 @@ class RolloutActorFinder(
       )
     logger.info { "getSortedActorDefinitionConnections connections=${connections.size}" }
     for (connection in connections) {
-      logger.info { "getSortedActorDefinitionConnections connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
+      logger.debug { "getSortedActorDefinitionConnections connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
     }
 
     val sortedSyncs =
@@ -356,7 +374,7 @@ class RolloutActorFinder(
 
     logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
     for (sync in sortedSyncs) {
-      logger.info { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
+      logger.debug { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
     }
     return sortedSyncs
   }

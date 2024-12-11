@@ -13,7 +13,6 @@ import { useConnectorBuilderTestRead } from "services/connectorBuilder/Connector
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
@@ -171,8 +170,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             },
             children: (
               <>
-                <BuilderFieldWithInputs
-                  type="string"
+                <BuilderField
+                  type="jinja"
                   path={streamFieldPath("incrementalSync.start_datetime.value")}
                   label={formatMessage({ id: "connectorBuilder.incremental.custom.value.label" })}
                   tooltip={formatMessage({
@@ -182,7 +181,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
                         : "connectorBuilder.incremental.custom.value.startDatetime.tooltip.default",
                   })}
                 />
-                <BuilderFieldWithInputs
+                <BuilderField
                   type="combobox"
                   options={DATETIME_FORMAT_OPTIONS}
                   path={streamFieldPath("incrementalSync.start_datetime.format")}
@@ -233,13 +232,13 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
               },
               children: (
                 <>
-                  <BuilderFieldWithInputs
-                    type="string"
+                  <BuilderField
+                    type="jinja"
                     path={streamFieldPath("incrementalSync.end_datetime.value")}
                     label={formatMessage({ id: "connectorBuilder.incremental.custom.value.label" })}
                     tooltip={formatMessage({ id: "connectorBuilder.incremental.custom.value.endDatetime.tooltip" })}
                   />
-                  <BuilderFieldWithInputs
+                  <BuilderField
                     type="combobox"
                     path={streamFieldPath("incrementalSync.end_datetime.format")}
                     label={formatMessage({ id: "connectorBuilder.incremental.custom.format.label" })}
@@ -289,7 +288,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           />
         </ToggleGroupField>
       )}
-      <BuilderFieldWithInputs
+      <BuilderField
         type="combobox"
         path={streamFieldPath("incrementalSync.datetime_format")}
         manifestPath="DatetimeBasedCursor.properties.datetime_format"
@@ -314,13 +313,13 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
               cursor_granularity: "",
             }}
           >
-            <BuilderFieldWithInputs
+            <BuilderField
               type="combobox"
               path={streamFieldPath("incrementalSync.slicer.step")}
               manifestPath="DatetimeBasedCursor.properties.step"
               options={LARGE_DURATION_OPTIONS}
             />
-            <BuilderFieldWithInputs
+            <BuilderField
               type="combobox"
               path={streamFieldPath("incrementalSync.slicer.cursor_granularity")}
               manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
@@ -328,7 +327,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             />
           </ToggleGroupField>
         )}
-        <BuilderFieldWithInputs
+        <BuilderField
           type="combobox"
           path={streamFieldPath("incrementalSync.lookback_window")}
           manifestPath="DatetimeBasedCursor.properties.lookback_window"
@@ -351,7 +350,7 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
   const datetimeFields = Object.keys(data?.inferred_datetime_formats || {});
 
   return (
-    <BuilderFieldWithInputs
+    <BuilderField
       preview={(fieldValue) => {
         const mostRecentRecordValues = data?.slices?.at(0)?.pages.at(0)?.records.at(0);
         const cursorValue = mostRecentRecordValues?.[fieldValue];
@@ -359,7 +358,7 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
           <FormattedMessage id="connectorBuilder.incremental.cursorValuePreview" values={{ cursorValue }} />
         ) : undefined;
       }}
-      type={datetimeFields.length > 0 ? "combobox" : "string"}
+      type={datetimeFields.length > 0 ? "combobox" : "jinja"}
       path={streamFieldPath(CURSOR_PATH)}
       manifestPath="DatetimeBasedCursor.properties.cursor_field"
       options={datetimeFields.map((field) => ({ label: field, value: field }))}

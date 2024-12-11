@@ -119,7 +119,7 @@ class ConnectorWatcher(
     logger.info { "Connector exited with exit code $exitCode" }
     val streamFactory = getStreamFactory(input.integrationLauncherConfig)
 
-    return when (input.operationType!!) {
+    return when (input.operationType) {
       SidecarInput.OperationType.CHECK ->
         connectorMessageProcessor.run(
           outputStream,
@@ -176,7 +176,7 @@ class ConnectorWatcher(
   ) {
     logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
     val connectorOutput =
-      when (input.operationType!!) {
+      when (input.operationType) {
         SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
         SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
         SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
@@ -187,14 +187,10 @@ class ConnectorWatcher(
   }
 
   @VisibleForTesting
-  fun readFile(fileName: String): String {
-    return Files.readString(Path.of(configDir, fileName))
-  }
+  fun readFile(fileName: String): String = Files.readString(Path.of(configDir, fileName))
 
   @VisibleForTesting
-  fun areNeededFilesPresent(): Boolean {
-    return Files.exists(outputPath) && Files.exists(Path.of(configDir, FileConstants.EXIT_CODE_FILE))
-  }
+  fun areNeededFilesPresent(): Boolean = Files.exists(outputPath) && Files.exists(Path.of(configDir, FileConstants.EXIT_CODE_FILE))
 
   @VisibleForTesting
   fun getStreamFactory(integrationLauncherConfig: IntegrationLauncherConfig): AirbyteStreamFactory {
@@ -240,11 +236,11 @@ class ConnectorWatcher(
 
   @VisibleForTesting
   fun getFailedOutput(
-    input: StandardCheckConnectionInput,
+    input: StandardCheckConnectionInput?,
     e: Exception,
   ): ConnectorJobOutput {
     val failureOrigin =
-      if (input.actorType == ActorType.SOURCE) {
+      if (input?.actorType == ActorType.SOURCE) {
         FailureReason.FailureOrigin.SOURCE
       } else {
         FailureReason.FailureOrigin.DESTINATION
@@ -270,13 +266,13 @@ class ConnectorWatcher(
 
   @VisibleForTesting
   fun getFailedOutput(
-    input: StandardDiscoverCatalogInput,
+    input: StandardDiscoverCatalogInput?,
     e: Exception,
   ): ConnectorJobOutput {
     val failureReason =
       FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-        .withExternalMessage("The discover catalog failed due to an internal error for source: ${input.sourceId}")
+        .withExternalMessage("The discover catalog failed due to an internal error for source: ${input?.sourceId}")
         .withInternalMessage(e.message)
         .withStacktrace(e.stackTraceToString())
 

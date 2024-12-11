@@ -17,8 +17,6 @@ import java.util.UUID;
  */
 public interface OAuthService {
 
-  Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(UUID workspaceId, UUID sourceDefinitionId) throws IOException;
-
   void writeSourceOAuthParam(SourceOAuthParameter sourceOAuthParameter) throws IOException;
 
   SourceOAuthParameter getSourceOAuthParameterWithSecrets(UUID workspaceId, UUID sourceDefinitionId)
@@ -27,15 +25,17 @@ public interface OAuthService {
   Optional<SourceOAuthParameter> getSourceOAuthParameterOptional(UUID workspaceId, UUID sourceDefinitionId)
       throws IOException;
 
+  Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(UUID workspaceId, UUID sourceDefinitionId) throws IOException;
+
+  void writeDestinationOAuthParam(DestinationOAuthParameter destinationOAuthParameter) throws IOException;
+
   DestinationOAuthParameter getDestinationOAuthParameterWithSecrets(UUID workspaceId, UUID destinationDefinitionId)
       throws IOException, ConfigNotFoundException;
 
-  Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(UUID workspaceId, UUID sourceDefinitionId)
+  Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(UUID workspaceId, UUID destinationDefinitionId)
       throws IOException;
 
   Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(UUID workspaceId, UUID destinationDefinitionId)
       throws IOException;
-
-  void writeDestinationOAuthParam(DestinationOAuthParameter destinationOAuthParameter) throws IOException;
 
 }

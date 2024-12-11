@@ -27,7 +27,6 @@ interface BuilderOneOfProps<T extends OneOfType> {
   tooltip?: string | React.ReactNode;
   manifestPath?: string;
   manifestOptionPaths?: string[];
-  omitInterpolationContext?: boolean;
   onSelect?: (type: string) => void;
 }
 
@@ -38,7 +37,6 @@ export const BuilderOneOf = <T extends OneOfType>({
   path,
   manifestPath,
   manifestOptionPaths,
-  omitInterpolationContext,
   onSelect,
 }: BuilderOneOfProps<T>) => {
   const { setValue, unregister } = useFormContext();
@@ -60,7 +58,6 @@ export const BuilderOneOf = <T extends OneOfType>({
     manifestPath,
     path,
     false,
-    omitInterpolationContext,
     manifestOptionPaths
   );
 

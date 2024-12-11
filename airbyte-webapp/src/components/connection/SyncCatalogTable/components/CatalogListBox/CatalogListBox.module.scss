@@ -1,0 +1,11 @@
+// overwrite the ListBox default button styles
+.button.button {
+  padding-left: unset;
+  border: unset;
+  width: unset;
+  gap: unset;
+}
+
+.option {
+  white-space: nowrap;
+}

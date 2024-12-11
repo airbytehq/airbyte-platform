@@ -26,6 +26,7 @@ import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.Duration
 import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
@@ -49,6 +50,7 @@ class AirbyteLogbackCustomConfigurer :
       listOf(
         createPlatformAppender(loggerContext = loggerContext),
         createOperationsJobAppender(loggerContext = loggerContext),
+        createAuditLogAppender(loggerContext = loggerContext),
       )
 
     // Register appenders with root logger
@@ -83,6 +85,30 @@ class AirbyteLogbackCustomConfigurer :
       appenderFactory = appenderFactory,
       appenderName = CLOUD_OPERATIONS_JOB_LOGGER_NAME,
       contextKey = DEFAULT_JOB_LOG_PATH_MDC_KEY,
+      loggerContext = loggerContext,
+    )
+  }
+
+  /**
+   * Builds the appender for audit log messages.  This appender logs all messages to remote storage.
+   *
+   * @param loggerContext The logging context.
+   * @return The operations audit log appender.
+   */
+  private fun createAuditLogAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
+    val appenderFactory = { context: Context, discriminatorValue: String ->
+      createCloudAppender(
+        context = context,
+        discriminatorValue = discriminatorValue,
+        documentType = DocumentType.AUDIT_LOGS,
+        appenderName = AUDIT_LOGGER_NAME,
+      )
+    }
+
+    return createSiftingAppender(
+      appenderFactory = appenderFactory,
+      appenderName = AUDIT_LOGGER_NAME,
+      contextKey = DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY,
       loggerContext = loggerContext,
     )
   }
