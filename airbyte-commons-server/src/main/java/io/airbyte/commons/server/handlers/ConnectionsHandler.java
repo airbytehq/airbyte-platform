@@ -85,6 +85,7 @@ import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptWithJobInfo;
@@ -1486,10 +1487,13 @@ public class ConnectionsHandler {
    */
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
+    final var connection = connectionService.getStandardSync(connectionId);
+    final var mostRecentCatalog = catalogService.getMostRecentSourceActorCatalog(connection.getSourceId());
+    final var mostRecentCatalogId = mostRecentCatalog.map(ActorCatalogWithUpdatedAt::getId).orElse(discoveredCatalogId);
+    final var read = diffCatalogAndConditionallyDisable(connectionId, mostRecentCatalogId);
 
     final var autoPropResult =
-        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog(), true);
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), mostRecentCatalogId, read.getCatalog(), true);
     final var diff = autoPropResult.getPropagatedDiff();
 
     return new PostprocessDiscoveredCatalogResult().appliedDiff(diff);

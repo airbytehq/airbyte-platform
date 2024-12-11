@@ -218,6 +218,7 @@ class SchemaManagementTests {
 
     // Modify the source to add a new column and populate it with default values.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
+    testHarness.discoverSourceSchemaWithId(createdConnection.getSourceId());
 
     // Sync again. This should update the schema, but it shouldn't backfill, so only the new row should
     // have the new column populated.
@@ -240,6 +241,7 @@ class SchemaManagementTests {
 
     // Modify the source to add a new column, which will be populated with a default value.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
+    testHarness.discoverSourceSchemaWithId(createdConnection.getSourceId());
 
     // Sync again. This should update the schema, and also run a backfill for the affected stream.
     final JobRead jobReadWithBackfills = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
