@@ -7,12 +7,16 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.server.ConnectionId
 import io.airbyte.commons.server.OrganizationId
+import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import io.airbyte.data.services.ConnectionService as ConnectionRepository
 import io.airbyte.data.services.OrganizationPaymentConfigService as OrganizationPaymentConfigRepository
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Application service for performing business logic related to organizations.
@@ -43,6 +47,20 @@ interface OrganizationService {
    * @param organizationId the ID of the organization with the uncollectible invoice.
    */
   fun handleUncollectibleInvoice(organizationId: OrganizationId)
+
+  /**
+   * Handle the start of a subscription for an organization
+   *
+   * @param organizationId the ID of the organization that started a new subscription
+   */
+  fun handleSubscriptionStarted(organizationId: OrganizationId)
+
+  /**
+   * Handle the end of a subscription for an organization
+   *
+   * @param organizationId the ID of the organization that unsubscribed
+   */
+  fun handleSubscriptionEnded(organizationId: OrganizationId)
 }
 
 @Singleton
@@ -95,5 +113,57 @@ open class OrganizationServiceImpl(
 
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVOICE_MARKED_UNCOLLECTIBLE)
     // TODO send an email summarizing the disabled connections and uncollectible invoice problem
+  }
+
+  override fun handleSubscriptionStarted(organizationId: OrganizationId) {
+    val orgPaymentConfig =
+      organizationPaymentConfigRepository.findByOrganizationId(organizationId.value)
+        ?: throw ResourceNotFoundProblem(
+          ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
+        )
+
+    val currentSubscriptionStatus = orgPaymentConfig.subscriptionStatus
+
+    if (currentSubscriptionStatus == OrganizationPaymentConfig.SubscriptionStatus.SUBSCRIBED) {
+      logger.warn {
+        "Received a subscription started event for organization ${orgPaymentConfig.organizationId} that is already subscribed. Ignoring..."
+      }
+      return
+    }
+
+    orgPaymentConfig.subscriptionStatus = OrganizationPaymentConfig.SubscriptionStatus.SUBSCRIBED
+    organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
+    logger.info {
+      "Organization ${orgPaymentConfig.organizationId} successfully updated from $currentSubscriptionStatus to ${orgPaymentConfig.subscriptionStatus}"
+    }
+  }
+
+  @Transactional("config")
+  override fun handleSubscriptionEnded(organizationId: OrganizationId) {
+    val orgPaymentConfig =
+      organizationPaymentConfigRepository.findByOrganizationId(organizationId.value)
+        ?: throw ResourceNotFoundProblem(
+          ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
+        )
+
+    when (val currentSubscriptionStatus = orgPaymentConfig.subscriptionStatus) {
+      OrganizationPaymentConfig.SubscriptionStatus.UNSUBSCRIBED, OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION -> {
+        logger.warn {
+          "Received a subscription ended event for organization $organizationId that is not currently subscribed. Ignoring..."
+        }
+        return
+      }
+      OrganizationPaymentConfig.SubscriptionStatus.SUBSCRIBED -> {
+        orgPaymentConfig.subscriptionStatus = OrganizationPaymentConfig.SubscriptionStatus.UNSUBSCRIBED
+        organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
+        logger.info {
+          "Organization $organizationId successfully updated from $currentSubscriptionStatus to ${orgPaymentConfig.subscriptionStatus}"
+        }
+        // TODO uncomment this once subscription support is finalized - we do not want to shut down connections until
+        //  sync validation takes subscription status into account.
+        // disableAllConnections(organizationId, ConnectionAutoDisabledReason.UNSUBSCRIBED)
+        // logger.info { "Successfully disabled all syncs for unsubscribed organization $organizationId" }
+      }
+    }
   }
 }

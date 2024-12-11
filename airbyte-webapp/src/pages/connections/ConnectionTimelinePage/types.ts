@@ -38,6 +38,7 @@ const connectionAutoDisabledReasons = [
   "WORKSPACE_IS_DELINQUENT",
   "INVOICE_MARKED_UNCOLLECTIBLE",
   "INVALID_PAYMENT_METHOD",
+  "UNSUBSCRIBED",
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",

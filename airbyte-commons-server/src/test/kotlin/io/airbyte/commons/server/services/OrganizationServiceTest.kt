@@ -6,10 +6,13 @@ import io.airbyte.commons.server.ConnectionId
 import io.airbyte.commons.server.OrganizationId
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
+import io.airbyte.config.OrganizationPaymentConfig.SubscriptionStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -71,7 +74,7 @@ class OrganizationServiceTest {
       val orgPaymentConfigSlot = slot<OrganizationPaymentConfig>()
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(capture(orgPaymentConfigSlot)) } returns Unit
+      every { organizationPaymentConfigRepository.savePaymentConfig(capture(orgPaymentConfigSlot)) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns emptyList()
       every { connectionService.disableConnections(any(), any()) } returns mockk()
 
@@ -85,7 +88,7 @@ class OrganizationServiceTest {
     fun `should call disableAllConnections with invalid payment method reason`() {
       val orgPaymentConfig = OrganizationPaymentConfig().apply { paymentStatus = PaymentStatus.GRACE_PERIOD }
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } returns Unit
+      every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns
         listOf(connectionId1.value, connectionId2.value, connectionId3.value)
       every { connectionService.disableConnections(any(), any()) } returns mockk()
@@ -115,7 +118,7 @@ class OrganizationServiceTest {
       val orgPaymentConfigSlot = slot<OrganizationPaymentConfig>()
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(capture(orgPaymentConfigSlot)) } returns Unit
+      every { organizationPaymentConfigRepository.savePaymentConfig(capture(orgPaymentConfigSlot)) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns emptyList()
       every { connectionService.disableConnections(any(), any()) } returns mockk()
 
@@ -129,7 +132,7 @@ class OrganizationServiceTest {
     fun `should call disableAllConnections with uncollectible invoice reason`() {
       val orgPaymentConfig = OrganizationPaymentConfig().apply { paymentStatus = PaymentStatus.GRACE_PERIOD }
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } returns Unit
+      every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns
         listOf(connectionId1.value, connectionId2.value, connectionId3.value)
       every { connectionService.disableConnections(any(), any()) } returns mockk()
@@ -142,6 +145,116 @@ class OrganizationServiceTest {
           ConnectionAutoDisabledReason.INVOICE_MARKED_UNCOLLECTIBLE,
         )
       }
+    }
+  }
+
+  @Nested
+  inner class HandleSubscriptionStarted {
+    @Test
+    fun `should throw if orgPaymentConfig is not found`() {
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
+      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionStarted(organizationId) }
+    }
+
+    @Test
+    fun `should no-op if already subscribed`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          subscriptionStatus = SubscriptionStatus.SUBSCRIBED
+        }
+
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+
+      service.handleSubscriptionStarted(organizationId)
+
+      verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
+      verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
+    }
+
+    @Test
+    fun `should set subscriptionStatus to SUBSCRIBED if not already subscribed`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
+        }
+      val slotConfig = slot<OrganizationPaymentConfig>()
+
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+      every { organizationPaymentConfigRepository.savePaymentConfig(capture(slotConfig)) } just Runs
+
+      service.handleSubscriptionStarted(organizationId)
+
+      slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
+      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
+      verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
+    }
+  }
+
+  @Nested
+  inner class HandleSubscriptionEnded {
+    @Test
+    fun `should throw if orgPaymentConfig is not found`() {
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
+      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionEnded(organizationId) }
+    }
+
+    @Test
+    fun `should no-op if already unsubscribed`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          subscriptionStatus = SubscriptionStatus.UNSUBSCRIBED
+        }
+
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+
+      service.handleSubscriptionEnded(organizationId)
+
+      verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
+      verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
+    }
+
+    @Test
+    fun `should no-op if pre-subscription`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
+        }
+
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+
+      service.handleSubscriptionEnded(organizationId)
+
+      verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
+      verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
+    }
+
+    @Test
+    fun `should set subscriptionStatus to UNSUBSCRIBED if currently SUBSCRIBED and disableAllConnections`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          subscriptionStatus = SubscriptionStatus.SUBSCRIBED
+        }
+      val slotConfig = slot<OrganizationPaymentConfig>()
+
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+      every { organizationPaymentConfigRepository.savePaymentConfig(capture(slotConfig)) } just Runs
+
+      every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns
+        listOf(connectionId1.value, connectionId2.value)
+      every { connectionService.disableConnections(any(), any()) } returns mockk()
+
+      service.handleSubscriptionEnded(organizationId)
+
+      slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.UNSUBSCRIBED
+      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
+
+      // TODO uncomment this once connection disabling is enabled
+//      verify {
+//        connectionService.disableConnections(
+//          setOf(connectionId1, connectionId2),
+//          ConnectionAutoDisabledReason.UNSUBSCRIBED,
+//        )
+//      }
     }
   }
 }
