@@ -286,6 +286,8 @@ class ContainerConfigBeanFactory {
       Toleration().apply {
         key = "airbyte/spot"
         value = "true"
+        operator = "Equal"
+        effect = "NoSchedule"
       },
     )
 
