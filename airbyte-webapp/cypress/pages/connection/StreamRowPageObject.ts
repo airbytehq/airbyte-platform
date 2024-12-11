@@ -9,6 +9,7 @@ const getFieldRowTestId = (fieldName: string) => getTestId(`row-depth-2-field-${
 const streamSyncCheckbox = getTestId("sync-stream-checkbox", "input");
 const streamExpandCollapseButton = getTestId("expand-collapse-stream-btn", "button");
 const streamSyncModeSelectButton = getTestId("sync-mode-select-listbox-button", "button");
+const streamSyncModeOptionsMenu = getTestId("sync-mode-select-listbox-options", "ul");
 const streamPKCell = getTestId("primary-key-cell", "div");
 const streamCursorCell = getTestId("cursor-field-cell", "div");
 
@@ -101,12 +102,16 @@ export class StreamRowPageObject {
 
     this.withinStream(() => {
       cy.get(streamSyncModeSelectButton).click();
-      cy.get('li[role="option"]')
-        // It's possible that there are multiple options with the same text, so we need to filter by exact text content
-        // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
-        .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
-        .should("have.length", 1)
-        .click({ force: true });
+      cy.get(streamSyncModeOptionsMenu).should("exist");
+
+      cy.get(streamSyncModeOptionsMenu).within(() => {
+        cy.get('li[role="option"]')
+          // It's possible that there are multiple options with the same text, so we need to filter by exact text content
+          // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
+          .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
+          .should("have.length", 1)
+          .click({ force: true });
+      });
     });
   }
 

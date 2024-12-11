@@ -256,6 +256,9 @@ export const ListBox = <T,>({
             modal={false}
             onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
             className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth }, optionsMenuClassName)}
+            {...(testId && {
+              "data-testid": `${testId}-listbox-options`,
+            })}
           >
             {options.length && isVirtualized ? (
               <Virtuoso<Option<T>>
