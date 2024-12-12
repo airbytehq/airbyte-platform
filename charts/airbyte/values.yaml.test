@@ -1351,6 +1351,8 @@ postgresql:
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
+  storage:
+    volumeClaimValue: 500Mi
 
   postgresqlUsername: airbyte
   postgresqlPassword: airbyte
