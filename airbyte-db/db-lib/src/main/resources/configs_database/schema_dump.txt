@@ -231,6 +231,7 @@ create table "public"."connector_rollout" (
   "failed_reason" varchar(1024),
   "rollout_strategy" varchar(256),
   "workflow_run_id" varchar(64),
+  "paused_reason" varchar(1024),
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."declarative_manifest" (
