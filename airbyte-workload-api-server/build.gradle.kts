@@ -28,6 +28,7 @@ dependencies {
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.okhttp)
   implementation(libs.v3.swagger.annotations)
   implementation(libs.jakarta.ws.rs.api)
