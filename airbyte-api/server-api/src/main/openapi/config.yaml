@@ -4761,6 +4761,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationTrialStatusRead"
+  /v1/billing/cancel_subscription:
+    post:
+      summary: Schedule canceling the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: cancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully scheduled cancelation of the subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelSubscriptionRead"
+  /v1/billing/unschedule_cancel_subscription:
+    post:
+      summary: Unschedule a scheduled cancelation of the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: unscheduleCancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "204":
+          description: Successfully unscheduled cancelation of the subscription
   /v1/organization_payment_config/{organizationId}:
     get:
       summary: Get an organization payment config
@@ -11341,6 +11375,13 @@ components:
             - The organization is currently in the trial. End of the trial is indicated by the `trialEndsAt` property
             - The organization has left the trial already
         trialEndsAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+    CancelSubscriptionRead:
+      type: object
+      required:
+        - subscriptionEndsAt
+      properties:
+        subscriptionEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
 
     # Organization payment config
