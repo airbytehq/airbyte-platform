@@ -133,8 +133,12 @@ export class StreamRowPageObject {
     this.withinStream(() => {
       cy.get(streamPKCell).within(() => {
         cy.get("button").click();
+        cy.get('div[role="listbox"]').should("exist");
         pks.forEach((pk) => {
-          cy.contains(pk).click();
+          cy.get('div[role="option"]')
+            .filter((_, element) => Cypress.$(element).text().trim() === pk)
+            .should("have.length", 1)
+            .click();
         });
       });
       // Press ESC key to close the dropdown
@@ -177,6 +181,7 @@ export class StreamRowPageObject {
     this.withinStream(() => {
       cy.get(streamCursorCell).within(() => {
         cy.get("button").click();
+        cy.get('div[role="listbox"]').should("exist");
         cy.contains(cursor).click();
       });
     });
