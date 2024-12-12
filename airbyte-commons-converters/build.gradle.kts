@@ -13,6 +13,7 @@ dependencies {
   implementation(libs.apache.commons.text)
 
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-json-validation"))

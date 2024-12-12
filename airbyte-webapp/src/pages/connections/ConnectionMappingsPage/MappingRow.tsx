@@ -6,28 +6,20 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
-
 import { EncryptionRow } from "./EncryptionRow";
 import { FieldRenamingRow } from "./FieldRenamingRow";
 import { HashFieldRow } from "./HashFieldRow";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
 import { RowFilteringMapperForm } from "./RowFilteringMapperForm";
-
-export const SupportedMappingTypes = [
-  StreamMapperType.hashing,
-  StreamMapperType["field-renaming"],
-  StreamMapperType["row-filtering"],
-  StreamMapperType.encryption,
-] as const;
+import { isEncryptionMapping, isFieldRenamingMapping, isHashingMapping, isRowFilteringMapping } from "./typeHelpers";
 
 export const MappingRow: React.FC<{
   streamName: string;
   id: string;
 }> = ({ streamName, id }) => {
   const { removeMapping, streamsWithMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === id);
+  const mapping = streamsWithMappings[streamName].find((m) => m.id === id);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -38,17 +30,21 @@ export const MappingRow: React.FC<{
   };
 
   const RowContent = useMemo(() => {
-    if (mapping?.type === StreamMapperType.hashing) {
-      return <HashFieldRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (!mapping) {
+      return null;
     }
-    if (mapping?.type === StreamMapperType["field-renaming"]) {
-      return <FieldRenamingRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+
+    if (isHashingMapping(mapping)) {
+      return <HashFieldRow streamName={streamName} mapping={mapping} />;
     }
-    if (mapping?.type === StreamMapperType["row-filtering"]) {
-      return <RowFilteringMapperForm streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (isFieldRenamingMapping(mapping)) {
+      return <FieldRenamingRow streamName={streamName} mapping={mapping} />;
     }
-    if (mapping?.type === StreamMapperType.encryption) {
-      return <EncryptionRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (isRowFilteringMapping(mapping)) {
+      return <RowFilteringMapperForm streamName={streamName} mapping={mapping} />;
+    }
+    if (isEncryptionMapping(mapping)) {
+      return <EncryptionRow streamName={streamName} mapping={mapping} />;
     }
 
     return null;
@@ -71,7 +67,7 @@ export const MappingRow: React.FC<{
           key={`remove-${id}`}
           variant="clear"
           type="button"
-          onClick={() => removeMapping(streamName, mapping.mapperConfiguration.id)}
+          onClick={() => removeMapping(streamName, mapping.id)}
         >
           <Icon color="disabled" type="trash" />
         </Button>

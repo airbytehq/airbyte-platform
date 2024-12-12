@@ -5,12 +5,12 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { MapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { useMappingContext } from "./MappingContext";
-import { SupportedMappingTypes } from "./MappingRow";
 import styles from "./MappingRow.module.scss";
 import { OperationType } from "./RowFilteringMapperForm";
+import { StreamMapperWithId } from "./types";
 
 interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;
@@ -37,7 +37,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
     },
   };
 
-  const supportedMappingsOptions = Object.values(SupportedMappingTypes).map((type) => ({
+  const supportedMappingsOptions = Object.values(StreamMapperType).map((type) => ({
     label: (
       <FlexContainer direction="column" gap="xs" as="span">
         <Text as="span">
@@ -70,6 +70,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
     );
   };
 
+  // todo: support partial/empty config!
   return (
     <ListBox
       options={supportedMappingsOptions}
@@ -78,14 +79,53 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
       buttonClassName={styles.controlButton}
       onSelect={(value) => {
         if (value !== selectedValue) {
-          if (value === StreamMapperType["row-filtering"]) {
-            updateLocalMapping(streamName, {
-              type: value,
-              mapperConfiguration: { id: mappingId, conditions: { type: OperationType.equal } },
-            });
-          } else {
-            updateLocalMapping(streamName, { type: value, mapperConfiguration: { id: mappingId } });
+          let validConfiguration: StreamMapperWithId<MapperConfiguration>;
+          switch (value) {
+            case StreamMapperType["row-filtering"]:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                mapperConfiguration: {
+                  conditions: { type: OperationType.equal, fieldName: "", comparisonValue: "" },
+                },
+              };
+              break;
+            case StreamMapperType.hashing:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                mapperConfiguration: {
+                  targetField: "",
+                  method: "MD5",
+                  fieldNameSuffix: "_hashed",
+                },
+              };
+              break;
+            case StreamMapperType["field-renaming"]:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                mapperConfiguration: { originalFieldName: "", newFieldName: "" },
+              };
+              break;
+            case StreamMapperType.encryption:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                mapperConfiguration: {
+                  algorithm: "AES",
+                  targetField: "",
+                  key: "",
+                  fieldNameSuffix: "_encrypted",
+                  mode: "CBC",
+                  padding: "PKCS5Padding",
+                },
+              };
+              break;
+            default:
+              throw new Error(`Unsupported StreamMapperType: ${value}`);
           }
+          updateLocalMapping(streamName, validConfiguration);
         }
       }}
     />

@@ -1,32 +1,33 @@
 import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from "./formValueHelpers";
 import { FilterCondition, RowFilteringMapperFormValues } from "./RowFilteringMapperForm";
+import { RowFilteringMapperConfiguration, StreamMapperWithId } from "../types";
 
-const mapperConfigurationIn = {
+const mapperConfigurationIn: StreamMapperWithId<RowFilteringMapperConfiguration<"IN">> = {
   type: "row-filtering",
+  id: "id",
   mapperConfiguration: {
-    id: "id",
     conditions: {
       type: "EQUAL",
       fieldName: "fieldName",
       comparisonValue: "comparisonValue",
     },
   },
-} as const;
+};
 
 const formValuesIn: RowFilteringMapperFormValues = {
   type: "row-filtering",
+  id: "id",
   configuration: {
-    id: "id",
     condition: FilterCondition.IN,
     fieldName: "fieldName",
     comparisonValue: "comparisonValue",
   },
 };
 
-const mapperConfigurationNotIn = {
+const mapperConfigurationNotIn: StreamMapperWithId<RowFilteringMapperConfiguration<"OUT">> = {
   type: "row-filtering",
+  id: "id",
   mapperConfiguration: {
-    id: "id",
     conditions: {
       type: "NOT",
       conditions: [
@@ -38,12 +39,12 @@ const mapperConfigurationNotIn = {
       ],
     },
   },
-} as const;
+};
 
 const formValuesNotIn: RowFilteringMapperFormValues = {
   type: "row-filtering",
+  id: "id",
   configuration: {
-    id: "id",
     condition: FilterCondition.OUT,
     fieldName: "fieldName",
     comparisonValue: "comparisonValue",

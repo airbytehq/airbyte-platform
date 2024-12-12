@@ -1,69 +1,59 @@
 import React, { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { v4 as uuidv4 } from "uuid";
 import * as yup from "yup";
 
-import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType, MapperConfiguration } from "core/api/types/AirbyteClient";
+import {
+  EncryptionMapperAESConfigurationPadding,
+  EncryptionMapperAlgorithm,
+  StreamMapperType,
+  EncryptionMapperAESConfigurationMode,
+} from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
-import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectFieldOption, SelectTargetField } from "./SelectTargetField";
+import { StreamMapperWithId, EncryptionMapperConfiguration } from "./types";
 import { useGetFieldsInStream } from "./useGetFieldsInStream";
 
-export enum Algorithm {
-  RSA = "RSA",
-  AES = "AES",
-}
-export type AESMode = "CBC" | "CFB" | "OFB" | "CTR" | "GCM" | "ECB";
-export type AESPadding = "PKCS5Padding" | "NoPadding";
-export const aesModes: AESMode[] = ["CBC", "CFB", "OFB", "CTR", "GCM", "ECB"];
-export const aesPaddings: AESPadding[] = ["PKCS5Padding", "NoPadding"];
-
-export interface EncryptionMapperFormValues {
+export interface EncryptionMapperFormValues<T extends EncryptionMapperAlgorithm> {
   type: StreamMapperType;
-  mapperConfiguration: {
-    id: string;
-    algorithm: Algorithm;
-    targetField: string;
-    fieldNameSuffix: string;
-    key?: string;
-    mode?: AESMode;
-    padding?: AESPadding;
-    publicKey?: string;
-  };
+  id: string;
+  mapperConfiguration: EncryptionMapperConfiguration<T>;
 }
 
 const rsaEncryptionMappingSchema = yup.object().shape({
-  id: yup.string().required("id required"),
-  algorithm: yup.mixed<Algorithm>().oneOf([Algorithm.RSA]).required("Algorithm is required"),
+  algorithm: yup.mixed<EncryptionMapperAlgorithm>().oneOf(["RSA"]).required("Algorithm is required"),
   targetField: yup.string().required("Target field is required"),
   publicKey: yup.string().required("Public key is required"),
   fieldNameSuffix: yup.string().oneOf(["_encrypted"]).required("Field name suffix is required"),
 });
 
 const aesEncryptionMappingSchema = yup.object().shape({
-  id: yup.string().required("id required"),
-  algorithm: yup.mixed<Algorithm>().oneOf([Algorithm.AES]).required("Algorithm is required"),
+  algorithm: yup.mixed<EncryptionMapperAlgorithm>().oneOf(["AES"]).required("Algorithm is required"),
   targetField: yup.string().required("Target field is required"),
   key: yup.string().required("Key is required"),
   fieldNameSuffix: yup.string().oneOf(["_encrypted"]).required("Field name suffix is required"),
-  mode: yup.mixed<AESMode>().oneOf(aesModes).required("Mode is required"),
-  padding: yup.mixed<AESPadding>().oneOf(aesPaddings).required("Padding is required"),
+  mode: yup
+    .mixed<EncryptionMapperAESConfigurationMode>()
+    .oneOf(Object.values(EncryptionMapperAESConfigurationMode))
+    .required("Mode is required"),
+  padding: yup
+    .mixed<EncryptionMapperAESConfigurationPadding>()
+    .oneOf(Object.values(EncryptionMapperAESConfigurationPadding))
+    .required("Padding is required"),
 });
 
 const encryptionMapperConfigSchema = yup.lazy((value) => {
   switch (value.algorithm) {
-    case Algorithm.AES:
+    case "AES":
       return aesEncryptionMappingSchema.required("AES configuration is required");
-    case Algorithm.RSA:
+    case "RSA":
       return rsaEncryptionMappingSchema.required("RSA configuration is required");
     default:
       return yup.mixed().notRequired();
@@ -72,29 +62,36 @@ const encryptionMapperConfigSchema = yup.lazy((value) => {
 
 export const encryptionMapperSchema = yup.object().shape({
   type: yup.mixed<StreamMapperType>().oneOf(["encryption"]).required(),
+  id: yup.string().required("id required"),
   mapperConfiguration: encryptionMapperConfigSchema,
 });
 
 const aesFormSchema = yup.object().shape({
   type: yup.mixed<StreamMapperType>().oneOf([StreamMapperType.encryption]).required(),
+  id: yup.string().required("id required"),
   mapperConfiguration: yup
     .object()
     .shape({
-      id: yup.string().required("id required"),
-      algorithm: yup.mixed<Algorithm>().oneOf([Algorithm.AES]).required(),
+      algorithm: yup.mixed<EncryptionMapperAlgorithm>().oneOf(["AES", "RSA"]).required(),
       targetField: yup.string().required("Target field is required"),
       key: yup.string().required("Key is required"),
       fieldNameSuffix: yup.string().oneOf(["_encrypted"]).required("Field name suffix is required"),
-      mode: yup.mixed<AESMode>().oneOf(aesModes).required("Mode is required"),
-      padding: yup.mixed<AESPadding>().oneOf(aesPaddings).required("Padding is required"),
+      mode: yup
+        .mixed<EncryptionMapperAESConfigurationMode>()
+        .oneOf(Object.values(EncryptionMapperAESConfigurationMode))
+        .required("Mode is required"),
+      padding: yup
+        .mixed<EncryptionMapperAESConfigurationPadding>()
+        .oneOf(Object.values(EncryptionMapperAESConfigurationPadding))
+        .required("Padding is required"),
     })
     .required(),
 });
 
 interface AESFormProps {
   streamName: string;
-  mapping: MapperConfiguration;
-  setAlgorithm: (algorithm: Algorithm) => void;
+  mapping: StreamMapperWithId<EncryptionMapperConfiguration<"AES">>;
+  setAlgorithm: (algorithm: EncryptionMapperAlgorithm) => void;
   targetFieldOptions: SelectFieldOption[];
 }
 
@@ -102,12 +99,17 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
   const { updateLocalMapping, validateMappings } = useMappingContext();
   const { formatMessage } = useIntl();
 
-  const methods = useForm<EncryptionMapperFormValues>({
+  // needed for type narrowing for schema
+  if (mapping.mapperConfiguration.algorithm !== "AES") {
+    throw new Error("Invalid configuration: expected AES configuration");
+  }
+
+  const methods = useForm<EncryptionMapperFormValues<"AES">>({
     defaultValues: {
       type: StreamMapperType.encryption,
+      id: mapping.id,
       mapperConfiguration: {
-        id: mapping.mapperConfiguration.id ?? uuidv4(),
-        algorithm: Algorithm.AES,
+        algorithm: "AES",
         targetField: mapping.mapperConfiguration.targetField ?? "",
         key: mapping.mapperConfiguration.key ?? "",
         fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_encrypted",
@@ -115,7 +117,7 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
         padding: mapping.mapperConfiguration.padding ?? "PKCS5Padding",
       },
     },
-    resolver: autoSubmitResolver<EncryptionMapperFormValues>(aesFormSchema, (data) => {
+    resolver: autoSubmitResolver<EncryptionMapperFormValues<"AES">>(aesFormSchema, (data) => {
       updateLocalMapping(streamName, data);
       validateMappings();
     }),
@@ -127,7 +129,7 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
   return (
     <FormProvider {...methods}>
       <form className={styles.form}>
-        <SelectTargetField<EncryptionMapperFormValues>
+        <SelectTargetField<EncryptionMapperFormValues<"AES">>
           targetFieldOptions={targetFieldOptions}
           name="mapperConfiguration.targetField"
         />
@@ -135,11 +137,11 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
           <FormattedMessage id="connections.mappings.using" />
         </Text>
         <ListBox
-          selectedValue={Algorithm.AES}
-          onSelect={(selectedAlgorithm: Algorithm) => setAlgorithm(selectedAlgorithm)}
+          selectedValue="AES"
+          onSelect={(selectedAlgorithm: EncryptionMapperAlgorithm) => setAlgorithm(selectedAlgorithm)}
           options={[
-            { label: "AES", value: Algorithm.AES },
-            { label: "RSA", value: Algorithm.RSA },
+            { label: "AES", value: "AES" },
+            { label: "RSA", value: "RSA" },
           ]}
         />
         <Text>
@@ -152,28 +154,34 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
         />
         <ListBox
           selectedValue={values.mapperConfiguration.mode}
-          onSelect={(mode: AESMode) => methods.setValue("mapperConfiguration.mode", mode, { shouldValidate: true })}
-          options={aesModes.map((mode) => ({ label: mode, value: mode }))}
+          onSelect={(mode: EncryptionMapperAESConfigurationMode) =>
+            methods.setValue("mapperConfiguration.mode", mode, { shouldValidate: true })
+          }
+          options={Object.values(EncryptionMapperAESConfigurationMode).map((mode) => ({ label: mode, value: mode }))}
         />
         <ListBox
           selectedValue={values.mapperConfiguration.padding}
-          onSelect={(padding: AESPadding) =>
+          onSelect={(padding: EncryptionMapperAESConfigurationPadding) =>
             methods.setValue("mapperConfiguration.padding", padding, { shouldValidate: true })
           }
-          options={aesPaddings.map((padding) => ({ label: padding, value: padding }))}
+          options={Object.values(EncryptionMapperAESConfigurationPadding).map((padding) => ({
+            label: padding,
+            value: padding,
+          }))}
         />
       </form>
     </FormProvider>
   );
 };
 
-const rsaFormSchema: yup.SchemaOf<EncryptionMapperFormValues> = yup.object().shape({
+const rsaFormSchema: yup.SchemaOf<EncryptionMapperFormValues<"RSA">> = yup.object().shape({
   type: yup.mixed<StreamMapperType>().oneOf([StreamMapperType.encryption]).required(),
+  id: yup.string().required("id required"),
   mapperConfiguration: yup
     .object()
     .shape({
       id: yup.string().required("id required"),
-      algorithm: yup.mixed<Algorithm>().oneOf([Algorithm.RSA]).required(),
+      algorithm: yup.mixed<EncryptionMapperAlgorithm>().oneOf(["RSA"]).required(),
       targetField: yup.string().required("Target field is required"),
       publicKey: yup.string().required("Public key is required"),
       fieldNameSuffix: yup.string().oneOf(["_encrypted"]).required("Field name suffix is required"),
@@ -183,8 +191,8 @@ const rsaFormSchema: yup.SchemaOf<EncryptionMapperFormValues> = yup.object().sha
 
 interface RSAFormProps {
   streamName: string;
-  mapping: MapperConfiguration;
-  setAlgorithm: (algorithm: Algorithm) => void;
+  mapping: StreamMapperWithId<EncryptionMapperConfiguration<"RSA">>;
+  setAlgorithm: (algorithm: EncryptionMapperAlgorithm) => void;
   targetFieldOptions: SelectFieldOption[];
 }
 
@@ -192,18 +200,22 @@ export const RSAForm: React.FC<RSAFormProps> = ({ streamName, mapping, setAlgori
   const { formatMessage } = useIntl();
   const { updateLocalMapping, validateMappings } = useMappingContext();
 
-  const methods = useForm<EncryptionMapperFormValues>({
+  // needed for type narrowing for schema
+  if (mapping.mapperConfiguration.algorithm !== "RSA") {
+    throw new Error("Invalid configuration: expected AES configuration");
+  }
+  const methods = useForm<EncryptionMapperFormValues<"RSA">>({
     defaultValues: {
       type: StreamMapperType.encryption,
+      id: mapping.id,
       mapperConfiguration: {
-        id: mapping.mapperConfiguration.id ?? uuidv4(),
-        algorithm: Algorithm.RSA,
+        algorithm: "RSA",
         targetField: mapping.mapperConfiguration.targetField ?? "",
         publicKey: mapping.mapperConfiguration.publicKey ?? "",
         fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_encrypted",
       },
     },
-    resolver: autoSubmitResolver<EncryptionMapperFormValues>(rsaFormSchema, (data) => {
+    resolver: autoSubmitResolver<EncryptionMapperFormValues<"RSA">>(rsaFormSchema, (data) => {
       updateLocalMapping(streamName, data);
       validateMappings();
     }),
@@ -213,7 +225,7 @@ export const RSAForm: React.FC<RSAFormProps> = ({ streamName, mapping, setAlgori
   return (
     <FormProvider {...methods}>
       <form className={styles.form}>
-        <SelectTargetField<EncryptionMapperFormValues>
+        <SelectTargetField<EncryptionMapperFormValues<"RSA">>
           targetFieldOptions={targetFieldOptions}
           name="mapperConfiguration.targetField"
         />
@@ -221,11 +233,11 @@ export const RSAForm: React.FC<RSAFormProps> = ({ streamName, mapping, setAlgori
           <FormattedMessage id="connections.mappings.using" />
         </Text>
         <ListBox
-          selectedValue={Algorithm.RSA}
-          onSelect={(selectedAlgorithm: Algorithm) => setAlgorithm(selectedAlgorithm)}
+          selectedValue="RSA"
+          onSelect={(selectedAlgorithm: EncryptionMapperAlgorithm) => setAlgorithm(selectedAlgorithm)}
           options={[
-            { label: "AES", value: Algorithm.AES },
-            { label: "RSA", value: Algorithm.RSA },
+            { label: "AES", value: "AES" },
+            { label: "RSA", value: "RSA" },
           ]}
         />
         <Text>
@@ -242,43 +254,41 @@ export const RSAForm: React.FC<RSAFormProps> = ({ streamName, mapping, setAlgori
 };
 
 export const EncryptionRow: React.FC<{
-  mappingId: string;
+  mapping: StreamMapperWithId<EncryptionMapperConfiguration>;
   streamName: string;
-}> = ({ mappingId, streamName }) => {
-  const { streamsWithMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === mappingId);
+}> = ({ mapping, streamName }) => {
   const fieldsInStream = useGetFieldsInStream(streamName);
-
-  const [algorithm, setAlgorithm] = useState<Algorithm>(mapping?.mapperConfiguration.algorithm || Algorithm.RSA);
+  const [algorithm, setAlgorithm] = useState<EncryptionMapperAlgorithm>(mapping.mapperConfiguration.algorithm || "RSA");
 
   if (!mapping) {
     return null;
   }
 
-  return (
-    <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.rowContent}>
-      <MappingTypeListBox
-        selectedValue={StreamMapperType.encryption}
-        streamName={streamName}
-        mappingId={mapping.mapperConfiguration.id}
-      />
+  if (algorithm === "AES") {
+    const aesMapping = mapping as StreamMapperWithId<EncryptionMapperConfiguration<"AES">>;
 
-      {algorithm === Algorithm.AES && (
-        <AESForm
-          streamName={streamName}
-          mapping={mapping}
-          setAlgorithm={setAlgorithm}
-          targetFieldOptions={fieldsInStream}
-        />
-      )}
-      {algorithm === Algorithm.RSA && (
-        <RSAForm
-          streamName={streamName}
-          mapping={mapping}
-          setAlgorithm={setAlgorithm}
-          targetFieldOptions={fieldsInStream}
-        />
-      )}
-    </FlexContainer>
-  );
+    return (
+      <AESForm
+        streamName={streamName}
+        mapping={aesMapping}
+        setAlgorithm={setAlgorithm}
+        targetFieldOptions={fieldsInStream}
+      />
+    );
+  }
+
+  if (algorithm === "RSA") {
+    const rsaMapping = mapping as StreamMapperWithId<EncryptionMapperConfiguration<"RSA">>;
+
+    return (
+      <RSAForm
+        streamName={streamName}
+        mapping={rsaMapping}
+        setAlgorithm={setAlgorithm}
+        targetFieldOptions={fieldsInStream}
+      />
+    );
+  }
+
+  return null;
 };

@@ -7,7 +7,7 @@ import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { RowFilteringMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from "./formValueHelpers";
 import { autoSubmitResolver } from "../autoSubmitResolver";
@@ -15,6 +15,7 @@ import { useMappingContext } from "../MappingContext";
 import { MappingRowContent, MappingRowInputWrapper } from "../MappingRow";
 import { MappingTypeListBox } from "../MappingTypeListBox";
 import { SelectTargetField } from "../SelectTargetField";
+import { StreamMapperWithId } from "../types";
 import { useGetFieldsInStream } from "../useGetFieldsInStream";
 export enum OperationType {
   equal = "EQUAL",
@@ -28,8 +29,8 @@ export enum FilterCondition {
 
 export interface RowFilteringMapperFormValues {
   type: StreamMapperType;
+  id: string;
   configuration: {
-    id: string;
     condition: FilterCondition;
     fieldName: string;
     comparisonValue: string;
@@ -37,14 +38,14 @@ export interface RowFilteringMapperFormValues {
 }
 
 interface RowFilteringMapperFormProps {
-  mappingId: string;
+  mapping: StreamMapperWithId<RowFilteringMapperConfiguration>;
   streamName: string;
 }
 
 const simpleSchema: yup.SchemaOf<RowFilteringMapperFormValues> = yup.object({
   type: yup.mixed<StreamMapperType>().oneOf([StreamMapperType["row-filtering"]]).required(),
+  id: yup.string().required(),
   configuration: yup.object({
-    id: yup.string().required(),
     condition: yup.mixed<FilterCondition>().oneOf([FilterCondition.IN, FilterCondition.OUT]).required(),
     fieldName: yup.string().required(),
     comparisonValue: yup.string().required(),
@@ -53,18 +54,17 @@ const simpleSchema: yup.SchemaOf<RowFilteringMapperFormValues> = yup.object({
 
 const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
   type: StreamMapperType["row-filtering"],
+  id: uuidv4(),
   configuration: {
-    id: uuidv4(),
     condition: FilterCondition.IN,
     fieldName: "",
     comparisonValue: "",
   },
 });
 
-export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mappingId, streamName }) => {
+export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamName }) => {
   const { formatMessage } = useIntl();
-  const { updateLocalMapping, streamsWithMappings, validateMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === mappingId);
+  const { updateLocalMapping, validateMappings } = useMappingContext();
   const fieldsInStream = useGetFieldsInStream(streamName);
 
   const methods = useForm<RowFilteringMapperFormValues>({
@@ -88,7 +88,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
           <MappingTypeListBox
             selectedValue={StreamMapperType["row-filtering"]}
             streamName={streamName}
-            mappingId={mapping?.mapperConfiguration.id}
+            mappingId={mapping.id}
           />
           <SelectFilterType />
           <Text>

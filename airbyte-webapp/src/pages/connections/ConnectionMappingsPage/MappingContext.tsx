@@ -2,15 +2,16 @@ import React, { PropsWithChildren, createContext, useContext, useState } from "r
 import { v4 as uuidv4 } from "uuid";
 
 import { useCurrentConnection } from "core/api";
-import { ConfiguredStreamMapper, StreamMapperType } from "core/api/types/AirbyteClient";
+import { HashingMapperConfigurationMethod, StreamMapperType } from "core/api/types/AirbyteClient";
 
+import { StreamMapperWithId } from "./types";
 import { useGetMappingsForCurrentConnection } from "./useGetMappingsForCurrentConnection";
 import { useUpdateMappingsForCurrentConnection } from "./useUpdateMappingsForCurrentConnection";
 
 interface MappingContextType {
-  streamsWithMappings: Record<string, ConfiguredStreamMapper[]>;
-  updateLocalMapping: (streamName: string, updatedMapping: ConfiguredStreamMapper) => void;
-  reorderMappings: (streamName: string, newOrder: ConfiguredStreamMapper[]) => void;
+  streamsWithMappings: Record<string, StreamMapperWithId[]>;
+  updateLocalMapping: (streamName: string, updatedMapping: StreamMapperWithId) => void;
+  reorderMappings: (streamName: string, newOrder: StreamMapperWithId[]) => void;
   clear: () => void;
   submitMappings: () => Promise<void>;
   removeMapping: (streamName: string, mappingId: string) => void;
@@ -33,12 +34,12 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   };
 
   // Updates a specific mapping in the local state
-  const updateLocalMapping = (streamName: string, updatedMapping: ConfiguredStreamMapper) => {
+  const updateLocalMapping = (streamName: string, updatedMapping: StreamMapperWithId) => {
     console.log(`updating local mapping for stream ${streamName}`, updatedMapping);
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,
       [streamName]: prevMappings[streamName].map((mapping) =>
-        mapping.mapperConfiguration.id === updatedMapping.mapperConfiguration.id ? updatedMapping : mapping
+        mapping.id === updatedMapping.id ? updatedMapping : mapping
       ),
     }));
   };
@@ -48,13 +49,21 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
       ...prevMappings,
       [streamName]: [
         ...prevMappings[streamName],
-        { type: StreamMapperType.hashing, mapperConfiguration: { id: uuidv4() } },
+        {
+          type: StreamMapperType.hashing,
+          id: uuidv4(),
+          mapperConfiguration: {
+            fieldNameSuffix: "_hashed",
+            method: HashingMapperConfigurationMethod["SHA-256"],
+            targetField: "",
+          },
+        },
       ],
     }));
   };
 
   // Reorders the mappings for a specific stream
-  const reorderMappings = (streamName: string, newOrder: ConfiguredStreamMapper[]) => {
+  const reorderMappings = (streamName: string, newOrder: StreamMapperWithId[]) => {
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,
       [streamName]: newOrder,
@@ -67,9 +76,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   };
 
   const removeMapping = (streamName: string, mappingId: string) => {
-    const mappingsForStream = streamsWithMappings[streamName].filter(
-      (mapping) => mapping.mapperConfiguration.id !== mappingId
-    );
+    const mappingsForStream = streamsWithMappings[streamName].filter((mapping) => mapping.id !== mappingId);
 
     setStreamsWithMappings((prevMappings) => {
       if (mappingsForStream.length === 0) {
@@ -90,8 +97,18 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   };
 
   const addStreamToMappingsList = (streamName: string) => {
-    const newMapping: Record<string, ConfiguredStreamMapper[]> = {
-      [streamName]: [{ type: StreamMapperType.hashing, mapperConfiguration: { id: uuidv4() } }],
+    const newMapping: Record<string, StreamMapperWithId[]> = {
+      [streamName]: [
+        {
+          type: StreamMapperType.hashing,
+          id: uuidv4(),
+          mapperConfiguration: {
+            fieldNameSuffix: "_hashed",
+            method: HashingMapperConfigurationMethod["SHA-256"],
+            targetField: "",
+          },
+        },
+      ],
     };
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,

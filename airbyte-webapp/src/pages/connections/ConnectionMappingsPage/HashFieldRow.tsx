@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { v4 as uuidv4 } from "uuid";
 import * as yup from "yup";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -9,66 +8,55 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { MapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  HashingMapperConfiguration,
+  HashingMapperConfigurationMethod,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
+import { StreamMapperWithId } from "./types";
 import { useGetFieldsInStream } from "./useGetFieldsInStream";
-
-export enum HashingMethods {
-  MD2 = "MD2",
-  MD5 = "MD5",
-  SHA1 = "SHA-1",
-  SHA224 = "SHA-224",
-  SHA256 = "SHA-256",
-  SHA384 = "SHA-384",
-  SHA512 = "SHA-512",
-}
-
 export interface HashingMapperFormValues {
   type: StreamMapperType;
-  mapperConfiguration: {
-    targetField: string;
-    method: HashingMethods;
-    fieldNameSuffix: string;
-  };
-}
-
-export interface HashingMapperRowProps {
-  type: StreamMapperType;
-  mapperConfiguration: MapperConfiguration;
+  id: string;
+  mapperConfiguration: HashingMapperConfiguration;
 }
 
 const hashingMapperConfigSchema = yup.object().shape({
   targetField: yup.string().required("Target field is required"),
-  method: yup.mixed<HashingMethods>().oneOf(Object.values(HashingMethods)).required("Hashing method is required"),
+  method: yup
+    .mixed<HashingMapperConfigurationMethod>()
+    .oneOf(Object.values(HashingMapperConfigurationMethod))
+    .required("Hashing method is required"),
   fieldNameSuffix: yup.string().required("Field name suffix is required"),
 });
 
 export const hashingMapperSchema = yup.object().shape({
   type: yup.mixed<StreamMapperType>().oneOf(["hashing"]).required(),
+  id: yup.string().required(),
   mapperConfiguration: hashingMapperConfigSchema,
 });
 
 export const HashFieldRow: React.FC<{
-  mappingId: string;
+  mapping: StreamMapperWithId<HashingMapperConfiguration>;
   streamName: string;
-}> = ({ mappingId, streamName }) => {
-  const { updateLocalMapping, streamsWithMappings, validateMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === mappingId);
+}> = ({ mapping, streamName }) => {
+  const { updateLocalMapping, validateMappings } = useMappingContext();
   const fieldsInStream = useGetFieldsInStream(streamName);
 
   const defaultValues = useMemo(() => {
     return {
       type: StreamMapperType.hashing,
       mapperConfiguration: {
-        id: mapping?.mapperConfiguration.id ?? uuidv4(),
-        targetField: mapping?.mapperConfiguration.targetField ?? "",
-        method: mapping?.mapperConfiguration.method ?? HashingMethods.MD5,
-        fieldNameSuffix: mapping?.mapperConfiguration.fieldNameSuffix ?? "_hashed",
+        id: mapping.id,
+        targetField: mapping.mapperConfiguration.targetField ?? "",
+        method: mapping.mapperConfiguration.method ?? HashingMapperConfigurationMethod.MD5,
+        fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_hashed",
       },
     };
   }, [mapping]);
@@ -90,11 +78,7 @@ export const HashFieldRow: React.FC<{
     <FormProvider {...methods}>
       <form>
         <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.rowContent}>
-          <MappingTypeListBox
-            selectedValue={StreamMapperType.hashing}
-            mappingId={mapping.mapperConfiguration.id}
-            streamName={streamName}
-          />
+          <MappingTypeListBox selectedValue={StreamMapperType.hashing} mappingId={mapping.id} streamName={streamName} />
           <SelectTargetField<HashingMapperFormValues>
             name="mapperConfiguration.targetField"
             targetFieldOptions={fieldsInStream}
@@ -109,7 +93,9 @@ export const HashFieldRow: React.FC<{
   );
 };
 
-const SelectHashingMethodControlButton: React.FC<ListBoxControlButtonProps<HashingMethods>> = ({ selectedOption }) => {
+const SelectHashingMethodControlButton: React.FC<ListBoxControlButtonProps<HashingMapperConfigurationMethod>> = ({
+  selectedOption,
+}) => {
   if (!selectedOption) {
     return (
       <Text color="grey">
@@ -127,9 +113,9 @@ const SelectHashingMethodControlButton: React.FC<ListBoxControlButtonProps<Hashi
 };
 
 const supportedHashTypes = [
-  { label: "MD5", value: HashingMethods.MD5 },
-  { label: "SHA-256", value: HashingMethods.SHA256 },
-  { label: "SHA-512", value: HashingMethods.SHA512 },
+  { label: "MD5", value: HashingMapperConfigurationMethod.MD5 },
+  { label: "SHA-256", value: HashingMapperConfigurationMethod["SHA-256"] },
+  { label: "SHA-512", value: HashingMapperConfigurationMethod["SHA-512"] },
 ];
 
 const SelectHashingMethod = () => {
@@ -139,7 +125,7 @@ const SelectHashingMethod = () => {
     <Controller
       name="mapperConfiguration.method"
       control={control}
-      defaultValue={HashingMethods.MD5}
+      defaultValue={HashingMapperConfigurationMethod.MD5}
       render={({ field }) => (
         <ListBox
           buttonClassName={styles.controlButton}

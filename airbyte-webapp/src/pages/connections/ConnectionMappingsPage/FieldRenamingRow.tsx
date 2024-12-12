@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { FormProvider, get, useForm, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { v4 as uuidv4 } from "uuid";
 import * as yup from "yup";
 
 import { FormControlFooterError } from "components/forms/FormControl";
@@ -9,15 +8,15 @@ import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { FieldRenamingMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
+import { StreamMapperWithId } from "./types";
 import { useGetFieldsInStream } from "./useGetFieldsInStream";
-
 export const fieldRenamingConfigSchema = yup.object().shape({
   id: yup.string().required("id required"),
   newFieldName: yup.string().required("New field name is required"),
@@ -26,32 +25,29 @@ export const fieldRenamingConfigSchema = yup.object().shape({
 
 export const fieldRenamingMapperSchema: yup.SchemaOf<FieldRenamingMapperFormValues> = yup.object().shape({
   type: yup.mixed<StreamMapperType>().oneOf(["field-renaming"]).required(),
+  id: yup.string().required(),
   mapperConfiguration: fieldRenamingConfigSchema.required(),
 });
 
 interface FieldRenamingRowProps {
-  mappingId: number;
+  mapping: StreamMapperWithId<FieldRenamingMapperConfiguration>;
   streamName: string;
 }
 interface FieldRenamingMapperFormValues {
   type: StreamMapperType;
-  mapperConfiguration: {
-    id: string;
-    originalFieldName: string;
-    newFieldName: string;
-  };
+  id: string;
+  mapperConfiguration: FieldRenamingMapperConfiguration;
 }
 
-export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mappingId, streamName }) => {
-  const { updateLocalMapping, streamsWithMappings, validateMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === mappingId);
+export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamName }) => {
+  const { updateLocalMapping, validateMappings } = useMappingContext();
   const fieldsInStream = useGetFieldsInStream(streamName);
 
   const defaultValues = useMemo(() => {
     return {
       type: StreamMapperType["field-renaming"],
+      id: mapping.id,
       mapperConfiguration: {
-        id: mapping?.mapperConfiguration.id ?? uuidv4(),
         originalFieldName: mapping?.mapperConfiguration?.originalFieldName ?? "",
         newFieldName: mapping?.mapperConfiguration?.newFieldName ?? "",
       },
@@ -74,7 +70,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mappingId, s
           <MappingTypeListBox
             selectedValue={StreamMapperType["field-renaming"]}
             streamName={streamName}
-            mappingId={mapping?.mapperConfiguration.id}
+            mappingId={mapping.id}
           />
           <SelectTargetField<FieldRenamingMapperFormValues>
             targetFieldOptions={fieldsInStream}

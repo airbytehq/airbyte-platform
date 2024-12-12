@@ -36,8 +36,8 @@ export const StreamMappingsCard: React.FC<{ streamName: string }> = ({ streamNam
     const { active, over } = event;
 
     if (active.id && over?.id && active.id !== over.id) {
-      const oldIndex = mappingsForStream.findIndex((mapping) => mapping.mapperConfiguration.id === active.id);
-      const newIndex = mappingsForStream.findIndex((mapping) => mapping.mapperConfiguration.id === over.id);
+      const oldIndex = mappingsForStream.findIndex((mapping) => mapping.id === active.id);
+      const newIndex = mappingsForStream.findIndex((mapping) => mapping.id === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const updatedOrder = arrayMove(mappingsForStream, oldIndex, newIndex);
@@ -49,17 +49,10 @@ export const StreamMappingsCard: React.FC<{ streamName: string }> = ({ streamNam
   return (
     <Card title={streamName}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={mappingsForStream.map((mapping) => mapping.mapperConfiguration.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={mappingsForStream.map((mapping) => mapping.id)} strategy={verticalListSortingStrategy}>
           <FlexContainer direction="column">
             {mappingsForStream.map((mapping) => (
-              <MappingRow
-                key={mapping.mapperConfiguration.id}
-                id={mapping.mapperConfiguration.id}
-                streamName={streamName}
-              />
+              <MappingRow key={mapping.id} id={mapping.id} streamName={streamName} />
             ))}
             <Button onClick={() => addMappingForStream(streamName)} variant="secondary" size="sm" width={125}>
               <FormattedMessage id="connections.mappings.addMapping" />

@@ -524,6 +524,48 @@ components:
               default: The mapper configuration is invalid
             data:
               $ref: "#/components/schemas/ProblemMapperErrorsData"
+    MapperValidationMissingRequiredParamProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/missing-required-param
+            title:
+              type: string
+              default: Mapper configuration missing required parameter
+            detail:
+              type: string
+              default: The mapper configuration is missing a required parameter
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+    MapperValidationInvalidConfigProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/invalid-config
+            title:
+              type: string
+              default: Invalid Mapper Configuration
+            detail:
+              type: string
+              default: The mapper configuration is invalid and cannot be parsed
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
     MapperSecretNotFoundProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -853,6 +895,8 @@ components:
           type: string
           format: uuid
         mapperType:
+          type: string
+        message:
           type: string
     ProblemMapperErrorsData:
       type: object

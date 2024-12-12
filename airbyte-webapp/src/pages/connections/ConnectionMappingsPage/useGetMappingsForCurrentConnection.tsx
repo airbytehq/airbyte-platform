@@ -1,20 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
 
 import { useCurrentConnection } from "core/api";
-import { ConfiguredStreamMapper } from "core/api/types/AirbyteClient";
 
-export const useGetMappingsForCurrentConnection = (): Record<string, ConfiguredStreamMapper[]> => {
+import { StreamMapperWithId } from "./types";
+export const useGetMappingsForCurrentConnection = (): Record<string, StreamMapperWithId[]> => {
   const connection = useCurrentConnection();
 
-  const mappings: Record<string, ConfiguredStreamMapper[]> = {};
+  const mappings: Record<string, StreamMapperWithId[]> = {};
 
   connection.syncCatalog?.streams.forEach((streamItem) => {
     if (streamItem.config?.mappers && streamItem.config.mappers.length > 0) {
       mappings[streamItem.stream?.name ?? ""] = streamItem.config.mappers.map((mapper) => ({
         ...mapper,
+        id: mapper.id ?? uuidv4(),
         mapperConfiguration: {
           ...mapper.mapperConfiguration,
-          id: uuidv4(),
         },
       }));
     }
