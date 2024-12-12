@@ -29,6 +29,12 @@ interface ScopedConfigurationService {
     scopeId: UUID,
   ): Optional<ScopedConfiguration>
 
+  fun getScopedConfiguration(
+    key: String,
+    scopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
+
   /**
    * Get a scoped configuration by key, resource and scope.
    */

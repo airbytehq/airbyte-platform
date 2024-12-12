@@ -27,8 +27,14 @@ data object NetworkSecurityTokenKey : ScopedConfigurationKey(
   supportedScopes = listOf(ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION),
 )
 
+data object ProductLimitsKey : ScopedConfigurationKey(
+  key = "product_limits",
+  supportedScopes = listOf(ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION),
+)
+
 val ScopedConfigurationKeys: Map<String, ScopedConfigurationKey> =
   mapOf(
     ConnectorVersionKey.key to ConnectorVersionKey,
     NetworkSecurityTokenKey.key to NetworkSecurityTokenKey,
+    ProductLimitsKey.key to ProductLimitsKey,
   )

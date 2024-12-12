@@ -43,6 +43,14 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
   }
 
   override fun getScopedConfiguration(
+    key: String,
+    scopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration> {
+    return repository.findByKeyAndScopeTypeAndScopeId(key, scopeType.toEntity(), scopeId).map { it.toConfigModel() }
+  }
+
+  override fun getScopedConfiguration(
     configKey: ScopedConfigurationKey,
     resourceType: ConfigResourceType,
     resourceId: UUID,
