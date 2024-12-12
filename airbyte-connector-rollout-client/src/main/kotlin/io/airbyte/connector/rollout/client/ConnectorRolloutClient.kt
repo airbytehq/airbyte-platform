@@ -9,6 +9,7 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputF
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
@@ -56,7 +57,7 @@ class ConnectorRolloutClient
       }
     }
 
-    fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
+    fun startRollout(input: ConnectorRolloutWorkflowInput): ConnectorRolloutOutput {
       logger.info { "ConnectorRolloutService.startWorkflow with input: $input" }
       if (input.rolloutId == null) {
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
@@ -73,17 +74,28 @@ class ConnectorRolloutClient
             .build(),
         )
 
+      val connectorRolloutActivityInputStart =
+        ConnectorRolloutActivityInputStart(
+          input.dockerRepository,
+          input.dockerImageTag,
+          input.actorDefinitionId,
+          input.rolloutId,
+          input.updatedBy,
+          input.rolloutStrategy,
+          input.migratePins,
+        )
+
       logger.info { "Starting workflow $workflowId" }
       val workflowExecution = WorkflowClient.start(workflowStub::run, input)
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
-      val startOutput = executeUpdate(input, workflowId) { stub, i -> stub.startRollout(i) }
+      val startOutput = executeUpdate(connectorRolloutActivityInputStart, workflowId) { stub, i -> stub.startRollout(i) }
       logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
       return startOutput
     }
 
     fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeUpdate(input, workflowId) { stub, i -> stub.doRollout(i) }
+      return executeUpdate(input, workflowId) { stub, i -> stub.progressRollout(i) }
     }
 
     fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize) {

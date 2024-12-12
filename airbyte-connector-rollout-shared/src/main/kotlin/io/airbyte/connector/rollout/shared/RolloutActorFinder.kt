@@ -38,7 +38,6 @@ data class ActorSelectionInfo(
   val nActorsEligibleOrAlreadyPinned: Int,
   val nNewPinned: Int = actorIdsToPin.size,
   val nPreviouslyPinned: Int,
-  val percentagePinned: Int,
 )
 
 data class ActorSyncJobInfo(
@@ -61,7 +60,7 @@ class RolloutActorFinder(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
   ): ActorSelectionInfo {
-    logger.info { "Finding actors to pin for rollout ${connectorRollout.id}" }
+    logger.info { "Finding actors to pin for rollout ${connectorRollout.id} targetPercent=$targetPercent" }
 
     var candidates = actorDefinitionVersionUpdater.getConfigScopeMaps(connectorRollout.actorDefinitionId)
     val initialNCandidates = candidates.size
@@ -97,12 +96,11 @@ class RolloutActorFinder(
         nActors = initialNCandidates,
         nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
         nPreviouslyPinned = nPreviouslyPinned,
-        percentagePinned = ceil(nPreviouslyPinned * 100.0 / nEligibleOrAlreadyPinned).toInt(),
       )
     }
 
     // Calculate the number to pin based on the input percentage
-    val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
+    val targetTotalToPin = getTargetTotalToPin(nEligibleOrAlreadyPinned, nPreviouslyPinned, targetPercent)
     val filteredActorDefinitionConnections = filterByConnectionActorId(candidates, sortedActorDefinitionConnections, actorType)
     logger.info {
       "Rollout ${connectorRollout.id}: " +
@@ -117,7 +115,7 @@ class RolloutActorFinder(
     val actorIdsToPin =
       getUniqueActorIds(
         filteredActorDefinitionConnections,
-        targetTotalToPin - nPreviouslyPinned,
+        targetTotalToPin,
         actorType,
       )
 
@@ -129,15 +127,32 @@ class RolloutActorFinder(
       nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
       nNewPinned = actorIdsToPin.size,
       nPreviouslyPinned = nPreviouslyPinned,
-      // Total percentage pinned out of all eligible, including new and previously pinned
-      // This could end up being >100% if the number of eligible actors changes between rollout increments.
-      percentagePinned =
-        if (nEligibleOrAlreadyPinned == 0) {
-          0
-        } else {
-          ceil((nPreviouslyPinned + actorIdsToPin.size) * 100.0 / nEligibleOrAlreadyPinned).toInt()
-        },
     )
+  }
+
+  @VisibleForTesting
+  internal fun getTargetTotalToPin(
+    nEligibleOrAlreadyPinned: Int,
+    nPreviouslyPinned: Int,
+    targetPercentage: Int,
+  ): Int {
+    logger.info {
+      "getTargetTotalToPin nEligibleOrAlreadyPinned=$nEligibleOrAlreadyPinned nPreviouslyPinned=$nPreviouslyPinned targetPercentage=$targetPercentage"
+    }
+    if (nEligibleOrAlreadyPinned == 0 || targetPercentage <= 0) {
+      return 0
+    }
+
+    val targetTotal = ceil(nEligibleOrAlreadyPinned.toDouble() * targetPercentage / 100).toInt()
+    logger.info { "getTargetTotalToPin targetTotal=$targetTotal" }
+
+    if (nPreviouslyPinned >= targetTotal) {
+      return 0
+    }
+
+    val actorsToPin = targetTotal - nPreviouslyPinned
+
+    return minOf(actorsToPin, nEligibleOrAlreadyPinned - nPreviouslyPinned)
   }
 
   @VisibleForTesting

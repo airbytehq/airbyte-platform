@@ -292,7 +292,6 @@ class RolloutActorFinderTest {
     assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
     assertEquals(2, actorSelectionInfo.nNewPinned)
     assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
-    assertEquals(50, actorSelectionInfo.percentagePinned)
   }
 
   @ParameterizedTest
@@ -335,7 +334,34 @@ class RolloutActorFinderTest {
     assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
     assertEquals(0, actorSelectionInfo.nNewPinned)
     assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
-    assertEquals(0, actorSelectionInfo.percentagePinned)
+  }
+
+  @Test
+  fun `test getTargetTotalToPin`() {
+    // No eligible actors, nothing previously pinned, no targetPercentage
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(0, 0, 1))
+    // No eligible actors, nothing previously pinned
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(0, 0, 1))
+    // No eligible actors, one previously pinned, no targetPercentage
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(0, 1, 0))
+    // No eligible actors, one previously pinned
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(0, 1, 1))
+
+    // 1 eligible, 0 previously pinned
+    assertEquals(1, rolloutActorFinder.getTargetTotalToPin(1, 0, 1))
+    // 1 eligible, one previously pinned
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(1, 1, 1))
+
+    // 2 eligible, 0 previously pinned, targetPercentage 1
+    assertEquals(1, rolloutActorFinder.getTargetTotalToPin(2, 0, 1))
+    // 2 eligible, 0 previously pinned, targetPercentage 100
+    assertEquals(2, rolloutActorFinder.getTargetTotalToPin(2, 0, 100))
+    // 2 eligible, 1 previously pinned, targetPercentage 1
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(2, 1, 1))
+    // 2 eligible, 1 previously pinned, targetPercentage 50
+    assertEquals(0, rolloutActorFinder.getTargetTotalToPin(2, 1, 50))
+    // 2 eligible, 1 previously pinned, targetPercentage 70
+    assertEquals(1, rolloutActorFinder.getTargetTotalToPin(2, 1, 70))
   }
 
   @ParameterizedTest
@@ -593,7 +619,6 @@ class RolloutActorFinderTest {
     assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
     assertEquals(1, actorSelectionInfo.nNewPinned)
     assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
-    assertEquals(25, actorSelectionInfo.percentagePinned)
   }
 
   @ParameterizedTest
@@ -666,7 +691,6 @@ class RolloutActorFinderTest {
     assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
     assertEquals(0, actorSelectionInfo.nNewPinned)
     assertEquals(1, actorSelectionInfo.nPreviouslyPinned)
-    assertEquals(25, actorSelectionInfo.percentagePinned)
   }
 
   @ParameterizedTest

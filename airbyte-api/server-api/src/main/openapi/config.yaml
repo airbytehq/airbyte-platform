@@ -7630,8 +7630,8 @@ components:
         actor_selection_info:
           $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
         actor_syncs:
-          type: array
-          items:
+          type: object
+          additionalProperties:
             $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutState:
@@ -7878,40 +7878,40 @@ components:
             actor_selection_info:
               $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
             syncs:
-              type: array
-              items:
+              type: object
+              additionalProperties:
                 $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutActorSelectionInfo:
       type: object
       required:
-        - n_actors
-        - n_actors_eligible_or_already_pinned
-        - n_pinned_to_connector_rollout
+        - num_actors
+        - num_actors_eligible_or_already_pinned
+        - num_pinned_to_connector_rollout
       properties:
-        n_actors:
+        num_actors:
           type: integer
-        n_actors_eligible_or_already_pinned:
+        num_actors_eligible_or_already_pinned:
           type: integer
-        n_pinned_to_connector_rollout:
+        num_pinned_to_connector_rollout:
           type: integer
 
     ConnectorRolloutActorSyncInfo:
       type: object
       required:
         - actor_id
-        - n_succeeded
-        - n_failed
-        - n_connections
+        - num_succeeded
+        - num_failed
+        - num_connections
       properties:
         actor_id:
           type: string
           format: uuid
-        n_succeeded:
+        num_succeeded:
           type: integer
-        n_failed:
+        num_failed:
           type: integer
-        n_connections:
+        num_connections:
           type: integer
 
     ConnectorRolloutManualFinalizeResponse:

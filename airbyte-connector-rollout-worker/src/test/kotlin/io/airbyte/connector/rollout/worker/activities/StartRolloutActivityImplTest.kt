@@ -26,8 +26,6 @@ class StartRolloutActivityImplTest {
     private val ROLLOUT_ID = UUID.randomUUID()
     private val USER_ID = UUID.randomUUID()
     private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
-    private val INITIAL_ROLLOUT_PERCENT = 0
-    private val FINAL_TARGET_ROLLOUT_PERCENT = 100
   }
 
   @BeforeEach
@@ -50,8 +48,6 @@ class StartRolloutActivityImplTest {
         rolloutId = ROLLOUT_ID,
         updatedBy = USER_ID,
         rolloutStrategy = ROLLOUT_STRATEGY,
-        initialRolloutPct = INITIAL_ROLLOUT_PERCENT,
-        finalTargetRolloutPct = FINAL_TARGET_ROLLOUT_PERCENT,
       )
 
     startRolloutActivity.startRollout("workflowRunId", input)
@@ -71,8 +67,6 @@ class StartRolloutActivityImplTest {
         rolloutId = ROLLOUT_ID,
         updatedBy = USER_ID,
         rolloutStrategy = null,
-        initialRolloutPct = null,
-        finalTargetRolloutPct = null,
       )
 
     startRolloutActivity.startRollout("workflowRunId", input)

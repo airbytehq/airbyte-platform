@@ -38,8 +38,9 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Controller("/api/v1/connector_rollout")
 @Context
@@ -157,7 +158,13 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   public ConnectorRolloutActorSyncInfoResponse getConnectorRolloutActorSyncInfo(@Body final ConnectorRolloutGetActorSyncInfoRequestBody connectorRolloutGetActorSyncInfoRequestBody) {
     return ApiHelper.execute(() -> {
       final UUID connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.getId();
-      final List<ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo = connectorRolloutHandler.getActorSyncInfo(connectorRolloutId);
+      final Map<String, ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo =
+          connectorRolloutHandler.getActorSyncInfo(connectorRolloutId)
+              .entrySet()
+              .stream()
+              .collect(Collectors.toMap(
+                  entry -> entry.getKey().toString(),
+                  Map.Entry::getValue));
       final ConnectorRolloutActorSelectionInfo actorSelectionInfo = connectorRolloutHandler.getPinnedActorInfo(connectorRolloutId);
 
       final ConnectorRolloutActorSyncInfoResponseData responseData = new ConnectorRolloutActorSyncInfoResponseData();

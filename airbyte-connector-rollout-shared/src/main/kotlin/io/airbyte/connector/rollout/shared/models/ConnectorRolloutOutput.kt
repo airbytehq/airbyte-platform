@@ -28,5 +28,5 @@ data class ConnectorRolloutOutput(
   var errorMsg: String? = null,
   var failedReason: String? = null,
   var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
-  var actorSyncs: List<ConnectorRolloutActorSyncInfo>? = null,
+  var actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
 )
