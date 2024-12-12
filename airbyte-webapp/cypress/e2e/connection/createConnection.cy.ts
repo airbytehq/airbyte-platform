@@ -116,8 +116,8 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
           goToSourcePage();
           openSourceConnectionsPage(source.name);
-          cy.get("button").contains("add destination").click();
-          cy.get("button").contains("add a new destination").click();
+          cy.get("button").contains("Add destination").click();
+          cy.get("button").contains("Add a new destination").click();
           cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
 
           // confirm toggling the type
@@ -161,8 +161,8 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
           goToDestinationPage();
           openDestinationConnectionsPage(destination.name);
-          cy.get("button").contains("add source").click();
-          cy.get("button").contains("add a new source").click();
+          cy.get("button").contains("Add source").click();
+          cy.get("button").contains("Add a new source").click();
           cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
 
           // confirm can toggle back and
