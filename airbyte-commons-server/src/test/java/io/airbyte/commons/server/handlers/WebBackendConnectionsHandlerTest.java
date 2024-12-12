@@ -86,7 +86,7 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -1037,7 +1037,7 @@ class WebBackendConnectionsHandlerTest {
     when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
-    final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
+    final ManualOperationResult successfulResult = new ManualOperationResult(null, null, null);
     when(eventRunner.resetConnection(any(), any())).thenReturn(successfulResult);
     when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
 

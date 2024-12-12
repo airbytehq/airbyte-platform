@@ -49,7 +49,7 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -696,8 +696,8 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(jobId);
 
     final ManualOperationResult cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.getScope()));
-    if (cancellationResult.getFailingReason().isPresent()) {
-      throw new IllegalStateException(cancellationResult.getFailingReason().get());
+    if (cancellationResult.getFailingReason() != null) {
+      throw new IllegalStateException(cancellationResult.getFailingReason());
     }
     // log connection timeline event (job cancellation).
     final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
@@ -747,15 +747,15 @@ public class SchedulerHandler {
   }
 
   public JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
-    if (manualOperationResult.getFailingReason().isPresent()) {
-      if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.getErrorCode().get())) {
-        throw new ValueConflictKnownException(manualOperationResult.getFailingReason().get());
+    if (manualOperationResult.getFailingReason() != null) {
+      if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.getErrorCode())) {
+        throw new ValueConflictKnownException(manualOperationResult.getFailingReason());
       } else {
-        throw new IllegalStateException(manualOperationResult.getFailingReason().get());
+        throw new IllegalStateException(manualOperationResult.getFailingReason());
       }
     }
 
-    final Job job = jobPersistence.getJob(manualOperationResult.getJobId().get());
+    final Job job = jobPersistence.getJob(manualOperationResult.getJobId());
 
     return jobConverter.getJobInfoRead(job);
   }

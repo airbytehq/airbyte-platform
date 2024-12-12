@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,7 +26,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException;
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
@@ -420,9 +420,9 @@ public class TemporalClientTest {
 
       final ManualOperationResult result = temporalClient.startNewManualSync(CONNECTION_ID);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(JOB_ID, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(JOB_ID, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow).submitManualSync();
     }
 
@@ -439,8 +439,8 @@ public class TemporalClientTest {
 
       final ManualOperationResult result = temporalClient.startNewManualSync(CONNECTION_ID);
 
-      assertFalse(result.getJobId().isPresent());
-      assertTrue(result.getFailingReason().isPresent());
+      assertNull(result.getJobId());
+      assertNotNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow, times(0)).submitManualSync();
     }
 
@@ -468,9 +468,9 @@ public class TemporalClientTest {
 
       final ManualOperationResult result = temporalClient.startNewManualSync(CONNECTION_ID);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(JOB_ID, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(JOB_ID, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(workflowClient).signalWithStart(mBatchRequest);
 
       // Verify that the submitManualSync signal was passed to the batch request by capturing the
@@ -497,8 +497,8 @@ public class TemporalClientTest {
       final ManualOperationResult result = temporalClient.startNewManualSync(CONNECTION_ID);
 
       // this is only called when updating an existing workflow
-      assertFalse(result.getJobId().isPresent());
-      assertTrue(result.getFailingReason().isPresent());
+      assertNull(result.getJobId());
+      assertNotNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow, times(0)).submitManualSync();
     }
 
@@ -521,9 +521,9 @@ public class TemporalClientTest {
 
       final ManualOperationResult result = temporalClient.startNewCancellation(CONNECTION_ID);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(JOB_ID, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(JOB_ID, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow).cancelJob();
       verify(streamResetRecordsHelper).deleteStreamResetRecordsForJob(JOB_ID, CONNECTION_ID);
     }
@@ -551,9 +551,9 @@ public class TemporalClientTest {
 
       final ManualOperationResult result = temporalClient.startNewCancellation(CONNECTION_ID);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(NON_RUNNING_JOB_ID, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(NON_RUNNING_JOB_ID, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(workflowClient).signalWithStart(mBatchRequest);
 
       // Verify that the cancelJob signal was passed to the batch request by capturing the argument,
@@ -579,8 +579,8 @@ public class TemporalClientTest {
       final ManualOperationResult result = temporalClient.startNewCancellation(CONNECTION_ID);
 
       // this is only called when updating an existing workflow
-      assertFalse(result.getJobId().isPresent());
-      assertTrue(result.getFailingReason().isPresent());
+      assertNull(result.getJobId());
+      assertNotNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow, times(0)).cancelJob();
     }
 
@@ -647,9 +647,9 @@ public class TemporalClientTest {
 
       verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(jobId2, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(jobId2, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow).resetConnection();
     }
 
@@ -684,9 +684,9 @@ public class TemporalClientTest {
 
       verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset);
 
-      assertTrue(result.getJobId().isPresent());
-      assertEquals(JOB_ID, result.getJobId().get());
-      assertFalse(result.getFailingReason().isPresent());
+      assertNotNull(result.getJobId());
+      assertEquals(JOB_ID, result.getJobId());
+      assertNull(result.getFailingReason());
       verify(workflowClient).signalWithStart(mBatchRequest);
 
       // Verify that the resetConnection signal was passed to the batch request by capturing the argument,
@@ -715,8 +715,8 @@ public class TemporalClientTest {
       verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset);
 
       // this is only called when updating an existing workflow
-      assertFalse(result.getJobId().isPresent());
-      assertTrue(result.getFailingReason().isPresent());
+      assertNull(result.getJobId());
+      assertNotNull(result.getFailingReason());
       verify(mConnectionManagerWorkflow, times(0)).resetConnection();
     }
 
@@ -752,9 +752,9 @@ public class TemporalClientTest {
 
     final ManualOperationResult result = temporalClient.startNewManualSync(CONNECTION_ID);
 
-    assertTrue(result.getJobId().isPresent());
-    assertEquals(JOB_ID, result.getJobId().get());
-    assertFalse(result.getFailingReason().isPresent());
+    assertNotNull(result.getJobId());
+    assertEquals(JOB_ID, result.getJobId());
+    assertNull(result.getFailingReason());
     verify(workflowClient).signalWithStart(mBatchRequest);
     verify(mWorkflowStub).terminate(anyString());
 

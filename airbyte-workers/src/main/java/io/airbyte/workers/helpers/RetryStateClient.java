@@ -89,19 +89,20 @@ public class RetryStateClient {
     try {
       final var organizationId = fetchOrganizationId(workspaceId);
 
-      final var manager = initializeBuilder(workspaceId, organizationId);
+      final var manager = initializeRetryManager(workspaceId, organizationId);
 
       final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
       // if there is retry state we hydrate
       // otherwise we will build with default 0 values
-      state.ifPresent(s -> manager
-          .totalCompleteFailures(s.getTotalCompleteFailures())
-          .totalPartialFailures(s.getTotalPartialFailures())
-          .successiveCompleteFailures(s.getSuccessiveCompleteFailures())
-          .successivePartialFailures(s.getSuccessivePartialFailures()));
+      state.ifPresent(s -> {
+        manager.setTotalCompleteFailures(s.getTotalCompleteFailures());
+        manager.setTotalPartialFailures(s.getTotalPartialFailures());
+        manager.setSuccessiveCompleteFailures(s.getSuccessiveCompleteFailures());
+        manager.setSuccessivePartialFailures(s.getSuccessivePartialFailures());
+      });
 
-      return manager.build();
+      return manager;
     } catch (final RetryableException e) {
       throw e;
     } catch (final Exception e) {
@@ -133,7 +134,7 @@ public class RetryStateClient {
    * tweak values on the fly without requiring redeployment. Eventually we plan to finalize the
    * default values and remove these FF'd values.
    */
-  private RetryManager.RetryManagerBuilder initializeBuilder(final UUID workspaceId, final UUID organizationId) {
+  private RetryManager initializeRetryManager(final UUID workspaceId, final UUID organizationId) {
     final var ffContext = organizationId == null
         ? new Workspace(workspaceId)
         : new Multi(List.of(new Workspace(workspaceId), new Organization(organizationId)));
@@ -143,12 +144,13 @@ public class RetryStateClient {
     final var ffSuccessivePartialFailureLimit = featureFlagClient.intVariation(SuccessivePartialFailureLimit.INSTANCE, ffContext);
     final var ffTotalPartialFailureLimit = featureFlagClient.intVariation(TotalPartialFailureLimit.INSTANCE, ffContext);
 
-    return RetryManager.builder()
-        .completeFailureBackoffPolicy(buildBackOffPolicy(ffContext))
-        .successiveCompleteFailureLimit(initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit))
-        .successivePartialFailureLimit(initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit))
-        .totalCompleteFailureLimit(initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit))
-        .totalPartialFailureLimit(initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
+    return new RetryManager(
+        buildBackOffPolicy(ffContext),
+        null,
+        initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit),
+        initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit),
+        initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit),
+        initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
   }
 
   private BackoffPolicy buildBackOffPolicy(final Context ffContext) {
@@ -156,11 +158,10 @@ public class RetryStateClient {
     final var ffMax = featureFlagClient.intVariation(CompleteFailureBackoffMaxInterval.INSTANCE, ffContext);
     final var ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase.INSTANCE, ffContext);
 
-    return BackoffPolicy.builder()
-        .minInterval(Duration.ofSeconds(initializedOrElse(ffMin, minInterval)))
-        .maxInterval(Duration.ofSeconds(initializedOrElse(ffMax, maxInterval)))
-        .base(initializedOrElse(ffBase, backoffBase))
-        .build();
+    return new BackoffPolicy(
+        Duration.ofSeconds(initializedOrElse(ffMin, minInterval)),
+        Duration.ofSeconds(initializedOrElse(ffMax, maxInterval)),
+        initializedOrElse(ffBase, backoffBase));
   }
 
   /**

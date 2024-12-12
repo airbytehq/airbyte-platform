@@ -33,16 +33,16 @@ public class TemporalWorkflowUtils {
    * @return connection updated input
    */
   public static ConnectionUpdaterInput buildStartWorkflowInput(final UUID connectionId) {
-    return ConnectionUpdaterInput.builder()
-        .connectionId(connectionId)
-        .jobId(null)
-        .attemptId(null)
-        .fromFailure(false)
-        .attemptNumber(1)
-        .workflowState(null)
-        .resetConnection(false)
-        .fromJobResetFailure(false)
-        .build();
+    return new ConnectionUpdaterInput(
+        connectionId,
+        null,
+        null,
+        false,
+        1,
+        null,
+        false,
+        false,
+        false);
   }
 
   /**

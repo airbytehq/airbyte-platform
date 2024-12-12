@@ -244,7 +244,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @SuppressWarnings("PMD.UnusedLocalVariable")
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
-      if (connectionUpdaterInput.isSkipScheduling()) {
+      if (connectionUpdaterInput.getSkipScheduling()) {
         workflowState.setSkipScheduling(true);
       }
 
@@ -262,7 +262,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       final Duration timeTilScheduledRun = getTimeTilScheduledRun(connectionUpdaterInput.getConnectionId());
 
       final Duration timeToWait;
-      if (connectionUpdaterInput.isFromFailure()) {
+      if (connectionUpdaterInput.getFromFailure()) {
         // note this can fail the job if the backoff is longer than scheduled time to wait
         timeToWait = resolveBackoff();
       } else {
@@ -793,13 +793,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private ConnectionUpdaterInput connectionUpdaterInputFromState() {
-    return ConnectionUpdaterInput.builder()
-        .connectionId(connectionId)
-        .jobId(workflowInternalState.getJobId())
-        .attemptNumber(workflowInternalState.getAttemptNumber())
-        .fromFailure(false)
-        .build();
-
+    return new ConnectionUpdaterInput(
+        connectionId,
+        workflowInternalState.getJobId(),
+        null,
+        false,
+        workflowInternalState.getAttemptNumber(),
+        null,
+        false,
+        false,
+        false);
   }
 
   /**
@@ -1164,10 +1167,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       new MetricAttribute(MetricTags.ACTIVITY_NAME, className),
       new MetricAttribute(MetricTags.ACTIVITY_METHOD, methodName),
     };
-    final var inputCtx = ConnectionUpdaterInput.builder()
-        .connectionId(connectionId)
-        .jobId(workflowInternalState.getJobId())
-        .build();
+    final var inputCtx = new ConnectionUpdaterInput(connectionId, workflowInternalState.getJobId());
 
     logActivityFailure(className, methodName);
     tryRecordCountMetric(
@@ -1190,7 +1190,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private void initializeWorkflowStateFromInput(final ConnectionUpdaterInput input) {
     // if our previous attempt was a failure, we are still in a run
-    if (input.isFromFailure()) {
+    if (input.getFromFailure()) {
       workflowState.setRunning(true);
     }
     // workflow state is only ever set in test cases. for production cases, it will always be null.

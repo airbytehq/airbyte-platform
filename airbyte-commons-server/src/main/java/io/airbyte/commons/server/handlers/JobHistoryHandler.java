@@ -340,7 +340,7 @@ public class JobHistoryHandler {
     final JobDebugInfoRead jobDebugInfoRead = buildJobDebugInfoRead(jobinfoRead);
     if (temporalClient != null) {
       final UUID connectionId = UUID.fromString(job.getScope());
-      temporalClient.getWorkflowState(connectionId)
+      Optional.ofNullable(temporalClient.getWorkflowState(connectionId))
           .map(workflowStateConverter::getWorkflowStateRead)
           .ifPresent(jobDebugInfoRead::setWorkflowState);
     }

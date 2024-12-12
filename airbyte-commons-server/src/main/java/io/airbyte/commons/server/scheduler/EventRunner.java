@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.scheduler;
 
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StreamDescriptor;
 import java.util.List;

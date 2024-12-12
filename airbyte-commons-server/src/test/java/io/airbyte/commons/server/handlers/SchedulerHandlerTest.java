@@ -83,7 +83,7 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.JobMetadata;
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
@@ -1536,11 +1536,7 @@ class SchedulerHandlerTest {
     final UUID connectionId = UUID.randomUUID();
 
     final long jobId = 123L;
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.empty())
-        .jobId(Optional.of(jobId))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
 
     when(eventRunner.startNewManualSync(connectionId))
         .thenReturn(manualOperationResult);
@@ -1557,12 +1553,7 @@ class SchedulerHandlerTest {
   void testSyncConnectionFailWithOtherSyncRunning() throws IOException {
     final UUID connectionId = UUID.randomUUID();
 
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.of("another sync running"))
-        .jobId(Optional.empty())
-        .errorCode(Optional.of(ErrorCode.WORKFLOW_RUNNING))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult("another sync running", null, ErrorCode.WORKFLOW_RUNNING);
 
     when(eventRunner.startNewManualSync(connectionId))
         .thenReturn(manualOperationResult);
@@ -1591,11 +1582,7 @@ class SchedulerHandlerTest {
     final UUID connectionId = UUID.randomUUID();
 
     final long jobId = 123L;
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.empty())
-        .jobId(Optional.of(jobId))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
 
     final List<StreamDescriptor> streamDescriptors = List.of(STREAM_DESCRIPTOR);
     when(connectionService.getAllStreamsForConnection(connectionId))
@@ -1619,11 +1606,7 @@ class SchedulerHandlerTest {
     final String streamNamespace = "namespace";
 
     final long jobId = 123L;
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.empty())
-        .jobId(Optional.of(jobId))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
     final List<StreamDescriptor> streamDescriptors = List.of(new StreamDescriptor().withName(streamName).withNamespace(streamNamespace));
     final ConnectionStreamRequestBody connectionStreamRequestBody = new ConnectionStreamRequestBody()
         .connectionId(connectionId)
@@ -1648,11 +1631,7 @@ class SchedulerHandlerTest {
     final String streamNamespace = "namespace";
 
     final long jobId = 123L;
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.empty())
-        .jobId(Optional.of(jobId))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
     final List<StreamDescriptor> streamDescriptors = List.of(new StreamDescriptor().withName(streamName).withNamespace(streamNamespace));
     final ConnectionStreamRequestBody connectionStreamRequestBody = new ConnectionStreamRequestBody()
         .connectionId(connectionId)
@@ -1680,11 +1659,7 @@ class SchedulerHandlerTest {
     when(job.getScope()).thenReturn(connectionId.toString());
     when(jobPersistence.getJob(jobId)).thenReturn(job);
 
-    final ManualOperationResult manualOperationResult = ManualOperationResult
-        .builder()
-        .failingReason(Optional.empty())
-        .jobId(Optional.of(jobId))
-        .build();
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
 
     when(eventRunner.startNewCancellation(connectionId))
         .thenReturn(manualOperationResult);

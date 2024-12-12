@@ -60,7 +60,7 @@ class StreamRefreshesHandler(
 
     // Store connection timeline event (start a refresh).
     val manualSyncResult = eventRunner.startNewManualSync(connectionId)
-    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it.get()) }
+    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it) }
     job?.let {
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =
@@ -69,8 +69,7 @@ class StreamRefreshesHandler(
           startTimeEpochSeconds = job.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            job.config.refresh.streamsToRefresh.map {
-                refreshStream ->
+            job.config.refresh.streamsToRefresh.map { refreshStream ->
               refreshStream.streamDescriptor
             },
         )
@@ -80,9 +79,7 @@ class StreamRefreshesHandler(
     return if (job == null) null else JobConverter.getJobRead(job)
   }
 
-  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
-    return streamRefreshesRepository.findByConnectionId(connectionId)
-  }
+  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> = streamRefreshesRepository.findByConnectionId(connectionId)
 
   private fun createRefreshesForStreams(
     connectionId: UUID,
@@ -93,13 +90,12 @@ class StreamRefreshesHandler(
   }
 
   companion object {
-    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> {
-      return connectionStreams.map { connectionStream ->
+    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> =
+      connectionStreams.map { connectionStream ->
         StreamDescriptor()
           .withName(connectionStream.streamName)
           .withNamespace(connectionStream.streamNamespace)
       }
-    }
 
     private fun RefreshMode.toConfigObject(): RefreshStream.RefreshType =
       when (this) {
