@@ -82,6 +82,10 @@ object ConfigClientErrorHandler {
   fun handleError(throwable: Throwable) {
     when (throwable) {
       is ConfigNotFoundException -> throw ResourceNotFoundProblem(ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId))
+      is io.airbyte.data.exceptions.ConfigNotFoundException -> throw ResourceNotFoundProblem(
+        ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId),
+      )
+
       is ValueConflictKnownException -> {
         val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
         throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
