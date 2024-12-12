@@ -4,7 +4,6 @@ import pick from "lodash/pick";
 
 import { FormBlock, FormGroupItem } from "core/form/types";
 import { AirbyteJSONSchemaDefinition, AirbyteJSONSchema } from "core/jsonSchema/types";
-import { isDefined } from "core/utils/common";
 
 import { FormBuildError } from "./FormBuildError";
 
@@ -176,10 +175,6 @@ const pickDefaultFields = (schema: AirbyteJSONSchema) => {
 
   if (typeof schema.items === "object" && !Array.isArray(schema.items) && schema.items.enum) {
     partialSchema.enum = schema.items.enum;
-  } else if (schema.enum && schema.enum?.length === 1 && isDefined(schema.default)) {
-    partialSchema.const = schema.default;
-    // remove enum key as it has been "picked" already above
-    delete partialSchema.enum;
   }
 
   if (typeof schema.items === "object" && !Array.isArray(schema.items) && schema.items.pattern) {

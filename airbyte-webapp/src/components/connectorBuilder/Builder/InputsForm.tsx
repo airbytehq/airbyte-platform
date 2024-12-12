@@ -383,7 +383,6 @@ const InputModal = ({
                   path="definition.default"
                   type={values.type}
                   options={(values.definition?.enum || []) as string[]}
-                  optional
                   label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
                 />
               )}
