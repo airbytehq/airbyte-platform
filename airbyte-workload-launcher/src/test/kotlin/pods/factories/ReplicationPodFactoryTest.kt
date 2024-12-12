@@ -3,27 +3,29 @@ package pods.factories
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
-import io.airbyte.featureflag.AllowSpotInstances
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
+import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
+import io.airbyte.workload.launcher.pods.model.NodeSelection
+import io.fabric8.kubernetes.api.model.Affinity
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.Toleration
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import pods.factories.ReplicationPodFactoryTest.Fixtures.resourceRequirements
 import java.util.UUID
 
 class ReplicationPodFactoryTest {
@@ -98,19 +100,52 @@ class ReplicationPodFactoryTest {
     assertEquals(VolumeFactory.LOCAL_VOLUME_MOUNT, destSpec.volumeMounts[destLocalIdx].mountPath)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `create pod with spot tolerations`(useSpotTolerations: Boolean) {
-    val featureFlagClient = TestClient(mapOf(AllowSpotInstances.key to useSpotTolerations))
+  @Test
+  fun `create replication pod with node selection`() {
+    val expectedNodeSelection =
+      NodeSelection(
+        nodeSelectors = mapOf("node" to "replication"),
+        tolerations = listOf(Toleration().apply { key = "repl" }),
+        podAffinity = Affinity().apply { additionalProperties["sanity check"] = "replicate" },
+      )
+    val nodeSelectionFactory: NodeSelectionFactory =
+      mockk {
+        every { createReplicationNodeSelection(any(), any()) } returns expectedNodeSelection
+      }
     val fac =
       Fixtures.defaultReplicationPodFactory.copy(
-        featureFlagClient = featureFlagClient,
+        nodeSelectionFactory = nodeSelectionFactory,
       )
 
     val pod = Fixtures.createPodWithDefaults(fac)
 
-    assertTrue(pod.spec.tolerations.containsAll(Fixtures.defaultTolerations))
-    assertEquals(useSpotTolerations, pod.spec.tolerations.containsAll(Fixtures.spotTolerations))
+    assertEquals(expectedNodeSelection.nodeSelectors, pod.spec.nodeSelector)
+    assertEquals(expectedNodeSelection.tolerations, pod.spec.tolerations)
+    assertEquals(expectedNodeSelection.podAffinity, pod.spec.affinity)
+  }
+
+  @Test
+  fun `create reset pod with node selection`() {
+    val expectedNodeSelection =
+      NodeSelection(
+        nodeSelectors = mapOf("node" to "reset"),
+        tolerations = listOf(Toleration().apply { key = "reset" }),
+        podAffinity = Affinity().apply { additionalProperties["sanity check"] = "reset" },
+      )
+    val nodeSelectionFactory: NodeSelectionFactory =
+      mockk {
+        every { createResetNodeSelection(any(), any()) } returns expectedNodeSelection
+      }
+    val fac =
+      Fixtures.defaultReplicationPodFactory.copy(
+        nodeSelectionFactory = nodeSelectionFactory,
+      )
+
+    val pod = Fixtures.createResetWithDefaults(fac)
+
+    assertEquals(expectedNodeSelection.nodeSelectors, pod.spec.nodeSelector)
+    assertEquals(expectedNodeSelection.tolerations, pod.spec.tolerations)
+    assertEquals(expectedNodeSelection.podAffinity, pod.spec.affinity)
   }
 
   object Fixtures {
@@ -145,7 +180,15 @@ class ReplicationPodFactoryTest {
       )
 
     val defaultTolerations = listOf(Toleration().apply { key = "configuredByUser" })
-    val spotTolerations = listOf(Toleration().apply { key = "spotToleration" })
+    val spotToleration = Toleration().apply { key = "spotToleration" }
+
+    val defaultNodeSelectionFactory =
+      NodeSelectionFactory(
+        featureFlagClient = featureFlagClient,
+        tolerations = defaultTolerations,
+        infraFlagContexts = listOf(PlaneName("test")),
+        spotToleration = spotToleration,
+      )
 
     val defaultReplicationPodFactory =
       ReplicationPodFactory(
@@ -167,10 +210,8 @@ class ReplicationPodFactoryTest {
           ),
         volumeFactory = defaultVolumeFactory,
         workloadSecurityContextProvider = workloadSecurityContextProvider,
+        nodeSelectionFactory = defaultNodeSelectionFactory,
         imagePullSecrets = emptyList(),
-        tolerations = defaultTolerations,
-        infraFlagContexts = listOf(PlaneName("test")),
-        spotTolerations = spotTolerations,
       )
 
     fun createPodWithDefaults(
@@ -194,6 +235,25 @@ class ReplicationPodFactoryTest {
       podName, allLabels, annotations, nodeSelectors, orchImage, sourceImage, destImage, orchResourceReqs,
       sourceResourceReqs, destResourceReqs, orchRuntimeEnvVars, sourceRuntimeEnvVars, destRuntimeEnvVars,
       isFileTransfer, workspaceId,
+    )
+
+    fun createResetWithDefaults(
+      factory: ReplicationPodFactory,
+      podName: String = "test-pod-name",
+      allLabels: Map<String, String> = emptyMap(),
+      annotations: Map<String, String> = emptyMap(),
+      nodeSelectors: Map<String, String> = emptyMap(),
+      orchImage: String = "test-orch-image",
+      destImage: String = "test-dest-image",
+      orchResourceReqs: ResourceRequirements? = ResourceConversionUtils.domainToApi(resourceRequirements),
+      destResourceReqs: ResourceRequirements? = ResourceConversionUtils.domainToApi(resourceRequirements),
+      orchRuntimeEnvVars: List<EnvVar> = emptyList(),
+      destRuntimeEnvVars: List<EnvVar> = emptyList(),
+      isFileTransfer: Boolean = false,
+      workspaceId: UUID = UUID.randomUUID(),
+    ) = factory.createReset(
+      podName, allLabels, annotations, nodeSelectors, orchImage, destImage, orchResourceReqs,
+      destResourceReqs, orchRuntimeEnvVars, destRuntimeEnvVars, isFileTransfer, workspaceId,
     )
   }
 }
