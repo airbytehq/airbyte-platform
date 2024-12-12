@@ -271,9 +271,206 @@ components:
         - "row-filtering"
         - "encryption"
       x-speakeasy-component: true
+    ConfiguredStreamMapper:
+      type: "object"
+      required:
+        - "type"
+        - "mapperConfiguration"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
+      x-speakeasy-component: true
     MapperConfiguration:
       type: "object"
       description: "The values required to configure the mapper."
+      oneOf:
+        - $ref: "#/components/schemas/HashingMapperConfiguration"
+        - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
+        - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperConfiguration"
+      x-speakeasy-component: true
+    HashingMapperConfiguration:
+      title: "Hashing"
+      type: "object"
+      properties:
+        fieldNameSuffix:
+          type: "string"
+          title: "Field name suffix"
+          description: "The suffix to append to the field name after hashing."
+        method:
+          type: "string"
+          enum:
+            - "MD2"
+            - "MD5"
+            - "SHA-1"
+            - "SHA-224"
+            - "SHA-256"
+            - "SHA-384"
+            - "SHA-512"
+          title: "Hashing method"
+          description: "The hashing algorithm to use."
+        targetField:
+          type: "string"
+          title: "Original Field Name"
+          description: "The name of the field to be hashed."
+      required:
+        - "fieldNameSuffix"
+        - "method"
+        - "targetField"
+      x-speakeasy-component: true
+    FieldRenamingMapperConfiguration:
+      title: "Field Renaming"
+      type: "object"
+      properties:
+        newFieldName:
+          type: "string"
+          title: "New Field Name"
+          description: "The new name for the field after renaming."
+        originalFieldName:
+          type: "string"
+          title: "Original Field Name"
+          description: "The current name of the field to rename."
+      required:
+        - "newFieldName"
+        - "originalFieldName"
+      x-speakeasy-component: true
+    RowFilteringOperationType:
+      type: "string"
+      enum:
+        - "EQUAL"
+        - "NOT"
+      x-speakeasy-component: true
+    RowFilteringOperationEqual:
+      type: "object"
+      title: "EQUAL"
+      required:
+        - "comparisonValue"
+        - "fieldName"
+        - "type"
+      properties:
+        comparisonValue:
+          type: "string"
+          title: "Comparison Value"
+          description: "The value to compare the field against."
+        fieldName:
+          type: "string"
+          title: "Field Name"
+          description: "The name of the field to apply the operation on."
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-speakeasy-component: true
+    RowFilteringOperationNot:
+      type: "object"
+      title: "NOT"
+      required:
+        - "conditions"
+        - "type"
+      properties:
+        conditions:
+          title: "Sub-Conditions (NOT)"
+          description: "Conditions to evaluate with the NOT operator."
+          minItems: 1
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RowFilteringOperation"
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-speakeasy-component: true
+    RowFilteringOperation:
+      type: "object"
+      oneOf:
+        - $ref: "#/components/schemas/RowFilteringOperationEqual"
+        - $ref: "#/components/schemas/RowFilteringOperationNot"
+      discriminator:
+        propertyName: "type"
+        mapping:
+          EQUAL: "#/components/schemas/RowFilteringOperationEqual"
+          NOT: "#/components/schemas/RowFilteringOperationNot"
+      x-speakeasy-component: true
+    RowFilteringMapperConfiguration:
+      title: "Row Filtering"
+      type: "object"
+      properties:
+        conditions:
+          $ref: "#/components/schemas/RowFilteringOperation"
+      required:
+        - "conditions"
+      x-speakeasy-component: true
+    EncryptionMapperAlgorithm:
+      type: "string"
+      enum:
+        - "RSA"
+        - "AES"
+      x-speakeasy-component: true
+    EncryptionMapperConfiguration:
+      title: "Encryption"
+      type: "object"
+      oneOf:
+        - $ref: "#/components/schemas/EncryptionMapperRSAConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperAESConfiguration"
+      discriminator:
+        propertyName: "algorithm"
+        mapping:
+          RSA: "#/components/schemas/EncryptionMapperRSAConfiguration"
+          AES: "#/components/schemas/EncryptionMapperAESConfiguration"
+      x-speakeasy-component: true
+    EncryptionMapperRSAConfiguration:
+      title: "Encryption - RSA"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        publicKey:
+          type: "string"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "publicKey"
+        - "targetField"
+        - "fieldNameSuffix"
+      x-speakeasy-component: true
+    EncryptionMapperAESConfiguration:
+      title: "Encryption - AES"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        key:
+          type: "string"
+          x-speakeasy-param-sensitive: true
+        mode:
+          type: "string"
+          enum:
+            - "CBC"
+            - "CFB"
+            - "OFB"
+            - "CTR"
+            - "GCM"
+            - "ECB"
+        padding:
+          type: "string"
+          enum:
+            - "NoPadding"
+            - "PKCS5Padding"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "key"
+        - "mode"
+        - "padding"
+        - "targetField"
+        - "fieldNameSuffix"
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
