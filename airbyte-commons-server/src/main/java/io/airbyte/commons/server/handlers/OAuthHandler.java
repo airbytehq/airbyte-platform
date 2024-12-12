@@ -651,33 +651,31 @@ public class OAuthHandler {
   @VisibleForTesting
   @SuppressWarnings("PMD.PreserveStackTrace")
   JsonNode getSourceOAuthParamConfig(final UUID workspaceId, final UUID sourceDefinitionId) throws IOException, ConfigNotFoundException {
-    try {
-      final SourceOAuthParameter param = oAuthService.getSourceOAuthParameterWithSecrets(workspaceId, sourceDefinitionId);
+    final Optional<SourceOAuthParameter> paramOptional = oAuthService.getSourceOAuthParameterWithSecretsOptional(workspaceId, sourceDefinitionId);
+    if (paramOptional.isPresent()) {
       // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
       // here see https://github.com/airbytehq/airbyte/issues/7624
       // Should already be hydrated.
-      return MoreOAuthParameters.flattenOAuthConfig(param.getConfiguration());
-    } catch (final JsonValidationException e) {
-      throw new IOException("Failed to load OAuth Parameters", e);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      return MoreOAuthParameters.flattenOAuthConfig(paramOptional.get().getConfiguration());
+    } else {
+      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM,
+          String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, sourceDefinitionId));
     }
   }
 
   @VisibleForTesting
   @SuppressWarnings("PMD.PreserveStackTrace")
-  JsonNode getDestinationOAuthParamConfig(final UUID workspaceId, final UUID destinationDefinitionId)
-      throws IOException, ConfigNotFoundException {
-    try {
-      final DestinationOAuthParameter param =
-          oAuthService.getDestinationOAuthParameterWithSecrets(workspaceId, destinationDefinitionId);
-      // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
+  JsonNode getDestinationOAuthParamConfig(final UUID workspaceId, final UUID destinationDefinitionId) throws IOException, ConfigNotFoundException {
+    final Optional<DestinationOAuthParameter> paramOptional =
+        oAuthService.getDestinationOAuthParameterWithSecretsOptional(workspaceId, destinationDefinitionId);
+    if (paramOptional.isPresent()) {
+      // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
       // here see https://github.com/airbytehq/airbyte/issues/7624
-      // Should already be hydrated
-      return MoreOAuthParameters.flattenOAuthConfig(param.getConfiguration());
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-
+      // Should already be hydrated.
+      return MoreOAuthParameters.flattenOAuthConfig(paramOptional.get().getConfiguration());
+    } else {
+      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM,
+          String.format("workspaceId: %s, destinationDefinitionId: %s", workspaceId, destinationDefinitionId));
     }
   }
 
