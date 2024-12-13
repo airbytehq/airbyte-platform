@@ -1,5 +1,6 @@
 package io.airbyte.workload.api
 
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.WorkflowClientWrapped
 import io.airbyte.workload.api.domain.KnownExceptionInfo
@@ -72,6 +73,13 @@ class WorkloadApiTest(
   }
 
   private val workloadClientWrapped = mockk<WorkflowClientWrapped>()
+  private val airbyteApiClient: AirbyteApiClient = mockk()
+
+  @MockBean(AirbyteApiClient::class)
+  @Replaces(AirbyteApiClient::class)
+  fun airbyteApiClient(): AirbyteApiClient {
+    return airbyteApiClient
+  }
 
   @MockBean(WorkflowClientWrapped::class)
   @Replaces(WorkflowClientWrapped::class)
@@ -82,11 +90,11 @@ class WorkloadApiTest(
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
-    every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
-    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-    verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @Test

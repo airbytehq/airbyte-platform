@@ -1,7 +1,6 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.config.ConnectorJobOutput
@@ -42,7 +41,6 @@ class SpecCommand(
       labels = listOf(WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId)),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(Path.of(workloadId)),
-      geography = Geography.AUTO.value,
       type = WorkloadType.SPEC,
       priority = WorkloadPriority.HIGH,
       signalInput = signalPayload,

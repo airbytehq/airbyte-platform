@@ -486,7 +486,6 @@ internal class WorkloadRepositoryTest {
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         mutexKey = mutexKey,
         type = type,
         deadline = deadline,

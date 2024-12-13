@@ -78,7 +78,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "/",
-        geography = "US",
         mutexKey = null,
         type = WorkloadType.SYNC,
         autoId = UUID.randomUUID(),
@@ -112,7 +111,6 @@ class WorkloadHandlerImplTest {
       workloadLabels,
       "input payload",
       "/log/path",
-      "US",
       "mutex-this",
       io.airbyte.config.WorkloadType.SYNC,
       UUID.randomUUID(),
@@ -132,7 +130,6 @@ class WorkloadHandlerImplTest {
             it.workloadLabels!![1].value == workloadLabel2.value &&
             it.inputPayload == "input payload" &&
             it.logPath == "/log/path" &&
-            it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
             it.deadline!! == now.plusHours(2) &&
@@ -146,7 +143,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     }
   }
 
@@ -175,7 +172,7 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -197,7 +194,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "a payload",
         logPath = "/log/path",
-        geography = "US",
         mutexKey = "mutex-this",
         type = WorkloadType.DISCOVER,
       )
@@ -207,7 +203,6 @@ class WorkloadHandlerImplTest {
     assertEquals(WORKLOAD_ID, workloads[0].id)
     assertEquals("a payload", workloads[0].inputPayload)
     assertEquals("/log/path", workloads[0].logPath)
-    assertEquals("US", workloads[0].geography)
     assertEquals("mutex-this", workloads[0].mutexKey)
     assertEquals(io.airbyte.config.WorkloadType.DISCOVER, workloads[0].type)
   }
@@ -799,7 +794,6 @@ class WorkloadHandlerImplTest {
       workloadLabels: List<io.airbyte.workload.repository.domain.WorkloadLabel>? = listOf(),
       inputPayload: String = "",
       logPath: String = "/",
-      geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
@@ -812,7 +806,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         mutexKey = mutexKey,
         type = type,
         createdAt = createdAt,

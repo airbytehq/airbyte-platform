@@ -1,7 +1,6 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
@@ -53,7 +52,6 @@ class CheckCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.checkConnectionInput.actorContext.workspaceId
-    val geo: Geography = getGeography(input.launcherConfig.connectionId, workspaceId)
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -68,7 +66,6 @@ class CheckCommand(
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
-      geography = geo.value,
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,

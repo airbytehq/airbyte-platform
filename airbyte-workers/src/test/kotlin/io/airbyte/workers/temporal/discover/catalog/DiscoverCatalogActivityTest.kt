@@ -5,7 +5,6 @@ package io.airbyte.workers.temporal.discover.catalog
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectionApi
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.config.ActorContext
@@ -131,7 +130,6 @@ class DiscoverCatalogActivityTest {
     } else {
       every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
     }
-    every { discoverCommand.getGeography(connectionId, workspaceId) }.returns(Geography.AUTO)
 
     val output =
       ConnectorJobOutput()

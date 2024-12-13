@@ -58,11 +58,13 @@ import okhttp3.Response
  * <li>3. Integrate failsafe (https://failsafe.dev/) for circuit breaking / retry<li>
  * policies.
  * </ol>
+ *
+ * This needs to be open so that we can wrap it in micronaut test annotations for mock injection in tests.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @Singleton
 @Requires(property = "airbyte.internal-api.base-path")
-class AirbyteApiClient(
+open class AirbyteApiClient(
   @Value("\${airbyte.internal-api.base-path}") basePath: String,
   @Named("airbyteApiClientRetryPolicy") policy: RetryPolicy<Response>,
   @Named("airbyteApiOkHttpClient") httpClient: OkHttpClient,

@@ -1,7 +1,6 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
@@ -92,7 +91,6 @@ class DiscoverCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.discoverCatalogInput.actorContext.workspaceId
-    val geo: Geography = getGeography(input.launcherConfig.connectionId, workspaceId)
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -106,7 +104,6 @@ class DiscoverCommand(
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
-      geography = geo.value,
       type = WorkloadType.DISCOVER,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,

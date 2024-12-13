@@ -16,7 +16,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
@@ -66,7 +65,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
   private final ReplicationInputMapper replicationInputMapper;
   private final Path workspaceRoot;
-  private final AirbyteApiClient airbyteApiClient;
   private final WorkloadApiClient workloadApiClient;
   private final WorkloadClient workloadClient;
   private final JobOutputDocStore jobOutputDocStore;
@@ -79,7 +77,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
   public AsyncReplicationActivityImpl(
                                       @Named("workspaceRoot") final Path workspaceRoot,
-                                      final AirbyteApiClient airbyteApiClient,
                                       final JobOutputDocStore jobOutputDocStore,
                                       final WorkloadApiClient workloadApiClient,
                                       final WorkloadClient workloadClient,
@@ -91,7 +88,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                       final LogClientManager logClientManager) {
     this.replicationInputMapper = new ReplicationInputMapper();
     this.workspaceRoot = workspaceRoot;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -106,7 +102,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
   @VisibleForTesting
   AsyncReplicationActivityImpl(final ReplicationInputMapper replicationInputMapper,
                                @Named("workspaceRoot") final Path workspaceRoot,
-                               final AirbyteApiClient airbyteApiClient,
                                final JobOutputDocStore jobOutputDocStore,
                                final WorkloadApiClient workloadApiClient,
                                final WorkloadClient workloadClient,
@@ -118,7 +113,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                final LogClientManager logClientManager) {
     this.replicationInputMapper = replicationInputMapper;
     this.workspaceRoot = workspaceRoot;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -254,8 +248,8 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final WorkloadApiWorker worker;
 
     replicationInput = replicationInputMapper.toReplicationInput(replicationActivityInput);
-    worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-        workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
+    worker = new WorkloadApiWorker(jobOutputDocStore, workloadApiClient,
+        workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
 
     return new WorkerAndReplicationInput(worker, replicationInput);
   }

@@ -40,7 +40,6 @@ class ReplicationActivityTest {
         replicationInputMapper,
         workspaceRoot,
         airbyteVersion,
-        airbyteApiClient,
         jobOutputDocStore,
         workloadApiClient,
         workloadClient,

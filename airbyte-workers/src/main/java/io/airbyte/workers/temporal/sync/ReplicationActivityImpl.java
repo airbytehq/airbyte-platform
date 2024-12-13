@@ -16,7 +16,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -71,7 +70,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final ReplicationInputMapper replicationInputMapper;
   private final Path workspaceRoot;
   private final String airbyteVersion;
-  private final AirbyteApiClient airbyteApiClient;
   private final WorkloadApiClient workloadApiClient;
   private final WorkloadClient workloadClient;
   private final JobOutputDocStore jobOutputDocStore;
@@ -85,7 +83,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   public ReplicationActivityImpl(
                                  @Named("workspaceRoot") final Path workspaceRoot,
                                  @Value("${airbyte.version}") final String airbyteVersion,
-                                 final AirbyteApiClient airbyteApiClient,
                                  final JobOutputDocStore jobOutputDocStore,
                                  final WorkloadApiClient workloadApiClient,
                                  final WorkloadClient workloadClient,
@@ -98,7 +95,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.replicationInputMapper = new ReplicationInputMapper();
     this.workspaceRoot = workspaceRoot;
     this.airbyteVersion = airbyteVersion;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -114,7 +110,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   ReplicationActivityImpl(final ReplicationInputMapper replicationInputMapper,
                           @Named("workspaceRoot") final Path workspaceRoot,
                           @Value("${airbyte.version}") final String airbyteVersion,
-                          final AirbyteApiClient airbyteApiClient,
                           final JobOutputDocStore jobOutputDocStore,
                           final WorkloadApiClient workloadApiClient,
                           final WorkloadClient workloadClient,
@@ -127,7 +122,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.replicationInputMapper = replicationInputMapper;
     this.workspaceRoot = workspaceRoot;
     this.airbyteVersion = airbyteVersion;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -236,8 +230,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     final WorkloadApiWorker worker;
 
     replicationInput = replicationInputMapper.toReplicationInput(replicationActivityInput);
-    worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-        workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
+    worker = new WorkloadApiWorker(jobOutputDocStore, workloadApiClient,
+        workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
 
     return new WorkerAndReplicationInput(worker, replicationInput);
   }

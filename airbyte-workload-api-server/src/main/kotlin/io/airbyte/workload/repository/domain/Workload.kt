@@ -41,7 +41,6 @@ data class Workload(
   var workloadLabels: List<WorkloadLabel>?,
   var inputPayload: String,
   var logPath: String,
-  var geography: String,
   @Nullable
   var mutexKey: String?,
   @field:TypeDef(type = DataType.OBJECT)
@@ -65,7 +64,6 @@ data class Workload(
     workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
     logPath: String,
-    geography: String,
     mutexKey: String,
     type: WorkloadType,
     signalInput: String,
@@ -76,7 +74,6 @@ data class Workload(
     workloadLabels = workloadLabels,
     inputPayload = inputPayload,
     logPath = logPath,
-    geography = geography,
     mutexKey = mutexKey,
     type = type,
     lastHeartbeatAt = null,

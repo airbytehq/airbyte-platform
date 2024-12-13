@@ -4,7 +4,6 @@
 package io.airbyte.workers.temporal.check.connection
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.config.ActorContext
@@ -68,7 +67,6 @@ class CheckConnectionActivityTest {
 
     every { featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds, any()) } returns WORKLOAD_CHECK_FREQUENCY_IN_SECONDS
     every { workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT) } returns WORKLOAD_ID
-    every { checkCommand.getGeography(CONNECTION_ID, WORKSPACE_ID) } returns Geography.US
     every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args[0].toString(), DEFAULT_LOG_FILENAME).toString() }
 
     mockkStatic(Activity::class)

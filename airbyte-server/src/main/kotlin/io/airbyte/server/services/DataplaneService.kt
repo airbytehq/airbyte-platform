@@ -16,6 +16,7 @@ import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.CloudProvider
 import io.airbyte.featureflag.CloudProviderRegion
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.GeographicRegion
 import io.airbyte.featureflag.Multi
@@ -36,11 +37,46 @@ class DataplaneService(
   private val featureFlagClient: FeatureFlagClient,
   private val scopedConfigurationService: ScopedConfigurationService,
 ) {
+  /**
+   * Get queue name from given data. Pulled from the WorkloadService.
+   */
+  fun getQueueName(
+    connectionId: UUID?,
+    actorType: ActorType?,
+    actorId: UUID?,
+    workspaceId: UUID?,
+    priority: @NotNull WorkloadPriority,
+  ): String {
+    val connection = connectionId?.let { connectionService.getStandardSync(connectionId) }
+    val resolvedWorkspaceId = workspaceId ?: resolveWorkspaceId(connection, actorType, actorId)
+    val geography = getGeography(connection, resolvedWorkspaceId)
+
+    val context =
+      when (hasNetworkSecurityTokenConfig(resolvedWorkspaceId)) {
+        true -> {
+          buildNetworkSecurityTokenFeatureFlagContext(
+            workspaceId = resolvedWorkspaceId,
+            connectionId = connectionId,
+            geography = geography,
+          )
+        }
+        false -> {
+          buildFeatureFlagContext(
+            workspaceId = resolvedWorkspaceId,
+            connectionId = connectionId,
+            geography = geography,
+            priority = priority,
+          )
+        }
+      }
+    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
+  }
+
   private fun resolveWorkspaceId(
     connection: StandardSync?,
     actorType: ActorType?,
     actorId: UUID?,
-  ): UUID {
+  ): UUID? {
     return connection?.let {
       destinationService.getDestinationConnection(connection.destinationId).workspaceId
     } ?: actorType?.let {
@@ -49,12 +85,6 @@ class DataplaneService(
         ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
         else -> null
       }
-    } ?: run {
-      throw BadRequestProblem(
-        ProblemMessageData().message(
-          "Unable to resolve workspace id for connection [${connection?.connectionId}], actor [${actorType?.name}], actorId [$actorId]",
-        ),
-      )
     }
   }
 
@@ -76,65 +106,73 @@ class DataplaneService(
     }
   }
 
-  /**
-   * Get queue name from given data. Pulled from the WorkloadService.
-   */
-  fun getQueueName(
-    connectionId: UUID?,
-    actorType: ActorType?,
-    actorId: UUID?,
-    workspaceId: UUID?,
-    priority: @NotNull WorkloadPriority,
-  ): String {
-    val connection = connectionId?.let { connectionService.getStandardSync(connectionId) }
-    val resolvedWorkspaceId = workspaceId ?: resolveWorkspaceId(connection, actorType, actorId)
-    val geography = getGeography(connection, resolvedWorkspaceId)
-
-    getQueueWithScopedConfig(resolvedWorkspaceId, connectionId, geography)?.let {
-      return it
-    }
-
-    val context = mutableListOf(io.airbyte.featureflag.Geography(geography.toString()), Workspace(resolvedWorkspaceId))
-    if (WorkloadPriority.HIGH == priority) {
-      context.add(Priority(HIGH_PRIORITY))
-    }
-    connectionId?.let {
-      context.add(Connection(it))
-    }
-
-    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
-  }
-
-  private fun getQueueWithScopedConfig(
-    workspaceId: UUID,
-    connectionId: UUID?,
-    geography: Geography,
-  ): String? {
-    val scopedConfigs =
+  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean {
+    return workspaceId?.let {
       scopedConfigurationService.getScopedConfigurations(
         NetworkSecurityTokenKey,
         mapOf(ConfigScopeType.WORKSPACE to workspaceId),
-      )
+      ).isNotEmpty()
+    } ?: false
+  }
 
-    // Very hardcoded for now
+  /**
+   * Build the feature flag context for network security token.
+   * Uses geographic region (new).
+   */
+  private fun buildNetworkSecurityTokenFeatureFlagContext(
+    workspaceId: UUID?,
+    connectionId: UUID?,
+    geography: Geography,
+    priority: WorkloadPriority = WorkloadPriority.DEFAULT,
+  ): MutableList<Context> {
     val context =
       mutableListOf(
-        CloudProvider(CloudProvider.AWS),
         GeographicRegion(geography.toGeographicRegion()),
-        Workspace(workspaceId.toString()),
+        CloudProvider(CloudProvider.AWS),
         CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
       )
 
+    workspaceId?.let {
+      context.add(Workspace(workspaceId))
+    }
+
     connectionId?.let {
-      context.add(Connection(it))
+      context.add(Connection(connectionId))
     }
 
-    if (scopedConfigs.isNotEmpty()) {
-      return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
+    if (WorkloadPriority.HIGH == priority) {
+      context.add(Priority(HIGH_PRIORITY))
     }
 
-    return null
+    return context
   }
+}
+
+/**
+ * Builds the old feature flag context for routing.
+ * Uses geography.
+ */
+private fun buildFeatureFlagContext(
+  workspaceId: UUID?,
+  connectionId: UUID?,
+  geography: Geography,
+  priority: WorkloadPriority = WorkloadPriority.DEFAULT,
+): MutableList<Context> {
+  val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
+
+  workspaceId?.let {
+    context.add(Workspace(workspaceId))
+  }
+
+  connectionId?.let {
+    context.add(Connection(connectionId))
+  }
+
+  if (WorkloadPriority.HIGH == priority) {
+    context.add(Priority(HIGH_PRIORITY))
+  }
+
+  return context
 }
 
 fun Geography.toGeographicRegion(): String {

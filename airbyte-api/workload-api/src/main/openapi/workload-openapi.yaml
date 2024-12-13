@@ -449,7 +449,6 @@ components:
           nullable: true
     WorkloadCreateRequest:
       required:
-      - geography
       - labels
       - logPath
       - priority
@@ -467,8 +466,6 @@ components:
         workloadInput:
           type: string
         logPath:
-          type: string
-        geography:
           type: string
         mutexKey:
           type: string

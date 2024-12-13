@@ -92,7 +92,6 @@ internal class WorkloadApiWorkerTest {
     workloadApiWorker =
       WorkloadApiWorker(
         jobOutputDocStore,
-        apiClient,
         workloadApiClient,
         WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
