@@ -150,6 +150,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   // when setValue is called on a parent path in a way that changes the value of this field.
   const { fieldValue, isPreview } = useWatchWithPreview({ name: path });
 
+  const isPreviewRef = useRef(isPreview);
+  isPreviewRef.current = isPreview;
+
   const hasError = !!fieldState.error;
 
   const { label, tooltip } = getLabelAndTooltip(
@@ -221,7 +224,19 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           key={path}
           name={field.name}
           value={fieldValue || ""}
-          onChange={setValue}
+          onChange={(newValue) => {
+            // Monaco editor triggers onChange whenever the value is changed, whether by the user or by
+            // changing the value passed to the "value" prop above.
+            // Because we show preview values by changing the value prop, but we don't want to actually
+            // commit that preview value back to the form, we don't want to call setValue in that case.
+            // So, we use a ref to track the current value of isPreview (because onChange gets called
+            // on the old instance of the component which has the old value of isPreview), and if the
+            // current value is true, then we don't commit the change back to the form.
+            if (isPreviewRef.current) {
+              return;
+            }
+            setValue(newValue);
+          }}
           onBlur={(value) => {
             field.onBlur();
             props.onBlur?.(value);
@@ -284,6 +299,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             value={fieldValue || ""}
             language="json"
             onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
               setValue(val);
             }}
             disabled={isDisabled}
