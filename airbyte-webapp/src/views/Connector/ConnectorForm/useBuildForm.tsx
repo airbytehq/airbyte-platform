@@ -37,17 +37,8 @@ export function setDefaultValues(
     if (property.const && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.const;
     }
-    if ("default" in property) {
-      if (!options.respectExistingValues || values[property.fieldKey] === undefined) {
-        // set the default value needs to be applied to the field
-        values[property.fieldKey] = property.default;
-      } else if (
-        "enum" in property &&
-        !property.enum!.includes(values[property.fieldKey] as Exclude<typeof property.enum, undefined>[number])
-      ) {
-        // the existing value isn't valid for this enum, apply the default
-        values[property.fieldKey] = property.default;
-      }
+    if ("default" in property && (!options.respectExistingValues || values[property.fieldKey] === undefined)) {
+      values[property.fieldKey] = property.default;
     }
     switch (property._type) {
       case "formGroup":
