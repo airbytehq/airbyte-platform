@@ -2,6 +2,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationPaymentConfigApi
 import io.airbyte.api.model.generated.OrganizationPaymentConfigRead
+import io.airbyte.api.model.generated.OrganizationPaymentConfigUpdateRequestBody
 import io.airbyte.api.problems.ResourceType
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
@@ -13,21 +14,17 @@ import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.config.OrganizationPaymentConfig.UsageCategoryOverride
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.UUID
 import io.airbyte.data.services.OrganizationPaymentConfigService as OrganizationPaymentConfigRepository
-import io.airbyte.data.services.OrganizationService as OrganizationRepository
 
 private val UTC = ZoneId.of("UTC")
 
@@ -35,7 +32,6 @@ private val UTC = ZoneId.of("UTC")
 open class OrganizationPaymentConfigController(
   private val organizationService: OrganizationService,
   private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
-  private val organizationRepository: OrganizationRepository,
 ) : OrganizationPaymentConfigApi {
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")
@@ -47,21 +43,6 @@ open class OrganizationPaymentConfigController(
       ?: throw ResourceNotFoundProblem(
         ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
       )
-
-  @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
-  @Delete("/{organizationId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Status(HttpStatus.NO_CONTENT)
-  override fun deleteOrganizationPaymentConfig(
-    @PathVariable("organizationId") organizationId: UUID,
-  ) {
-    if (organizationPaymentConfigRepository.findByOrganizationId(organizationId) == null) {
-      throw ResourceNotFoundProblem(
-        ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
-      )
-    }
-    organizationPaymentConfigRepository.deletePaymentConfig(organizationId)
-  }
 
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Post("/{organizationId}/end_grace_period")
@@ -76,14 +57,21 @@ open class OrganizationPaymentConfigController(
   @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateOrganizationPaymentConfig(
-    @Body organizationPaymentConfigUpdateRequestBody: OrganizationPaymentConfigRead,
+    @Body requestBody: OrganizationPaymentConfigUpdateRequestBody,
   ): OrganizationPaymentConfigRead {
-    val orgId = organizationPaymentConfigUpdateRequestBody.organizationId
-    if (organizationRepository.getOrganization(orgId).isEmpty) {
-      throw ResourceNotFoundProblem(ProblemResourceData().resourceId(orgId.toString()).resourceType(ResourceType.ORGANIZATION))
+    val existingConfig =
+      organizationPaymentConfigRepository.findByOrganizationId(requestBody.organizationId) ?: throw ResourceNotFoundProblem(
+        ProblemResourceData().resourceId(requestBody.organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
+      )
+
+    existingConfig.apply {
+      paymentProviderId = requestBody.paymentProviderId
+      paymentStatus = PaymentStatus.fromValue(requestBody.paymentStatus.value())
+      usageCategoryOverride = requestBody.usageCategoryOverwrite?.let { UsageCategoryOverride.fromValue(it.value()) }
     }
-    organizationPaymentConfigRepository.savePaymentConfig(organizationPaymentConfigUpdateRequestBody.toConfigModel())
-    return getOrganizationPaymentConfig(orgId)
+
+    organizationPaymentConfigRepository.savePaymentConfig(existingConfig)
+    return getOrganizationPaymentConfig(requestBody.organizationId)
   }
 }
 
@@ -91,15 +79,7 @@ private fun OrganizationPaymentConfig.toApiModel(): OrganizationPaymentConfigRea
   OrganizationPaymentConfigRead()
     .organizationId(this.organizationId)
     .paymentStatus(OrganizationPaymentConfigRead.PaymentStatusEnum.fromValue(this.paymentStatus.value()))
+    .subscriptionStatus(OrganizationPaymentConfigRead.SubscriptionStatusEnum.fromValue(this.subscriptionStatus.value()))
     .paymentProviderId(this.paymentProviderId)
     .gracePeriodEndAt(this.gracePeriodEndAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), UTC) })
     .usageCategoryOverwrite(this.usageCategoryOverride?.let { OrganizationPaymentConfigRead.UsageCategoryOverwriteEnum.fromValue(it.value()) })
-
-private fun OrganizationPaymentConfigRead.toConfigModel(): OrganizationPaymentConfig =
-  OrganizationPaymentConfig().also {
-    it.organizationId = this.organizationId
-    it.paymentStatus = PaymentStatus.fromValue(this.paymentStatus.value())
-    it.paymentProviderId = this.paymentProviderId
-    it.gracePeriodEndAt = this.gracePeriodEndAt?.toEpochSecond()
-    it.usageCategoryOverride = this.usageCategoryOverwrite?.let { UsageCategoryOverride.fromValue(it.value()) }
-  }

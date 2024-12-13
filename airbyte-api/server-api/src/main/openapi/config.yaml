@@ -4818,26 +4818,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-    delete:
-      summary: Delete an organization payment config
-      tags:
-        - organization_payment_config
-        - billing
-        - cloud-only
-        - admin-api
-      operationId: deleteOrganizationPaymentConfig
-      parameters:
-        - in: path
-          name: organizationId
-          schema:
-            type: string
-            format: uuid
-          required: true
-      responses:
-        "204":
-          description: Successfully deleted organization payment config
-        "404":
-          description: Payment config didn't exist
   /v1/organization_payment_config:
     post:
       summary: Create or update an organization payment config
@@ -11390,6 +11370,40 @@ components:
       required:
         - organizationId
         - paymentStatus
+        - subscriptionStatus
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum:
+            - uninitialized
+            - okay
+            - grace_period
+            - disabled
+            - locked
+            - manual
+        subscriptionStatus:
+          type: string
+          enum:
+            - pre_subscription
+            - subscribed
+            - unsubscribed
+        paymentProviderId:
+          type: string
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        usageCategoryOverwrite:
+          type: string
+          enum:
+            - free
+            - internal
+    OrganizationPaymentConfigUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - paymentStatus
       properties:
         organizationId:
           type: string
@@ -11405,16 +11419,11 @@ components:
             - manual
         paymentProviderId:
           type: string
-        gracePeriodEndAt:
-          $ref: "#/components/schemas/ISO8601DateTime"
         usageCategoryOverwrite:
           type: string
           enum:
             - free
             - internal
-    OrganizationPaymentConfigUpdateRequestBody:
-      $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-
     # ORGANIZATIONS
     OrganizationId:
       type: string
