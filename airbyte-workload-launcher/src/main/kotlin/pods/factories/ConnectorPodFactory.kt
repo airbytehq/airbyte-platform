@@ -29,6 +29,7 @@ data class ConnectorPodFactory(
   private val connectorEnvVars: List<EnvVar>,
   private val sideCarEnvVars: List<EnvVar>,
   private val sidecarContainerInfo: KubeContainerInfo,
+  private val serviceAccount: String?,
   private val volumeFactory: VolumeFactory,
   private val initContainerFactory: InitContainerFactory,
   private val connectorArgs: Map<String, String>,
@@ -63,6 +64,7 @@ data class ConnectorPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withContainers(sidecar, main)

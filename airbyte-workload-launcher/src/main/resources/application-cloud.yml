@@ -15,3 +15,7 @@ micronaut:
 airbyte:
   workload-launcher:
     network-policy-introspection: true
+  worker:
+    job:
+      kube:
+        serviceAccount: airbyte-admin # TODO - update this once we know how to separate cloud and SME

@@ -10,6 +10,7 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -21,6 +22,7 @@ data class ReplicationPodFactory(
   private val replContainerFactory: ReplicationContainerFactory,
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
+  @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   private val nodeSelectionFactory: NodeSelectionFactory,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
 ) {
@@ -83,6 +85,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
@@ -146,6 +149,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)

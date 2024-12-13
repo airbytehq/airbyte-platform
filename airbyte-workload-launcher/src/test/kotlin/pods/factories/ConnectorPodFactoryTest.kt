@@ -148,6 +148,7 @@ class ConnectorPodFactoryTest {
         connectorEnvVars = emptyList(),
         sideCarEnvVars = emptyList(),
         sidecarContainerInfo = KubeContainerInfo("sidecar-image", "Always"),
+        serviceAccount = "test-sa",
         volumeFactory = defaultVolumeFactory,
         initContainerFactory =
           InitContainerFactory(
