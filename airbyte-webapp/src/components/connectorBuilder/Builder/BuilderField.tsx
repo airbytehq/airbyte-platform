@@ -61,7 +61,12 @@ interface BaseFieldProps {
 
 export type BuilderFieldProps = BaseFieldProps &
   (
-    | { type: "jinja"; onChange?: (newValue: string) => void; onBlur?: (value: string) => void }
+    | {
+        type: "jinja";
+        onChange?: (newValue: string) => void;
+        onBlur?: (value: string) => void;
+        bubbleUpUndoRedo?: boolean;
+      }
     | {
         type: "string" | "number" | "integer";
         onChange?: (newValue: string) => void;
@@ -244,6 +249,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           disabled={isDisabled}
           manifestPath={manifestPath}
           error={hasError}
+          bubbleUpUndoRedo={props.bubbleUpUndoRedo}
         />
       )}
       {(props.type === "string" || props.type === "number" || props.type === "integer") && (

@@ -319,6 +319,7 @@ const AddStreamForm = ({
               type="jinja"
               label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
               tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+              bubbleUpUndoRedo={false}
             />
           )}
           {/* Only allow to copy from another stream within the modal if there aren't initial values set already and there are other streams */}

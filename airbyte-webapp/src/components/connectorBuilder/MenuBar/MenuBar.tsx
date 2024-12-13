@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { isAnyModalOpen, isElementInModal } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -29,9 +30,38 @@ export const MenuBar: React.FC = () => {
   } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
 
+  // The browser default undo/redo behavior maintains a stack of all edited fields, and
+  // as the user continues to undo/redo, it will continue to apply it to the next input
+  // in the stack, regardless of whether the input is in a modal or not.
+  // This is problematic because while we want the default browser undo/redo behavior for
+  // inputs in modals, we don't want the browser undo/redo to bubble up to the non-modal
+  // inputs.
+  // This solves the issue by listening for the browser undo/redo event, and checking if
+  // the target input is inside of a modal. We allow the default behavior if so, and
+  // prevent the default behavior if not.
+  useEffect(() => {
+    window.addEventListener("beforeinput", (event) => {
+      if (
+        (event.inputType === "historyUndo" || event.inputType === "historyRedo") &&
+        event.target instanceof Element &&
+        !isElementInModal(event.target)
+      ) {
+        event.preventDefault();
+      }
+    });
+  }, []);
+
   useHotkeys(
     ["ctrl+z", "meta+z"],
     (event) => {
+      // If a modal is open, we want the default browser undo behavior, so prevent
+      // the Builder's undo from firing.
+      // This can not be combined with the "beforeinput" event listener, because that
+      // event is not fired when the user presses ctrl+z in fields that use monaco editors,
+      // since monaco editors are not native inputs.
+      if (isAnyModalOpen()) {
+        return;
+      }
       event.preventDefault();
       undo();
     },
@@ -41,6 +71,14 @@ export const MenuBar: React.FC = () => {
   useHotkeys(
     ["ctrl+shift+z", "meta+shift+z"],
     (event) => {
+      // If a modal is open, we want the default browser redo behavior, so prevent
+      // the Builder's redo from firing.
+      // This can not be combined with the "beforeinput" event listener, because that
+      // event is not fired when the user presses ctrl+shift+z in fields that use monaco
+      // editors, since monaco editors are not native inputs.
+      if (isAnyModalOpen()) {
+        return;
+      }
       event.preventDefault();
       redo();
     },

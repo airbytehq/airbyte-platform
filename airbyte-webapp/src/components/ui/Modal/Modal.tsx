@@ -36,6 +36,9 @@ const cardStyleBySize = {
   full: styles.full,
 };
 
+const MODAL_ATTRIBUTE = "data-airbyte-modal";
+const MODAL_SELECTOR = `[${MODAL_ATTRIBUTE}]`;
+
 export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   children,
   title,
@@ -74,6 +77,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
         className={classNames(styles.modalContainer, {
           [styles["modalContainer--noSidebarOffset"]]: size === "full",
         })}
+        {...{ [MODAL_ATTRIBUTE]: true }}
       >
         <DialogPanel className={styles.modalPanel}>
           {cardless ? (
@@ -104,4 +108,12 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
       </Wrapper>
     </Dialog>
   );
+};
+
+export const isElementInModal = (element: Element) => {
+  return !!element.closest(MODAL_SELECTOR);
+};
+
+export const isAnyModalOpen = () => {
+  return !!document.querySelector(MODAL_SELECTOR);
 };
