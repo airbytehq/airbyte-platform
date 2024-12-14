@@ -1007,11 +1007,6 @@ describe("Connector form", () => {
         },
       });
     }
-    it("should render regular inputs for auth fields", async () => {
-      const container = await renderNewOAuthForm({ disableOAuth: true });
-      expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
-      expect(getOAuthButton(container)).not.toBeInTheDocument();
-    });
 
     it("should render the oauth button", async () => {
       const container = await renderNewOAuthForm();

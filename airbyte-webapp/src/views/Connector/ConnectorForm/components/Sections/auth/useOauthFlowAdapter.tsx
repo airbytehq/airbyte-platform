@@ -14,7 +14,7 @@ import { useAuthentication } from "views/Connector/ConnectorForm/useAuthenticati
 import { useNotificationService } from "../../../../../../hooks/services/Notification";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { ConnectorFormValues } from "../../../types";
-import { makeConnectionConfigurationPath, serverProvidedOauthPaths } from "../../../utils";
+import { makeConnectionConfigurationPath, serverProvidedOauthPaths, userProvidedOauthInputPaths } from "../../../utils";
 
 interface Credentials {
   credentials: AdvancedAuth;
@@ -74,12 +74,7 @@ function useFormOauthAdapter(
     done: done || hasAuthFieldValues,
     hasRun,
     run: async () => {
-      const oauthInputProperties =
-        (
-          connector?.advancedAuth?.oauthConfigSpecification?.oauthUserInputFromConnectorConfigSpecification as {
-            properties: Array<{ path_in_connector_config: string[] }>;
-          }
-        )?.properties ?? {};
+      const oauthInputProperties = userProvidedOauthInputPaths(connector);
 
       if (!isEmpty(oauthInputProperties)) {
         const oauthInputFields =

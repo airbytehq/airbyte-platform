@@ -9317,7 +9317,7 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
-        advancedAuthCredentialsAvailable:
+        advancedAuthGlobalCredentialsAvailable:
           type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"
@@ -9762,7 +9762,7 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
-        advancedAuthCredentialsAvailable:
+        advancedAuthGlobalCredentialsAvailable:
           type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"

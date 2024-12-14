@@ -22,7 +22,7 @@ export type ConnectorDefinitionOrEnterpriseStub = ConnectorDefinition | Enterpri
 
 export type SourceDefinitionSpecificationDraft = Pick<
   SourceDefinitionSpecificationRead,
-  "documentationUrl" | "connectionSpecification" | "advancedAuth"
+  "documentationUrl" | "connectionSpecification" | "advancedAuth" | "advancedAuthGlobalCredentialsAvailable"
 >;
 
 export type ConnectorDefinitionSpecificationRead =
