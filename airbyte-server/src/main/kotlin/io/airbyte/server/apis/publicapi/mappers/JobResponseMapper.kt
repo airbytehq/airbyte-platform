@@ -16,6 +16,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -63,10 +64,10 @@ object JobResponseMapper {
           }
         },
       // set to string for now since the jax-rs response entity turns offsetdatetime into epoch seconds
-      startTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC).toString(),
+      startTime = DateTimeFormatter.ISO_DATE_TIME.format(OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC)),
       lastUpdatedAt =
         if (TERMINAL_JOB_STATUS.contains(jobRead.status)) {
-          OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC).toString()
+          DateTimeFormatter.ISO_DATE_TIME.format(OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC))
         } else {
           null
         },
