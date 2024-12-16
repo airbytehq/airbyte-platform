@@ -230,4 +230,20 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
     return ApiHelper.execute(() -> connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeRequestBody));
   }
 
+  @SuppressWarnings("LineLength")
+  @Post("/manual_pause")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutResponse manualPauseConnectorRollout(@Body final ConnectorRolloutUpdateStateRequestBody connectorRolloutPauseRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead updatedConnectorRollout =
+          connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutPauseRequestBody);
+
+      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
+      response.setData(updatedConnectorRollout);
+      return response;
+    });
+  }
+
 }

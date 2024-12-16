@@ -8,6 +8,7 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -39,6 +40,12 @@ interface ConnectorRolloutWorkflow {
 
   @UpdateValidatorMethod(updateName = "getRollout")
   fun getRolloutValidator(input: ConnectorRolloutActivityInputGet)
+
+  @UpdateMethod
+  fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput
+
+  @UpdateValidatorMethod(updateName = "pauseRollout")
+  fun pauseRolloutValidator(input: ConnectorRolloutActivityInputPause)
 
   @UpdateMethod
   fun progressRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput

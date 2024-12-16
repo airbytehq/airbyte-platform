@@ -6,6 +6,7 @@ package io.airbyte.connector.rollout.client
 
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -96,6 +97,11 @@ class ConnectorRolloutClient
     fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
       return executeUpdate(input, workflowId) { stub, i -> stub.progressRollout(i) }
+    }
+
+    fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+      return executeUpdate(input, workflowId) { stub, i -> stub.pauseRollout(i) }
     }
 
     fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize) {

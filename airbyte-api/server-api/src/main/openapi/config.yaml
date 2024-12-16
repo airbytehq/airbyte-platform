@@ -5494,6 +5494,30 @@ paths:
       tags:
         - connector_rollout
 
+  /v1/connector_rollout/manual_pause:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateStateRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update rollout state to paused
+      operationId: manualPauseConnectorRollout
+      tags:
+        - connector_rollout
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -7605,6 +7629,8 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
         actor_selection_info:
@@ -7812,6 +7838,11 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutFinalizeRequestBody:
       type: object

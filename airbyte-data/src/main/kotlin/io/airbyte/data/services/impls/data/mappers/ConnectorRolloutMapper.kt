@@ -77,6 +77,7 @@ fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout {
     .withExpiresAt(this.expiresAt?.toEpochSecond())
     .withErrorMsg(this.errorMsg)
     .withFailedReason(this.failedReason)
+    .withPausedReason(this.pausedReason)
 }
 
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout {
@@ -100,5 +101,6 @@ fun ModelConnectorRollout.toEntity(): EntityConnectorRollout {
     expiresAt = this.expiresAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
+    pausedReason = this.pausedReason,
   )
 }

@@ -31,11 +31,11 @@ class RolloutProgressionDecider {
     val nActorsPinned = actorSelectionInfo.getNumPinnedToConnectorRollout()
     val actorSyncs = connectorRolloutOutput.actorSyncs!!
 
-    // If any syncs have failed, we pause the rollout so the dev can decide the next steps
-    // For now, they will have to manually pin & monitor if they want to proceed with the rollout
-    // TODO: in the future, we will fail the rollout
     val nFailedSyncs = actorSyncs.values.sumOf { it.getNumFailed() }
     if (nFailedSyncs > 0) {
+      // If any syncs have failed, we pause the rollout so the dev can decide the next steps
+      // For now, they will have to manually pin & monitor if they want to proceed with the rollout
+      // TODO: in the future, we will fail the rollout
       val decision = Decision.PAUSE
       logger.info { "RolloutProgressionDecider.decide: nFailedSyncs=$nFailedSyncs decision=decision" }
       return decision

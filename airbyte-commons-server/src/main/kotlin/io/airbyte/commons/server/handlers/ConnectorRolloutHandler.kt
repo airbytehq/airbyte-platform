@@ -32,6 +32,7 @@ import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTIO
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_MAX_ROLLOUT_PERCENTAGE
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.data.exceptions.InvalidRequestException
@@ -101,6 +102,7 @@ open class ConnectorRolloutHandler
           .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
           .errorMsg(connectorRollout.errorMsg)
           .failedReason(connectorRollout.failedReason)
+          .pausedReason(connectorRollout.pausedReason)
           .updatedBy(
             connectorRollout.rolloutStrategy?.let { strategy ->
               connectorRollout.updatedBy?.let { updatedBy ->
@@ -109,8 +111,6 @@ open class ConnectorRolloutHandler
             },
           ).completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
           .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
-          .errorMsg(connectorRollout.errorMsg)
-          .failedReason(connectorRollout.failedReason)
 
       if (withActorSyncAndSelectionInfo) {
         val pinnedActorInfo = getPinnedActorInfo(connectorRollout.id)
@@ -439,6 +439,7 @@ open class ConnectorRolloutHandler
       state: ConnectorEnumRolloutState,
       errorMsg: String?,
       failedReason: String?,
+      pausedReason: String?,
     ): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(id)
       val invalidUpdateStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
@@ -454,6 +455,7 @@ open class ConnectorRolloutHandler
         .withState(state)
         .withErrorMsg(errorMsg)
         .withFailedReason(failedReason)
+        .withPausedReason(pausedReason)
     }
 
     private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime = Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
@@ -545,6 +547,7 @@ open class ConnectorRolloutHandler
           ConnectorEnumRolloutState.fromValue(connectorRolloutUpdateStateRequestBody.state.toString()),
           connectorRolloutUpdateStateRequestBody.errorMsg,
           connectorRolloutUpdateStateRequestBody.failedReason,
+          connectorRolloutUpdateStateRequestBody.pausedReason,
         )
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return buildConnectorRolloutRead(updatedConnectorRollout, true)
@@ -716,6 +719,57 @@ open class ConnectorRolloutHandler
       val response = ConnectorRolloutManualFinalizeResponse()
       response.status("ok")
       return response
+    }
+
+    open fun manualPauseConnectorRollout(connectorRolloutPause: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
+      // Start a workflow if one doesn't exist
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)
+
+      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
+        try {
+          connectorRolloutClient.startRollout(
+            ConnectorRolloutWorkflowInput(
+              connectorRolloutPause.dockerRepository,
+              connectorRolloutPause.dockerImageTag,
+              connectorRolloutPause.actorDefinitionId,
+              connectorRolloutPause.id,
+              connectorRolloutPause.updatedBy,
+              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
+              connectorRollout,
+              getPinnedActorInfo(connectorRollout.id),
+              getActorSyncInfo(connectorRollout.id),
+              waitBetweenRolloutSeconds = waitBetweenRolloutSeconds,
+              waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
+              rolloutExpirationSeconds = rolloutExpirationSeconds,
+            ),
+          )
+        } catch (e: WorkflowUpdateException) {
+          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
+        }
+      }
+      logger.info {
+        "Pausing rollout for ${connectorRolloutPause.id}; " +
+          "dockerRepository=${connectorRolloutPause.dockerRepository}" +
+          "dockerImageTag=${connectorRolloutPause.dockerImageTag}" +
+          "actorDefinitionId=${connectorRolloutPause.actorDefinitionId}"
+      }
+      try {
+        connectorRolloutClient.pauseRollout(
+          ConnectorRolloutActivityInputPause(
+            connectorRolloutPause.dockerRepository,
+            connectorRolloutPause.dockerImageTag,
+            connectorRolloutPause.actorDefinitionId,
+            connectorRolloutPause.id,
+            connectorRolloutPause.pausedReason,
+            connectorRolloutPause.updatedBy,
+            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+          ),
+        )
+      } catch (e: WorkflowUpdateException) {
+        throw throwAirbyteApiClientExceptionIfExists("pauseRollout", e)
+      }
+      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)!!, false)
     }
 
     private fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {

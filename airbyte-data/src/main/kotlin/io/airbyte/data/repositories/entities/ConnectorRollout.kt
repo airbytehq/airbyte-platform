@@ -44,4 +44,6 @@ data class ConnectorRollout(
   var errorMsg: String? = null,
   @Nullable
   var failedReason: String? = null,
+  @Nullable
+  var pausedReason: String? = null,
 )

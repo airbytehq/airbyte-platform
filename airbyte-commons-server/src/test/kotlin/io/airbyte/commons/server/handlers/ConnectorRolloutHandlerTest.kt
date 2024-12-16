@@ -7,8 +7,10 @@ import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutState
 import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
+import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.config.ActorDefinitionVersion
@@ -925,7 +927,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
 
     val result =
-      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.FINALIZING, null, null)
+      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.FINALIZING, null, null, null)
 
     assertEquals(connectorRollout, result)
 
@@ -946,7 +948,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
-      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.SUCCEEDED, null, null)
+      connectorRolloutHandler.getAndValidateUpdateStateRequest(rolloutId, ConnectorEnumRolloutState.SUCCEEDED, null, null, null)
     }
 
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
@@ -1172,6 +1174,79 @@ internal class ConnectorRolloutHandlerTest {
         rolloutActorFinder.getSyncInfoForPinnedActors(any())
       }
       connectorRolloutClient.finalizeRollout(any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("workflowStartedInProgress")
+  fun `test manualPauseConnectorRollout`(rolloutState: ConnectorEnumRolloutState) {
+    val rolloutId = UUID.randomUUID()
+    val connectorRolloutWorkflowUpdate =
+      ConnectorRolloutUpdateStateRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+        id = rolloutId
+        state = ConnectorRolloutState.PAUSED
+        pausedReason = "test"
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+    // Rollout has been started
+    connectorRollout.apply { this.state = state }
+
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(emptyList(), 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns mapOf(UUID.randomUUID() to ActorSyncJobInfo(0, 0, 0))
+
+    val result = connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutWorkflowUpdate)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.startRollout(any())
+      connectorRolloutClient.pauseRollout(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionService.getActorDefinitionVersion(any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+    }
+  }
+
+  @Test
+  fun `test manualPauseConnectorRollout workflow not started`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRolloutWorkflowUpdate =
+      ConnectorRolloutUpdateStateRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+        id = rolloutId
+        state = ConnectorRolloutState.PAUSED
+        pausedReason = "test"
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId)
+    // Rollout has been initialized, but workflow hasn't been started
+    connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
+
+    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
+    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
+
+    val result = connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutWorkflowUpdate)
+
+    assertEquals(connectorRollout.id, result.id)
+    verifyAll {
+      connectorRolloutClient.startRollout(any())
+      connectorRolloutClient.pauseRollout(any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      actorDefinitionService.getActorDefinitionVersion(any())
+      rolloutActorFinder.getActorSelectionInfo(any(), any())
+      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
