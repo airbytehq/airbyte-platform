@@ -1705,6 +1705,9 @@ postgresql:
   # -- Affinity and anti-affinity for postgresql pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  storage:
+    volumeClaimValue: 500Mi
+    storageClassName: ""
 
 # External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
@@ -1738,6 +1741,7 @@ minio:
 
   storage:
     volumeClaimValue: 500Mi
+    storageClassName: ""
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
