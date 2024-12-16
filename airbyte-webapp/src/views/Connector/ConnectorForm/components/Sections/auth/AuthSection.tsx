@@ -1,4 +1,5 @@
 import React from "react";
+import { FormattedMessage } from "react-intl";
 
 import { getSupportRevokingTokensConnectorIds } from "core/domain/connector/constants";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
@@ -8,13 +9,15 @@ import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormCon
 import { AuthButton } from "./AuthButton";
 import { RevokeButton } from "./RevokeButton";
 import { FlexContainer } from "../../../../../../components/ui/Flex";
+import { Message } from "../../../../../../components/ui/Message";
 import { ConnectorSpecification } from "../../../../../../core/domain/connector";
+import { OAUTH_REDIRECT_URL } from "../../../../../../hooks/services/useConnectorAuth";
 import { useAuthentication } from "../../../useAuthentication";
 import { SectionContainer } from "../SectionContainer";
 
 export const AuthSection: React.FC = () => {
   const { selectedConnectorDefinitionSpecification, connectorId } = useConnectorForm();
-  const { hasAuthFieldValues } = useAuthentication();
+  const { hasAuthFieldValues, shouldShowRedirectUrlTooltip } = useAuthentication();
   if (
     !selectedConnectorDefinitionSpecification ||
     isSourceDefinitionSpecificationDraft(selectedConnectorDefinitionSpecification)
@@ -37,6 +40,9 @@ export const AuthSection: React.FC = () => {
           )}
         </FlexContainer>
       </SectionContainer>
+      {shouldShowRedirectUrlTooltip && (
+        <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
+      )}
     </IfFeatureEnabled>
   );
 };

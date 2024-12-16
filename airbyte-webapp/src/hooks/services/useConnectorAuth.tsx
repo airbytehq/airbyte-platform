@@ -29,7 +29,7 @@ import { useCurrentWorkspace } from "./useWorkspace";
 let windowObjectReference: Window | null = null;
 
 const tabUuid = uuid();
-const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
+export const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}/auth_flow`;
 
 /**
  * Since some OAuth providers clear out the window.opener and window.name properties,
@@ -98,7 +98,7 @@ export function useConnectorAuth(): {
           const payload: SourceOauthConsentRequest = {
             workspaceId,
             sourceDefinitionId: ConnectorSpecification.id(connector),
-            redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
+            redirectUrl: OAUTH_REDIRECT_URL,
             oAuthInputConfiguration,
             sourceId: connectorId,
           };
@@ -109,7 +109,7 @@ export function useConnectorAuth(): {
         const payload: DestinationOauthConsentRequest = {
           workspaceId,
           destinationDefinitionId: ConnectorSpecification.id(connector),
-          redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
+          redirectUrl: OAUTH_REDIRECT_URL,
           oAuthInputConfiguration,
           destinationId: connectorId,
         };
