@@ -61,19 +61,13 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Inject
-  @Named("checkConnectionActivities")
-  private Optional<List<Object>> checkConnectionActivities;
-
-  @Inject
   @Named("uiCommandsActivities")
   private Optional<List<Object>> uiCommandsActivities;
 
   @Inject
   @Named("connectionManagerActivities")
   private Optional<List<Object>> connectionManagerActivities;
-  @Inject
-  @Named("discoverActivities")
-  private Optional<List<Object>> discoverActivities;
+
   @Inject
   @Named(TaskExecutors.IO)
   private ExecutorService executorService;
@@ -99,9 +93,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Value("${airbyte.worker.sync.enabled}")
   private boolean shouldRunSyncWorkflows;
 
-  @Inject
-  @Named("specActivities")
-  private Optional<List<Object>> specActivities;
   @Inject
   @Named("syncActivities")
   private Optional<List<Object>> syncActivities;
@@ -165,24 +156,24 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     log.info("Registering worker factories....");
     registerUiCommandsWorker(workerFactory, maxWorkersConfiguration);
 
-    if (shouldRunGetSpecWorkflows) {
-      registerGetSpec(workerFactory, maxWorkersConfiguration);
-    }
-
-    if (shouldRunCheckConnectionWorkflows) {
-      registerCheckConnection(workerFactory, maxWorkersConfiguration);
-    }
-
-    if (shouldRunDiscoverWorkflows) {
-      registerDiscover(workerFactory, maxWorkersConfiguration);
-    }
-
     if (shouldRunSyncWorkflows) {
       registerSync(workerFactory, maxWorkersConfiguration);
     }
 
     if (shouldRunConnectionManagerWorkflows) {
       registerConnectionManager(workerFactory, maxWorkersConfiguration);
+    }
+
+    if (shouldRunGetSpecWorkflows) {
+      registerGetSpec(workerFactory);
+    }
+
+    if (shouldRunCheckConnectionWorkflows) {
+      registerCheckConnection(workerFactory);
+    }
+
+    if (shouldRunDiscoverWorkflows) {
+      registerDiscover(workerFactory);
     }
   }
 
@@ -198,20 +189,17 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     log.info("UI Commands Worker registered.");
   }
 
-  private void registerCheckConnection(final WorkerFactory factory,
-                                       final MaxWorkersConfig maxWorkersConfig) {
+  // This workflow is now deprecated, it remains to provide an explicit failure in case of a migration
+  @Deprecated
+  private void registerCheckConnection(final WorkerFactory factory) {
     final Set<String> taskQueues = getCheckTaskQueue();
     for (final String taskQueue : taskQueues) {
-      final Worker checkConnectionWorker =
-          factory.newWorker(taskQueue,
-              getWorkerOptions(maxWorkersConfig.getMaxCheckWorkers()));
+      final Worker checkConnectionWorker = factory.newWorker(taskQueue, getWorkerOptions(1));
       final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       checkConnectionWorker
           .registerWorkflowImplementationTypes(options,
               temporalProxyHelper.proxyWorkflowClass(CheckConnectionWorkflowImpl.class));
-      checkConnectionWorker.registerActivitiesImplementations(
-          checkConnectionActivities.orElseThrow().toArray(new Object[] {}));
       log.info("Check Connection Workflow registered.");
     }
   }
@@ -231,35 +219,30 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     log.info("Connection Manager Workflow registered.");
   }
 
-  private void registerDiscover(final WorkerFactory factory,
-                                final MaxWorkersConfig maxWorkersConfig) {
+  // This workflow is now deprecated, it remains to provide an explicit failure in case of a migration
+  @Deprecated
+  private void registerDiscover(final WorkerFactory factory) {
     final Set<String> taskQueues = getDiscoverTaskQueue();
     for (final String taskQueue : taskQueues) {
-      final Worker discoverWorker =
-          factory.newWorker(taskQueue,
-              getWorkerOptions(maxWorkersConfig.getMaxDiscoverWorkers()));
+      final Worker discoverWorker = factory.newWorker(taskQueue, getWorkerOptions(1));
       final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       discoverWorker
           .registerWorkflowImplementationTypes(options,
               temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogWorkflowImpl.class),
               temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogAndAutoPropagateWorkflowImpl.class));
-      discoverWorker.registerActivitiesImplementations(
-          discoverActivities.orElseThrow().toArray(new Object[] {}));
       log.info("Discover Workflow registered.");
     }
   }
 
-  private void registerGetSpec(final WorkerFactory factory,
-                               final MaxWorkersConfig maxWorkersConfig) {
-    final Worker specWorker = factory.newWorker(TemporalJobType.GET_SPEC.name(),
-        getWorkerOptions(maxWorkersConfig.getMaxSpecWorkers()));
+  // This workflow is now deprecated, it remains to provide an explicit failure in case of a migration
+  @Deprecated
+  private void registerGetSpec(final WorkerFactory factory) {
+    final Worker specWorker = factory.newWorker(TemporalJobType.GET_SPEC.name(), getWorkerOptions(1));
     final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
     specWorker.registerWorkflowImplementationTypes(options,
         temporalProxyHelper.proxyWorkflowClass(SpecWorkflowImpl.class));
-    specWorker.registerActivitiesImplementations(
-        specActivities.orElseThrow().toArray(new Object[] {}));
     log.info("Get Spec Workflow registered.");
   }
 

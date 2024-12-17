@@ -13,8 +13,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
-import io.airbyte.workers.temporal.sync.ReplicationActivity;
-import io.airbyte.workers.temporal.sync.ReplicationActivityImpl;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivityImpl;
 import io.micronaut.context.annotation.Bean;
@@ -64,9 +62,6 @@ class DataPlaneActivityInitializationMicronautTest {
   RefreshSchemaActivity refreshSchemaActivity;
 
   @Inject
-  ReplicationActivity replicationActivity;
-
-  @Inject
   WebhookOperationActivity webhookOperationActivity;
 
   @Test
@@ -77,11 +72,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Test
   void testRefreshSchemaActivity() {
     assertEquals(RefreshSchemaActivityImpl.class, refreshSchemaActivity.getClass());
-  }
-
-  @Test
-  void testReplicationActivity() {
-    assertEquals(ReplicationActivityImpl.class, replicationActivity.getClass());
   }
 
   @Test

@@ -9,8 +9,6 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseAsyncActivities;
-import io.airbyte.featureflag.Workspace;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -62,15 +60,7 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
     // No feature flags are currently in use.
     // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    UUID workspaceId;
-    try {
-      workspaceId = getWorkspaceId(input.getConnectionId());
-    } catch (final Exception e) {
-      log.warn("Unable to get workspace ID for connection {}", input.getConnectionId());
-      workspaceId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-    }
-    final Boolean useAsyncChecks = featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(workspaceId));
-    return new FeatureFlagFetchOutput(Map.of(UseAsyncActivities.INSTANCE.getKey(), useAsyncChecks));
+    return new FeatureFlagFetchOutput(Map.of());
   }
 
 }

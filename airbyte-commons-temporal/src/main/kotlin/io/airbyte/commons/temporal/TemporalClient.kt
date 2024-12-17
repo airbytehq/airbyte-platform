@@ -9,14 +9,11 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException
 import io.airbyte.commons.temporal.exception.UnreachableWorkflowException
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
-import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
-import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
-import io.airbyte.commons.temporal.scheduling.SpecWorkflow
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ConfigScopeType
@@ -36,8 +33,6 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseAsyncActivities
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -427,14 +422,7 @@ class TemporalClient(
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector())
 
-    return if (!featureFlagClient.boolVariation(UseAsyncActivities, Workspace(resolvedWorkspaceId))) {
-      execute<ConnectorJobOutput>(
-        jobRunConfig,
-        Supplier { getWorkflowStub<SpecWorkflow>(SpecWorkflow::class.java, TemporalJobType.GET_SPEC, jobId).run(jobRunConfig, launcherConfig) },
-      )
-    } else {
-      executeConnectorCommandWorkflow(jobRunConfig, SpecCommandInput(SpecCommandInput.SpecInput(jobRunConfig, launcherConfig)))
-    }
+    return executeConnectorCommandWorkflow(jobRunConfig, SpecCommandInput(SpecCommandInput.SpecInput(jobRunConfig, launcherConfig)))
   }
 
   /**
@@ -474,23 +462,10 @@ class TemporalClient(
         .withActorContext(context)
         .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId))
 
-    if (!featureFlagClient.boolVariation(UseAsyncActivities, Workspace(workspaceId))) {
-      return execute<ConnectorJobOutput>(
-        jobRunConfig,
-        Supplier {
-          getWorkflowStubWithTaskQueue<CheckConnectionWorkflow>(CheckConnectionWorkflow::class.java, taskQueue, jobId).run(
-            jobRunConfig,
-            launcherConfig,
-            input,
-          )
-        },
-      )
-    } else {
-      return executeConnectorCommandWorkflow(
-        jobRunConfig,
-        CheckCommandInput(CheckCommandInput.CheckConnectionInput(jobRunConfig, launcherConfig, input)),
-      )
-    }
+    return executeConnectorCommandWorkflow(
+      jobRunConfig,
+      CheckCommandInput(CheckCommandInput.CheckConnectionInput(jobRunConfig, launcherConfig, input)),
+    )
   }
 
   /**
@@ -533,23 +508,10 @@ class TemporalClient(
         .withManual(true)
         .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId))
 
-    if (!featureFlagClient.boolVariation(UseAsyncActivities, Workspace(workspaceId))) {
-      return execute<ConnectorJobOutput>(
-        jobRunConfig,
-        Supplier {
-          getWorkflowStubWithTaskQueue<DiscoverCatalogWorkflow>(DiscoverCatalogWorkflow::class.java, taskQueue, jobId).run(
-            jobRunConfig,
-            launcherConfig,
-            input,
-          )
-        },
-      )
-    } else {
-      return executeConnectorCommandWorkflow(
-        jobRunConfig,
-        DiscoverCommandInput(DiscoverCommandInput.DiscoverCatalogInput(jobRunConfig, launcherConfig, input)),
-      )
-    }
+    return executeConnectorCommandWorkflow(
+      jobRunConfig,
+      DiscoverCommandInput(DiscoverCommandInput.DiscoverCatalogInput(jobRunConfig, launcherConfig, input)),
+    )
   }
 
   /**

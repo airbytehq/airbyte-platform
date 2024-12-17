@@ -60,9 +60,6 @@ import io.airbyte.data.services.shared.NetworkSecurityTokenKey;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseAsyncActivities;
-import io.airbyte.featureflag.UseAsyncReplicate;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
@@ -214,9 +211,6 @@ public class JobInputHandler {
         featureFlagContext.add(new Connection(standardSync.getConnectionId()));
       }
 
-      final boolean useAsyncReplicate = featureFlagClient.boolVariation(UseAsyncReplicate.INSTANCE, new Multi(featureFlagContext));
-      final boolean useAsyncActivities = featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(config.getWorkspaceId()));
-
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
       final StandardSyncInput syncInput = new StandardSyncInput()
@@ -234,8 +228,8 @@ public class JobInputHandler {
           .withWorkspaceId(config.getWorkspaceId())
           .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType))
           .withConnectionContext(connectionContext)
-          .withUseAsyncReplicate(useAsyncReplicate)
-          .withUseAsyncActivities(useAsyncActivities)
+          .withUseAsyncReplicate(true)
+          .withUseAsyncActivities(true)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);

@@ -12,12 +12,6 @@ import io.temporal.activity.ActivityMethod;
 @ActivityInterface
 public interface DiscoverCatalogHelperActivity {
 
-  @ActivityMethod
-  void reportSuccess();
-
-  @ActivityMethod
-  void reportFailure();
-
   /**
    * Perform catalog diffing, subsequent disabling of the connection and any other necessary
    * operations after performing the discover.
