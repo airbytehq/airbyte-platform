@@ -1,8 +1,10 @@
+import { RowFilteringMapperConfiguration } from "core/api/types/AirbyteClient";
+
 import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from "./formValueHelpers";
 import { FilterCondition, RowFilteringMapperFormValues } from "./RowFilteringMapperForm";
-import { RowFilteringMapperConfiguration, StreamMapperWithId } from "../types";
+import { StreamMapperWithId } from "../types";
 
-const mapperConfigurationIn: StreamMapperWithId<RowFilteringMapperConfiguration<"IN">>["mapperConfiguration"] = {
+const mapperConfigurationIn: StreamMapperWithId<RowFilteringMapperConfiguration>["mapperConfiguration"] = {
   conditions: {
     type: "EQUAL",
     fieldName: "fieldName",
@@ -16,7 +18,7 @@ const formValuesIn: RowFilteringMapperFormValues = {
   comparisonValue: "comparisonValue",
 };
 
-const mapperConfigurationNotIn: StreamMapperWithId<RowFilteringMapperConfiguration<"OUT">>["mapperConfiguration"] = {
+const mapperConfigurationNotIn: StreamMapperWithId<RowFilteringMapperConfiguration>["mapperConfiguration"] = {
   conditions: {
     type: "NOT",
     conditions: [

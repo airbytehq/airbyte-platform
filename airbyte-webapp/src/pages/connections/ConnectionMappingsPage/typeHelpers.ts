@@ -1,5 +1,5 @@
 import {
-  EncryptionMapperAlgorithm,
+  EncryptionMapperConfiguration,
   FieldRenamingMapperConfiguration,
   HashingMapperConfiguration,
   MapperConfiguration,
@@ -12,11 +12,11 @@ import {
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
 
-import { EncryptionMapperConfiguration, StreamMapperWithId } from "./types";
+import { StreamMapperWithId } from "./types";
 
 export const isEncryptionMapping = (
   mapping: StreamMapperWithId<MapperConfiguration>
-): mapping is StreamMapperWithId<EncryptionMapperConfiguration, EncryptionMapperAlgorithm> => {
+): mapping is StreamMapperWithId<EncryptionMapperConfiguration> => {
   return mapping.type === StreamMapperType.encryption;
 };
 
