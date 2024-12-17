@@ -193,7 +193,6 @@ sendgrid-java = { module = "com.sendgrid:sendgrid-java", version = "4.0.1" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
-slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.2" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 spring-core = { module = "org.springframework:spring-core", version = "6.1.6" }

@@ -26,7 +26,6 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
   implementation(libs.bundles.apache)
-  implementation(libs.slugify)
   implementation(libs.quartz.scheduler)
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)

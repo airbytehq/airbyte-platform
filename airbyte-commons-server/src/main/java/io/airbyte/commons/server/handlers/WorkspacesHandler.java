@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
 
-import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -43,6 +42,7 @@ import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
+import io.airbyte.commons.server.slug.Slug;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
@@ -87,7 +87,6 @@ public class WorkspacesHandler {
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
-  private final Slugify slugify;
   private final TrackingClient trackingClient;
   private final ApiPojoConverters apiPojoConverters;
 
@@ -112,7 +111,6 @@ public class WorkspacesHandler {
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
-    this.slugify = new Slugify();
     this.trackingClient = trackingClient;
     this.apiPojoConverters = apiPojoConverters;
   }
@@ -489,7 +487,7 @@ public class WorkspacesHandler {
   }
 
   private String generateUniqueSlug(final String workspaceName) throws IOException {
-    final String proposedSlug = slugify.slugify(workspaceName);
+    final String proposedSlug = Slug.slugify(workspaceName);
 
     // todo (cgardens) - this is going to be too expensive once there are too many workspaces. needs to
     // be replaced with an actual sql query. e.g. SELECT COUNT(*) WHERE slug=%s;

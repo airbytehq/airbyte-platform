@@ -30,7 +30,6 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.reactor.core)
-  implementation(libs.slugify)
   implementation(libs.temporal.sdk)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
