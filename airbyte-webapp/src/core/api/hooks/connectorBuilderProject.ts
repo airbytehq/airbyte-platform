@@ -353,6 +353,7 @@ export const usePublishBuilderProject = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
         },
@@ -395,6 +396,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
           setAsActiveManifest: useAsActiveVersion,
