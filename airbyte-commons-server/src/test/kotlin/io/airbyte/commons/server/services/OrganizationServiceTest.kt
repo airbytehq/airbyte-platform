@@ -248,13 +248,12 @@ class OrganizationServiceTest {
       slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.UNSUBSCRIBED
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
 
-      // TODO uncomment this once connection disabling is enabled
-//      verify {
-//        connectionService.disableConnections(
-//          setOf(connectionId1, connectionId2),
-//          ConnectionAutoDisabledReason.UNSUBSCRIBED,
-//        )
-//      }
+      verify {
+        connectionService.disableConnections(
+          setOf(connectionId1, connectionId2),
+          ConnectionAutoDisabledReason.UNSUBSCRIBED,
+        )
+      }
     }
   }
 }

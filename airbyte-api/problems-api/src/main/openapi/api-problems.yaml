@@ -732,7 +732,7 @@ components:
             title:
               type: string
               default: A subscription is required for this operation to succeed.
-    BillingInsufficientPaymentStatusProblemResponse:
+    BillingInvalidStatusProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
       allOf:
@@ -749,7 +749,7 @@ components:
               type: string
               default: The payment status of the associated Organization is insufficient.
             data:
-              $ref: "#/components/schemas/BillingInsufficientPaymentStatusProblemData"
+              $ref: "#/components/schemas/BillingInvalidStatusProblemData"
     BillingInsufficientCreditBalanceProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -991,18 +991,13 @@ components:
           type: integer
         message:
           type: string
-    BillingInsufficientPaymentStatusProblemData:
+    BillingInvalidStatusProblemData:
       type: object
-      required:
-        - requiredStatuses
-        - currentStatus
       properties:
-        validPaymentStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/PaymentStatusEnum"
-        currentPaymentStatus:
+        invalidPaymentStatus:
           $ref: "#/components/schemas/PaymentStatusEnum"
+        invalidSubscriptionStatus:
+          $ref: "#/components/schemas/SubscriptionStatusEnum"
     PaymentStatusEnum:
       type: string
       enum:
@@ -1012,6 +1007,12 @@ components:
         - disabled
         - locked
         - manual
+    SubscriptionStatusEnum:
+      type: string
+      enum:
+        - pre_subscription
+        - subscribed
+        - unsubscribed
     BillingInsufficientCreditBalanceProblemData:
       type: object
       required:

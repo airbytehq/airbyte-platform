@@ -159,10 +159,8 @@ open class OrganizationServiceImpl(
         logger.info {
           "Organization $organizationId successfully updated from $currentSubscriptionStatus to ${orgPaymentConfig.subscriptionStatus}"
         }
-        // TODO uncomment this once subscription support is finalized - we do not want to shut down connections until
-        //  sync validation takes subscription status into account.
-        // disableAllConnections(organizationId, ConnectionAutoDisabledReason.UNSUBSCRIBED)
-        // logger.info { "Successfully disabled all syncs for unsubscribed organization $organizationId" }
+        disableAllConnections(organizationId, ConnectionAutoDisabledReason.UNSUBSCRIBED)
+        logger.info { "Successfully disabled all syncs for unsubscribed organization $organizationId" }
       }
     }
   }
