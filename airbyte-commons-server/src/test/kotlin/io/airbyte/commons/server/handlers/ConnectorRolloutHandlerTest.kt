@@ -1031,6 +1031,23 @@ internal class ConnectorRolloutHandlerTest {
     }
   }
 
+  @Test
+  fun `test getRolloutStrategyForManualStart`() {
+    assertEquals(connectorRolloutHandler.getRolloutStrategyForManualStart(null), ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(connectorRolloutHandler.getRolloutStrategyForManualStart(ConnectorRolloutStrategy.MANUAL), ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(connectorRolloutHandler.getRolloutStrategyForManualStart(ConnectorRolloutStrategy.AUTOMATED), ConnectorEnumRolloutStrategy.AUTOMATED)
+  }
+
+  @Test
+  fun `test getRolloutStrategyForManualUpdate`() {
+    assertEquals(connectorRolloutHandler.getRolloutStrategyForManualUpdate(null), ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(connectorRolloutHandler.getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.MANUAL), ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(
+      connectorRolloutHandler.getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.AUTOMATED),
+      ConnectorEnumRolloutStrategy.OVERRIDDEN,
+    )
+  }
+
   @ParameterizedTest
   @MethodSource("workflowStartedInProgress")
   fun `test manualDoConnectorRolloutWorkflowUpdate`(state: ConnectorEnumRolloutState) {

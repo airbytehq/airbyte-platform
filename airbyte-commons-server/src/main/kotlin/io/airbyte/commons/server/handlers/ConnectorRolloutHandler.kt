@@ -206,7 +206,7 @@ open class ConnectorRolloutHandler
             .withUpdatedBy(updatedBy)
             .withState(ConnectorEnumRolloutState.INITIALIZED)
             .withHasBreakingChanges(false)
-            .withRolloutStrategy(getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())))
+            .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
             .withInitialRolloutPct(initialRolloutPct?.toLong())
             .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
         connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -238,7 +238,7 @@ open class ConnectorRolloutHandler
       val connectorRollout =
         initializedRollouts.first()
           .withUpdatedBy(updatedBy)
-          .withRolloutStrategy(getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())))
+          .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
           .withInitialRolloutPct(initialRolloutPct?.toLong())
           .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
       connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -773,11 +773,19 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)!!, false)
     }
 
-    private fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {
+    internal fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {
       return if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
         ConnectorEnumRolloutStrategy.MANUAL
       } else {
         ConnectorEnumRolloutStrategy.OVERRIDDEN
+      }
+    }
+
+    internal fun getRolloutStrategyForManualStart(rolloutStrategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy {
+      return if (rolloutStrategy == null || rolloutStrategy == ConnectorRolloutStrategy.MANUAL) {
+        ConnectorEnumRolloutStrategy.MANUAL
+      } else {
+        ConnectorEnumRolloutStrategy.AUTOMATED
       }
     }
 
