@@ -118,7 +118,7 @@ export const AESForm: React.FC<AESFormProps> = ({ streamName, mapping, setAlgori
       },
     },
     resolver: autoSubmitResolver<EncryptionMapperFormValues<"AES">>(aesFormSchema, (data) => {
-      updateLocalMapping(streamName, data);
+      updateLocalMapping(streamName, mapping.id, data);
       validateMappings();
     }),
     mode: "onBlur",
@@ -216,7 +216,7 @@ export const RSAForm: React.FC<RSAFormProps> = ({ streamName, mapping, setAlgori
       },
     },
     resolver: autoSubmitResolver<EncryptionMapperFormValues<"RSA">>(rsaFormSchema, (data) => {
-      updateLocalMapping(streamName, data);
+      updateLocalMapping(streamName, mapping.id, data);
       validateMappings();
     }),
     mode: "onBlur",

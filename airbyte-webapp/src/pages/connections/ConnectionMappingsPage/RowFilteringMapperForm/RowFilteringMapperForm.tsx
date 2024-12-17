@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { v4 as uuidv4 } from "uuid";
 import * as yup from "yup";
 
-import { Input } from "components/ui/Input";
+import { FormControlErrorMessage } from "components/forms/FormControl";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
@@ -12,11 +12,12 @@ import { RowFilteringMapperConfiguration, StreamMapperType } from "core/api/type
 import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from "./formValueHelpers";
 import { autoSubmitResolver } from "../autoSubmitResolver";
 import { useMappingContext } from "../MappingContext";
-import { MappingRowContent, MappingRowInputWrapper } from "../MappingRow";
+import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "../MappingRow";
 import { MappingTypeListBox } from "../MappingTypeListBox";
 import { SelectTargetField } from "../SelectTargetField";
 import { StreamMapperWithId } from "../types";
 import { useGetFieldsInStream } from "../useGetFieldsInStream";
+
 export enum OperationType {
   equal = "EQUAL",
   not = "NOT",
@@ -28,13 +29,9 @@ export enum FilterCondition {
 }
 
 export interface RowFilteringMapperFormValues {
-  type: StreamMapperType;
-  id: string;
-  configuration: {
-    condition: FilterCondition;
-    fieldName: string;
-    comparisonValue: string;
-  };
+  condition: FilterCondition;
+  fieldName: string;
+  comparisonValue: string;
 }
 
 interface RowFilteringMapperFormProps {
@@ -43,23 +40,15 @@ interface RowFilteringMapperFormProps {
 }
 
 const simpleSchema: yup.SchemaOf<RowFilteringMapperFormValues> = yup.object({
-  type: yup.mixed<StreamMapperType>().oneOf([StreamMapperType["row-filtering"]]).required(),
-  id: yup.string().required(),
-  configuration: yup.object({
-    condition: yup.mixed<FilterCondition>().oneOf([FilterCondition.IN, FilterCondition.OUT]).required(),
-    fieldName: yup.string().required(),
-    comparisonValue: yup.string().required(),
-  }),
+  condition: yup.mixed<FilterCondition>().oneOf([FilterCondition.IN, FilterCondition.OUT]).required("form.empty.error"),
+  fieldName: yup.string().required("form.empty.error"),
+  comparisonValue: yup.string().required("form.empty.error"),
 });
 
 const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
-  type: StreamMapperType["row-filtering"],
-  id: uuidv4(),
-  configuration: {
-    condition: FilterCondition.IN,
-    fieldName: "",
-    comparisonValue: "",
-  },
+  condition: FilterCondition.IN,
+  fieldName: "",
+  comparisonValue: "",
 });
 
 export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamName }) => {
@@ -68,14 +57,18 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
   const fieldsInStream = useGetFieldsInStream(streamName);
 
   const methods = useForm<RowFilteringMapperFormValues>({
-    defaultValues: mapping ? mapperConfigurationToFormValues(mapping) : createEmptyDefaultValues(),
+    defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),
     resolver: autoSubmitResolver<RowFilteringMapperFormValues>(simpleSchema, (values) => {
       const mapperConfiguration = formValuesToMapperConfiguration(values);
-      updateLocalMapping(streamName, mapperConfiguration);
+      updateLocalMapping(streamName, mapping.id, { mapperConfiguration });
       validateMappings();
     }),
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
 
   if (!mapping) {
     return null;
@@ -91,22 +84,25 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
             mappingId={mapping.id}
           />
           <SelectFilterType />
-          <Text>
-            <FormattedMessage id="connections.mappings.if" />
-          </Text>
-          <SelectTargetField<RowFilteringMapperFormValues>
-            name="configuration.fieldName"
-            targetFieldOptions={fieldsInStream}
-          />
-          <Text>
-            <FormattedMessage id="connections.mappings.equals" />
-          </Text>
-          <MappingRowInputWrapper>
-            <Input
+          <MappingRowItem>
+            <Text>
+              <FormattedMessage id="connections.mappings.if" />
+            </Text>
+          </MappingRowItem>
+          <SelectTargetField<RowFilteringMapperFormValues> name="fieldName" targetFieldOptions={fieldsInStream} />
+          <MappingRowItem>
+            <Text>
+              <FormattedMessage id="connections.mappings.equals" />
+            </Text>
+          </MappingRowItem>
+          <MappingRowItem>
+            <MappingFormTextInput
               placeholder={formatMessage({ id: "connections.mappings.value" })}
-              {...methods.register(`configuration.comparisonValue`)}
+              name="comparisonValue"
+              testId="comparisonValue"
             />
-          </MappingRowInputWrapper>
+            <FormControlErrorMessage<RowFilteringMapperFormValues> name="comparisonValue" />
+          </MappingRowItem>
         </MappingRowContent>
       </form>
     </FormProvider>
@@ -120,7 +116,7 @@ const SelectFilterType = () => {
 
   return (
     <Controller
-      name="configuration.condition"
+      name="condition"
       control={control}
       render={({ field }) => (
         <ListBox<"IN" | "OUT">

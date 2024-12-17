@@ -85,6 +85,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
               validConfiguration = {
                 type: value,
                 id: mappingId,
+                validationCallback: () => Promise.reject(false),
                 mapperConfiguration: {
                   conditions: { type: OperationType.equal, fieldName: "", comparisonValue: "" },
                 },
@@ -94,6 +95,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
               validConfiguration = {
                 type: value,
                 id: mappingId,
+                validationCallback: () => Promise.reject(false),
                 mapperConfiguration: {
                   targetField: "",
                   method: "MD5",
@@ -105,6 +107,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
               validConfiguration = {
                 type: value,
                 id: mappingId,
+                validationCallback: () => Promise.reject(false),
                 mapperConfiguration: { originalFieldName: "", newFieldName: "" },
               };
               break;
@@ -112,6 +115,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
               validConfiguration = {
                 type: value,
                 id: mappingId,
+                validationCallback: () => Promise.reject(false),
                 mapperConfiguration: {
                   algorithm: "AES",
                   targetField: "",
@@ -125,7 +129,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
             default:
               throw new Error(`Unsupported StreamMapperType: ${value}`);
           }
-          updateLocalMapping(streamName, validConfiguration);
+          updateLocalMapping(streamName, validConfiguration.id, validConfiguration);
         }
       }}
     />

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import * as yup from "yup";
@@ -16,30 +16,20 @@ import {
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
+import { MappingRowContent, MappingRowItem } from "./MappingRow";
 import styles from "./MappingRow.module.scss";
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 import { useGetFieldsInStream } from "./useGetFieldsInStream";
-export interface HashingMapperFormValues {
-  type: StreamMapperType;
-  id: string;
-  mapperConfiguration: HashingMapperConfiguration;
-}
 
 const hashingMapperConfigSchema = yup.object().shape({
-  targetField: yup.string().required("Target field is required"),
+  targetField: yup.string().required("form.empty.error"),
   method: yup
     .mixed<HashingMapperConfigurationMethod>()
     .oneOf(Object.values(HashingMapperConfigurationMethod))
-    .required("Hashing method is required"),
-  fieldNameSuffix: yup.string().required("Field name suffix is required"),
-});
-
-export const hashingMapperSchema = yup.object().shape({
-  type: yup.mixed<StreamMapperType>().oneOf(["hashing"]).required(),
-  id: yup.string().required(),
-  mapperConfiguration: hashingMapperConfigSchema,
+    .required("form.empty.error"),
+  fieldNameSuffix: yup.string().required("form.empty.error"),
 });
 
 export const HashFieldRow: React.FC<{
@@ -51,24 +41,24 @@ export const HashFieldRow: React.FC<{
 
   const defaultValues = useMemo(() => {
     return {
-      type: StreamMapperType.hashing,
-      mapperConfiguration: {
-        id: mapping.id,
-        targetField: mapping.mapperConfiguration.targetField ?? "",
-        method: mapping.mapperConfiguration.method ?? HashingMapperConfigurationMethod.MD5,
-        fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_hashed",
-      },
+      targetField: mapping.mapperConfiguration.targetField ?? "",
+      method: mapping.mapperConfiguration.method ?? HashingMapperConfigurationMethod.MD5,
+      fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_hashed",
     };
   }, [mapping]);
 
-  const methods = useForm<HashingMapperFormValues>({
+  const methods = useForm<HashingMapperConfiguration>({
     defaultValues,
-    resolver: autoSubmitResolver<HashingMapperFormValues>(hashingMapperSchema, (data) => {
-      updateLocalMapping(streamName, data);
+    resolver: autoSubmitResolver<HashingMapperConfiguration>(hashingMapperConfigSchema, (formValues) => {
+      updateLocalMapping(streamName, mapping.id, { mapperConfiguration: formValues });
       validateMappings();
     }),
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
 
   if (!mapping) {
     return null;
@@ -77,17 +67,18 @@ export const HashFieldRow: React.FC<{
   return (
     <FormProvider {...methods}>
       <form>
-        <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.rowContent}>
+        <MappingRowContent>
           <MappingTypeListBox selectedValue={StreamMapperType.hashing} mappingId={mapping.id} streamName={streamName} />
-          <SelectTargetField<HashingMapperFormValues>
-            name="mapperConfiguration.targetField"
-            targetFieldOptions={fieldsInStream}
-          />
-          <Text>
-            <FormattedMessage id="connections.mappings.using" />
-          </Text>
-          <SelectHashingMethod />
-        </FlexContainer>
+          <SelectTargetField<HashingMapperConfiguration> name="targetField" targetFieldOptions={fieldsInStream} />
+          <MappingRowItem>
+            <Text>
+              <FormattedMessage id="connections.mappings.using" />
+            </Text>
+          </MappingRowItem>
+          <MappingRowItem>
+            <SelectHashingMethod />
+          </MappingRowItem>
+        </MappingRowContent>
       </form>
     </FormProvider>
   );
@@ -119,11 +110,11 @@ const supportedHashTypes = [
 ];
 
 const SelectHashingMethod = () => {
-  const { control } = useFormContext<HashingMapperFormValues>();
+  const { control } = useFormContext<HashingMapperConfiguration>();
 
   return (
     <Controller
-      name="mapperConfiguration.method"
+      name="method"
       control={control}
       defaultValue={HashingMapperConfigurationMethod.MD5}
       render={({ field }) => (

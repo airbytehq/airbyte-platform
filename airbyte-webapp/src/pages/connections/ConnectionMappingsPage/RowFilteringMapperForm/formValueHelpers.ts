@@ -1,4 +1,4 @@
-import { RowFilteringMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
+import { RowFilteringMapperConfiguration } from "core/api/types/AirbyteClient";
 
 import { FilterCondition, RowFilteringMapperFormValues } from "./RowFilteringMapperForm";
 import { isRowFilteringOperationEqual, isRowFilteringOperationNot } from "../typeHelpers";
@@ -6,42 +6,34 @@ import { StreamMapperWithId } from "../types";
 
 export function formValuesToMapperConfiguration(
   values: RowFilteringMapperFormValues
-): StreamMapperWithId<RowFilteringMapperConfiguration> {
-  if (values.configuration.condition === FilterCondition.OUT) {
+): StreamMapperWithId<RowFilteringMapperConfiguration>["mapperConfiguration"] {
+  if (values.condition === FilterCondition.OUT) {
     return {
-      type: StreamMapperType["row-filtering"],
-      id: values.id,
-      mapperConfiguration: {
-        conditions: {
-          type: "NOT",
-          conditions: [
-            {
-              type: "EQUAL",
-              fieldName: values.configuration.fieldName,
-              comparisonValue: values.configuration.comparisonValue,
-            },
-          ],
-        },
+      conditions: {
+        type: "NOT",
+        conditions: [
+          {
+            type: "EQUAL",
+            fieldName: values.fieldName,
+            comparisonValue: values.comparisonValue,
+          },
+        ],
       },
     };
   }
   return {
-    type: StreamMapperType["row-filtering"],
-    id: values.id,
-    mapperConfiguration: {
-      conditions: {
-        type: "EQUAL",
-        fieldName: values.configuration.fieldName,
-        comparisonValue: values.configuration.comparisonValue,
-      },
+    conditions: {
+      type: "EQUAL",
+      fieldName: values.fieldName,
+      comparisonValue: values.comparisonValue,
     },
   };
 }
 
 export function mapperConfigurationToFormValues(
-  mapperWithId: StreamMapperWithId<RowFilteringMapperConfiguration>
+  mapperConfiguration: StreamMapperWithId<RowFilteringMapperConfiguration>["mapperConfiguration"]
 ): RowFilteringMapperFormValues {
-  const { conditions } = mapperWithId.mapperConfiguration;
+  const { conditions } = mapperConfiguration;
 
   if (isRowFilteringOperationNot(conditions)) {
     const {
@@ -50,25 +42,17 @@ export function mapperConfigurationToFormValues(
 
     if (isRowFilteringOperationEqual(condition)) {
       return {
-        type: StreamMapperType["row-filtering"],
-        id: mapperWithId.id,
-        configuration: {
-          condition: FilterCondition.OUT,
-          fieldName: condition.fieldName,
-          comparisonValue: condition.comparisonValue,
-        },
+        condition: FilterCondition.OUT,
+        fieldName: condition.fieldName,
+        comparisonValue: condition.comparisonValue,
       };
     }
   }
   if (isRowFilteringOperationEqual(conditions)) {
     return {
-      type: StreamMapperType["row-filtering"],
-      id: mapperWithId.id,
-      configuration: {
-        condition: FilterCondition.IN,
-        fieldName: conditions.fieldName,
-        comparisonValue: conditions.comparisonValue,
-      },
+      condition: FilterCondition.IN,
+      fieldName: conditions.fieldName,
+      comparisonValue: conditions.comparisonValue,
     };
   }
 

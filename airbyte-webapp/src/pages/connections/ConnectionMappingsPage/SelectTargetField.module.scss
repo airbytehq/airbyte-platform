@@ -3,15 +3,13 @@
 @use "scss/z-indices";
 
 .comboboxInput {
+  height: variables.$form-input-height;
   padding: variables.$spacing-md;
   border-radius: variables.$border-radius-xs;
   font-size: variables.$font-size-md;
-  line-height: 1.2;
   cursor: pointer;
 
   &:focus {
-    background-color: colors.$white;
-
     &::placeholder {
       color: colors.$grey-300;
       text-align: left;

@@ -2,9 +2,10 @@ import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOption
 import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import { Fragment, useState } from "react";
-import { Controller, FieldValues, Path, useFormContext } from "react-hook-form";
+import { Controller, FieldValues, Path, get, useFormContext, useFormState } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { FormControlErrorMessage } from "components/forms/FormControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
@@ -12,6 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
+import { MappingRowItem } from "./MappingRow";
 import styles from "./SelectTargetField.module.scss";
 
 export interface SelectFieldOption {
@@ -30,23 +32,29 @@ export const SelectTargetField = <TFormValues extends FieldValues>({
   name,
 }: SelectTargetFieldProps<TFormValues>) => {
   const { control } = useFormContext<TFormValues>();
+  const { errors } = useFormState<TFormValues>({ name });
+  const error = get(errors, name);
 
   return (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field }) => (
-        <ComboBox
-          options={targetFieldOptions}
-          selectedFieldName={field.value}
-          onSelectField={(value) => {
-            field.onChange(value);
-            // We're using onBlur mode, so we need to manually trigger the validation
-            field.onBlur();
-          }}
-        />
-      )}
-    />
+    <MappingRowItem>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <ComboBox
+            hasError={!!error}
+            options={targetFieldOptions}
+            selectedFieldName={field.value}
+            onSelectField={(value) => {
+              field.onChange(value ?? "");
+              // We're using onBlur mode, so we need to manually trigger the validation
+              field.onBlur();
+            }}
+          />
+        )}
+      />
+      <FormControlErrorMessage name={name} />
+    </MappingRowItem>
   );
 };
 
@@ -60,9 +68,10 @@ interface FieldComboBoxProps {
   onSelectField: (fieldName: string) => void;
   options: TargetFieldOption[];
   selectedFieldName?: string;
+  hasError?: boolean;
 }
 
-const ComboBox: React.FC<FieldComboBoxProps> = ({ onSelectField, options, selectedFieldName }) => {
+const ComboBox: React.FC<FieldComboBoxProps> = ({ onSelectField, options, selectedFieldName, hasError = false }) => {
   const { mode } = useConnectionFormService();
   const [query, setQuery] = useState<string>("");
   const { formatMessage } = useIntl();
@@ -85,6 +94,7 @@ const ComboBox: React.FC<FieldComboBoxProps> = ({ onSelectField, options, select
       <Float adaptiveWidth placement="bottom-start" as={Fragment}>
         <ComboboxInput as={Fragment}>
           <Input
+            error={hasError}
             spellCheck={false}
             autoComplete="off"
             aria-label={formatMessage({ id: "connections.mappings.fieldName" })}
@@ -92,8 +102,12 @@ const ComboBox: React.FC<FieldComboBoxProps> = ({ onSelectField, options, select
             value={query || selectedFieldName || ""}
             className={styles.comboboxInput}
             onChange={(e) => setQuery(e.target.value)}
+            data-testid="selectTargetField"
             adornment={
-              <ComboboxButton className={styles.caretButton}>
+              <ComboboxButton
+                className={styles.caretButton}
+                aria-label={formatMessage({ id: "connections.mappings.selectField" })}
+              >
                 <Icon type="caretDown" />
               </ComboboxButton>
             }

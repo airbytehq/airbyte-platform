@@ -13,6 +13,8 @@ export const useGetMappingsForCurrentConnection = (): Record<string, StreamMappe
       mappings[streamItem.stream?.name ?? ""] = streamItem.config.mappers.map((mapper) => ({
         ...mapper,
         id: mapper.id ?? uuidv4(),
+        // Mappers returned by the backend are valid by default
+        validationCallback: () => Promise.resolve(true),
         mapperConfiguration: {
           ...mapper.mapperConfiguration,
         },

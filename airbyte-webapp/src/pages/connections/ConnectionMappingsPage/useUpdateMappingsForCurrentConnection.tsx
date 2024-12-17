@@ -10,6 +10,7 @@ import { useNotificationService } from "hooks/services/Notification";
 
 import { ClearDataWarningModal } from "../ConnectionReplicationPage/ClearDataWarningModal";
 import { RecommendRefreshModal } from "../ConnectionReplicationPage/RecommendRefreshModal";
+
 export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
   const connection = useGetConnection(connectionId);
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(

@@ -1,18 +1,38 @@
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { AddStreamForMappingComboBox } from "./AddStreamForMappingComboBox";
-import { useMappingContext } from "./MappingContext";
+import { MAPPING_VALIDATION_ERROR_KEY, useMappingContext } from "./MappingContext";
 import { StreamMappingsCard } from "./StreamMappingsCard";
 
 export const ConnectionMappingsList: React.FC = () => {
-  const { streamsWithMappings, clear, submitMappings } = useMappingContext();
+  const { streamsWithMappings, clear, submitMappings, key } = useMappingContext();
   const { mode } = useConnectionFormService();
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+
+  const handleValidations = async () => {
+    const validations = await Promise.allSettled(
+      Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
+        mappers.map((mapper) => mapper.validationCallback())
+      )
+    );
+    if (validations.every((validation) => validation.status === "fulfilled" && validation.value === true)) {
+      submitMappings();
+    } else {
+      registerNotification({
+        type: "error",
+        text: formatMessage({ id: "connections.mappings.submissionValidationError" }),
+        id: MAPPING_VALIDATION_ERROR_KEY,
+      });
+    }
+  };
 
   return (
     <FlexContainer direction="column">
@@ -24,7 +44,7 @@ export const ConnectionMappingsList: React.FC = () => {
           <Button variant="secondary" onClick={clear} disabled={mode === "readonly"}>
             <FormattedMessage id="form.cancel" />
           </Button>
-          <Button onClick={submitMappings} disabled={mode === "readonly"}>
+          <Button onClick={handleValidations} disabled={mode === "readonly"}>
             <FormattedMessage id="form.submit" />
           </Button>
         </FlexContainer>
@@ -35,7 +55,7 @@ export const ConnectionMappingsList: React.FC = () => {
             return null;
           }
 
-          return <StreamMappingsCard key={streamName} streamName={streamName} />;
+          return <StreamMappingsCard key={`${streamName}-${key}`} streamName={streamName} />;
         })}
         <div>
           <AddStreamForMappingComboBox secondary />

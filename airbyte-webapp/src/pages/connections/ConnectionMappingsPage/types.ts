@@ -31,6 +31,7 @@ export interface StreamMapperWithId<
   V extends "OUT" | "IN" = "OUT" | "IN", // Default V to a union of all possible filter types
 > extends ConfiguredStreamMapper {
   id: string;
+  validationCallback: () => Promise<boolean>;
   mapperConfiguration: T extends EncryptionMapperConfiguration<U>
     ? EncryptionMapperConfiguration<U>
     : T extends RowFilteringMapperConfiguration<V>

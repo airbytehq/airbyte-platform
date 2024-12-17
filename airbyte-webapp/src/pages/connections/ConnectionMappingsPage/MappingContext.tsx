@@ -1,8 +1,10 @@
-import React, { PropsWithChildren, createContext, useContext, useState } from "react";
+import merge from "lodash/merge";
+import React, { PropsWithChildren, createContext, useCallback, useContext, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { useCurrentConnection } from "core/api";
 import { HashingMapperConfigurationMethod, StreamMapperType } from "core/api/types/AirbyteClient";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { StreamMapperWithId } from "./types";
 import { useGetMappingsForCurrentConnection } from "./useGetMappingsForCurrentConnection";
@@ -10,7 +12,7 @@ import { useUpdateMappingsForCurrentConnection } from "./useUpdateMappingsForCur
 
 interface MappingContextType {
   streamsWithMappings: Record<string, StreamMapperWithId[]>;
-  updateLocalMapping: (streamName: string, updatedMapping: StreamMapperWithId) => void;
+  updateLocalMapping: (streamName: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => void;
   reorderMappings: (streamName: string, newOrder: StreamMapperWithId[]) => void;
   clear: () => void;
   submitMappings: () => Promise<void>;
@@ -18,7 +20,10 @@ interface MappingContextType {
   addStreamToMappingsList: (streamName: string) => void;
   addMappingForStream: (streamName: string) => void;
   validateMappings: () => void;
+  key: number;
 }
+
+export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
 
 const MappingContext = createContext<MappingContextType | undefined>(undefined);
 
@@ -27,6 +32,9 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   const savedStreamsWithMappings = useGetMappingsForCurrentConnection();
   const { updateMappings } = useUpdateMappingsForCurrentConnection(connection.connectionId);
   const [streamsWithMappings, setStreamsWithMappings] = useState(savedStreamsWithMappings);
+  // Key is used to force mapping forms to re-render if a user chooses to reset the form state
+  const [key, setKey] = useState(1);
+  const { unregisterNotificationById } = useNotificationService();
 
   const validateMappings = () => {
     console.log(`validateMappings`, streamsWithMappings);
@@ -34,15 +42,26 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   };
 
   // Updates a specific mapping in the local state
-  const updateLocalMapping = (streamName: string, updatedMapping: StreamMapperWithId) => {
-    console.log(`updating local mapping for stream ${streamName}`, updatedMapping);
-    setStreamsWithMappings((prevMappings) => ({
-      ...prevMappings,
-      [streamName]: prevMappings[streamName].map((mapping) =>
-        mapping.id === updatedMapping.id ? updatedMapping : mapping
-      ),
-    }));
-  };
+  const updateLocalMapping = useCallback(
+    (streamName: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => {
+      console.log(`updating local mapping for stream ${streamName}`, updatedMapping);
+
+      setStreamsWithMappings((prevMappings) => ({
+        ...prevMappings,
+        [streamName]: prevMappings[streamName].map((mapping) => {
+          if (mapping.id === mappingId) {
+            if (updatedMapping.type && updatedMapping.type !== mapping.type) {
+              return updatedMapping as StreamMapperWithId;
+            }
+            const merged = merge({}, mapping, updatedMapping);
+            return merged;
+          }
+          return mapping;
+        }),
+      }));
+    },
+    []
+  );
 
   const addMappingForStream = (streamName: string) => {
     setStreamsWithMappings((prevMappings) => ({
@@ -52,6 +71,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         {
           type: StreamMapperType.hashing,
           id: uuidv4(),
+          validationCallback: () => Promise.reject(false),
           mapperConfiguration: {
             fieldNameSuffix: "_hashed",
             method: HashingMapperConfigurationMethod["SHA-256"],
@@ -72,7 +92,9 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
 
   // Clears the mappings back to the saved state
   const clear = () => {
+    setKey((prevKey) => prevKey + 1);
     setStreamsWithMappings(savedStreamsWithMappings);
+    unregisterNotificationById(MAPPING_VALIDATION_ERROR_KEY);
   };
 
   const removeMapping = (streamName: string, mappingId: string) => {
@@ -102,6 +124,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         {
           type: StreamMapperType.hashing,
           id: uuidv4(),
+          validationCallback: () => Promise.reject(false),
           mapperConfiguration: {
             fieldNameSuffix: "_hashed",
             method: HashingMapperConfigurationMethod["SHA-256"],
@@ -128,6 +151,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         addStreamToMappingsList,
         addMappingForStream,
         validateMappings,
+        key,
       }}
     >
       {children}

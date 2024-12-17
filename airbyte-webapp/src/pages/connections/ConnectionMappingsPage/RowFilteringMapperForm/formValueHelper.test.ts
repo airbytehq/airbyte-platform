@@ -2,53 +2,37 @@ import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from
 import { FilterCondition, RowFilteringMapperFormValues } from "./RowFilteringMapperForm";
 import { RowFilteringMapperConfiguration, StreamMapperWithId } from "../types";
 
-const mapperConfigurationIn: StreamMapperWithId<RowFilteringMapperConfiguration<"IN">> = {
-  type: "row-filtering",
-  id: "id",
-  mapperConfiguration: {
-    conditions: {
-      type: "EQUAL",
-      fieldName: "fieldName",
-      comparisonValue: "comparisonValue",
-    },
+const mapperConfigurationIn: StreamMapperWithId<RowFilteringMapperConfiguration<"IN">>["mapperConfiguration"] = {
+  conditions: {
+    type: "EQUAL",
+    fieldName: "fieldName",
+    comparisonValue: "comparisonValue",
   },
 };
 
 const formValuesIn: RowFilteringMapperFormValues = {
-  type: "row-filtering",
-  id: "id",
-  configuration: {
-    condition: FilterCondition.IN,
-    fieldName: "fieldName",
-    comparisonValue: "comparisonValue",
-  },
+  condition: FilterCondition.IN,
+  fieldName: "fieldName",
+  comparisonValue: "comparisonValue",
 };
 
-const mapperConfigurationNotIn: StreamMapperWithId<RowFilteringMapperConfiguration<"OUT">> = {
-  type: "row-filtering",
-  id: "id",
-  mapperConfiguration: {
-    conditions: {
-      type: "NOT",
-      conditions: [
-        {
-          type: "EQUAL",
-          fieldName: "fieldName",
-          comparisonValue: "comparisonValue",
-        },
-      ],
-    },
+const mapperConfigurationNotIn: StreamMapperWithId<RowFilteringMapperConfiguration<"OUT">>["mapperConfiguration"] = {
+  conditions: {
+    type: "NOT",
+    conditions: [
+      {
+        type: "EQUAL",
+        fieldName: "fieldName",
+        comparisonValue: "comparisonValue",
+      },
+    ],
   },
 };
 
 const formValuesNotIn: RowFilteringMapperFormValues = {
-  type: "row-filtering",
-  id: "id",
-  configuration: {
-    condition: FilterCondition.OUT,
-    fieldName: "fieldName",
-    comparisonValue: "comparisonValue",
-  },
+  condition: FilterCondition.OUT,
+  fieldName: "fieldName",
+  comparisonValue: "comparisonValue",
 };
 
 describe(`${formValuesToMapperConfiguration.name}`, () => {

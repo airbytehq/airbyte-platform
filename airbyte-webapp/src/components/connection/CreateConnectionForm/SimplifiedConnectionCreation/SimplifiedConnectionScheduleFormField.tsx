@@ -10,7 +10,7 @@ import {
   useBasicFrequencyDropdownData,
 } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "components/connection/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
-import { FormControlFooterError, FormControlFooter, FormControlFooterInfo } from "components/forms/FormControl";
+import { FormControlFooter, FormControlFooterInfo, FormControlErrorMessage } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
@@ -269,20 +269,21 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
               {!cronExpressionDescription.isFetching && (
                 <>
                   {error ? (
-                    <FormControlFooterError>
-                      {error?.message === I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED ? (
-                        <FormattedMessage
-                          id={I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED}
-                          values={{
-                            lnk: (btnText: React.ReactNode) => (
-                              <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
-                            ),
-                          }}
-                        />
-                      ) : (
-                        <FormattedMessage id={error.message} />
-                      )}
-                    </FormControlFooterError>
+                    <FormControlErrorMessage<FormConnectionFormValues>
+                      name="scheduleData.cron.cronExpression"
+                      message={
+                        error?.message === I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED ? (
+                          <FormattedMessage
+                            id={I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED}
+                            values={{
+                              lnk: (btnText: React.ReactNode) => (
+                                <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
+                              ),
+                            }}
+                          />
+                        ) : undefined
+                      }
+                    />
                   ) : (
                     cronExpressionDescription.data?.isValid && (
                       <FormControlFooterInfo>{cronExpressionDescription.data.cronDescription}</FormControlFooterInfo>

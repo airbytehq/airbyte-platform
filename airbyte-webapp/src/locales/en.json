@@ -760,6 +760,7 @@
   "connections.mappings.addStream.disabled": "All enabled streams already have mappings",
   "connections.mappings.rowFilter.in": "in",
   "connections.mappings.rowFilter.out": "out",
+  "connections.mappings.submissionValidationError": "There are errors in some of the mapping configurations. Please fix them before saving.",
 
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",
