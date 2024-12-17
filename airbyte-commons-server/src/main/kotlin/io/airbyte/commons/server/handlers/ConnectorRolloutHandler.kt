@@ -206,7 +206,7 @@ open class ConnectorRolloutHandler
             .withUpdatedBy(updatedBy)
             .withState(ConnectorEnumRolloutState.INITIALIZED)
             .withHasBreakingChanges(false)
-            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
+            .withRolloutStrategy(getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())))
             .withInitialRolloutPct(initialRolloutPct?.toLong())
             .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
         connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -238,6 +238,7 @@ open class ConnectorRolloutHandler
       val connectorRollout =
         initializedRollouts.first()
           .withUpdatedBy(updatedBy)
+          .withRolloutStrategy(getRolloutStrategyForManualUpdate(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())))
           .withInitialRolloutPct(initialRolloutPct?.toLong())
           .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
       connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -394,7 +395,7 @@ open class ConnectorRolloutHandler
       if (connectorRollout.currentTargetRolloutPct >= actualTargetRolloutPct) {
         throw ConnectorRolloutInvalidRequestProblem(
           ProblemMessageData().message(
-            "Requested to pin $targetPercentage% of actors but already pinned ${connectorRollout.currentTargetRolloutPct}.",
+            "Requested to pin $actualTargetRolloutPct% of actors but already pinned ${connectorRollout.currentTargetRolloutPct}.",
           ),
         )
       }

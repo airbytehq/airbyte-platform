@@ -613,7 +613,7 @@ internal class ConnectorRolloutHandlerTest {
     val runId = UUID.randomUUID().toString()
     val rolloutStrategy = ConnectorRolloutStrategy.MANUAL
     val connectorRollout =
-      createMockConnectorRollout(rolloutId).apply {
+      createMockConnectorRollout(rolloutId, rolloutStrategy = ConnectorEnumRolloutStrategy.MANUAL).apply {
         this.state = state
       }
 
@@ -988,7 +988,7 @@ internal class ConnectorRolloutHandlerTest {
         rolloutStrategy = ConnectorRolloutStrategy.MANUAL
         migratePins = false
       }
-    val connectorRollout = createMockConnectorRollout(rolloutId)
+    val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
     every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
@@ -1014,6 +1014,9 @@ internal class ConnectorRolloutHandlerTest {
     val result = connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutWorkflowStart)
 
     assertEquals(connectorRollout.id, result.id)
+    assertEquals(connectorRollout.rolloutStrategy, ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(connectorRollout.updatedBy, UPDATED_BY)
+
     verifyAll {
       connectorRolloutClient.startRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
@@ -1400,6 +1403,7 @@ internal class ConnectorRolloutHandlerTest {
     id: UUID,
     actorDefinitionId: UUID = ACTOR_DEFINITION_ID,
     releaseCandidateVersionId: UUID = RELEASE_CANDIDATE_VERSION_ID,
+    rolloutStrategy: ConnectorEnumRolloutStrategy? = ConnectorEnumRolloutStrategy.MANUAL,
   ): ConnectorRollout =
     ConnectorRollout().apply {
       this.id = id
@@ -1410,7 +1414,7 @@ internal class ConnectorRolloutHandlerTest {
       this.initialRolloutPct = 10L
       this.finalTargetRolloutPct = 100L
       this.hasBreakingChanges = false
-      this.rolloutStrategy = ConnectorEnumRolloutStrategy.MANUAL
+      this.rolloutStrategy = rolloutStrategy
       this.maxStepWaitTimeMins = 60L
       this.createdAt = OffsetDateTime.now().toEpochSecond()
       this.updatedAt = OffsetDateTime.now().toEpochSecond()
