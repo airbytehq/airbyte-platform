@@ -47,7 +47,6 @@ const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/worksp
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const OrganizationBillingPage = React.lazy(() => import("packages/cloud/views/billing/OrganizationBillingPage"));
 const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/billing/OrganizationUsagePage"));
-const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
 const WorkspaceUsagePage = React.lazy(() => import("packages/cloud/views/workspaces/WorkspaceUsagePage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
@@ -141,7 +140,6 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
-        <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>

@@ -25,7 +25,6 @@ export interface Experiments {
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
-  "upcomingFeaturesPage.url": string;
 }
 
 export const defaultExperimentValues: Experiments = {
@@ -48,5 +47,4 @@ export const defaultExperimentValues: Experiments = {
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": false,
   "settings.showAdvancedSettings": false,
-  "upcomingFeaturesPage.url": "",
 };
