@@ -185,8 +185,8 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     var nextRolloutStageAt = getCurrentTimeMilli()
     val expirationTime = nextRolloutStageAt.plusSeconds(input.rolloutExpirationSeconds.toLong())
 
-    val waitBetweenRolloutsSeconds = rollout.maxStepWaitTimeMins?.let { it * 60 } ?: input.waitBetweenRolloutSeconds
-    val waitBetweenResultPollsSeconds = rollout.maxStepWaitTimeMins?.let { it * 60 } ?: input.waitBetweenSyncResultsQueriesSeconds
+    val waitBetweenRolloutsSeconds = input.waitBetweenRolloutSeconds
+    val waitBetweenResultPollsSeconds = input.waitBetweenSyncResultsQueriesSeconds
     val stepSizePercentage = rollout.initialRolloutPct ?: Constants.DEFAULT_INITIAL_ROLLOUT_PERCENTAGE
 
     // Continuously manage the rollout until we reach a terminal state, the workflow is paused, or the rollout expires.
