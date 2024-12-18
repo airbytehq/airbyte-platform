@@ -166,8 +166,6 @@ object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", defaul
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
 
-object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
-
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
