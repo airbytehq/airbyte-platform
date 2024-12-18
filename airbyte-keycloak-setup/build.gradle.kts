@@ -29,6 +29,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.junit.jupiter.system.stubs)
+  testImplementation(libs.platform.testcontainers.postgresql)
 
   testImplementation(project(":oss:airbyte-test-utils"))
 }
