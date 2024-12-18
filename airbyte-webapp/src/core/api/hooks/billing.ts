@@ -1,10 +1,12 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   getCustomerPortalLink,
   getSubscriptionInfo,
   getPaymentInformation,
   listPastInvoices,
+  cancelSubscription,
+  unscheduleCancelSubscription,
 } from "../generated/AirbyteClient";
 import { CustomerPortalRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION } from "../scopes";
@@ -47,10 +49,34 @@ export const useGetPaymentInformation = (organizationId: string) => {
   );
 };
 
-export const useGetOrganizationSubscriptionInfo = (organizationId: string) => {
+export const useGetOrganizationSubscriptionInfo = (organizationId: string, enabled: boolean = true) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(billingKeys.subscriptionInfo(organizationId), () =>
-    getSubscriptionInfo({ organizationId }, requestOptions)
+  return useQuery(
+    billingKeys.subscriptionInfo(organizationId),
+    () => getSubscriptionInfo({ organizationId }, requestOptions),
+    { enabled }
   );
+};
+
+export const useCancelSubscription = (organizationId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(async () => {
+    const response = await cancelSubscription({ organizationId }, requestOptions);
+    await queryClient.invalidateQueries(billingKeys.subscriptionInfo(organizationId));
+    return response;
+  });
+};
+
+export const useUnscheduleCancelSubscription = (organizationId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(async () => {
+    const response = await unscheduleCancelSubscription({ organizationId }, requestOptions);
+    await queryClient.invalidateQueries(billingKeys.subscriptionInfo(organizationId));
+    return response;
+  });
 };

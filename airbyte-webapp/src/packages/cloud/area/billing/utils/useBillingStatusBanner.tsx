@@ -5,7 +5,6 @@ import { ExternalLink, Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCurrentOrganizationInfo, useOrganizationTrialStatus } from "core/api";
-import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -46,19 +45,6 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         content: formatMessage({ id: "billing.banners.manualPaymentStatusInternal" }),
       };
     }
-    return {
-      level: "info",
-      content: formatMessage(
-        { id: "billing.banners.manualPaymentStatus" },
-        {
-          lnk: (node: React.ReactNode) => (
-            <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
-              {node}
-            </ExternalLink>
-          ),
-        }
-      ),
-    };
   }
 
   if (billing.paymentStatus === "locked") {
@@ -156,7 +142,10 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     }
   }
 
-  if (trialStatus?.trialStatus === "post_trial" && billing.paymentStatus === "uninitialized") {
+  if (
+    trialStatus?.trialStatus === "post_trial" &&
+    (billing.paymentStatus === "uninitialized" || billing.subscriptionStatus !== "subscribed")
+  ) {
     return {
       level: "info",
       content: formatMessage(

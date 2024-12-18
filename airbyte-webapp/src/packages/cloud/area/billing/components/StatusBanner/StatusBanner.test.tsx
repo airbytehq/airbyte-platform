@@ -57,7 +57,7 @@ const mockGeneratedIntent = (options: { canViewTrialStatus: boolean; canManageOr
 
 describe("StatusBanner", () => {
   it("should render nothing with paymentStatus=OKAY and not in trial", async () => {
-    mockOrgInfo({ paymentStatus: "okay" });
+    mockOrgInfo({ paymentStatus: "okay", subscriptionStatus: "subscribed" });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
@@ -188,7 +188,16 @@ describe("StatusBanner", () => {
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
     const wrapper = await render(<StatusBanner />);
-    expect(wrapper.container.textContent).toContain("Enter payment details");
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
+    expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("should render post-trial banner w/o link if unsubscribed", async () => {
+    mockOrgInfo({ paymentStatus: "okay", subscriptionStatus: "unsubscribed" });
+    mockTrialStatus({ trialStatus: "post_trial" });
+    mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
+    const wrapper = await render(<StatusBanner />);
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
     expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
   });
 
@@ -197,7 +206,7 @@ describe("StatusBanner", () => {
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
-    expect(wrapper.container.textContent).toContain("Enter payment details");
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
   });
 
