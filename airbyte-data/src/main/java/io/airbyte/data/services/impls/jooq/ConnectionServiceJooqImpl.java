@@ -332,6 +332,34 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   /**
+   * List connections that use a source.
+   *
+   * @param destinationId destination id
+   * @param includeDeleted include deleted
+   * @return connections that use the provided destination
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<StandardSync> listConnectionsByDestination(final UUID destinationId, final boolean includeDeleted)
+      throws IOException {
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+        .from(CONNECTION)
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .where(CONNECTION.DESTINATION_ID.eq(destinationId)
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
+  /**
    * List connections that use a particular actor definition.
    *
    * @param actorDefinitionId id of the source or destination definition.
