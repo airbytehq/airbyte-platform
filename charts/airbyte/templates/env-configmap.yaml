@@ -89,8 +89,6 @@ data:
   JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
   {{- end }}
 
-  JOB_KUBE_BUSYBOX_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.busybox $) }}
-  JOB_KUBE_CURL_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.curl $) }}
   {{ $workloadLauncher := (index .Values "workload-launcher") }}
   CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
   WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}

@@ -21,7 +21,7 @@ global:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
     # Image tag to use for airbyte images. 
-    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
   jobs:
@@ -75,16 +75,6 @@ global:
       ## image pull secret to use for job pod
       ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
       main_container_image_pull_secret: ""
-
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        ## busybox image used by the job pod
-        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_CURL_IMAGE
-        ## curl image used by the job pod
-        ##   jobs.kube.images.curl [string] curl image used by the job pod
-        curl: ""
 
 enabled: true
 ##  workload-launcher.replicaCount Number of workload launcher replicas

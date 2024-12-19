@@ -26,7 +26,7 @@ global:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
     # Image tag to use for airbyte images. 
-    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
   # Docker image pull secret
@@ -184,14 +184,6 @@ global:
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       # -- image pull secret to use for job pod
       main_container_image_pull_secret: ""
-
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        # -- busybox image used by the job pod
-        busybox: "busybox:1.35"
-        ## JOB_KUBE_CURL_IMAGE
-        # -- curl image used by the job pod
-        curl: "curlimages/curl:8.1.1"
 
 ## @section Common Parameters
 
@@ -447,11 +439,7 @@ pod-sweeper:
   enabled: true
   image:
     # -- The image repository to use for the pod sweeper
-    repository: bitnami/kubectl
-    # -- The pull policy for the pod sweeper image
-    pullPolicy: IfNotPresent
-    # -- The pod sweeper image tag to use
-    tag: 1.28.9
+    repository: airbyte/pod-sweeper
 
   # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
@@ -1732,10 +1720,6 @@ minio:
     # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
 
-  mcImage:
-    repository: airbyte/mc
-    tag: latest
-
   storage:
     volumeClaimValue: 500Mi
 
@@ -2106,10 +2090,6 @@ keycloak-setup:
     seccompProfile:
       type: RuntimeDefault
 
-  initContainers:
-    keycloakReadinessCheck:
-      image: "curlimages/curl:8.1.1"
-
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -2373,5 +2353,5 @@ featureflag-server:
 
 testWebapp:
   image:
-    repository: busybox
-    tag: latest
+    repository: airbyte/airbyte-base-java-image
+    tag: 3.3.1
