@@ -101,6 +101,9 @@ export class StreamRowPageObject {
     const syncMode = `${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`;
 
     this.withinStream(() => {
+      // Need 1 second delay to fix flaky test where sync mode dropdown closes before the option is selected
+      // eslint-disable-next-line cypress/no-unnecessary-waiting
+      cy.wait(1000);
       cy.get(streamSyncModeSelectButton).click();
       cy.get(streamSyncModeOptionsMenu).should("exist");
 
@@ -132,6 +135,9 @@ export class StreamRowPageObject {
   selectPKs(pks: string[]) {
     this.withinStream(() => {
       cy.get(streamPKCell).within(() => {
+        // Need 1 second delay to fix flaky test where PK dropdown closes before the option is selected
+        // eslint-disable-next-line cypress/no-unnecessary-waiting
+        cy.wait(1000);
         cy.get("button").click();
         cy.get('div[role="listbox"]').should("exist");
         pks.forEach((pk) => {
@@ -180,6 +186,9 @@ export class StreamRowPageObject {
   selectCursor(cursor: string) {
     this.withinStream(() => {
       cy.get(streamCursorCell).within(() => {
+        // Need 1 second delay to fix flaky test where cursor dropdown closes before the option is selected
+        // eslint-disable-next-line cypress/no-unnecessary-waiting
+        cy.wait(1000);
         cy.get("button").click();
         cy.get('div[role="listbox"]').should("exist");
         cy.contains(cursor).click();
