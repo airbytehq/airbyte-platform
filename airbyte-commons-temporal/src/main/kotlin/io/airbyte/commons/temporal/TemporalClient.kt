@@ -6,6 +6,7 @@ package io.airbyte.commons.temporal
 import com.google.common.annotations.VisibleForTesting
 import com.google.protobuf.ByteString
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException
 import io.airbyte.commons.temporal.exception.UnreachableWorkflowException
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
@@ -40,7 +41,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
@@ -87,7 +87,7 @@ data class ManualOperationResult(
 @Singleton
 class TemporalClient(
   @param:Named("workspaceRootTemporal") private val workspaceRoot: Path,
-  @param:Property(name = "airbyte.temporal.queues.ui-commands") private val uiCommandsQueue: String?,
+  private val queueConfiguration: TemporalQueueConfiguration,
   private val workflowClientWrapped: WorkflowClientWrapped,
   private val serviceStubsWrapped: WorkflowServiceStubsWrapped,
   private val streamResetPersistence: StreamResetPersistence,
@@ -581,7 +581,7 @@ class TemporalClient(
     val workflowOptions =
       WorkflowOptions
         .newBuilder()
-        .setTaskQueue(uiCommandsQueue)
+        .setTaskQueue(queueConfiguration.uiCommandsQueue)
         .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
         .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.getJobId()))
         .build()

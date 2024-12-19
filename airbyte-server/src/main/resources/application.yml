@@ -321,8 +321,6 @@ airbyte:
         max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:30}
         max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   temporal:
-    queues:
-      ui-commands: ui_commands
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
