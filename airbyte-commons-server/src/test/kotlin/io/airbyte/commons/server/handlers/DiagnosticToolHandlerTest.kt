@@ -207,7 +207,7 @@ private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
     }
 
   val podList = PodList().apply { items = listOf(pod) }
-
+  every { kubernetesClient.namespace } returns "ab"
   every { kubernetesClient.pods() } returns
     mockk {
       every { inNamespace("ab") } returns

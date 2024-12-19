@@ -320,10 +320,12 @@ open class DiagnosticToolHandler(
 
   private fun collectPodInfo(client: KubernetesClient): List<Map<String, Any>> {
     logger.info { "Collecting pods data..." }
+    val currentNamespace = client.namespace
+    logger.info { "Current namespace from client: $currentNamespace" }
     val pods =
       client
         .pods()
-        ?.inNamespace("ab")
+        ?.inNamespace(currentNamespace)
         ?.list()
         ?.items ?: emptyList()
 
