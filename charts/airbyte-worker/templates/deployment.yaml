@@ -164,16 +164,6 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        - name: JOB_KUBE_BUSYBOX_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_BUSYBOX_IMAGE
-        - name: JOB_KUBE_CURL_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_CURL_IMAGE
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:

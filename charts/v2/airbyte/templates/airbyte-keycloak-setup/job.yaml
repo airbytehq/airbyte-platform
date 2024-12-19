@@ -38,13 +38,6 @@ spec:
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.affinity "context" $) | nindent 6 }}
       {{- end }}
       initContainers:
-        - name: keycloak-readiness-check
-          image: {{ include "imageUrl" (list .Values.keycloakSetup.initContainers.keycloakReadinessCheck.image $) }}
-          command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
-          env:
-            {{- include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 12 }}
-          securityContext: 
-            {{- toYaml .Values.keycloakSetup.initContainerSecurityContext | nindent 12 }}
         {{- if .Values.keycloakSetup.extraInitContainers }}
         {{- toYaml .Values.keycloakSetup.extraInitContainers | nindent 8 }}
         {{- end }}

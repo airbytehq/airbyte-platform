@@ -43,3 +43,12 @@ airbyte {
     imageName = "keycloak-setup"
   }
 }
+
+val copyScripts = tasks.register<Copy>("copyScripts") {
+  from("scripts")
+  into("build/airbyte/docker/")
+}
+
+tasks.named("dockerCopyDistribution") {
+  dependsOn(copyScripts)
+}

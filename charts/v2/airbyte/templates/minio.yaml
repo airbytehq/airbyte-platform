@@ -123,13 +123,13 @@ spec:
     fsGroup: 1000
   containers:
     - name: minio-mc
-      image: {{ include "imageUrl" (list .Values.minio.mcImage $) }}
+      image: {{ include "imageUrl" (list .Values.minio.image $) }}
       command: ["/bin/sh", "-c",
-        "until (/usr/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
-          /usr/bin/mc mb --ignore-existing myminio/state-storage;
-          /usr/bin/mc policy set public myminio/state-storage;
-          /usr/bin/mc mb --ignore-existing myminio/airbyte-dev-logs;
-          /usr/bin/mc policy set public myminio/airbyte-dev-logs;"]
+        "until (/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
+          /bin/mc mb --ignore-existing myminio/state-storage;
+          /bin/mc policy set public myminio/state-storage;
+          /bin/mc mb --ignore-existing myminio/airbyte-dev-logs;
+          /bin/mc policy set public myminio/airbyte-dev-logs;"]
       securityContext:
         allowPrivilegeEscalation: false 
         runAsNonRoot: true

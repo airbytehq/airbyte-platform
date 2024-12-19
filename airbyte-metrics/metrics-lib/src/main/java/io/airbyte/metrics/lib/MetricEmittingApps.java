@@ -31,7 +31,8 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   WORKER("worker"),
   WORKLOAD_API("workload-api"),
   WORKLOAD_INIT("workload-init"),
-  WORKLOAD_LAUNCHER("workload-launcher");
+  WORKLOAD_LAUNCHER("workload-launcher"),
+  CONNECTOR_BUILDER_SERVER("connector-builder-server");
 
   private final String applicationName;
 

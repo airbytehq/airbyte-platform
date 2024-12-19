@@ -205,16 +205,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONTAINER_ORCHESTRATOR_IMAGE
-        - name: JOB_KUBE_BUSYBOX_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_BUSYBOX_IMAGE
-        - name: JOB_KUBE_CURL_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_CURL_IMAGE
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:
             configMapKeyRef:

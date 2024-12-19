@@ -25,7 +25,7 @@ ADD --chown=airbyte:airbyte https://dtdg.co/latest-java-tracer dd-java-agent.jar
 # Add the OpenTelemetry Java APM agent
 ADD --chown=airbyte:airbyte https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 
-ADD --chown=airbyte:airbyte oss/docker/airbyte-base-java-image/entrypoint.sh /entrypoint.sh
+ADD --chown=airbyte:airbyte entrypoint.sh /entrypoint.sh
 
 USER airbyte:airbyte
 

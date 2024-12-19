@@ -71,60 +71,6 @@ Renders the jobs.kube.localVolume.enabled environment variable
 {{- end }}
 
 {{/*
-Renders the global.jobs.kube.images.busybox value
-*/}}
-{{- define "airbyte.jobs.kube.images.busybox" }}
-    {{- include "imageUrl" (list .Values.global.jobs.kube.images.busybox $) }}
-{{- end }}
-
-{{/*
-Renders the jobs.kube.images.busybox environment variable
-*/}}
-{{- define "airbyte.jobs.kube.images.busybox.env" }}
-- name: JOB_KUBE_BUSYBOX_IMAGE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: JOB_KUBE_BUSYBOX_IMAGE
-{{- end }}
-
-{{/*
-Renders the global.jobs.kube.images.socat value
-*/}}
-{{- define "airbyte.jobs.kube.images.socat" }}
-    {{- include "imageUrl" (list .Values.global.jobs.kube.images.socat $) }}
-{{- end }}
-
-{{/*
-Renders the jobs.kube.images.socat environment variable
-*/}}
-{{- define "airbyte.jobs.kube.images.socat.env" }}
-- name: JOB_KUBE_SOCAT_IMAGE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: JOB_KUBE_SOCAT_IMAGE
-{{- end }}
-
-{{/*
-Renders the global.jobs.kube.images.curl value
-*/}}
-{{- define "airbyte.jobs.kube.images.curl" }}
-    {{- include "imageUrl" (list .Values.global.jobs.kube.images.curl $) }}
-{{- end }}
-
-{{/*
-Renders the jobs.kube.images.curl environment variable
-*/}}
-{{- define "airbyte.jobs.kube.images.curl.env" }}
-- name: JOB_KUBE_CURL_IMAGE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: JOB_KUBE_CURL_IMAGE
-{{- end }}
-
-{{/*
 Renders the global.jobs.kube.main_container_image_pull_secret value
 */}}
 {{- define "airbyte.jobs.kube.main_container_image_pull_secret" }}
@@ -255,9 +201,6 @@ Renders the set of all jobs config map variables
 JOB_KUBE_SERVICEACCOUNT: {{ .Values.global.serviceAccountName | quote }}
 JOB_KUBE_NAMESPACE: {{ include "airbyte.jobs.kube.namespace" . | quote }}
 JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ include "airbyte.jobs.kube.localVolume.enabled" . | quote }}
-JOB_KUBE_BUSYBOX_IMAGE: {{ include "imageUrl" (list .Values.global.jobs.kube.images.busybox $) | quote }}
-JOB_KUBE_SOCAT_IMAGE: {{ include "imageUrl" (list .Values.global.jobs.kube.images.socat $) | quote }}
-JOB_KUBE_CURL_IMAGE: {{ include "imageUrl" (list .Values.global.jobs.kube.images.curl $) | quote }}
 JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ include "airbyte.jobs.kube.main_container_image_pull_secret" . | quote }}
 JOB_KUBE_ANNOTATIONS: {{ .Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
 JOB_KUBE_LABELS: {{ .Values.global.jobs.kube.labels | include "airbyte.flattenMap" | quote }}
