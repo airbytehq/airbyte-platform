@@ -55,5 +55,3 @@ flags:
         serve: true
   - name: platform.fail-sync-on-invalid-checksum
     serve: false
-  - name: platform.allow-sub-one-hour-sync-frequency
-    serve: true

@@ -172,7 +172,7 @@ object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-conn
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
-object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = false)
+object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = true)
 
 object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
 
