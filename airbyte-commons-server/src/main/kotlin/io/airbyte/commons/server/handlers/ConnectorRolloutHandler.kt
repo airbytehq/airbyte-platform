@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.problems.throwable.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
@@ -393,7 +394,7 @@ open class ConnectorRolloutHandler
       }
 
       if (connectorRollout.currentTargetRolloutPct >= actualTargetRolloutPct) {
-        throw ConnectorRolloutInvalidRequestProblem(
+        throw ConnectorRolloutMaximumRolloutPercentageReachedProblem(
           ProblemMessageData().message(
             "Requested to pin $actualTargetRolloutPct% of actors but already pinned ${connectorRollout.currentTargetRolloutPct}.",
           ),

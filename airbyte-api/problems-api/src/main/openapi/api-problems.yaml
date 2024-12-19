@@ -837,6 +837,27 @@ components:
               default: Invalid connector rollout request.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/rollout-percentage-reached
+            title:
+              type: string
+              default: Max rollout percentage already reached
+            detail:
+              type: string
+              default: Cannot pin more actors; the maximum rollout percentage was already reached
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     ConnectorRolloutNotEnoughActorsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

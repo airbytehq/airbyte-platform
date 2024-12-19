@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.problems.throwable.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -848,10 +849,10 @@ internal class ConnectorRolloutHandlerTest {
     connectorRollout.withFinalTargetRolloutPct(50)
     connectorRollout.withCurrentTargetRolloutPct(50)
 
-    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+    assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
       connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 50, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED)
     }
-    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+    assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
       connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED)
     }
   }
