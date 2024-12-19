@@ -162,7 +162,7 @@ public class ReplicationWorkerFactory {
     final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
-    log.info("Setting up source...");
+    log.info("Setting up source with image {}.", replicationInput.getSourceLauncherConfig().getDockerImage());
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
@@ -178,7 +178,7 @@ public class ReplicationWorkerFactory {
             new MessageMetricsTracker(metricClient),
             ContainerIOHandle.source());
 
-    log.info("Setting up destination...");
+    log.info("Setting up destination with image {}.", replicationInput.getDestinationLauncherConfig().getDockerImage());
     final AirbyteMessageBufferedWriterFactory messageWriterFactory =
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(replicationInput.getCatalog()));
