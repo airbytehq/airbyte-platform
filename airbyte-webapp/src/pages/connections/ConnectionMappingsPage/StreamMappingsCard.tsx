@@ -19,12 +19,13 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useMappingContext } from "./MappingContext";
+import { getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
 import { MappingRow } from "./MappingRow";
 
-export const StreamMappingsCard: React.FC<{ streamName: string }> = ({ streamName }) => {
+export const StreamMappingsCard: React.FC<{ streamDescriptorKey: string }> = ({ streamDescriptorKey }) => {
   const { streamsWithMappings, reorderMappings, addMappingForStream } = useMappingContext();
-  const mappingsForStream = streamsWithMappings[streamName];
+  const mappingsForStream = streamsWithMappings[streamDescriptorKey];
+  const { name: streamName } = getStreamDescriptorForKey(streamDescriptorKey);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -41,7 +42,7 @@ export const StreamMappingsCard: React.FC<{ streamName: string }> = ({ streamNam
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const updatedOrder = arrayMove(mappingsForStream, oldIndex, newIndex);
-        reorderMappings(streamName, updatedOrder);
+        reorderMappings(streamDescriptorKey, updatedOrder);
       }
     }
   };
@@ -52,9 +53,9 @@ export const StreamMappingsCard: React.FC<{ streamName: string }> = ({ streamNam
         <SortableContext items={mappingsForStream.map((mapping) => mapping.id)} strategy={verticalListSortingStrategy}>
           <FlexContainer direction="column">
             {mappingsForStream.map((mapping) => (
-              <MappingRow key={mapping.id} id={mapping.id} streamName={streamName} />
+              <MappingRow key={mapping.id} id={mapping.id} streamDescriptorKey={streamDescriptorKey} />
             ))}
-            <Button onClick={() => addMappingForStream(streamName)} variant="secondary" size="sm" width={125}>
+            <Button onClick={() => addMappingForStream(streamDescriptorKey)} variant="secondary" size="sm" width={125}>
               <FormattedMessage id="connections.mappings.addMapping" />
             </Button>
           </FlexContainer>

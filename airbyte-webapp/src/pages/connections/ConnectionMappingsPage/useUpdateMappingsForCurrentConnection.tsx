@@ -8,6 +8,7 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { getKeyForStream } from "./MappingContext";
 import { ClearDataWarningModal } from "../ConnectionReplicationPage/ClearDataWarningModal";
 import { RecommendRefreshModal } from "../ConnectionReplicationPage/RecommendRefreshModal";
 
@@ -26,16 +27,17 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
   const updateMappings = async (updatedMappings: Record<string, ConfiguredStreamMapper[]>) => {
     const updatedCatalog: AirbyteStreamAndConfiguration[] = connection.syncCatalog.streams.map(
       (streamWithConfig: AirbyteStreamAndConfiguration) => {
-        const streamName = streamWithConfig.stream?.name;
-        if (streamName && updatedMappings[streamName] && streamWithConfig.config) {
+        if (streamWithConfig.stream && streamWithConfig.config) {
+          const streamDescriptorKey = getKeyForStream(streamWithConfig.stream);
           return {
             ...streamWithConfig,
             config: {
               ...streamWithConfig.config,
-              mappers: updatedMappings[streamName],
+              mappers: updatedMappings[streamDescriptorKey],
             },
           };
         }
+
         return streamWithConfig;
       }
     );

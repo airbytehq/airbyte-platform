@@ -34,10 +34,10 @@ const hashingMapperConfigSchema = yup.object().shape({
 
 export const HashFieldRow: React.FC<{
   mapping: StreamMapperWithId<HashingMapperConfiguration>;
-  streamName: string;
-}> = ({ mapping, streamName }) => {
+  streamDescriptorKey: string;
+}> = ({ mapping, streamDescriptorKey }) => {
   const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamName);
+  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
 
   const defaultValues = useMemo(() => {
     return {
@@ -50,15 +50,15 @@ export const HashFieldRow: React.FC<{
   const methods = useForm<HashingMapperConfiguration>({
     defaultValues,
     resolver: autoSubmitResolver<HashingMapperConfiguration>(hashingMapperConfigSchema, (formValues) => {
-      updateLocalMapping(streamName, mapping.id, { mapperConfiguration: formValues });
+      updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
       validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
-  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   if (!mapping) {
     return null;
@@ -68,7 +68,11 @@ export const HashFieldRow: React.FC<{
     <FormProvider {...methods}>
       <form>
         <MappingRowContent>
-          <MappingTypeListBox selectedValue={StreamMapperType.hashing} mappingId={mapping.id} streamName={streamName} />
+          <MappingTypeListBox
+            selectedValue={StreamMapperType.hashing}
+            mappingId={mapping.id}
+            streamDescriptorKey={streamDescriptorKey}
+          />
           <SelectTargetField<HashingMapperConfiguration> name="targetField" targetFieldOptions={fieldsInStream} />
           <MappingRowItem>
             <Text>

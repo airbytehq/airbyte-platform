@@ -36,7 +36,7 @@ export interface RowFilteringMapperFormValues {
 
 interface RowFilteringMapperFormProps {
   mapping: StreamMapperWithId<RowFilteringMapperConfiguration>;
-  streamName: string;
+  streamDescriptorKey: string;
 }
 
 const simpleSchema: yup.SchemaOf<RowFilteringMapperFormValues> = yup.object({
@@ -51,24 +51,24 @@ const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
   comparisonValue: "",
 });
 
-export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamName }) => {
+export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamDescriptorKey }) => {
   const { formatMessage } = useIntl();
   const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamName);
+  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
 
   const methods = useForm<RowFilteringMapperFormValues>({
     defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),
     resolver: autoSubmitResolver<RowFilteringMapperFormValues>(simpleSchema, (values) => {
       const mapperConfiguration = formValuesToMapperConfiguration(values);
-      updateLocalMapping(streamName, mapping.id, { mapperConfiguration });
+      updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration });
       validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
-  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   if (!mapping) {
     return null;
@@ -80,7 +80,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
         <MappingRowContent>
           <MappingTypeListBox
             selectedValue={StreamMapperType["row-filtering"]}
-            streamName={streamName}
+            streamDescriptorKey={streamDescriptorKey}
             mappingId={mapping.id}
           />
           <SelectFilterType />

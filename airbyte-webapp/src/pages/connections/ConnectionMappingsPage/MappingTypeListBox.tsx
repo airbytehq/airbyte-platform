@@ -14,11 +14,15 @@ import { StreamMapperWithId } from "./types";
 
 interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;
-  streamName: string;
+  streamDescriptorKey: string;
   mappingId: string;
 }
 
-export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selectedValue, streamName, mappingId }) => {
+export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
+  selectedValue,
+  streamDescriptorKey,
+  mappingId,
+}) => {
   const { updateLocalMapping } = useMappingContext();
 
   const mappingTypeLabels = {
@@ -129,7 +133,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
             default:
               throw new Error(`Unsupported StreamMapperType: ${value}`);
           }
-          updateLocalMapping(streamName, validConfiguration.id, validConfiguration);
+          updateLocalMapping(streamDescriptorKey, validConfiguration.id, validConfiguration);
         }
       }}
     />

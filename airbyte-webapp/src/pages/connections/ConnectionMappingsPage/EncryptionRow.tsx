@@ -53,12 +53,12 @@ const encryptionMapperSchema = yup
   .required();
 
 interface EncryptionFormProps {
-  streamName: string;
+  streamDescriptorKey: string;
   mapping: StreamMapperWithId<EncryptionMapperConfiguration>;
   targetFieldOptions: SelectFieldOption[];
 }
 
-export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamName, mapping, targetFieldOptions }) => {
+export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptorKey, mapping, targetFieldOptions }) => {
   const { updateLocalMapping, validateMappings } = useMappingContext();
   const { formatMessage } = useIntl();
   const [algorithm, setAlgorithm] = useState<EncryptionMapperAlgorithm>(mapping.mapperConfiguration.algorithm || "RSA");
@@ -71,23 +71,21 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamName, mapp
       ...(mapping.mapperConfiguration.algorithm === "RSA" && {
         publicKey: mapping.mapperConfiguration.publicKey ?? "",
       }),
-
       ...(mapping.mapperConfiguration.algorithm === "AES" && {
-        key: mapping.mapperConfiguration.key ?? "",
-        mode: mapping.mapperConfiguration.mode ?? "CBC",
-        padding: mapping.mapperConfiguration.padding ?? "PKCS5Padding",
+        targetField: mapping.mapperConfiguration.targetField ?? "",
+        fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_encrypted",
       }),
     },
     resolver: autoSubmitResolver<EncryptionMapperConfiguration>(encryptionMapperSchema, (formValues) => {
-      updateLocalMapping(streamName, mapping.id, { mapperConfiguration: formValues });
+      updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
       validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
-  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   const values = methods.watch();
 
@@ -96,7 +94,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamName, mapp
       <form className={styles.form}>
         <MappingTypeListBox
           selectedValue={StreamMapperType.encryption}
-          streamName={streamName}
+          streamDescriptorKey={streamDescriptorKey}
           mappingId={mapping.id}
         />
         <SelectTargetField<EncryptionMapperConfiguration> targetFieldOptions={targetFieldOptions} name="targetField" />
@@ -172,13 +170,15 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamName, mapp
 
 export const EncryptionRow: React.FC<{
   mapping: StreamMapperWithId<EncryptionMapperConfiguration>;
-  streamName: string;
-}> = ({ mapping, streamName }) => {
-  const fieldsInStream = useGetFieldsInStream(streamName);
+  streamDescriptorKey: string;
+}> = ({ mapping, streamDescriptorKey }) => {
+  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
 
   if (!mapping) {
     return null;
   }
 
-  return <EncryptionForm streamName={streamName} mapping={mapping} targetFieldOptions={fieldsInStream} />;
+  return (
+    <EncryptionForm streamDescriptorKey={streamDescriptorKey} mapping={mapping} targetFieldOptions={fieldsInStream} />
+  );
 };

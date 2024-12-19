@@ -9,7 +9,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./AddStreamForMappingComboBox.module.scss";
-import { useMappingContext } from "./MappingContext";
+import { getKeyForStream, useMappingContext } from "./MappingContext";
 import { useGetStreamsForNewMapping } from "./useGetStreamsForNewMappings";
 
 export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({ secondary = false }) => {
@@ -23,14 +23,14 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
     ? formatMessage({ id: "connections.mappings.addStream" })
     : formatMessage({ id: "connections.mappings.selectAStream" });
 
-  const onChange = (streamName: string) => {
-    setSelectedStream(streamName);
-    addStreamToMappingsList(streamName);
+  const onChange = (streamDescriptorKey: string) => {
+    setSelectedStream(streamDescriptorKey);
+    addStreamToMappingsList(streamDescriptorKey);
   };
 
   const options = streamsToList?.map((stream) => ({
     label: stream.stream?.name || "",
-    value: stream.stream?.name || "",
+    value: stream.stream ? getKeyForStream(stream.stream) : "",
   }));
   const disabled = !options || options.length === 0 || mode === "readonly";
 

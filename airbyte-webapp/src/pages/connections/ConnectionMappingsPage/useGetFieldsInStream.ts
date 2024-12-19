@@ -7,15 +7,20 @@
 import { useCurrentConnection } from "core/api";
 import { traverseSchemaToField } from "core/domain/catalog";
 
-export const useGetFieldsInStream = (streamName: string) => {
+import { getStreamDescriptorForKey } from "./MappingContext";
+
+export const useGetFieldsInStream = (streamDescriptorKey: string) => {
   const { syncCatalog } = useCurrentConnection();
+  const streamDescriptor = getStreamDescriptorForKey(streamDescriptorKey);
 
   if (!syncCatalog) {
     return [];
   }
-  const stream = syncCatalog.streams.find((s) => s.stream?.name === streamName);
+  const stream = syncCatalog.streams.find(
+    (s) => s.stream?.name === streamDescriptor.name && s.stream?.namespace === streamDescriptor.namespace
+  );
 
-  return traverseSchemaToField(stream?.stream?.jsonSchema, streamName).map((field) => ({
+  return traverseSchemaToField(stream?.stream?.jsonSchema, streamDescriptorKey).map((field) => ({
     fieldName: field.cleanedName,
     fieldType: field.type,
     airbyteType: field.airbyte_type,

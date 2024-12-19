@@ -3,7 +3,12 @@ import React, { PropsWithChildren, createContext, useCallback, useContext, useSt
 import { v4 as uuidv4 } from "uuid";
 
 import { useCurrentConnection } from "core/api";
-import { HashingMapperConfigurationMethod, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  AirbyteStream,
+  HashingMapperConfigurationMethod,
+  StreamDescriptor,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { StreamMapperWithId } from "./types";
@@ -12,13 +17,17 @@ import { useUpdateMappingsForCurrentConnection } from "./useUpdateMappingsForCur
 
 interface MappingContextType {
   streamsWithMappings: Record<string, StreamMapperWithId[]>;
-  updateLocalMapping: (streamName: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => void;
-  reorderMappings: (streamName: string, newOrder: StreamMapperWithId[]) => void;
+  updateLocalMapping: (
+    streamDescriptorKey: string,
+    mappingId: string,
+    updatedMapping: Partial<StreamMapperWithId>
+  ) => void;
+  reorderMappings: (streamDescriptorKey: string, newOrder: StreamMapperWithId[]) => void;
   clear: () => void;
   submitMappings: () => Promise<void>;
-  removeMapping: (streamName: string, mappingId: string) => void;
-  addStreamToMappingsList: (streamName: string) => void;
-  addMappingForStream: (streamName: string) => void;
+  removeMapping: (streamDescriptorKey: string, mappingId: string) => void;
+  addStreamToMappingsList: (streamDescriptorKey: string) => void;
+  addMappingForStream: (streamDescriptorKey: string) => void;
   validateMappings: () => void;
   key: number;
 }
@@ -26,6 +35,15 @@ interface MappingContextType {
 export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
 
 const MappingContext = createContext<MappingContextType | undefined>(undefined);
+export const getKeyForStream = (stream: AirbyteStream) => `${stream.namespace}-${stream.name}`;
+export const getStreamDescriptorForKey = (key: string): StreamDescriptor => {
+  const [namespace, name] = key.split("-");
+
+  if (namespace === "undefined") {
+    return { namespace: undefined, name };
+  }
+  return { namespace, name };
+};
 
 export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const connection = useCurrentConnection();
@@ -43,12 +61,12 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
 
   // Updates a specific mapping in the local state
   const updateLocalMapping = useCallback(
-    (streamName: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => {
-      console.log(`updating local mapping for stream ${streamName}`, updatedMapping);
+    (streamDescriptorKey: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => {
+      console.log(`updating local mapping for stream ${streamDescriptorKey}`, updatedMapping);
 
       setStreamsWithMappings((prevMappings) => ({
         ...prevMappings,
-        [streamName]: prevMappings[streamName].map((mapping) => {
+        [streamDescriptorKey]: prevMappings[streamDescriptorKey].map((mapping) => {
           if (mapping.id === mappingId) {
             if (updatedMapping.type && updatedMapping.type !== mapping.type) {
               return updatedMapping as StreamMapperWithId;
@@ -63,11 +81,11 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
     []
   );
 
-  const addMappingForStream = (streamName: string) => {
+  const addMappingForStream = (streamDescriptorKey: string) => {
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,
-      [streamName]: [
-        ...prevMappings[streamName],
+      [streamDescriptorKey]: [
+        ...prevMappings[streamDescriptorKey],
         {
           type: StreamMapperType.hashing,
           id: uuidv4(),
@@ -83,10 +101,10 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   };
 
   // Reorders the mappings for a specific stream
-  const reorderMappings = (streamName: string, newOrder: StreamMapperWithId[]) => {
+  const reorderMappings = (streamDescriptorKey: string, newOrder: StreamMapperWithId[]) => {
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,
-      [streamName]: newOrder,
+      [streamDescriptorKey]: newOrder,
     }));
   };
 
@@ -97,17 +115,17 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
     unregisterNotificationById(MAPPING_VALIDATION_ERROR_KEY);
   };
 
-  const removeMapping = (streamName: string, mappingId: string) => {
-    const mappingsForStream = streamsWithMappings[streamName].filter((mapping) => mapping.id !== mappingId);
+  const removeMapping = (streamDescriptorKey: string, mappingId: string) => {
+    const mappingsForStream = streamsWithMappings[streamDescriptorKey].filter((mapping) => mapping.id !== mappingId);
 
     setStreamsWithMappings((prevMappings) => {
       if (mappingsForStream.length === 0) {
-        const { [streamName]: removedStream, ...rest } = prevMappings;
+        const { [streamDescriptorKey]: removedStream, ...rest } = prevMappings;
         return rest;
       }
       return {
         ...prevMappings,
-        [streamName]: mappingsForStream,
+        [streamDescriptorKey]: mappingsForStream,
       };
     });
   };
@@ -118,9 +136,9 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
     return Promise.resolve();
   };
 
-  const addStreamToMappingsList = (streamName: string) => {
+  const addStreamToMappingsList = (streamDescriptorKey: string) => {
     const newMapping: Record<string, StreamMapperWithId[]> = {
-      [streamName]: [
+      [streamDescriptorKey]: [
         {
           type: StreamMapperType.hashing,
           id: uuidv4(),

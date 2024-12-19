@@ -23,12 +23,12 @@ export const fieldRenamingConfigSchema = yup.object().shape({
 
 interface FieldRenamingRowProps {
   mapping: StreamMapperWithId<FieldRenamingMapperConfiguration>;
-  streamName: string;
+  streamDescriptorKey: string;
 }
 
-export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamName }) => {
+export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamDescriptorKey }) => {
   const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamName);
+  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
   const { formatMessage } = useIntl();
 
   const defaultValues = useMemo(() => {
@@ -41,15 +41,15 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
   const methods = useForm<FieldRenamingMapperConfiguration>({
     defaultValues,
     resolver: autoSubmitResolver<FieldRenamingMapperConfiguration>(fieldRenamingConfigSchema, (formValues) => {
-      updateLocalMapping(streamName, mapping.id, { mapperConfiguration: formValues });
+      updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
       validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamName, mapping.id, { validationCallback: methods.trigger });
-  }, [methods.trigger, streamName, updateLocalMapping, mapping.id]);
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+  }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   return (
     <FormProvider {...methods}>
@@ -57,7 +57,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
         <MappingRowContent>
           <MappingTypeListBox
             selectedValue={StreamMapperType["field-renaming"]}
-            streamName={streamName}
+            streamDescriptorKey={streamDescriptorKey}
             mappingId={mapping.id}
           />
           <SelectTargetField<FieldRenamingMapperConfiguration>

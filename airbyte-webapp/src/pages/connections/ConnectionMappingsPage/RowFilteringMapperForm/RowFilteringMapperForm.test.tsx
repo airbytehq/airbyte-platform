@@ -12,7 +12,7 @@ import { RowFilteringMapperForm } from "./RowFilteringMapperForm";
 import { StreamMapperWithId } from "../types";
 
 const mockMapperId = uuid();
-const mockStreamName = "pokemon";
+const mockstreamDescriptorKey = "undefined-pokemon";
 
 const mockRowFilteringMapperConfiguration: RowFilteringMapperConfiguration = {
   conditions: {
@@ -40,16 +40,20 @@ jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
 }));
 
 const mockUpdateLocalMapping = jest.fn();
-jest.mock("../MappingContext", () => ({
-  useMappingContext: () => ({
-    updateLocalMapping: mockUpdateLocalMapping,
-    validateMappings: jest.fn(),
-  }),
-}));
+jest.mock("../MappingContext", () => {
+  const originalModule = jest.requireActual("../MappingContext");
+  return {
+    ...originalModule,
+    useMappingContext: () => ({
+      updateLocalMapping: mockUpdateLocalMapping,
+      validateMappings: jest.fn(),
+    }),
+  };
+});
 
 describe(`${RowFilteringMapperForm.name}`, () => {
   it("renders error messages", async () => {
-    await render(<RowFilteringMapperForm mapping={mockMapper} streamName={mockStreamName} />);
+    await render(<RowFilteringMapperForm mapping={mockMapper} streamDescriptorKey={mockstreamDescriptorKey} />);
 
     // clear the default values
     const targetFieldInput = screen.getByPlaceholderText(messages["connections.mappings.selectField"]);
@@ -64,7 +68,7 @@ describe(`${RowFilteringMapperForm.name}`, () => {
   });
 
   it("updates the mapper context with new configuration values", async () => {
-    await render(<RowFilteringMapperForm mapping={mockMapper} streamName={mockStreamName} />);
+    await render(<RowFilteringMapperForm mapping={mockMapper} streamDescriptorKey={mockstreamDescriptorKey} />);
 
     const targetFieldInput = screen.getByPlaceholderText(messages["connections.mappings.selectField"]);
     const newTargetFieldName = "location_area_encounters";
@@ -78,7 +82,7 @@ describe(`${RowFilteringMapperForm.name}`, () => {
 
     // Form should have been submitted automatically with new config values
     await waitFor(() =>
-      expect(mockUpdateLocalMapping).toHaveBeenLastCalledWith(mockStreamName, mockMapperId, {
+      expect(mockUpdateLocalMapping).toHaveBeenLastCalledWith(mockstreamDescriptorKey, mockMapperId, {
         mapperConfiguration: {
           conditions: {
             ...mockRowFilteringMapperConfiguration.conditions,

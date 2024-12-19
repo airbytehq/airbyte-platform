@@ -17,11 +17,11 @@ import { RowFilteringMapperForm } from "./RowFilteringMapperForm";
 import { isEncryptionMapping, isFieldRenamingMapping, isHashingMapping, isRowFilteringMapping } from "./typeHelpers";
 
 export const MappingRow: React.FC<{
-  streamName: string;
+  streamDescriptorKey: string;
   id: string;
-}> = ({ streamName, id }) => {
+}> = ({ streamDescriptorKey, id }) => {
   const { removeMapping, streamsWithMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.id === id);
+  const mapping = streamsWithMappings[streamDescriptorKey].find((m) => m.id === id);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -37,20 +37,20 @@ export const MappingRow: React.FC<{
     }
 
     if (isHashingMapping(mapping)) {
-      return <HashFieldRow streamName={streamName} mapping={mapping} />;
+      return <HashFieldRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
     if (isFieldRenamingMapping(mapping)) {
-      return <FieldRenamingRow streamName={streamName} mapping={mapping} />;
+      return <FieldRenamingRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
     if (isRowFilteringMapping(mapping)) {
-      return <RowFilteringMapperForm streamName={streamName} mapping={mapping} />;
+      return <RowFilteringMapperForm streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
     if (isEncryptionMapping(mapping)) {
-      return <EncryptionRow streamName={streamName} mapping={mapping} />;
+      return <EncryptionRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
 
     return null;
-  }, [mapping, streamName]);
+  }, [mapping, streamDescriptorKey]);
 
   if (!RowContent || !mapping) {
     return null;
@@ -69,7 +69,7 @@ export const MappingRow: React.FC<{
           key={`remove-${id}`}
           variant="clear"
           type="button"
-          onClick={() => removeMapping(streamName, mapping.id)}
+          onClick={() => removeMapping(streamDescriptorKey, mapping.id)}
         >
           <Icon color="disabled" type="trash" />
         </Button>

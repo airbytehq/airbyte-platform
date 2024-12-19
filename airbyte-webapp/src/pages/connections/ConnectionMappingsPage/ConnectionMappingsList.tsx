@@ -19,7 +19,7 @@ export const ConnectionMappingsList: React.FC = () => {
 
   const handleValidations = async () => {
     const validations = await Promise.allSettled(
-      Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
+      Object.entries(streamsWithMappings).flatMap(([_streamDescriptorKey, mappers]) =>
         mappers.map((mapper) => mapper.validationCallback())
       )
     );
@@ -50,12 +50,12 @@ export const ConnectionMappingsList: React.FC = () => {
         </FlexContainer>
       </FlexContainer>
       <FlexContainer direction="column">
-        {Object.entries(streamsWithMappings).map(([streamName, mappers]) => {
+        {Object.entries(streamsWithMappings).map(([streamDescriptorKey, mappers]) => {
           if (!mappers || mappers.length === 0) {
             return null;
           }
 
-          return <StreamMappingsCard key={`${streamName}-${key}`} streamName={streamName} />;
+          return <StreamMappingsCard key={`${streamDescriptorKey}-${key}`} streamDescriptorKey={streamDescriptorKey} />;
         })}
         <div>
           <AddStreamForMappingComboBox secondary />
