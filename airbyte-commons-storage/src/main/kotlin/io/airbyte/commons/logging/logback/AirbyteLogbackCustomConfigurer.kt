@@ -60,6 +60,9 @@ class AirbyteLogbackCustomConfigurer :
       appenders.forEach { addAppender(it) }
     }
 
+    // Disable noise from Jooq. https://github.com/jOOQ/jOOQ/issues/4019
+    loggerContext.getLogger("org.jooq.Constants").level = Level.OFF
+
     // Do not allow any other configurators to run after this.
     // This prevents Logback from creating the default console appender for the root logger.
     return Configurator.ExecutionStatus.DO_NOT_INVOKE_NEXT_IF_ANY
@@ -148,7 +151,12 @@ class AirbyteLogbackCustomConfigurer :
   internal fun createPlatformAppender(loggerContext: LoggerContext): ConsoleAppender<ILoggingEvent> =
     ConsoleAppender<ILoggingEvent>().apply {
       context = loggerContext
-      encoder = createUnstructuredEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
+      encoder =
+        if (EnvVar.PLATFORM_LOG_FORMAT.fetchNotNull().lowercase() == "json") {
+          AirbyteLogEventEncoder().apply { start() }
+        } else {
+          createUnstructuredEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
+        }
       name = PLATFORM_LOGGER_NAME
       start()
     }
