@@ -6,8 +6,13 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.commons.jackson.MoreMappers
+import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.logging.StackTraceElementSerializer
+import io.airbyte.commons.logging.toLogEvent
 import io.airbyte.commons.storage.AzureStorageClient
 import io.airbyte.commons.storage.AzureStorageConfig
 import io.airbyte.commons.storage.DocumentType
@@ -28,6 +33,8 @@ import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+
+private val objectMapper = MoreMappers.initMapper()
 
 /**
  * Shared executor service used to reduce the number of threads created to handle
@@ -81,23 +88,22 @@ class AirbyteCloudStorageAppender(
 ) : AppenderBase<ILoggingEvent>() {
   private val buffer = LinkedBlockingQueue<ILoggingEvent>()
   private var currentStorageId: String = createFileId(baseId = baseStorageId)
-  private val encoder = AirbyteLogEventEncoder()
   private val uploadLock = Any()
 
   override fun start() {
     super.start()
     executorService.scheduleAtFixedRate(this::upload, period, period, unit)
-    encoder.start()
+    val structuredLogEventModule = SimpleModule()
+    structuredLogEventModule.addSerializer(StackTraceElement::class.java, StackTraceElementSerializer())
+    objectMapper.registerModule(structuredLogEventModule)
   }
 
   override fun stop() {
     try {
       super.stop()
-      encoder.stop()
     } finally {
       // Do one final upload attempt to ensure that all logs are published
       upload()
-      executorService.shutdownNow()
     }
   }
 
@@ -111,7 +117,7 @@ class AirbyteCloudStorageAppender(
       buffer.drainTo(events)
 
       if (events.isNotEmpty()) {
-        val document = encoder.bulkEncode(loggingEvents = events)
+        val document = objectMapper.writeValueAsString(LogEvents(events = events.map(ILoggingEvent::toLogEvent)))
         storageClient.write(id = currentStorageId, document = document)
 
         // Move to next file to avoid overwriting in log storage that doesn't support append mode

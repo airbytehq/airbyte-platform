@@ -8,7 +8,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.encoder.EncoderBase
 import com.fasterxml.jackson.databind.module.SimpleModule
 import io.airbyte.commons.jackson.MoreMappers
-import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.StackTraceElementSerializer
 import io.airbyte.commons.logging.toLogEvent
 
@@ -24,16 +23,6 @@ class AirbyteLogEventEncoder : EncoderBase<ILoggingEvent>() {
   override fun headerBytes(): ByteArray = EMPTY_BYTES
 
   override fun footerBytes(): ByteArray = EMPTY_BYTES
-
-  /**
-   * Converts the list of [ILoggingEvent] events into a [io.airbyte.commons.logging.LogEvents] document.
-   *
-   * @param loggingEvents A list of [ILoggingEvent] events.
-   * @return A JSON string representation of a [io.airbyte.commons.logging.LogEvents] document containing
-   *  a structured log event for each Logback logging event.
-   */
-  fun bulkEncode(loggingEvents: List<ILoggingEvent>): String =
-    objectMapper.writeValueAsString(LogEvents(events = loggingEvents.map(ILoggingEvent::toLogEvent)))
 
   override fun encode(loggingEvent: ILoggingEvent): ByteArray = objectMapper.writeValueAsBytes(loggingEvent.toLogEvent()) + NEW_LINE
 
