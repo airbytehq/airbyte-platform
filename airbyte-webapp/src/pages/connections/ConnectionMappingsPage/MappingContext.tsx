@@ -119,10 +119,6 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
     const mappingsForStream = streamsWithMappings[streamDescriptorKey].filter((mapping) => mapping.id !== mappingId);
 
     setStreamsWithMappings((prevMappings) => {
-      if (mappingsForStream.length === 0) {
-        const { [streamDescriptorKey]: removedStream, ...rest } = prevMappings;
-        return rest;
-      }
       return {
         ...prevMappings,
         [streamDescriptorKey]: mappingsForStream,

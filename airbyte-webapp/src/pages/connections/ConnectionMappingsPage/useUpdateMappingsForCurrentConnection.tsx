@@ -34,6 +34,9 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
             config: {
               ...streamWithConfig.config,
               mappers: updatedMappings[streamDescriptorKey],
+              // We should explicitly remove hashedFields, since the mappers field is now the source of truth. The
+              // backend may re-populate hashedFields in the response, but we don't want to send conflicting information.
+              hashedFields: undefined,
             },
           };
         }
