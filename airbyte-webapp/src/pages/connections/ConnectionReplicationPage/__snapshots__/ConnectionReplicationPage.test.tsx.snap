@@ -523,22 +523,14 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                 >
                                   <div
                                     data-testid="primary-key-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -659,22 +651,14 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                 >
                                   <div
                                     data-testid="primary-key-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1312,22 +1296,14 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                 >
                                   <div
                                     data-testid="primary-key-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1448,22 +1424,14 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                 >
                                   <div
                                     data-testid="primary-key-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"

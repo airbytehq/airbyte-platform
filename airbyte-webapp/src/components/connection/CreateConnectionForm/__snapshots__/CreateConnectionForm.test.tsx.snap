@@ -894,11 +894,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1050,11 +1046,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
