@@ -3555,7 +3555,32 @@ paths:
     post:
       tags:
         - jobs
+      summary: Get the latest job not including the cancel jobs.
       operationId: getLastReplicationJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOptionalRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/get_last_replication_job_with_cancel:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the latest job including the cancel jobs. This is used for scheduling in order to make sure that we don't immediately start a new job after a cancel.
+      operationId: getLastReplicationJobWithCancel
       requestBody:
         content:
           application/json:

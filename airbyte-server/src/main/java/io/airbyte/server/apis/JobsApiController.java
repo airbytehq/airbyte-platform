@@ -154,6 +154,14 @@ public class JobsApiController implements JobsApi {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
   }
 
+  @Post("/get_last_replication_job_with_cancel")
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobOptionalRead getLastReplicationJobWithCancel(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody));
+  }
+
   @Post("/job_failure")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)

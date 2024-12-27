@@ -439,6 +439,28 @@ class DefaultJobPersistenceTest {
   }
 
   @Test
+  @DisplayName("When getting the last replication job should return the most recently created job")
+  void testGetLastSyncJobWithCancel() throws IOException {
+    final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
+    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
+    jobPersistence.cancelJob(jobId);
+
+    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE));
+
+    final Job expected = createJob(
+        jobId,
+        SYNC_JOB_CONFIG,
+        JobStatus.CANCELLED,
+        Lists.newArrayList(
+            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
+            createAttempt(1, jobId, AttemptStatus.FAILED, LOG_PATH)),
+        NOW.getEpochSecond());
+
+    assertEquals(Optional.of(expected), actual);
+  }
+
+  @Test
   @DisplayName("Should extract a Job model from a JOOQ result set")
   void testGetJobFromRecord() throws IOException, SQLException {
     final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();

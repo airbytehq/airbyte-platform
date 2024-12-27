@@ -318,6 +318,17 @@ public class JobHistoryHandler {
 
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
     final Optional<Job> job = jobPersistence.getLastReplicationJob(connectionIdRequestBody.getConnectionId());
+
+    if (job.isEmpty()) {
+      return new JobOptionalRead();
+    } else {
+      return jobConverter.getJobOptionalRead(job.get());
+    }
+
+  }
+
+  public JobOptionalRead getLastReplicationJobWithCancel(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
+    final Optional<Job> job = jobPersistence.getLastReplicationJobWithCancel(connectionIdRequestBody.getConnectionId());
     if (job.isEmpty()) {
       return new JobOptionalRead();
     } else {

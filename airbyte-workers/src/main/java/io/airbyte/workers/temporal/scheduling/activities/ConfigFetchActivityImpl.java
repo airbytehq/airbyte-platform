@@ -147,7 +147,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJobWithCancel(new ConnectionIdRequestBody(connectionId));
 
     if (connectionRead.getScheduleType() == ConnectionScheduleType.BASIC) {
       if (previousJobOptional.getJob() == null) {
@@ -226,7 +226,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJobWithCancel(new ConnectionIdRequestBody(connectionId));
 
     if (previousJobOptional.getJob() == null && connectionRead.getSchedule() != null) {
       // Non-manual syncs don't wait for their first run

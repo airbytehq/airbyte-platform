@@ -142,7 +142,7 @@ class ConfigFetchActivityTest {
       @DisplayName("Test that the job gets scheduled if it is not manual and if it is the first run with legacy schedule schema")
       void testFirstJobNonManual() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead());
 
         when(mConnectionApi.getConnection(any()))
@@ -210,7 +210,7 @@ class ConfigFetchActivityTest {
         when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
@@ -236,7 +236,7 @@ class ConfigFetchActivityTest {
         when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
@@ -268,7 +268,7 @@ class ConfigFetchActivityTest {
       @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
       void testBasicScheduleTypeFirstRun() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead());
 
         when(mConnectionApi.getConnection(any()))
@@ -293,7 +293,7 @@ class ConfigFetchActivityTest {
         when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
@@ -333,7 +333,7 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
                 currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         // prior job completed 3 hours ago, so expect the next job to be scheduled
@@ -367,7 +367,7 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
                 currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         // Behavior is currently behind a feature flag
@@ -403,7 +403,7 @@ class ConfigFetchActivityTest {
 
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
@@ -437,7 +437,7 @@ class ConfigFetchActivityTest {
 
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
-        when(mJobsApi.getLastReplicationJob(any()))
+        when(mJobsApi.getLastReplicationJobWithCancel(any()))
             .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
