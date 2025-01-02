@@ -9,6 +9,7 @@ import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectUpdater;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
@@ -241,6 +242,21 @@ public class ApplicationBeanFactory {
   @Requires(env = Environment.KUBERNETES)
   public KubernetesClient kubernetesClient() {
     return new KubernetesClientBuilder().build();
+  }
+
+  @Singleton
+  public ProductLimitsProvider.WorkspaceLimits defaultWorkspaceLimits(
+                                                                      @Value("${airbyte.server.limits.connections}") final long maxConnections,
+                                                                      @Value("${airbyte.server.limits.sources}") final long maxSources,
+                                                                      @Value("${airbyte.server.limits.destinations}") final long maxDestinations) {
+    return new ProductLimitsProvider.WorkspaceLimits(maxConnections, maxSources, maxDestinations);
+  }
+
+  @Singleton
+  public ProductLimitsProvider.OrganizationLimits defaultOrganizationLimits(
+                                                                            @Value("${airbyte.server.limits.workspaces}") final long maxWorkspaces,
+                                                                            @Value("${airbyte.server.limits.users}") final long maxUsers) {
+    return new ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers);
   }
 
 }

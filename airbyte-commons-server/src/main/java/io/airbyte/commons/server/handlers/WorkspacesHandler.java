@@ -42,6 +42,8 @@ import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
+import io.airbyte.commons.server.limits.ConsumptionService;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.slug.Slug;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
@@ -55,6 +57,9 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HydrateLimits;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
@@ -89,6 +94,9 @@ public class WorkspacesHandler {
   private final WorkspaceService workspaceService;
   private final TrackingClient trackingClient;
   private final ApiPojoConverters apiPojoConverters;
+  private final ProductLimitsProvider limitsProvider;
+  private final ConsumptionService consumptionService;
+  private final FeatureFlagClient ffClient;
 
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
@@ -101,7 +109,10 @@ public class WorkspacesHandler {
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
                            final TrackingClient trackingClient,
-                           final ApiPojoConverters apiPojoConverters) {
+                           final ApiPojoConverters apiPojoConverters,
+                           final ProductLimitsProvider limitsProvider,
+                           final ConsumptionService consumptionService,
+                           final FeatureFlagClient ffClient) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -113,6 +124,9 @@ public class WorkspacesHandler {
     this.workspaceService = workspaceService;
     this.trackingClient = trackingClient;
     this.apiPojoConverters = apiPojoConverters;
+    this.limitsProvider = limitsProvider;
+    this.consumptionService = consumptionService;
+    this.ffClient = ffClient;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -310,7 +324,13 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
     final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    return WorkspaceConverter.domainToApiModel(workspace);
+    final WorkspaceRead result = WorkspaceConverter.domainToApiModel(workspace);
+    if (ffClient.boolVariation(HydrateLimits.INSTANCE, new Workspace(workspaceId))) {
+      final ProductLimitsProvider.WorkspaceLimits limits = limitsProvider.getLimitForWorkspace(workspaceId);
+      final var consumption = consumptionService.getForWorkspace(workspaceId);
+      result.workspaceLimits(WorkspaceConverter.domainToApiModel(limits, consumption));
+    }
+    return result;
   }
 
   public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)

@@ -313,6 +313,12 @@ airbyte:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
+    limits:
+      connections: ${MAX_CONNECTION_PER_WORKSPACE:10000}
+      sources: ${MAX_SOURCES_PER_WORKSPACE:10000}
+      destinations: ${MAX_DESTINATIONS_PER_WORKSPACE:10000}
+      workspaces: ${MAX_WORKSPACES_PER_ORGANIZATION:10000}
+      users: ${MAX_USERS_PER_ORGANIZATION:10000}
     connection:
       limits:
         max-days-warning: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_WARNING:4}

@@ -179,3 +179,5 @@ object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform
 object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)
 
 object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
+
+object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)

@@ -4,8 +4,10 @@ import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ProductLimitsKey
+import jakarta.inject.Singleton
 import java.util.UUID
 
+@Singleton
 class ScopedConfigProductLimits(
   private val scopedConfigService: ScopedConfigurationService,
   private val defaultWorkspaceLimits: ProductLimitsProvider.WorkspaceLimits,
