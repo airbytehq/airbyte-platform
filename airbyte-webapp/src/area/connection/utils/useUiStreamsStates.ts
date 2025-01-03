@@ -28,6 +28,7 @@ import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
 interface BaseUIStreamState {
   streamName: string;
+  streamNameWithPrefix: string;
   streamNamespace?: string;
   catalogStream?: AirbyteStreamAndConfiguration;
   activeJobConfigType?: JobConfigType;
@@ -91,7 +92,8 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const uiStreamStates = enabledStreamsByName.map((streamItem) => {
     // initialize the state as undefined
     const uiState: UIStreamState = {
-      streamName: `${prefix ? prefix : ""}${streamItem.streamName}`,
+      streamName: streamItem.streamName,
+      streamNameWithPrefix: `${prefix}${streamItem.streamName}`,
       streamNamespace: streamItem.streamNamespace,
       catalogStream: syncCatalog.streams.find(
         (catalogStream) =>
