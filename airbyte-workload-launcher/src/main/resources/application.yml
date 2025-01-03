@@ -23,6 +23,11 @@ micronaut:
     network-policy-label-cache:
       expire-after-write: 10m
       maximum-size: 100_000
+  executors:
+    kube-client:
+      type: cached
+      n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      core-pool-size: 0
 airbyte:
   connector:
     source:
