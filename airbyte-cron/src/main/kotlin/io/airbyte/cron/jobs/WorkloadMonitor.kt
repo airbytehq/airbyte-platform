@@ -19,7 +19,6 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
-import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -32,10 +31,6 @@ import kotlin.jvm.optionals.getOrElse
 private val logger = KotlinLogging.logger { }
 
 @Singleton
-@Requires(
-  property = "airbyte.workload.monitor.enabled",
-  value = "true",
-)
 open class WorkloadMonitor(
   private val workloadApiClient: WorkloadApiClient,
   @Property(name = "airbyte.workload.monitor.non-sync-workload-timeout") private val nonSyncWorkloadTimeout: Duration,

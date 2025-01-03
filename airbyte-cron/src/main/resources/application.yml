@@ -62,7 +62,6 @@ airbyte:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
   workload:
     monitor:
-      enabled: ${WORKLOAD_MONITOR_ENABLED:false}
       claim-check-rate: PT1M
       heartbeat-check-rate: PT1M
       not-started-check-rate: PT1M
