@@ -56,7 +56,7 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@floating-ui/react-dom": "^1.0.0",
     "@headlessui-float/react": "^0.11.2",
-    "@headlessui/react": "2.1.2",
+    "@headlessui/react": "2.2.0",
     "@hookform/resolvers": "^2.9.11",
     "@inline-svg-unique-id/react": "^1.2.3",
     "@monaco-editor/react": "^4.4.5",

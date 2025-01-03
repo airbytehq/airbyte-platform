@@ -495,7 +495,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:rk:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -623,7 +622,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:rn:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -1268,7 +1266,6 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1c:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -1396,7 +1393,6 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1f:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"

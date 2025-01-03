@@ -36,10 +36,10 @@ dependencies:
     version: 1.2.1(react-dom@18.2.0)(react@18.2.0)
   '@headlessui-float/react':
     specifier: ^0.11.2
-    version: 0.11.2(@headlessui/react@2.1.2)(react-dom@18.2.0)(react@18.2.0)
+    version: 0.11.2(@headlessui/react@2.2.0)(react-dom@18.2.0)(react@18.2.0)
   '@headlessui/react':
-    specifier: 2.1.2
-    version: 2.1.2(react-dom@18.2.0)(react@18.2.0)
+    specifier: 2.2.0
+    version: 2.2.0(react-dom@18.2.0)(react@18.2.0)
   '@hookform/resolvers':
     specifier: ^2.9.11
     version: 2.9.11(react-hook-form@7.45.4)
@@ -2953,17 +2953,6 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@floating-ui/react-dom@2.0.8(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-HOdqOt3R3OGeTKidaLvJKcgg75S6tibQ3Tif4eyd91QnIJWr0NLvoXFpJA/j8HqkFSL68GDca9AuyWEHlhyClw==}
-    peerDependencies:
-      react: '>=16.8.0'
-      react-dom: '>=16.8.0'
-    dependencies:
-      '@floating-ui/dom': 1.6.1
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-    dev: true
-
   /@floating-ui/react-dom@2.1.1(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-4h84MJt3CHrtG18mGsXuLCHMrug49d7DFkU0RMIyshRveBeyV2hmV/pDaF2Uxtu8kgq5r46llp5E5FQiR0K2Yg==}
     peerDependencies:
@@ -2973,7 +2962,6 @@ packages:
       '@floating-ui/dom': 1.6.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-    dev: false
 
   /@floating-ui/react@0.19.2(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-JyNk4A0Ezirq8FlXECvRtQOX/iBe5Ize0W/pLkrZjfHW9GUV7Xnq6zm6fyZuQzaHHqEnVizmvlA96e1/CkZv+w==}
@@ -3107,7 +3095,7 @@ packages:
       '@hapi/hoek': 9.3.0
     dev: true
 
-  /@headlessui-float/react@0.11.2(@headlessui/react@2.1.2)(react-dom@18.2.0)(react@18.2.0):
+  /@headlessui-float/react@0.11.2(@headlessui/react@2.2.0)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-ghnA7wOgrSDcLl9O+TTsW7VC7RjivVopt03hHPpKRMAMzV5TLnq8UW0ok6C6xnKb78LRdhCvlaZsvJXcXqb5Yg==}
     peerDependencies:
       '@headlessui/react': ^1.0.0
@@ -3117,17 +3105,17 @@ packages:
       '@floating-ui/core': 1.1.0
       '@floating-ui/dom': 1.1.0
       '@floating-ui/react': 0.19.2(react-dom@18.2.0)(react@18.2.0)
-      '@headlessui/react': 2.1.2(react-dom@18.2.0)(react@18.2.0)
+      '@headlessui/react': 2.2.0(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@headlessui/react@2.1.2(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-Kb3hgk9gRNRcTZktBrKdHhF3xFhYkca1Rk6e1/im2ENf83dgN54orMW0uSKTXFnUpZOUFZ+wcY05LlipwgZIFQ==}
+  /@headlessui/react@2.2.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-RzCEg+LXsuI7mHiSomsu/gBJSjpupm6A1qIZ5sWjd7JhARNlMiSA4kKfJpCKwU9tE+zMRterhhrP74PvfJrpXQ==}
     engines: {node: '>=10'}
     peerDependencies:
-      react: ^18
-      react-dom: ^18
+      react: ^18 || ^19 || ^19.0.0-rc
+      react-dom: ^18 || ^19 || ^19.0.0-rc
     dependencies:
       '@floating-ui/react': 0.26.22(react-dom@18.2.0)(react@18.2.0)
       '@react-aria/focus': 3.18.1(react@18.2.0)
@@ -4255,7 +4243,7 @@ packages:
         optional: true
     dependencies:
       '@babel/runtime': 7.24.6
-      '@floating-ui/react-dom': 2.0.8(react-dom@18.2.0)(react@18.2.0)
+      '@floating-ui/react-dom': 2.1.1(react-dom@18.2.0)(react@18.2.0)
       '@radix-ui/react-arrow': 1.0.3(@types/react-dom@18.2.14)(@types/react@18.2.34)(react-dom@18.2.0)(react@18.2.0)
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.2.34)(react@18.2.0)
       '@radix-ui/react-context': 1.0.1(@types/react@18.2.34)(react@18.2.0)

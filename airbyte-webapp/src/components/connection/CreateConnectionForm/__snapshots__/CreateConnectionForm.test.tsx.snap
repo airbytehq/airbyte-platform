@@ -835,7 +835,6 @@ exports[`CreateConnectionForm should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r16:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -987,7 +986,6 @@ exports[`CreateConnectionForm should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1c:"
-                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"

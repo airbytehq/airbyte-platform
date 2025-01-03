@@ -2,13 +2,15 @@
 @use "scss/colors";
 
 .optionsMenu {
+  width: var(--input-width); // match the combobox button's width, see https://headlessui.com/react/combobox
+  --anchor-max-height: #{variables.$height-long-listbox-options-list}; // limit the option list's height, see https://github.com/tailwindlabs/headlessui/blob/b6f355d154f69ac67d2196f755f9751c6b1acba0/packages/%40headlessui-react/src/internal/floating.tsx#L317
+
   background-color: colors.$foreground;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-raised;
   padding: 0;
   margin-top: variables.$spacing-sm;
   min-width: variables.$min-width-listbox-options-list;
-  max-height: variables.$height-long-listbox-options-list;
   list-style-type: none;
   overflow-y: auto;
 }
