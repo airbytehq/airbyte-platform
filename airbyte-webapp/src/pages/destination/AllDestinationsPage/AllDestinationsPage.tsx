@@ -19,10 +19,10 @@ import { Text } from "components/ui/Text";
 
 import { DestinationLimitReachedModal } from "area/workspace/components/DestinationLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useConnectionList, useCurrentWorkspace, useDestinationList, useFilters } from "core/api";
+import { useConnectionList, useDestinationList, useFilters } from "core/api";
 import { DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllDestinationsPage.module.scss";
@@ -34,8 +34,7 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
   const { limits, destinationLimitReached } = useCurrentWorkspaceLimits();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateDestination = useIntent("CreateDestination", { workspaceId });
+  const canCreateDestination = useGeneratedIntent(Intent.CreateOrEditConnector);
 
   const connectionList = useConnectionList({ destinationId: destinations.map(({ destinationId }) => destinationId) });
   const connections = connectionList?.connections ?? [];

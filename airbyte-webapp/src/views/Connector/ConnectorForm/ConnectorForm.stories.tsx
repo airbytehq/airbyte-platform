@@ -315,6 +315,7 @@ export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorFor
     };
     return (
       <ConnectorForm
+        canEdit
         formType={props.formType}
         renderFooter={() => (
           <div>

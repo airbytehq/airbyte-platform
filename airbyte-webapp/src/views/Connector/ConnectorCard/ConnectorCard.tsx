@@ -24,6 +24,7 @@ import {
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -89,6 +90,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   leftFooterSlot = null,
   ...props
 }) => {
+  const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
 
@@ -197,6 +199,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
   return (
     <ConnectorForm
+      canEdit={canEditConnector}
       trackDirtyChanges
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>

@@ -3,14 +3,12 @@ import { AnyObjectSchema } from "yup";
 
 import { Form } from "components/forms";
 
-import { useCurrentWorkspace } from "core/api";
 import {
   ConnectorDefinition,
   ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
 import { removeEmptyProperties } from "core/utils/form";
-import { useIntent } from "core/utils/rbac";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
@@ -31,14 +29,12 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
   trackDirtyChanges?: boolean;
+  canEdit: boolean;
 }
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
   const { clearFormChange } = useFormChangeTrackerService();
-
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditSource = useIntent("EditSource", { workspaceId });
 
   const {
     formType,
@@ -48,6 +44,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     selectedConnectorDefinition,
     selectedConnectorDefinitionSpecification,
     connectorId,
+    canEdit,
   } = props;
 
   const { formFields, initialValues, validationSchema, groups } = useBuildForm(
@@ -87,7 +84,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       defaultValues={initialValues as ConnectorFormValues<object>}
       schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}
-      disabled={!canEditSource}
+      disabled={!canEdit}
     >
       <ConnectorFormContextProvider
         formType={formType}
