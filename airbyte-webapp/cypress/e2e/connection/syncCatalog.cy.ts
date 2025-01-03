@@ -35,7 +35,7 @@ import {
 
 const CATALOG_SEARCH_INPUT = '[data-testid="sync-catalog-search"]';
 
-describe("Sync catalog", () => {
+describe("Search", { tags: "@sync-catalog", testIsolation: false }, () => {
   let fakerSource: SourceRead;
   let jsonDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -81,7 +81,7 @@ describe("Sync catalog", () => {
   });
 });
 
-describe("Stream", { testIsolation: false }, () => {
+describe("Stream", { tags: "@sync-catalog", testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -248,7 +248,7 @@ describe("Stream", { testIsolation: false }, () => {
   });
 });
 
-describe("Sync Modes", { testIsolation: false }, () => {
+describe("Sync Modes", { tags: "@sync-catalog", testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -522,7 +522,7 @@ describe("Sync Modes", { testIsolation: false }, () => {
   });
 });
 
-describe("Diff styles", { testIsolation: false }, () => {
+describe("Diff styles", { tags: "@sync-catalog", testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -665,7 +665,7 @@ describe("Diff styles", { testIsolation: false }, () => {
   });
 });
 
-describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
+describe("Sync Catalog - deleted connection", { tags: "@sync-catalog", testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -794,7 +794,7 @@ describe("Sync Catalog - deleted connection", { testIsolation: false }, () => {
   });
 });
 
-describe("Tab filter", { testIsolation: false }, () => {
+describe("Tab filter", { tags: "@sync-catalog", testIsolation: false }, () => {
   let postgresSource: SourceRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead;
