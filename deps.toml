@@ -23,10 +23,10 @@ keycloak = "25.0.2" # should be kept in sync with airbyte-keycloak/Dockerfile ba
 kotest = "5.9.1"
 kotlin-logging = "5.1.0"
 kubernetes-client = "7.0.1"
-logback = "1.5.12"
-micronaut = "4.7.2"
+logback = "1.5.15"
+micronaut = "4.7.3"
 micronaut-cache = "5.1.0"
-micronaut-core = "4.7.8"
+micronaut-core = "4.7.10"
 micronaut-data = "4.10.5"
 micronaut-email = "2.7.0"
 micronaut-jaxrs = "4.7.2"
@@ -115,7 +115,6 @@ jakarta-persistence-api = { module = "jakarta.persistence:jakarta.persistence-ap
 jakarta-transaction-api = { module = "jakarta.transaction:jakarta.transaction-api", version = "2.0.1" }
 jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version = "3.0.2" }
 jakarta-ws-rs-api = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jax-rs" }
-janino = { module = "org.codehaus.janino:janino", version = "3.1.12" }
 java-dogstatsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.1.0" }
 java-jwt = { module = "com.auth0:java-jwt", version = "3.19.2" }
 javax-databind = { module = "javax.xml.bind:jaxb-api", version = "2.4.0-b180830.0359" }
@@ -220,7 +219,7 @@ micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", vers
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
 micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
-micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.6.0" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.6.1" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut-core" }
@@ -264,7 +263,7 @@ junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "m
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
-logback = ["logback-classic", "logback-core", "janino"]
+logback = ["logback-classic", "logback-core"]
 micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind"]
 micronaut-light = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-inject-kotlin"]

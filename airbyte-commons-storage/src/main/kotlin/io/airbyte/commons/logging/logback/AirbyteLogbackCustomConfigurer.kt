@@ -6,7 +6,6 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
-import ch.qos.logback.classic.boolex.JaninoEventEvaluator
 import ch.qos.logback.classic.sift.SiftingAppender
 import ch.qos.logback.classic.spi.Configurator
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -210,9 +209,8 @@ class AirbyteLogbackCustomConfigurer :
     contextKey: String,
     loggerContext: LoggerContext,
   ): EventEvaluator<ILoggingEvent> =
-    JaninoEventEvaluator().apply {
+    AirbyteMdcEvaluator(contextKey = contextKey).apply {
       context = loggerContext
-      expression = """mdc.get("$contextKey") == null || mdc.get("$contextKey") == """""
       start()
     }
 
