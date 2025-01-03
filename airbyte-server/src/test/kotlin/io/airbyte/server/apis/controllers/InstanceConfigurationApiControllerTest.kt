@@ -7,6 +7,7 @@ import io.airbyte.api.model.generated.InstanceConfigurationResponse
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
+import io.fabric8.kubernetes.client.KubernetesClient
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -31,6 +32,9 @@ internal class InstanceConfigurationApiControllerTest {
 
   @MockBean(InstanceConfigurationHandler::class)
   fun mmInstanceConfigurationHandler(): InstanceConfigurationHandler = mockk()
+
+  @MockBean(KubernetesClient::class)
+  fun kubernetesClient(): KubernetesClient = mockk()
 
   @Test
   fun testGetInstanceConfiguration() {

@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
@@ -37,11 +39,15 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.api.model.Node;
+import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,6 +92,10 @@ class InstanceConfigurationHandlerTest {
   private PermissionService permissionService;
   @Mock
   private Optional<KubernetesClient> mKubernetesClient;
+  @Mock
+  private Optional<KubernetesClientPermissionHelper> mKubernetesClientHelper;
+  @Mock
+  private KubernetesClientPermissionHelper kubernetesClientPermissionHelperMock;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -171,7 +181,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        mKubernetesClientHelper);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -302,6 +312,39 @@ class InstanceConfigurationHandlerTest {
     assertEquals(licenseInfoResponse.getExpirationDate(), EXPIRATION_DATE.toInstant().getEpochSecond());
     assertEquals(licenseInfoResponse.getMaxEditors(), MAX_EDITORS);
     assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
+    assertEquals(licenseInfoResponse.getUsedNodes(), null);
+  }
+
+  @Test
+  void testLicenseInfoWithUsedNodes() {
+    var mockNodesOperation = mock(NonNamespaceOperation.class);
+    var nodeList = new NodeList();
+    nodeList.setItems(Arrays.asList(new Node(), new Node(), new Node(), new Node(), new Node()));
+
+    when(kubernetesClientPermissionHelperMock.listNodes()).thenReturn(mockNodesOperation);
+    when(mockNodesOperation.list()).thenReturn(nodeList);
+
+    final var handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.PRO,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty(),
+        Optional.of(kubernetesClientPermissionHelperMock));
+
+    final var licenseInfoResponse = handler.licenseInfo();
+
+    assertEquals(licenseInfoResponse.getExpirationDate(), EXPIRATION_DATE.toInstant().getEpochSecond());
+    assertEquals(licenseInfoResponse.getMaxEditors(), MAX_EDITORS);
+    assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
+    assertEquals(licenseInfoResponse.getUsedNodes(), nodeList.getItems().size());
   }
 
   @Test
@@ -321,7 +364,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
   }
 
@@ -340,7 +383,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
-        mKubernetesClient);
+        mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
   }
 
@@ -360,7 +403,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        mKubernetesClientHelper);
     when(permissionService.listPermissions()).thenReturn(
         Stream.generate(UUID::randomUUID)
             .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
@@ -408,7 +451,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        mKubernetesClientHelper);
   }
 
 }

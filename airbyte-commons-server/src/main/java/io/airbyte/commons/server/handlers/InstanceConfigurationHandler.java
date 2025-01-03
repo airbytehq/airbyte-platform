@@ -19,6 +19,8 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper;
+import io.airbyte.commons.server.helpers.PermissionDeniedException;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
@@ -32,7 +34,10 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.api.model.Node;
+import io.fabric8.kubernetes.api.model.NodeList;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
+import io.fabric8.kubernetes.client.dsl.Resource;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -69,7 +74,7 @@ public class InstanceConfigurationHandler {
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
   private final Clock clock;
-  private final Optional<KubernetesClient> kubernetesClient;
+  private final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -83,7 +88,7 @@ public class InstanceConfigurationHandler {
                                       final AuthConfigs authConfigs,
                                       final PermissionService permissionService,
                                       final Optional<Clock> clock,
-                                      final Optional<KubernetesClient> kubernetesClient) {
+                                      final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -96,7 +101,7 @@ public class InstanceConfigurationHandler {
     this.authConfigs = authConfigs;
     this.permissionService = permissionService;
     this.clock = clock.orElse(Clock.systemUTC());
-    this.kubernetesClient = kubernetesClient;
+    this.kubernetesClientPermissionHelper = kubernetesClientPermissionHelper;
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(InstanceConfigurationHandler.class);
@@ -271,7 +276,21 @@ public class InstanceConfigurationHandler {
   }
 
   private Integer nodesUsage() {
-    return kubernetesClient.map(client -> client.nodes().list().getItems().size()).orElse(null);
+    try {
+      final NonNamespaceOperation<Node, NodeList, Resource<Node>> nodes =
+          this.kubernetesClientPermissionHelper
+              .map(KubernetesClientPermissionHelper::listNodes)
+              .orElse(null);
+
+      if (nodes != null) {
+        return nodes.list().getItems().size();
+      }
+    } catch (PermissionDeniedException e) {
+      LOGGER.warn("Permission denied while attempting to get node usage: {}", e.getMessage());
+    } catch (Exception e) {
+      LOGGER.error("Unexpected error while fetching Kubernetes nodes: {}", e.getMessage(), e);
+    }
+    return null;
   }
 
 }
