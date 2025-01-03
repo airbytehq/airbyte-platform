@@ -23,6 +23,6 @@ button.tabContainer {
 .tabContainer--inactive:not(.tabContainer--disabled) {
   &:hover,
   &:focus-visible {
-    background-color: colors.$grey-40;
+    background-color: colors.$grey-50;
   }
 }
