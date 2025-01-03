@@ -52,6 +52,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -249,12 +250,31 @@ public class JobCreationAndStatusUpdateHelper {
         .map(MetricTags::getFailureType)
         .findFirst());
 
+    final Optional<String> externalMsg = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
+        .stream()
+        .map(FailureReason::getExternalMessage)
+        .filter(Objects::nonNull)
+        // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
+        .map(s -> StringUtils.abbreviate(s, 50))
+        .findFirst());
+
+    final Optional<String> internalMsg = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
+        .stream()
+        .map(FailureReason::getInternalMessage)
+        .filter(Objects::nonNull)
+        // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
+        .map(s -> StringUtils.abbreviate(s, 50))
+        .findFirst());
+
     final List<MetricAttribute> additionalAttributes = new ArrayList<>();
     additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()));
     additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)));
     additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)));
     additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.EXTERNAL_MESSAGE, externalMsg.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.INTERNAL_MESSAGE, internalMsg.orElse(null)));
     additionalAttributes.addAll(imageAttrsFromJob(job));
+    additionalAttributes.addAll(linkAttrsFromJob(job));
 
     try {
       emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
@@ -263,19 +283,39 @@ public class JobCreationAndStatusUpdateHelper {
     }
   }
 
+  private List<MetricAttribute> linkAttrsFromJob(final Job job) {
+    final List<MetricAttribute> attrs = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var config = job.getConfig().getSync();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var config = job.getConfig().getRefresh();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == RESET_CONNECTION) {
+      final var config = job.getConfig().getResetConnection();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    }
+    attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.getScope()));
+
+    return attrs;
+  }
+
   private List<MetricAttribute> imageAttrsFromJob(final Job job) {
     final List<MetricAttribute> attrs = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var config = job.getConfig().getSync();
       attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var config = job.getConfig().getRefresh();
       attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     } else if (job.getConfigType() == RESET_CONNECTION) {
       final var config = job.getConfig().getResetConnection();
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     }
 
     return attrs;
