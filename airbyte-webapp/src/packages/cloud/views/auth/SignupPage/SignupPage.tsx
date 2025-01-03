@@ -32,9 +32,11 @@ const SignupPage: React.FC<SignupPageProps> = () => {
   return (
     <FlexContainer direction="column" gap="xl" justifyContent="center" className={styles.container}>
       <HeadTitle titles={[{ id: "login.signup" }]} />
-      <Heading as="h1" centered>
-        <FormattedMessage id="signup.title" />
-      </Heading>
+      <FlexContainer justifyContent="center">
+        <Heading as="h1">
+          <FormattedMessage id="signup.title" />
+        </Heading>
+      </FlexContainer>
 
       <FlexContainer direction="column" justifyContent="center" alignItems="flex-start" className={styles.details}>
         <Detail>
