@@ -13702,9 +13702,14 @@ components:
       type: object
       required:
         - initialFields
+        - outputFields
         - mappers
       properties:
         initialFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        outputFields:
           type: array
           items:
             $ref: "#/components/schemas/FieldSpec"
@@ -13717,9 +13722,15 @@ components:
       required:
         - name
         - type
+        - isSelectedPrimaryKey
+        - isSelectedCursor
       properties:
         name:
           type: string
+        isSelectedPrimaryKey:
+          type: boolean
+        isSelectedCursor:
+          type: boolean
         type:
           type: string
           enum:
@@ -13740,11 +13751,16 @@ components:
       type: object
       required:
         - outputFields
+        - inputFields
       properties:
         id:
           type: string
           format: uuid
         outputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        inputFields:
           type: array
           items:
             $ref: "#/components/schemas/FieldSpec"

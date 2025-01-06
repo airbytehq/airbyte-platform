@@ -40,11 +40,17 @@ class WebBackendMappersHandler(
         it.stream.name == validateMappersRequest.streamDescriptor.name &&
           it.stream.namespace == validateMappersRequest.streamDescriptor.namespace
       }
+
+    val primaryKeyFields = stream.primaryKey?.map { it.first() }
+    val cursorFields = stream.cursorField?.firstOrNull()
+
     val initialFields =
       stream.fields!!.map {
         FieldSpec()
           .name(it.name)
           .type(convertFieldType(it.type))
+          .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
+          .isSelectedCursor(cursorFields == it.name)
       }.toList()
 
     val partialMappers = mutableListOf<MapperConfig>()
@@ -56,6 +62,7 @@ class WebBackendMappersHandler(
     // Trim down the catalog so we only process mappers for the stream we're working with
     val slimCatalog = ConfiguredAirbyteCatalog(listOf(stream))
 
+    var lastFieldSet = initialFields
     for (mapper in newMappers) {
       partialMappers.add(mapper)
 
@@ -64,12 +71,17 @@ class WebBackendMappersHandler(
 
       val validateRes = MapperValidationResult()
       validateRes.id = mapper.id()
+      validateRes.inputFields = lastFieldSet
       validateRes.outputFields =
         newStream.fields!!.map {
           FieldSpec()
             .name(it.name)
             .type(convertFieldType(it.type))
+            .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
+            .isSelectedCursor(cursorFields == it.name)
         }.toList()
+
+      lastFieldSet = validateRes.outputFields
 
       val streamErrors = generationResult.errors.entries.firstOrNull()?.value
       val mapperError = streamErrors?.get(mapper)
@@ -85,6 +97,7 @@ class WebBackendMappersHandler(
 
     return WebBackendValidateMappersResponse()
       .initialFields(initialFields)
+      .outputFields(lastFieldSet)
       .mappers(mapperValidationResults)
   }
 
