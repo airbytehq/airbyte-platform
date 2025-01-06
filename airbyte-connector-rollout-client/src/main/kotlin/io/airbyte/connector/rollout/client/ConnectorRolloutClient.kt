@@ -4,6 +4,7 @@
 
 package io.airbyte.connector.rollout.client
 
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
@@ -58,7 +59,7 @@ class ConnectorRolloutClient
       }
     }
 
-    fun startRollout(input: ConnectorRolloutWorkflowInput): ConnectorRolloutOutput {
+    fun startRollout(input: ConnectorRolloutWorkflowInput) {
       logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
       if (input.rolloutId == null) {
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
@@ -75,23 +76,25 @@ class ConnectorRolloutClient
             .build(),
         )
 
-      val connectorRolloutActivityInputStart =
-        ConnectorRolloutActivityInputStart(
-          input.dockerRepository,
-          input.dockerImageTag,
-          input.actorDefinitionId,
-          input.rolloutId,
-          input.updatedBy,
-          input.rolloutStrategy,
-          input.migratePins,
-        )
-
       logger.info { "Starting workflow $workflowId" }
       val workflowExecution = WorkflowClient.start(workflowStub::run, input)
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
-      val startOutput = executeUpdate(connectorRolloutActivityInputStart, workflowId) { stub, i -> stub.startRollout(i) }
-      logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
-      return startOutput
+
+      if (input.rolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
+        val connectorRolloutActivityInputStart =
+          ConnectorRolloutActivityInputStart(
+            input.dockerRepository,
+            input.dockerImageTag,
+            input.actorDefinitionId,
+            input.rolloutId,
+            input.updatedBy,
+            input.rolloutStrategy,
+            input.migratePins,
+          )
+
+        executeUpdate(connectorRolloutActivityInputStart, workflowId) { stub, i -> stub.startRollout(i) }
+        logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
+      }
     }
 
     fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {

@@ -205,6 +205,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(0),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(insufficientDataConnectorRolloutOutput)
 
     // Run workflow
@@ -223,6 +226,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
@@ -268,6 +272,9 @@ class ConnectorRolloutWorkflowImplTest {
         actorSelectionInfo = successActorSelectionInfo,
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(successConnectorRolloutOutput)
     `when`(verifyDefaultVersionActivity.getAndVerifyDefaultVersion(MockitoHelper.anyObject()))
       .thenReturn(ConnectorRolloutActivityOutputVerifyDefaultVersion(true))
@@ -282,6 +289,7 @@ class ConnectorRolloutWorkflowImplTest {
     val result = workflowById.getResult(String::class.java)
     assertEquals(ConnectorEnumRolloutState.SUCCEEDED.toString(), result)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
@@ -344,6 +352,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(1),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(failureConnectorRolloutOutput)
     `when`(pauseRolloutActivity.pauseRollout(MockitoHelper.anyObject())).thenReturn(pausedConnectorRolloutOutput)
 
@@ -363,6 +374,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(pauseRolloutActivity).pauseRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
@@ -412,6 +424,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(1),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     if (exceptionType == ApplicationFailure::class.java) {
       `when`(doRolloutActivity.doRollout(MockitoHelper.anyObject()))
         .thenThrow(ApplicationFailure.newFailure("Simulated ApplicationFailure", "TestFailure"))
@@ -437,6 +452,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(pauseRolloutActivity).pauseRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
@@ -467,8 +483,9 @@ class ConnectorRolloutWorkflowImplTest {
       ),
     )
 
-    `when`(startRolloutActivity.startRollout(Mockito.anyString(), MockitoHelper.anyObject()))
-      .thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     if (finalState != ConnectorRolloutFinalState.CANCELED) {
       `when`(
         promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()),
@@ -511,7 +528,7 @@ class ConnectorRolloutWorkflowImplTest {
     val result = workflowById.getResult(String::class.java)
     assertEquals(finalState.toString(), result)
 
-    verify(startRolloutActivity).startRollout(Mockito.anyString(), MockitoHelper.anyObject())
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     if (finalState != ConnectorRolloutFinalState.CANCELED) {
       verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
     }

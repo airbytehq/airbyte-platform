@@ -992,7 +992,7 @@ internal class ConnectorRolloutHandlerTest {
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.startRollout(any()) } just Runs
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     every {
@@ -1099,7 +1099,7 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been initialized, but workflow hasn't been started
     connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
 
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.startRollout(any()) } just Runs
     every { connectorRolloutClient.doRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.IN_PROGRESS)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -1138,7 +1138,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-      every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+      every { connectorRolloutClient.startRollout(any()) } just Runs
       every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
       every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
@@ -1178,7 +1178,7 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-      every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+      every { connectorRolloutClient.startRollout(any()) } just Runs
       every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
       every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
@@ -1215,7 +1215,7 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been started
     connectorRollout.apply { this.state = state }
 
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.startRollout(any()) } just Runs
     every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -1251,7 +1251,7 @@ internal class ConnectorRolloutHandlerTest {
     // Rollout has been initialized, but workflow hasn't been started
     connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
 
-    every { connectorRolloutClient.startRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.WORKFLOW_STARTED)
+    every { connectorRolloutClient.startRollout(any()) } just Runs
     every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
