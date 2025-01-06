@@ -213,7 +213,7 @@ const computeStreamTestResults = (
     streamHash,
     hasResponse: true,
     responsesAreSuccessful: streamRead.slices.every((slice) =>
-      slice.pages.every((page) => page.response?.status && page.response.status >= 200 && page.response.status < 300)
+      slice.pages.every((page) => !page.response || (page.response.status >= 200 && page.response.status < 300))
     ),
     hasRecords: streamRead.slices.some((slice) => slice.pages.some((page) => page.records.length > 0)),
     ...computePrimaryKeyTestResults(streamRead, resolvedTestStream),
