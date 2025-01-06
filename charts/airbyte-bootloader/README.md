@@ -44,5 +44,6 @@ Helm chart to deploy airbyte-bootloader
 | resources.limits | object | `{}` |  |
 | resources.requests | object | `{}` |  |
 | secrets | object | `{}` |  |
+| shareProcessNamespace | string | `"false"` | the shareProcessNamespace field is used in a PodSpec to enable all containers within a pod to share the same process namespace. This allows containers to view and interact with each other's processes. |
 | tolerations | list | `[]` |  |
 
