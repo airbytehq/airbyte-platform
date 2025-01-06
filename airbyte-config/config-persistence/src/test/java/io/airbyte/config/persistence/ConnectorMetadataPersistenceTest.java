@@ -37,6 +37,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -101,12 +102,14 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     connectionService = new ConnectionServiceJooqImpl(database);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     actorDefinitionVersionUpdater =
-        spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService));
+        spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
+            connectionTimelineEventService));
 
     sourceService = new SourceServiceJooqImpl(
         database,

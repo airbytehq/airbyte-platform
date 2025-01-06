@@ -26,6 +26,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -67,12 +68,14 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
+        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
+            connectionTimelineEventService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,

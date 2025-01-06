@@ -34,6 +34,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ConnectorRolloutService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -149,11 +150,13 @@ class BootloaderTest {
     var connectionService = new ConnectionServiceJooqImpl(configDatabase);
     var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
     var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
+        scopedConfigurationService,
+        connectionTimelineService);
     var destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
@@ -252,11 +255,13 @@ class BootloaderTest {
     var connectionService = new ConnectionServiceJooqImpl(configDatabase);
     var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
     var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
+        scopedConfigurationService,
+        connectionTimelineService);
     var sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
@@ -380,11 +385,13 @@ class BootloaderTest {
     var connectionService = new ConnectionServiceJooqImpl(configDatabase);
     var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
     var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
+        scopedConfigurationService,
+        connectionTimelineService);
 
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);

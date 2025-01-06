@@ -9,13 +9,16 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
+import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.MockData
 import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
+import io.airbyte.data.services.shared.ConnectorUpdate
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.TestClient
@@ -48,12 +51,14 @@ internal class ActorDefinitionVersionUpdaterTest {
   private val actorDefinitionService = mockk<ActorDefinitionService>(relaxed = true)
   private val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
   private val featureFlagClient = mockk<TestClient>()
+  private val connectionTimelineEventService = mockk<ConnectionTimelineEventService>()
   private val actorDefinitionVersionUpdater =
     ActorDefinitionVersionUpdater(
       featureFlagClient,
       connectionService,
       actorDefinitionService,
       scopedConfigurationService,
+      connectionTimelineEventService,
     )
 
   companion object {
@@ -295,6 +300,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       ScopedConfiguration()
         .withId(UUID.randomUUID())
         .withOriginType(ConfigOriginType.BREAKING_CHANGE)
+        .withValue(UUID.randomUUID().toString())
 
     every {
       scopedConfigurationService.getScopedConfiguration(
@@ -306,7 +312,20 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.of(breakingChangePinConfig)
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+    val oldVersionTag = "some-old-version"
+    val newVersionTag = "new-version"
+    every {
+      actorDefinitionService.getActorDefinitionVersion(UUID.fromString(breakingChangePinConfig.value))
+    } returns ActorDefinitionVersion().withDockerImageTag(oldVersionTag)
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
+    } returns Optional.of(ActorDefinitionVersion().withDockerImageTag(newVersionTag))
+
+    val connectionId = UUID.randomUUID()
+    every {
+      connectionService.listConnectionsBySource(actorId, true)
+    } returns listOf(StandardSync().withConnectionId(connectionId))
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "SourceMySql")
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(
@@ -318,6 +337,17 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
 
       scopedConfigurationService.deleteScopedConfiguration(breakingChangePinConfig.id)
+      connectionTimelineEventService.writeEvent(
+        connectionId,
+        ConnectorUpdate(
+          oldVersionTag,
+          newVersionTag,
+          ConnectorUpdate.ConnectorType.SOURCE,
+          "SourceMySql",
+          ConnectorUpdate.UpdateType.BREAKING_CHANGE_MANUAL.name,
+        ),
+        null,
+      )
     }
   }
 
@@ -342,7 +372,7 @@ internal class ActorDefinitionVersionUpdaterTest {
     } returns Optional.of(manualPinConfig)
 
     assertThrows<RuntimeException> {
-      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "")
     }
 
     verifyAll {
@@ -371,7 +401,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.empty()
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "")
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(

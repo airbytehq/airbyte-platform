@@ -1,6 +1,6 @@
 package io.airbyte.data.services.shared
 
-class ConnectorUpdate(
+data class ConnectorUpdate(
   val fromVersion: String,
   val toVersion: String,
   val connectorType: ConnectorType,
@@ -10,6 +10,10 @@ class ConnectorUpdate(
   enum class ConnectorType {
     SOURCE,
     DESTINATION,
+  }
+
+  enum class UpdateType {
+    BREAKING_CHANGE_MANUAL,
   }
 
   override fun getEventType(): ConnectionEvent.Type {

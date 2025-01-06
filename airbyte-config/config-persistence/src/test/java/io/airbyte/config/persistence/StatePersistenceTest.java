@@ -24,6 +24,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -86,12 +87,14 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     connectionService = mock(ConnectionService.class);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         new ActorDefinitionServiceJooqImpl(database),
-        mock(ScopedConfigurationService.class));
+        mock(ScopedConfigurationService.class),
+        connectionTimelineEventService);
     connectionService = new ConnectionServiceJooqImpl(database);
     sourceService = new SourceServiceJooqImpl(
         database,
