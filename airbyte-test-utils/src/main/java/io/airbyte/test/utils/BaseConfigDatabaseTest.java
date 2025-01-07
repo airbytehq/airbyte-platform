@@ -148,6 +148,7 @@ public class BaseConfigDatabaseTest {
               stream_generation,
               stream_refreshes,
               stream_reset,
+              tag,
               \"user\",
               user_invitation,
               workspace,

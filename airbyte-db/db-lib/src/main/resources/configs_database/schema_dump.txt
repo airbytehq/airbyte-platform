@@ -410,6 +410,15 @@ create table "public"."stream_reset" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "stream_reset_connection_id_stream_name_stream_namespace_key" unique ("connection_id", "stream_name", "stream_namespace")
 );
+create table "public"."tag" (
+  "id" uuid not null,
+  "workspace_id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "color" char(6) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "tag_name_workspace_id_key" unique ("name", "workspace_id")
+);
 create table "public"."user" (
   "id" uuid not null,
   "name" varchar(256) not null,
@@ -531,6 +540,7 @@ create index "stream_refreshes_connection_id_idx" on "public"."stream_refreshes"
 create index "stream_refreshes_connection_id_stream_name_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc);
 create index "stream_refreshes_connection_id_stream_name_stream_namespace_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
+create index "tag_workspace_id_idx" on "public"."tag"("workspace_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
 create unique index "user_email_unique_key" on "public"."user"(lower((email)::text) asc);
 create index "user_invitation_accepted_by_user_id_index" on "public"."user_invitation"("accepted_by_user_id" asc);
@@ -581,6 +591,7 @@ alter table "public"."sso_config" add constraint "sso_config_organization_id_fke
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."stream_generation" add constraint "stream_generation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."stream_refreshes" add constraint "stream_refreshes_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."tag" add constraint "tag_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."user" add constraint "user_default_workspace_id_fkey" foreign key ("default_workspace_id") references "public"."workspace" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_accepted_by_user_id_fkey" foreign key ("accepted_by_user_id") references "public"."user" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_inviter_user_id_fkey" foreign key ("inviter_user_id") references "public"."user" ("id");
