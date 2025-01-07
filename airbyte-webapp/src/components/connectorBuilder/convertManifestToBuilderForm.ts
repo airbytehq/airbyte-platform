@@ -163,6 +163,7 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "refresh_token",
   "token_refresh_endpoint",
   "access_token_name",
+  "access_token_value",
   "expires_in_name",
   "grant_type",
   "refresh_request_body",

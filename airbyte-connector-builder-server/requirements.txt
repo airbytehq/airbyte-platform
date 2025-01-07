@@ -4,17 +4,17 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.11.1
+airbyte-cdk==6.13.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.1
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyio==4.7.0
+anyio==4.8.0
     # via httpx
 attributes-doc==0.4.0
     # via serpyco-rs
-attrs==24.2.0
+attrs==24.3.0
     # via
     #   cattrs
     #   jsonschema
@@ -27,16 +27,16 @@ cachetools==5.5.0
     # via airbyte-cdk
 cattrs==24.1.2
     # via requests-cache
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   httpcore
     #   httpx
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via requests
-click==8.1.7
+click==8.1.8
     # via nltk
 cryptography==43.0.3
     # via airbyte-cdk
@@ -63,7 +63,7 @@ idna==3.10
     #   requests
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.4
+jinja2==3.1.5
     # via airbyte-cdk
 joblib==1.4.2
     # via nltk
@@ -87,7 +87,7 @@ numpy==1.26.4
     # via
     #   airbyte-cdk
     #   pandas
-orjson==3.10.12
+orjson==3.10.13
     # via
     #   airbyte-cdk
     #   langsmith
@@ -105,12 +105,12 @@ psutil==6.1.0
     # via airbyte-cdk
 pycparser==2.22
     # via cffi
-pydantic==2.10.3
+pydantic==2.10.4
     # via
     #   airbyte-cdk
     #   langchain-core
     #   langsmith
-pydantic-core==2.27.1
+pydantic-core==2.27.2
     # via pydantic
 pyjwt==2.10.1
     # via airbyte-cdk
@@ -125,7 +125,7 @@ python-dateutil==2.9.0.post0
     #   pendulum
 python-ulid==3.0.0
     # via airbyte-cdk
-pytz==2024.1
+pytz==2024.2
     # via
     #   airbyte-cdk
     #   pandas
@@ -135,7 +135,7 @@ pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-rapidfuzz==3.10.1
+rapidfuzz==3.11.0
     # via airbyte-cdk
 regex==2024.11.6
     # via nltk
@@ -171,9 +171,11 @@ typing-extensions==4.12.2
     #   serpyco-rs
 tzdata==2024.2
     # via pandas
+unidecode==1.3.8
+    # via airbyte-cdk
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.2.3
+urllib3==2.3.0
     # via
     #   requests
     #   requests-cache
