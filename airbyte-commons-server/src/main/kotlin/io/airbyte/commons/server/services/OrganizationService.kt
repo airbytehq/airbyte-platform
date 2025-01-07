@@ -1,5 +1,6 @@
 package io.airbyte.commons.server.services
 
+import io.airbyte.analytics.BillingTrackingHelper
 import io.airbyte.api.problems.ResourceType
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
@@ -68,6 +69,7 @@ open class OrganizationServiceImpl(
   private val connectionService: ConnectionService,
   private val connectionRepository: ConnectionRepository,
   private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
+  private val billingTrackingHelper: BillingTrackingHelper,
 ) : OrganizationService {
   @Transactional("config")
   override fun disableAllConnections(
@@ -98,7 +100,7 @@ open class OrganizationServiceImpl(
     organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
 
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVALID_PAYMENT_METHOD)
-    // TODO send an email summarizing the disabled connections and payment method problem
+    billingTrackingHelper.trackGracePeriodEnded(organizationId.value, orgPaymentConfig.paymentProviderId)
   }
 
   override fun handleUncollectibleInvoice(organizationId: OrganizationId) {
@@ -112,7 +114,6 @@ open class OrganizationServiceImpl(
     organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
 
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVOICE_MARKED_UNCOLLECTIBLE)
-    // TODO send an email summarizing the disabled connections and uncollectible invoice problem
   }
 
   override fun handleSubscriptionStarted(organizationId: OrganizationId) {

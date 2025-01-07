@@ -1,5 +1,6 @@
 package io.airbyte.commons.server.services
 
+import io.airbyte.analytics.BillingTrackingHelper
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.server.ConnectionId
@@ -26,12 +27,14 @@ class OrganizationServiceTest {
   private val connectionService: ConnectionService = mockk()
   private val connectionRepository: ConnectionRepository = mockk()
   private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository = mockk()
+  private val billingTrackingHelper: BillingTrackingHelper = mockk()
 
   private val service =
     OrganizationServiceImpl(
       connectionService,
       connectionRepository,
       organizationPaymentConfigRepository,
+      billingTrackingHelper,
     )
 
   private val organizationId = OrganizationId(UUID.randomUUID())
@@ -70,13 +73,18 @@ class OrganizationServiceTest {
 
     @Test
     fun `should update orgPaymentConfig status to disabled`() {
-      val orgPaymentConfig = OrganizationPaymentConfig().apply { paymentStatus = PaymentStatus.GRACE_PERIOD }
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          paymentStatus = PaymentStatus.GRACE_PERIOD
+          paymentProviderId = "provider-id-1"
+        }
       val orgPaymentConfigSlot = slot<OrganizationPaymentConfig>()
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
       every { organizationPaymentConfigRepository.savePaymentConfig(capture(orgPaymentConfigSlot)) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns emptyList()
       every { connectionService.disableConnections(any(), any()) } returns mockk()
+      every { billingTrackingHelper.trackGracePeriodEnded(any(), any()) } returns Unit
 
       service.handlePaymentGracePeriodEnded(organizationId)
 
@@ -86,12 +94,17 @@ class OrganizationServiceTest {
 
     @Test
     fun `should call disableAllConnections with invalid payment method reason`() {
-      val orgPaymentConfig = OrganizationPaymentConfig().apply { paymentStatus = PaymentStatus.GRACE_PERIOD }
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          paymentStatus = PaymentStatus.GRACE_PERIOD
+          paymentProviderId = "provider-id-1"
+        }
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
       every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } just Runs
       every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns
         listOf(connectionId1.value, connectionId2.value, connectionId3.value)
       every { connectionService.disableConnections(any(), any()) } returns mockk()
+      every { billingTrackingHelper.trackGracePeriodEnded(any(), any()) } returns Unit
 
       service.handlePaymentGracePeriodEnded(organizationId)
 
@@ -101,6 +114,24 @@ class OrganizationServiceTest {
           ConnectionAutoDisabledReason.INVALID_PAYMENT_METHOD,
         )
       }
+    }
+
+    @Test
+    fun `should track grace period ended`() {
+      val orgPaymentConfig =
+        OrganizationPaymentConfig().apply {
+          paymentStatus = PaymentStatus.GRACE_PERIOD
+          paymentProviderId = "provider-id-1"
+        }
+      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
+      every { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) } just Runs
+      every { connectionRepository.listConnectionIdsForOrganization(organizationId.value) } returns emptyList()
+      every { connectionService.disableConnections(any(), any()) } returns mockk()
+      every { billingTrackingHelper.trackGracePeriodEnded(any(), any()) } returns Unit
+
+      service.handlePaymentGracePeriodEnded(organizationId)
+
+      verify { billingTrackingHelper.trackGracePeriodEnded(organizationId.value, orgPaymentConfig.paymentProviderId) }
     }
   }
 
