@@ -7,7 +7,6 @@ global:
   serviceAccountName: placeholderServiceAccount
   deploymentMode: oss
   secretName: ""
-  shareProcessNamespace: false  
   database:
     secretName: ""
     secretValue: ""

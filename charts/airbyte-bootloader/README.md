@@ -35,7 +35,6 @@ Helm chart to deploy airbyte-bootloader
 | global.secretName | string | `""` |  |
 | global.secrets | object | `{}` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
-| global.shareProcessNamespace | string | `"false"` | the shareProcessNamespace field is used in a PodSpec to enable all containers within a pod to share the same process namespace. This allows containers to view and interact with each other's processes. |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"airbyte/bootloader"` |  |
 | nodeSelector | object | `{}` |  |
