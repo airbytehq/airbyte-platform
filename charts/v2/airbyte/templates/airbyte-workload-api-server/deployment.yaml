@@ -148,10 +148,10 @@ spec:
         {{- toYaml .Values.global.extraVolumeMounts | nindent 8 }}
         {{- end }}
       {{- if .Values.workloadApiServer.extraContainers }}
-      {{- toYaml .Values.workloadApiServer.extraContainers | nindent 8 }}
+      {{- toYaml .Values.workloadApiServer.extraContainers | nindent 6 }}
       {{- end }}
       {{- if .Values.global.extraContainers }}
-      {{ toYaml .Values.global.extraContainers | nindent 8 }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
       securityContext: {{- toYaml .Values.workloadApiServer.podSecurityContext | nindent 8 }}
       volumes:
