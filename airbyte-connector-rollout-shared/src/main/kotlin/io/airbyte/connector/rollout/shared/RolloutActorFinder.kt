@@ -181,7 +181,7 @@ class RolloutActorFinder(
     logger.info { "Connector rollout getting sync info for pinned actors: connectorRollout=${connectorRollout.id} pinnedActors=$pinnedActors" }
 
     val pinnedActorSyncs =
-      getSortedActorDefinitionConnections(
+      getSortedActorDefinitionConnectionsByActorId(
         pinnedActors,
         connectorRollout.actorDefinitionId,
         actorType,
@@ -384,6 +384,55 @@ class RolloutActorFinder(
         }
       }.filter { connection ->
         connection.manual != true
+      }.sortedBy { connection ->
+        getFrequencyInMinutes(connection.schedule)
+      }
+
+    logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
+    for (sync in sortedSyncs) {
+      logger.debug { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
+    }
+    return sortedSyncs
+  }
+
+  @VisibleForTesting
+  fun getSortedActorDefinitionConnectionsByActorId(
+    actorIds: List<UUID>,
+    actorDefinitionId: UUID,
+    actorType: ActorType,
+  ): List<StandardSync> {
+    logger.info {
+      "Connector rollout getting sorted actor definition connections for actor Ids: " +
+        "actorIds=$actorIds actorDefinitionId=$actorDefinitionId actorType=$actorType"
+    }
+    var connections: List<StandardSync>
+
+    if (actorType == ActorType.SOURCE) {
+      connections =
+        connectionService.listConnectionsBySources(
+          actorIds,
+          false,
+          false,
+        )
+    } else {
+      connections =
+        connectionService.listConnectionsByDestinations(
+          actorIds,
+          false,
+          false,
+        )
+    }
+    logger.info { "getSortedActorDefinitionConnectionsByActorId connections=${connections.size}" }
+    for (connection in connections) {
+      logger.debug { "getSortedActorDefinitionConnectionsByActorId connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
+    }
+
+    val sortedSyncs =
+      connections.filter { connection ->
+        when (actorType) {
+          ActorType.SOURCE -> connection.sourceId in actorIds
+          ActorType.DESTINATION -> connection.destinationId in actorIds
+        }
       }.sortedBy { connection ->
         getFrequencyInMinutes(connection.schedule)
       }

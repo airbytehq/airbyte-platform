@@ -46,6 +46,10 @@ public interface ConnectionService {
 
   List<StandardSync> listConnectionsByDestination(UUID destinationId, boolean includeDeleted) throws IOException;
 
+  List<StandardSync> listConnectionsBySources(List<UUID> sourceIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
+  List<StandardSync> listConnectionsByDestinations(List<UUID> destinationIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
   List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId,
                                                                String actorTypeValue,
                                                                boolean includeDeleted,

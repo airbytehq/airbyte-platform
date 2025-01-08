@@ -372,9 +372,19 @@ class RolloutActorFinderTest {
 
     if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
       every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+      every {
+        connectionService.listConnectionsBySources(
+          any(),
+          any(),
+          any(),
+        )
+      } returns MOCK_CONNECTION_SYNCS.filter { it.sourceId in SOURCE_ACTOR_IDS }
     } else {
       every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
       every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+      every {
+        connectionService.listConnectionsByDestinations(any(), any(), any())
+      } returns MOCK_CONNECTION_SYNCS.filter { it.destinationId in DESTINATION_ACTOR_IDS }
     }
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns
       listOf(
@@ -420,7 +430,6 @@ class RolloutActorFinderTest {
         },
       )
     every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
       MOCK_CONNECTION_SYNCS.map { connection ->
         Job(
@@ -451,8 +460,13 @@ class RolloutActorFinderTest {
 
     verify {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
+
+      if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+        connectionService.listConnectionsBySources(any(), any(), any())
+      } else {
+        connectionService.listConnectionsByDestinations(any(), any(), any())
+      }
     }
   }
 
@@ -965,6 +979,75 @@ class RolloutActorFinderTest {
 
     verify {
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorDefinitionIds")
+  fun `test getSortedActorDefinitionConnectionsByActorIds`(actorDefinitionId: UUID) {
+    if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+      every {
+        connectionService.listConnectionsBySources(
+          any(),
+          any(),
+          any(),
+        )
+      } returns MOCK_CONNECTION_SYNCS.filter { it.sourceId in SOURCE_ACTOR_IDS }
+    } else {
+      every {
+        connectionService.listConnectionsByDestinations(any(), any(), any())
+      } returns MOCK_CONNECTION_SYNCS.filter { it.destinationId in DESTINATION_ACTOR_IDS }
+    }
+
+    val sortedConnectionSyncs =
+      rolloutActorFinder.getSortedActorDefinitionConnectionsByActorId(
+        CONFIG_SCOPE_MAP.values.map { it.id },
+        actorDefinitionId,
+        if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) ActorType.SOURCE else ActorType.DESTINATION,
+      )
+
+    // Verify all items are present
+    assertEquals(
+      4,
+      sortedConnectionSyncs.size,
+      "The manual sync and all syncs for the irrelevant actorIds should have been removed",
+    )
+
+    // Verify the sorted order
+    for (index in 0 until sortedConnectionSyncs.size - 2) {
+      val currentSync = sortedConnectionSyncs[index]
+      val nextSync = sortedConnectionSyncs[index + 1]
+
+      // Ensure the sync with 'manual = true' is excluded from the list
+      assertFalse(currentSync.manual ?: false)
+
+      // If nextSync has a schedule (i.e., it isn't the last null one)
+      if (nextSync.schedule != null) {
+        assertNotNull(currentSync.schedule, "Sync at index $index should have a schedule")
+        assertNotNull(nextSync.schedule, "Sync at index ${index + 1} should have a schedule")
+
+        // Ensure that the current sync's next scheduled time is earlier than the next one in the sorted list
+        val currentMultiplier = getScheduleMultiplier(currentSync.schedule!!.timeUnit)
+        val nextMultiplier = getScheduleMultiplier(nextSync.schedule!!.timeUnit)
+
+        val currentTime = currentSync.schedule!!.units * currentMultiplier
+        val nextTime = nextSync.schedule!!.units * nextMultiplier
+
+        assertTrue(
+          currentTime < nextTime,
+          "Sync at index $index should run after or at the same time as sync at index ${index + 1}",
+        )
+      }
+    }
+    // Check if the last sync has a null schedule
+    Assertions.assertNull(sortedConnectionSyncs.last().schedule, "The last sync should have a null schedule")
+
+    verify {
+      if (actorDefinitionId == SOURCE_ACTOR_DEFINITION_ID) {
+        connectionService.listConnectionsBySources(any(), any(), any())
+      } else {
+        connectionService.listConnectionsByDestinations(any(), any(), any())
+      }
     }
   }
 
