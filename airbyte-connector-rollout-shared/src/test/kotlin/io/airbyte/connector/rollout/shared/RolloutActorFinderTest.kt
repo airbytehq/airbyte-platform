@@ -263,7 +263,7 @@ class RolloutActorFinderTest {
     every {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
@@ -278,7 +278,7 @@ class RolloutActorFinderTest {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
@@ -309,7 +309,7 @@ class RolloutActorFinderTest {
     every {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
@@ -324,7 +324,7 @@ class RolloutActorFinderTest {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
@@ -420,7 +420,7 @@ class RolloutActorFinderTest {
         },
       )
     every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
       MOCK_CONNECTION_SYNCS.map { connection ->
         Job(
@@ -451,7 +451,7 @@ class RolloutActorFinderTest {
 
     verify {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
   }
@@ -594,7 +594,7 @@ class RolloutActorFinderTest {
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
@@ -609,7 +609,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
@@ -665,7 +665,7 @@ class RolloutActorFinderTest {
         ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION,
       )
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
     every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns JOBS
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
@@ -680,7 +680,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
       jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
@@ -918,7 +918,7 @@ class RolloutActorFinderTest {
       }
     }
 
-    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
+    every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns MOCK_CONNECTION_SYNCS
 
     val sortedConnectionSyncs =
       rolloutActorFinder.getSortedActorDefinitionConnections(
@@ -964,7 +964,7 @@ class RolloutActorFinderTest {
     Assertions.assertNull(sortedConnectionSyncs.last().schedule, "The last sync should have a null schedule")
 
     verify {
-      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any())
+      connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
     }
   }
 

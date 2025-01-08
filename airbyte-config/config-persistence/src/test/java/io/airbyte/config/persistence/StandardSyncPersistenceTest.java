@@ -371,7 +371,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var expectedSync = createStandardSync(source1, destination1);
     final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
-        ActorType.DESTINATION.value(), false);
+        ActorType.DESTINATION.value(), false, false);
     assertThat(actualSyncs.size()).isEqualTo(1);
     assertThat(actualSyncs.get(0)).isEqualTo(expectedSync);
   }

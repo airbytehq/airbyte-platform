@@ -931,7 +931,7 @@ public class ConnectionsHandler {
     final List<StandardSync> standardSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         actorDefinitionRequestBody.getActorDefinitionId(),
         actorDefinitionRequestBody.getActorType().toString(),
-        false);
+        false, true);
 
     for (final StandardSync standardSync : standardSyncs) {
       final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);

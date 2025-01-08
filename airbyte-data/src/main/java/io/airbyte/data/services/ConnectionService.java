@@ -46,7 +46,10 @@ public interface ConnectionService {
 
   List<StandardSync> listConnectionsByDestination(UUID destinationId, boolean includeDeleted) throws IOException;
 
-  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId, String actorTypeValue, boolean includeDeleted)
+  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId,
+                                                               String actorTypeValue,
+                                                               boolean includeDeleted,
+                                                               boolean includeInactive)
       throws IOException;
 
   List<StreamDescriptor> getAllStreamsForConnection(UUID connectionId) throws ConfigNotFoundException, IOException;

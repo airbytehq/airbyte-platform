@@ -369,6 +369,7 @@ class RolloutActorFinder(
         actorDefinitionId,
         actorType.toString(),
         false,
+        false,
       )
     logger.info { "getSortedActorDefinitionConnections connections=${connections.size}" }
     for (connection in connections) {

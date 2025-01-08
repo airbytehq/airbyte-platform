@@ -371,7 +371,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   @Override
   public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
                                                                       final String actorTypeValue,
-                                                                      final boolean includeDeleted)
+                                                                      final boolean includeDeleted,
+                                                                      final boolean includeInactive)
       throws IOException {
     final Condition actorDefinitionJoinCondition = switch (ActorType.valueOf(actorTypeValue)) {
       case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
@@ -388,7 +389,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
         .leftJoin(SCHEMA_MANAGEMENT).on(CONNECTION.ID.eq(SCHEMA_MANAGEMENT.CONNECTION_ID))
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
-            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
+            .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
         .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));

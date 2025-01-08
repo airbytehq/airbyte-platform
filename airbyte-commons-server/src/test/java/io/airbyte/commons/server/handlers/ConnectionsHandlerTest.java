@@ -670,9 +670,9 @@ class ConnectionsHandlerTest {
 
     @Test
     void testListConnectionsByActorDefinition() throws IOException {
-      when(connectionService.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
+      when(connectionService.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false, true))
           .thenReturn(Lists.newArrayList(standardSync));
-      when(connectionService.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
+      when(connectionService.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false, true))
           .thenReturn(Lists.newArrayList(standardSync2));
 
       final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
