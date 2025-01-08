@@ -14,7 +14,6 @@ import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./Mappi
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
-import { useGetFieldsInStream } from "./useGetFieldsInStream";
 
 export const fieldRenamingConfigSchema = yup.object().shape({
   newFieldName: yup.string().required("form.empty.error"),
@@ -27,8 +26,9 @@ interface FieldRenamingRowProps {
 }
 
 export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamDescriptorKey }) => {
-  const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
+  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+
   const { formatMessage } = useIntl();
 
   const defaultValues = useMemo(() => {
@@ -42,10 +42,17 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
     defaultValues,
     resolver: autoSubmitResolver<FieldRenamingMapperConfiguration>(fieldRenamingConfigSchema, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
-      validateMappings();
     }),
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
+      methods.setError("originalFieldName", { message: mapping.validationError.message });
+    } else {
+      methods.clearErrors("originalFieldName");
+    }
+  }, [mapping.validationError, methods]);
 
   useEffect(() => {
     updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
@@ -55,15 +62,22 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
     <FormProvider {...methods}>
       <form>
         <MappingRowContent>
-          <MappingTypeListBox
-            selectedValue={StreamMapperType["field-renaming"]}
-            streamDescriptorKey={streamDescriptorKey}
-            mappingId={mapping.id}
-          />
-          <SelectTargetField<FieldRenamingMapperConfiguration>
-            targetFieldOptions={fieldsInStream}
-            name="originalFieldName"
-          />
+          <MappingRowItem>
+            <MappingTypeListBox
+              disabled={isStreamValidating}
+              selectedValue={StreamMapperType["field-renaming"]}
+              streamDescriptorKey={streamDescriptorKey}
+              mappingId={mapping.id}
+            />
+          </MappingRowItem>
+          <MappingRowItem>
+            <SelectTargetField<FieldRenamingMapperConfiguration>
+              disabled={isStreamValidating}
+              mappingId={mapping.id}
+              streamDescriptorKey={streamDescriptorKey}
+              name="originalFieldName"
+            />
+          </MappingRowItem>
           <MappingRowItem>
             <Text>
               <FormattedMessage id="connections.mappings.to" />
@@ -72,11 +86,17 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
           <MappingRowItem>
             <MappingFormTextInput<FieldRenamingMapperConfiguration>
               placeholder={formatMessage({ id: "connections.mappings.value" })}
+              disabled={isStreamValidating}
               name="newFieldName"
             />
             <FormControlErrorMessage<FieldRenamingMapperConfiguration> name="newFieldName" />
           </MappingRowItem>
         </MappingRowContent>
+        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
+          <Text italicized color="red">
+            {mapping.validationError.message}
+          </Text>
+        )}
       </form>
     </FormProvider>
   );

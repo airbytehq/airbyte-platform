@@ -760,6 +760,7 @@
   "connections.mappings.rowFilter.in": "in",
   "connections.mappings.rowFilter.out": "out",
   "connections.mappings.submissionValidationError": "There are errors in some of the mapping configurations. Please fix them before saving.",
+  "connections.mappings.aesRequiresSecrets": "You must have an external secrets manager to use an AES encryption key.",
 
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",

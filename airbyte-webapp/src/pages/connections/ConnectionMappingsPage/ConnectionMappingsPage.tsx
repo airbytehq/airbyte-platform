@@ -39,7 +39,15 @@ const ConnectionMappingsPageContent = () => {
         mappers.map((mapper) => mapper.validationCallback())
       )
     );
-    if (validations.every((validation) => validation.status === "fulfilled" && validation.value === true)) {
+
+    const hasServerValidationErrors = Object.entries(streamsWithMappings).some(([_, mappings]) => {
+      return mappings.some((mapper) => !!mapper.validationError);
+    });
+
+    if (
+      validations.every((validation) => validation.status === "fulfilled" && validation.value === true) &&
+      !hasServerValidationErrors
+    ) {
       submitMappings();
     } else {
       registerNotification({
@@ -69,7 +77,7 @@ const ConnectionMappingsPageContent = () => {
                 <Button variant="secondary" onClick={clear} disabled={mode === "readonly"}>
                   <FormattedMessage id="form.cancel" />
                 </Button>
-                <Button onClick={handleValidations} disabled={mode === "readonly"}>
+                <Button onClick={handleValidations} disabled={mode === "readonly"} data-testid="submit-mappings">
                   <FormattedMessage id="form.submit" />
                 </Button>
               </FlexContainer>

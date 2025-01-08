@@ -48,8 +48,9 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
           options={options}
           placeholder={placeholder}
           disabled={disabled}
+          data-testid="add-stream-for-mapping-combobox"
         />
-      ) : (
+      ) : mode !== "readonly" ? (
         <Tooltip
           control={
             <Button variant="secondary" disabled>
@@ -59,6 +60,10 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
         >
           <FormattedMessage id="connections.mappings.addStream.disabled" />
         </Tooltip>
+      ) : (
+        <Button variant="secondary" disabled>
+          {placeholder}
+        </Button>
       )}
     </>
   );

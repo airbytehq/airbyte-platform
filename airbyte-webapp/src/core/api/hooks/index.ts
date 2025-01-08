@@ -20,6 +20,7 @@ export * from "./geographies";
 export * from "./health";
 export * from "./instanceConfiguration";
 export * from "./jobs";
+export * from "./mappers";
 export * from "./notifications";
 export * from "./operations";
 export * from "./organizations";

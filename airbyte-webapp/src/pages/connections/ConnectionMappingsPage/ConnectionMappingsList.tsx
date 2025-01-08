@@ -9,14 +9,12 @@ export const ConnectionMappingsList: React.FC = () => {
 
   return (
     <FlexContainer direction="column">
-      {Object.entries(streamsWithMappings)
-        .filter(([_streamDescriptorKey, mappers]) => mappers.length > 0)
-        .map(([streamDescriptorKey, mappers]) => {
-          if (!mappers || mappers.length === 0) {
-            return null;
-          }
-          return <StreamMappingsCard key={`${streamDescriptorKey}-${key}`} streamDescriptorKey={streamDescriptorKey} />;
-        })}
+      {Object.entries(streamsWithMappings).map(([streamDescriptorKey, mappers]) => {
+        if (!mappers || mappers.length === 0) {
+          return null;
+        }
+        return <StreamMappingsCard key={`${streamDescriptorKey}-${key}`} streamDescriptorKey={streamDescriptorKey} />;
+      })}
       <div>
         <AddStreamForMappingComboBox secondary />
       </div>
