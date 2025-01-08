@@ -12,7 +12,7 @@ import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "co
 import styles from "./AuthButton.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import QuickBooksAuthButton from "./QuickBooksAuthButton";
-import { useFormOauthAdapter } from "./useOauthFlowAdapter";
+import { useFormOauthAdapter, useFormOauthAdapterBuilder } from "./useOauthFlowAdapter";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
 
@@ -95,6 +95,53 @@ export const AuthButton: React.FC<{
           <FormattedMessage id="connectorForm.authenticate.required" />
         </Text>
       )}
+    </FlexContainer>
+  );
+};
+
+export const AuthButtonBuilder: React.FC<{
+  builderProjectId: string;
+  onComplete: (authPayload: Record<string, unknown>) => void;
+}> = ({ builderProjectId, onComplete }) => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const { loading, done, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
+
+  // if (!selectedConnectorDefinition) {
+  //   console.error("Entered non-auth flow while no supported connector is selected");
+  //   return null;
+  // }
+
+  // const definitionId = ConnectorSpecification.id(selectedConnectorDefinitionSpecification);
+  // const Component = getButtonComponent(definitionId);
+  const Component = Button;
+
+  // const messageStyle = classnames(styles.message, {
+  //   [styles.error]: authRequiredError,
+  //   [styles.success]: !authRequiredError,
+  //   [styles.success]: true,
+  // });
+  const buttonLabel = done ? (
+    <FormattedMessage id="connectorForm.reauthenticate" />
+  ) : (
+    <FormattedMessage id="connectorForm.authenticate" values={{ connector: "" }} />
+  );
+  return (
+    <FlexContainer alignItems="center">
+      <Component
+        isLoading={loading}
+        type="button"
+        data-testid="oauth-button"
+        onClick={() => {
+          run();
+        }}
+      >
+        {buttonLabel}
+      </Component>
+      {/* {authRequiredError && (
+        <Text as="div" size="lg" className={messageStyle}>
+          <FormattedMessage id="connectorForm.authenticate.required" />
+        </Text>
+      )} */}
     </FlexContainer>
   );
 };

@@ -20,6 +20,7 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "connectorBuilder.aiAssist.enabled": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
+  "connectorBuilder.declarativeOauth": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
@@ -43,6 +44,7 @@ export const defaultExperimentValues: Experiments = {
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
+  "connectorBuilder.declarativeOauth": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,

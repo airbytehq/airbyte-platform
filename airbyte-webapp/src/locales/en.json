@@ -367,6 +367,7 @@
   "connectorForm.error.topLevelNonObject": "Top level configuration has to be an object. Make sure your connectors are up to date. See <docLink>connector docs</docLink> for more information.",
   "connectorForm.allowlistIp.message": "Please allow inbound traffic from the following Airbyte IPs in your firewall whether connecting directly or via SSH Tunnel (<a>more info</a>):",
   "connectorForm.allowlistIp.addressesLabel": "Airbyte IP addresses",
+  "connectorBuilder.oauth.state.invalidShape": "Key \"{key}\" is required and its value must be a number",
 
   "form.sourceNamespace": "Source namespace",
   "form.sourceStreamName": "Source stream name",
@@ -1828,6 +1829,8 @@
   "connectorBuilder.authentication.method.bearer": "Bearer",
   "connectorBuilder.authentication.method.basicHttp": "Basic HTTP",
   "connectorBuilder.authentication.method.oAuth": "OAuth",
+  "connectorBuilder.authentication.method.oAuth.declarative": "OAuth 2.0",
+  "connectorBuilder.authentication.method.oAuth.legacy": "OAuth (legacy)",
   "connectorBuilder.authentication.method.sessionToken": "Session Token",
   "connectorBuilder.authentication.refreshTokenUpdater.label": "Overwrite config with refresh token response",
   "connectorBuilder.authentication.refreshTokenUpdater.tooltip": "If enabled, the refresh token response will overwrite the current OAuth config. This is useful if requesting a new access token invalidates the old refresh token.",

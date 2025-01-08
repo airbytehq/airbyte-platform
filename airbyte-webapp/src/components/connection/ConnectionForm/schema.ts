@@ -200,9 +200,7 @@ export const syncCatalogSchema = yup.object({
       "syncCatalog.streams.mappers",
       "connectionForm.streams.existingMappers",
       (streams) =>
-        !streams?.some(
-          (stream) => stream.config?.mappers?.some((mapper) => mapper.type !== StreamMapperType.hashing)
-        ) ?? true
+        !streams?.some((stream) => stream.config?.mappers?.some((mapper) => mapper.type !== StreamMapperType.hashing))
     )
     .test("syncCatalog.streams.hash", "connectionForm.streams.hashFieldCollision", (streams) => {
       // group all top-level included fields by stream name & namespace

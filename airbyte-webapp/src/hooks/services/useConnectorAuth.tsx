@@ -6,12 +6,14 @@ import { v4 as uuid } from "uuid";
 
 import { OAuthEvent } from "area/connector/types/oauthCallback";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
-import { HttpError, useCompleteOAuth, useConsentUrls } from "core/api";
+import { HttpError, useCompleteOAuth, useCompleteOAuthBuilder, useConsentUrls, useConsentUrlsBuilder } from "core/api";
 import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
   DestinationOauthConsentRequest,
   SourceOauthConsentRequest,
+  BuilderProjectOauthConsentRequest,
+  CompleteConnectorBuilderProjectOauthRequest,
 } from "core/api/types/AirbyteClient";
 import {
   ConnectorDefinition,
@@ -160,6 +162,87 @@ export function useConnectorAuth(): {
   };
 }
 
+export function useConnectorAuthBuilder(): {
+  getConsentUrl: (
+    builderProjectId: string,
+    oAuthInputConfiguration: Record<string, unknown>
+  ) => Promise<{
+    payload: BuilderProjectOauthConsentRequest;
+    consentUrl: string;
+  }>;
+  completeOauthRequest: (
+    builderProjectId: string,
+    queryParams: Record<string, unknown>
+  ) => Promise<CompleteOAuthResponse>;
+} {
+  const { workspaceId } = useCurrentWorkspace();
+  const { getConsentUrl } = useConsentUrlsBuilder();
+  const { completeOAuth } = useCompleteOAuthBuilder();
+
+  return {
+    getConsentUrl: async (
+      builderProjectId: string,
+      oAuthInputConfiguration: Record<string, unknown>
+    ): Promise<{
+      payload: BuilderProjectOauthConsentRequest;
+      consentUrl: string;
+    }> => {
+      try {
+        const payload: BuilderProjectOauthConsentRequest = {
+          workspaceId,
+          builderProjectId,
+          redirectUrl: OAUTH_REDIRECT_URL,
+          oAuthInputConfiguration,
+        };
+        const response = await getConsentUrl(payload);
+
+        return { consentUrl: response.consentUrl, payload };
+      } catch (e) {
+        // @TODO: this whole sad path block
+
+        // // If this API returns a 404 the OAuth credentials have not been added to the database.
+        // if (e instanceof HttpError && e.status === 404) {
+        //   if (process.env.NODE_ENV === "development") {
+        //     notificationService.registerNotification({
+        //       id: "oauthConnector.credentialsMissing",
+        //       // Since it's dev only we don't need i18n on this string
+        //       text: "OAuth is not enabled for this connector on this environment.",
+        //     });
+        //   } else {
+        //     // Log error to our monitoring, this should never happen and means OAuth credentials
+        //     // where missed
+        //     trackError(e, {
+        //       id: "oauthConnector.credentialsMissing",
+        //       connectorSpecId: ConnectorSpecification.id(connector),
+        //       workspaceId,
+        //     });
+        //     notificationService.registerNotification({
+        //       id: "oauthConnector.credentialsMissing",
+        //       text: formatMessage({ id: "connector.oauthCredentialsMissing" }),
+        //       type: "error",
+        //     });
+        //   }
+        // }
+        throw e;
+      }
+    },
+    completeOauthRequest: async (
+      builderProjectId: string,
+      queryParams: Record<string, unknown>
+    ): Promise<CompleteOAuthResponse> => {
+      const payload: CompleteConnectorBuilderProjectOauthRequest = {
+        builderProjectId,
+        redirectUrl: OAUTH_REDIRECT_URL,
+        workspaceId,
+        queryParams,
+      };
+
+      const ret = completeOAuth(payload);
+      return ret;
+    },
+  };
+}
+
 const OAUTH_ERROR_ID = "connector.oauthError";
 
 export function useRunOauthFlow({
@@ -257,6 +340,120 @@ export function useRunOauthFlow({
       }
     },
     [connector]
+  );
+
+  // close the popup window and broadcast channel when unmounting
+  useUnmount(() => {
+    const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+    cancelBc.postMessage({ type: "cancel", tabUuid });
+    cancelBc.close();
+  });
+
+  const onCloseWindow = useCallback(() => {
+    windowObjectReference?.close();
+  }, []);
+
+  // close popup oauth window when we close the original tab
+  useEvent("beforeunload", onCloseWindow);
+
+  return {
+    loading: loadingCompleteOauth || loading,
+    done: value,
+    run: onStartOauth,
+  };
+}
+
+export function useRunOauthFlowBuilder({
+  builderProjectId,
+  onDone,
+}: {
+  builderProjectId: string;
+  onDone?: (values: CompleteOAuthResponseAuthPayload) => void;
+}): {
+  loading: boolean;
+  done?: boolean;
+  run: (oauthInputParams: Record<string, unknown>) => void;
+} {
+  const { getConsentUrl, completeOauthRequest } = useConnectorAuthBuilder();
+  const { registerNotification } = useNotificationService();
+  const param = useRef<BuilderProjectOauthConsentRequest>();
+  // const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
+
+  const [{ loading: loadingCompleteOauth, value }, completeOauth] = useAsyncFn(
+    async (queryParams: Record<string, unknown>) => {
+      const oauthStartedPayload = param.current;
+
+      if (!oauthStartedPayload) {
+        // unexpected call, no oauth flow was started
+        return false;
+      }
+
+      let completeOauthResponse: CompleteOAuthResponse;
+      try {
+        completeOauthResponse = await completeOauthRequest(builderProjectId, queryParams);
+      } catch (e) {
+        registerNotification({
+          id: OAUTH_ERROR_ID,
+          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
+          type: "error",
+        });
+        return false;
+      }
+
+      if (!completeOauthResponse.request_succeeded || !completeOauthResponse.auth_payload) {
+        // user canceled
+        param.current = undefined;
+        return false;
+      }
+
+      // trackOAuthSuccess(connectorDefinition);
+      onDone?.(completeOauthResponse.auth_payload);
+      return true;
+    },
+    [builderProjectId, onDone]
+  );
+
+  const [{ loading }, onStartOauth] = useAsyncFn(
+    async (oauthInputParams: Record<string, unknown>) => {
+      // trackOAuthAttemp(connectorDefinition);
+      const consentRequestInProgress = await getConsentUrl(builderProjectId, oauthInputParams);
+      param.current = consentRequestInProgress.payload;
+
+      // some oauth services (e.g. airflow) drop some of the query params we send as part of the consent url
+      // so parse apart that url and re-apply the query params when completing the oauth flow
+      const url = new URL(consentRequestInProgress.consentUrl);
+      const consentUrlQueryParams = Object.fromEntries(url.searchParams);
+
+      if (windowObjectReference && !windowObjectReference.closed) {
+        // popup window is already open, so just focus it
+        windowObjectReference.focus();
+      } else {
+        // popup window is not open, so open it and start listening on broadcast channel
+        const popupWindow = openWindow(consentRequestInProgress.consentUrl);
+
+        const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+        bc.postMessage({ type: "takeover" });
+        bc.onmessage = async (event) => {
+          if (event.type === "cancel" && event.tabUuid !== tabUuid) {
+            // cancel event is not meant for this tab, so ignore it
+            return;
+          }
+          if (event.type === "completed") {
+            const queryParams = {
+              ...consentUrlQueryParams, // ensure we pass along params from the consent url
+              ...event.query, // but any params provided here take priority and override
+            };
+
+            await completeOauth(queryParams);
+          }
+          // OAuth flow is completed or taken over by another tab, so close the broadcast channel
+          // and popup window if it is still open.
+          await bc.close();
+          popupWindow?.close();
+        };
+      }
+    },
+    [builderProjectId]
   );
 
   // close the popup window and broadcast channel when unmounting

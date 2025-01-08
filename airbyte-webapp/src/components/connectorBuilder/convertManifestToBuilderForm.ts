@@ -6,6 +6,7 @@ import isEmpty from "lodash/isEmpty";
 import isEqual from "lodash/isEqual";
 import isObject from "lodash/isObject";
 import isString from "lodash/isString";
+import omit from "lodash/omit";
 import pick from "lodash/pick";
 import { match } from "ts-pattern";
 
@@ -44,6 +45,7 @@ import {
   IterableDecoderType,
   SimpleRetrieverDecoder,
   GzipJsonDecoderType,
+  OAuthConfigSpecificationOauthConnectorInputSpecification,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -53,6 +55,8 @@ import {
   BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
+  BuilderFormOAuthAuthenticator,
+  BuilderFormDeclarativeOAuthAuthenticator,
   BuilderFormInput,
   BuilderFormValues,
   BuilderIncrementalSync,
@@ -64,6 +68,7 @@ import {
   BuilderRequestBody,
   BuilderStream,
   BuilderTransformation,
+  DeclarativeOAuthAuthenticatorType,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   extractInterpolatedConfigKey,
@@ -1159,6 +1164,16 @@ export function manifestAuthenticatorToBuilder(
         authenticator.type
       );
 
+      const isOauthConnectorInputSpecification = (
+        x: OAuthConfigSpecificationOauthConnectorInputSpecification | undefined
+      ): x is OAuthConfigSpecificationOauthConnectorInputSpecification => {
+        return !!x;
+      };
+
+      const isDeclarativeOAuth = isOauthConnectorInputSpecification(
+        spec?.advanced_auth?.oauth_config_specification?.oauth_connector_input_specification
+      );
+
       if (Object.values(oauth.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0) {
         throw new ManifestCompatibilityError(
           undefined,
@@ -1172,14 +1187,48 @@ export function manifestAuthenticatorToBuilder(
         );
       }
 
-      let builderAuthenticator: BuilderFormAuthenticator = {
+      let builderAuthenticator: BuilderFormOAuthAuthenticator & {
+        declarative?: BuilderFormDeclarativeOAuthAuthenticator["declarative"];
+      } = {
         ...oauth,
+        type: isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : OAUTH_AUTHENTICATOR,
         refresh_request_body: Object.entries(oauth.refresh_request_body ?? {}),
         grant_type: oauth.grant_type ?? "refresh_token",
         refresh_token_updater: undefined,
         client_id: interpolateConfigKey(extractAndValidateAuthKey(["client_id"], oauth, spec)),
         client_secret: interpolateConfigKey(extractAndValidateAuthKey(["client_secret"], oauth, spec)),
       };
+
+      if (isDeclarativeOAuth) {
+        builderAuthenticator.declarative = {
+          ...(omit(
+            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification,
+            "extract_output",
+            "access_token_params",
+            "access_token_headers",
+            "state"
+          ) as BuilderFormDeclarativeOAuthAuthenticator["declarative"]),
+          access_token_key:
+            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.extract_output[0],
+
+          access_token_params: Object.entries(
+            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.access_token_params ??
+              {}
+          ),
+          access_token_headers: Object.entries(
+            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!
+              .access_token_headers ?? {}
+          ),
+
+          state: spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.state
+            ? JSON.stringify(
+                spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.state,
+                null,
+                2
+              )
+            : undefined,
+        };
+      }
 
       if (!oauth.grant_type || oauth.grant_type === "refresh_token") {
         const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], oauth, spec);

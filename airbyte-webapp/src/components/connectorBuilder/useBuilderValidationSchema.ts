@@ -19,6 +19,7 @@ import {
   BuilderStream,
   CURSOR_PAGINATION,
   CUSTOM_PARTITION_ROUTER,
+  DeclarativeOAuthAuthenticatorType,
   LIST_PARTITION_ROUTER,
   OAUTH_AUTHENTICATOR,
   PAGE_INCREMENT,
@@ -99,13 +100,15 @@ export const useBuilderValidationSchema = () => {
     [formatMessage]
   );
 
+  const authenticatorSchema = useAuthenticatorSchema();
+
   const globalSchema = useMemo(
     () =>
       yup.object().shape({
         urlBase: yup.string().required(REQUIRED_ERROR),
         authenticator: maybeYamlSchema(authenticatorSchema),
       }),
-    []
+    [authenticatorSchema]
   );
 
   const streamSchema = useMemo(
@@ -285,7 +288,7 @@ const nonPathRequestOptionSchema = yup
   .notRequired()
   .default(undefined);
 
-const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required(REQUIRED_ERROR)));
+const keyValueListSchema = yup.array().of(yup.array().of(yup.string().min(1, REQUIRED_ERROR)).min(2).max(2));
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
@@ -408,64 +411,112 @@ const errorHandlerSchema = yup
   .notRequired()
   .default(undefined);
 
-const authenticatorSchema = yup.object({
-  type: yup.string().required(REQUIRED_ERROR),
-  inject_into: apiKeyInjectIntoSchema,
-  token_refresh_endpoint: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup.string().required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  refresh_token_updater: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup
-      .object()
-      .shape({
-        refresh_token_name: yup.string(),
-      })
-      .default(undefined),
-    otherwise: strip,
-  }),
-  refresh_request_body: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: keyValueListSchema,
-    otherwise: strip,
-  }),
-  login_requester: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      url: yup.string().required(REQUIRED_ERROR),
-      authenticator: yup.object({
+const useAuthenticatorSchema = () => {
+  const { formatMessage } = useIntl();
+
+  return useMemo(
+    () =>
+      yup.object({
+        type: yup.string().required(REQUIRED_ERROR),
         inject_into: apiKeyInjectIntoSchema,
+        token_refresh_endpoint: yup.mixed().when("type", {
+          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        refresh_token_updater: yup.mixed().when("type", {
+          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+          then: yup
+            .object()
+            .shape({
+              refresh_token_name: yup.string(),
+            })
+            .default(undefined),
+          otherwise: strip,
+        }),
+        refresh_request_body: yup.mixed().when("type", {
+          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        declarative: yup.mixed().when("type", {
+          is: DeclarativeOAuthAuthenticatorType,
+          then: yup.object().shape({
+            consent_url: yup.string().required(REQUIRED_ERROR),
+            access_token_url: yup.string().required(REQUIRED_ERROR),
+            access_token_key: yup.string().required(REQUIRED_ERROR),
+            access_token_headers: keyValueListSchema,
+            access_token_params: keyValueListSchema,
+            auth_code_key: yup.string(),
+            client_id_key: yup.string(),
+            client_secret_key: yup.string(),
+            redirect_uri_key: yup.string(),
+            scope: yup.string(),
+            scope_key: yup.string(),
+            state: yup
+              .string()
+              .test("state-valid-json", "connectorBuilder.invalidJSON", (stateString, { createError }) => {
+                if (stateString === undefined || stateString === "") {
+                  return true;
+                }
+                try {
+                  const stateObject = JSON.parse(stateString);
+                  if (typeof stateObject.min !== "number") {
+                    return createError({
+                      message: formatMessage({ id: "connectorBuilder.oauth.state.invalidShape" }, { key: "min" }),
+                    });
+                  } else if (typeof stateObject.max !== "number") {
+                    return createError({
+                      message: formatMessage({ id: "connectorBuilder.oauth.state.invalidShape" }, { key: "max" }),
+                    });
+                  }
+                } catch (e) {
+                  return false; // renders this test's "connectorBuilder.invalidJSON" message
+                }
+                return true;
+              }),
+            state_key: yup.string(),
+          }),
+          otherwise: strip,
+        }),
+        login_requester: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            authenticator: yup.object({
+              inject_into: apiKeyInjectIntoSchema,
+            }),
+            errorHandler: errorHandlerSchema,
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+          }),
+          otherwise: strip,
+        }),
+        session_token_path: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        expiration_duration: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.string(),
+          otherwise: strip,
+        }),
+        request_authentication: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.object().shape({
+            inject_into: yup.mixed().when("type", {
+              is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+              then: nonPathRequestOptionSchema,
+              otherwise: strip,
+            }),
+          }),
+          otherwise: strip,
+        }),
       }),
-      errorHandler: errorHandlerSchema,
-      httpMethod: httpMethodSchema,
-      requestOptions: requestOptionsSchema,
-    }),
-    otherwise: strip,
-  }),
-  session_token_path: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  expiration_duration: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.string(),
-    otherwise: strip,
-  }),
-  request_authentication: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      inject_into: yup.mixed().when("type", {
-        is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
-        then: nonPathRequestOptionSchema,
-        otherwise: strip,
-      }),
-    }),
-    otherwise: strip,
-  }),
-});
+    [formatMessage]
+  );
+};
 
 const recordSelectorSchema = yup.object().shape({
   fieldPath: yup.array().of(yup.string()),
