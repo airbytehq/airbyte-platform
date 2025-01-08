@@ -1403,7 +1403,7 @@ temporal:
     # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
-    tag: "1.23.0"
+    tag: "1.26"
 
   service:
     # -- The Kubernetes Service Type

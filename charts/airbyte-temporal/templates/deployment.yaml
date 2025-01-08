@@ -60,7 +60,7 @@ spec:
           - name: AUTO_SETUP
             value: "true"
           - name: DB # The DB engine to use
-            value: "postgresql"
+            value: "postgres12"
           - name: DYNAMIC_CONFIG_FILE_PATH
             value: "config/dynamicconfig/development.yaml"
 
