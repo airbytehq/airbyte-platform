@@ -187,6 +187,15 @@ create table "public"."connection_operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_operation_pkey" primary key ("id", "connection_id", "operation_id")
 );
+create table "public"."connection_tag" (
+  "id" uuid not null,
+  "tag_id" uuid not null,
+  "connection_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "connection_tag_pkey" primary key ("id"),
+  constraint "connection_tag_tag_id_connection_id_key" unique ("tag_id", "connection_id")
+);
 create table "public"."connection_timeline_event" (
   "id" uuid not null,
   "connection_id" uuid not null,
@@ -417,6 +426,7 @@ create table "public"."tag" (
   "color" char(6) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "tag_pkey" primary key ("id"),
   constraint "tag_name_workspace_id_key" unique ("name", "workspace_id")
 );
 create table "public"."user" (
@@ -572,6 +582,8 @@ alter table "public"."connection" add constraint "connection_destination_id_fkey
 alter table "public"."connection" add constraint "connection_source_id_fkey" foreign key ("source_id") references "public"."actor" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_operation_id_fkey" foreign key ("operation_id") references "public"."operation" ("id");
+alter table "public"."connection_tag" add constraint "connection_tag_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."connection_tag" add constraint "connection_tag_tag_id_fkey" foreign key ("tag_id") references "public"."tag" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."connector_builder_project" add constraint "connector_builder_project_base_adv_id_fkey" foreign key ("base_actor_definition_version_id") references "public"."actor_definition_version" ("id");

@@ -133,6 +133,7 @@ public class BaseConfigDatabaseTest {
               connection,
               connection_operation,
               connection_timeline_event,
+              connection_tag,
               connector_builder_project,
               connector_rollout,
               declarative_manifest,
