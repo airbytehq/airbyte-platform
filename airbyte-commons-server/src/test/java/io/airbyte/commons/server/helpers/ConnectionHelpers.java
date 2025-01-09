@@ -305,7 +305,8 @@ public class ConnectionHelpers {
         .latestSyncJobStatus(latestSynJobStatus)
         .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
         .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
-        .schemaChange(schemaChange);
+        .schemaChange(schemaChange)
+        .tags(Collections.emptyList());
 
     return connectionListItem;
   }

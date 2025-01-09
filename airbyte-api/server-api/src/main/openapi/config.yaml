@@ -10330,6 +10330,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -10458,6 +10462,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionRead:
       type: object
       required:
@@ -11077,6 +11085,22 @@ components:
       properties:
         propagatedDiff:
           $ref: "#/components/schemas/CatalogDiff"
+    Tag:
+      description: A tag that can be associated with a connection. Useful for grouping and organizing connections in a workspace.
+      type: object
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+
     # Operations
     OperationId:
       type: string
@@ -13811,6 +13835,7 @@ components:
         - schemaChange
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13838,6 +13863,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendConnectionRead:
       type: object
       required:
@@ -13856,6 +13885,7 @@ components:
         - nonBreakingChangesPreference
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13929,6 +13959,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendDescribeCronExpressionRequestBody:
       type: object
       required:

@@ -319,7 +319,10 @@ public class WebBackendConnectionsHandler {
         .isSyncing(latestRunningSyncJob.isPresent())
         .schemaChange(schemaChange)
         .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
-        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead);
+        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
+        // Temporarily set to an empty list:
+        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
+        .tags(Collections.emptyList());
 
     latestSyncJob.ifPresent(job -> {
       listItem.setLatestSyncJobCreatedAt(job.createdAt());
@@ -405,7 +408,10 @@ public class WebBackendConnectionsHandler {
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
         .createdAt(connectionRead.getCreatedAt())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
-        .backfillPreference(connectionRead.getBackfillPreference());
+        .backfillPreference(connectionRead.getBackfillPreference())
+        // Temporarily set to an empty list:
+        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
+        .tags(Collections.emptyList());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not

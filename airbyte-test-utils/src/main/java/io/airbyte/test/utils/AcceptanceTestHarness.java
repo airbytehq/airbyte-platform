@@ -1414,6 +1414,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null);
   }
 
