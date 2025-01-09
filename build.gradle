@@ -25,18 +25,6 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.40.1" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.40.1" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.40.1" apply false
-    id "io.airbyte.gradle.docker" version "0.40.1" apply false
-    id "io.airbyte.gradle.publish" version "0.40.1" apply false
-    id "io.airbyte.gradle.kube-reload" version "0.40.1" apply false
-    // uncomment for testing plugin locally
-    // id "io.airbyte.gradle.jvm" version "local-test" apply false
-    // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
-    // id "io.airbyte.gradle.jvm.lib" version "local-test" apply false
-    // id "io.airbyte.gradle.docker" version "local-test" apply false
-    // id "io.airbyte.gradle.publish" version "local-test" apply false
 }
 
 repositories {
@@ -87,8 +75,8 @@ allprojects {
     version = oss_version
 
     project.pluginManager.withPlugin("io.airbyte.gradle.jvm"){
-        airbyte{
-            pmd{
+        airbyte {
+            pmd {
                 ruleFiles = project.rootProject.files("./oss/pmd-rules.xml")
             }
         }
@@ -153,18 +141,6 @@ tasks.register('archiveReports', Tar) {
             into("${subproject.name}/reports")
         }
     }
-}
-
-tasks.register('generate-docker') {
-    dependsOn(':airbyte-bootloader:assemble')
-    dependsOn(':airbyte-workers:assemble')
-    dependsOn(':airbyte-webapp:assemble')
-    dependsOn(':airbyte-server:assemble')
-    dependsOn(':airbyte-db:db-lib:assemble')
-    dependsOn(':airbyte-config:init:assemble')
-    dependsOn(':airbyte-temporal:assemble')
-    dependsOn(':airbyte-keycloak:assemble')
-    dependsOn(':airbyte-keycloak-setup:assemble')
 }
 
 // todo (cgardens) - move this into the plugin.
