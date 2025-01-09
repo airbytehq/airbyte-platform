@@ -7,6 +7,7 @@ import { Heading } from "components/ui/Heading";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -28,11 +29,11 @@ export const ConnectionMappingsPage = () => {
 };
 
 const ConnectionMappingsPageContent = () => {
-  const { streamsWithMappings, clear, submitMappings } = useMappingContext();
+  const { streamsWithMappings, clear, submitMappings, hasMappingsChanged } = useMappingContext();
   const { mode } = useConnectionFormService();
+  const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
-
   const handleValidations = async () => {
     const validations = await Promise.allSettled(
       Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
@@ -48,7 +49,7 @@ const ConnectionMappingsPageContent = () => {
       validations.every((validation) => validation.status === "fulfilled" && validation.value === true) &&
       !hasServerValidationErrors
     ) {
-      submitMappings();
+      await submitMappings();
     } else {
       registerNotification({
         type: "error",
@@ -74,10 +75,19 @@ const ConnectionMappingsPageContent = () => {
             </Heading>
             {showSubmissionButtons && (
               <FlexContainer>
-                <Button variant="secondary" onClick={clear} disabled={mode === "readonly"}>
+                <Button
+                  variant="secondary"
+                  onClick={clear}
+                  disabled={mode === "readonly" || !hasMappingsChanged || connectionUpdating}
+                >
                   <FormattedMessage id="form.cancel" />
                 </Button>
-                <Button onClick={handleValidations} disabled={mode === "readonly"} data-testid="submit-mappings">
+                <Button
+                  isLoading={connectionUpdating}
+                  onClick={handleValidations}
+                  disabled={mode === "readonly" || !hasMappingsChanged}
+                  data-testid="submit-mappings"
+                >
                   <FormattedMessage id="form.submit" />
                 </Button>
               </FlexContainer>

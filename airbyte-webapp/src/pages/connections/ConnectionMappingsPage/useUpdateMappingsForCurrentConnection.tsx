@@ -18,7 +18,6 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
     connection.destination.destinationId
   );
   const { registerNotification } = useNotificationService();
-
   const getStateType = useGetStateTypeQuery();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
@@ -72,10 +71,9 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
               type: "error",
             });
           });
-      } else {
-        return Promise.reject();
+        return { success: true, skipped: false };
       }
-      return Promise.resolve();
+      return { success: false, skipped: true };
     }
 
     try {
@@ -86,15 +84,14 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
           size: "md",
           content: (props) => <ClearDataWarningModal {...props} stateType={stateType} />,
         });
-        await handleModalResult(result);
-      } else {
-        const result = await openModal<boolean>({
-          title: formatMessage({ id: "connection.refreshDataRecommended" }),
-          size: "md",
-          content: ({ onCancel, onComplete }) => <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />,
-        });
-        await handleModalResult(result);
+        return await handleModalResult(result);
       }
+      const result = await openModal<boolean>({
+        title: formatMessage({ id: "connection.refreshDataRecommended" }),
+        size: "md",
+        content: ({ onCancel, onComplete }) => <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />,
+      });
+      return await handleModalResult(result);
     } catch (e) {
       throw new Error(e);
     }

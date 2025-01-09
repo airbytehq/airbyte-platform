@@ -282,7 +282,6 @@
   "connectionForm.sourceNamespace.info": "<b>Namespace</b> is the database schema of your source tables.",
   "connectionForm.streams.required": "Select at least 1 stream to sync.",
   "connectionForm.streams.hashFieldCollision": "Configured field hashing conflicts with an existing field name.",
-  "connectionForm.streams.existingMappers": "Catalog has non-hashing mappers defined via the API, saving from the UI would break the existing configuration.",
   "connectionForm.hashing.title": "Hashing",
   "connectionForm.hashing.info": "SHA-256 hashing is used to anonymize individual fields.",
   "connectionForm.hashing.pk.tip": "You cannot hash your primary key.",

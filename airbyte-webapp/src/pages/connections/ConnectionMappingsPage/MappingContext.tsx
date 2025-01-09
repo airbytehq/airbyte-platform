@@ -19,7 +19,8 @@ interface MappingContextType {
   updateLocalMapping: (
     streamDescriptorKey: string,
     mappingId: string,
-    updatedMapping: Partial<StreamMapperWithId>
+    updatedMapping: Partial<StreamMapperWithId>,
+    skipDirty?: boolean
   ) => void;
   reorderMappings: (streamDescriptorKey: string, newOrder: StreamMapperWithId[]) => void;
   clear: () => void;
@@ -30,6 +31,7 @@ interface MappingContextType {
   validateMappings: (streamDescriptorKey: string) => void;
   validatingStreams: Set<string>;
   key: number;
+  hasMappingsChanged: boolean;
 }
 
 export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
@@ -52,6 +54,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   const { updateMappings } = useUpdateMappingsForCurrentConnection(connection.connectionId);
   const [streamsWithMappings, setStreamsWithMappings] = useState(savedStreamsWithMappings);
   const [validatingStreams, setValidatingStreams] = useState<Set<string>>(new Set());
+  const [hasMappingsChanged, setHasMappingsChanged] = useState(false);
 
   // Key is used to force mapping forms to re-render if a user chooses to reset the form state
   const [key, setKey] = useState(1);
@@ -92,7 +95,12 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
 
   // Updates a specific mapping in the local state
   const updateLocalMapping = useCallback(
-    (streamDescriptorKey: string, mappingId: string, updatedMapping: Partial<StreamMapperWithId>) => {
+    (
+      streamDescriptorKey: string,
+      mappingId: string,
+      updatedMapping: Partial<StreamMapperWithId>,
+      skipDirty?: boolean
+    ) => {
       setStreamsWithMappings((prevMappings) => ({
         ...prevMappings,
         [streamDescriptorKey]: prevMappings[streamDescriptorKey].map((mapping) => {
@@ -105,6 +113,10 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
           return mapping;
         }),
       }));
+
+      if (skipDirty !== true) {
+        setHasMappingsChanged(true);
+      }
       setValidatingStreams((prev) => new Set(prev).add(streamDescriptorKey));
     },
     []
@@ -127,6 +139,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         },
       ],
     }));
+    setHasMappingsChanged(true);
   }, []);
 
   // Reorders the mappings for a specific stream
@@ -135,12 +148,14 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
       ...prevMappings,
       [streamDescriptorKey]: newOrder,
     }));
+    setHasMappingsChanged(true);
     setValidatingStreams((prev) => new Set(prev).add(streamDescriptorKey));
   }, []);
 
   // Clears the mappings back to the saved state
   const clear = () => {
     setKey((prevKey) => prevKey + 1);
+    setHasMappingsChanged(false);
     setStreamsWithMappings(savedStreamsWithMappings);
     unregisterNotificationById(MAPPING_VALIDATION_ERROR_KEY);
   };
@@ -154,12 +169,16 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         [streamDescriptorKey]: mappingsForStream,
       };
     });
+    setHasMappingsChanged(true);
     setValidatingStreams((prev) => new Set(prev).add(streamDescriptorKey));
   };
 
   // Submits the current mappings state to the backend
   const submitMappings = async () => {
-    await updateMappings(streamsWithMappings);
+    const result = await updateMappings(streamsWithMappings);
+    if (result.success === true) {
+      setHasMappingsChanged(false);
+    }
     return Promise.resolve();
   };
 
@@ -178,10 +197,12 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         },
       ],
     };
+
     setStreamsWithMappings((prevMappings) => ({
       ...prevMappings,
       ...newMapping,
     }));
+    setHasMappingsChanged(true);
   };
 
   return (
@@ -198,6 +219,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         validateMappings,
         validatingStreams,
         key,
+        hasMappingsChanged,
       }}
     >
       {children}

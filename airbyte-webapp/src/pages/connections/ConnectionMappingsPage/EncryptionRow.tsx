@@ -94,7 +94,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
   }, [mapping.validationError, methods]);
 
   useEffect(() => {
-    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   const values = methods.watch();

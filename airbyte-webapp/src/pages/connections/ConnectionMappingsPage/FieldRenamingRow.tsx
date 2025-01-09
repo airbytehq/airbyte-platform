@@ -55,7 +55,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
   }, [mapping.validationError, methods]);
 
   useEffect(() => {
-    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   return (

@@ -56,7 +56,7 @@ export const HashFieldRow: React.FC<{
   });
 
   useEffect(() => {
-    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   useEffect(() => {
