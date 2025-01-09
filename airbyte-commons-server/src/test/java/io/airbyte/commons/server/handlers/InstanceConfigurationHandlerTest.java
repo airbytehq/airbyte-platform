@@ -66,6 +66,7 @@ class InstanceConfigurationHandlerTest {
 
   private static final String AIRBYTE_URL = "http://localhost:8000";
   private static final String AIRBYTE_REALM = "airbyte";
+  private static final String AUTHORIZATION_SERVER_URL = "http://localhost:8000/auth/realms/airbyte";
   private static final String WEB_CLIENT_ID = "airbyte-webapp";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID USER_ID = UUID.randomUUID();
@@ -139,6 +140,7 @@ class InstanceConfigurationHandlerTest {
         .auth(isEnterprise ? new AuthConfiguration()
             .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
+            .authorizationServerUrl(AUTHORIZATION_SERVER_URL)
             .defaultRealm(AIRBYTE_REALM) : new AuthConfiguration().mode(ModeEnum.NONE))
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
@@ -180,6 +182,7 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
+        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
 
@@ -245,7 +248,8 @@ class InstanceConfigurationHandlerTest {
         .auth(new AuthConfiguration()
             .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM))
+            .defaultRealm(AIRBYTE_REALM)
+            .authorizationServerUrl(AUTHORIZATION_SERVER_URL))
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
@@ -337,6 +341,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
+        Optional.empty(),
         Optional.of(kubernetesClientPermissionHelperMock));
 
     final var licenseInfoResponse = handler.licenseInfo();
@@ -364,6 +369,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
+        Optional.empty(),
         mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
   }
@@ -383,6 +389,7 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
+        Optional.empty(),
         mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
   }
@@ -402,6 +409,7 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
+        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
     when(permissionService.listPermissions()).thenReturn(
@@ -450,6 +458,7 @@ class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionService,
+        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
   }

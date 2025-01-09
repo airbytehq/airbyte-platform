@@ -50,7 +50,8 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
     final String email = (String) jwtMap.get(JWT_USER_EMAIL);
     // Default name to email address if name is not found
     final String name = (String) jwtMap.getOrDefault(JWT_USER_NAME, email);
-    final AuthProvider authProvider = (AuthProvider) jwtMap.getOrDefault(JWT_AUTH_PROVIDER, null);
+    // TODO: the default should maybe be OIDC?
+    final AuthProvider authProvider = (AuthProvider) jwtMap.getOrDefault(JWT_AUTH_PROVIDER, AuthProvider.AIRBYTE);
     return new AuthenticatedUser().withName(name).withEmail(email).withAuthUserId(authUserId).withAuthProvider(authProvider);
   }
 

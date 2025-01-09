@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.LicenseStatus;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AuthConfigs;
 import io.airbyte.commons.auth.config.AuthMode;
+import io.airbyte.commons.auth.config.OidcEndpointConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
@@ -74,6 +75,7 @@ public class InstanceConfigurationHandler {
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
   private final Clock clock;
+  private final Optional<OidcEndpointConfig> oidcEndpointConfig;
   private final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
@@ -88,6 +90,7 @@ public class InstanceConfigurationHandler {
                                       final AuthConfigs authConfigs,
                                       final PermissionService permissionService,
                                       final Optional<Clock> clock,
+                                      final Optional<OidcEndpointConfig> oidcEndpointConfig,
                                       final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
@@ -101,6 +104,7 @@ public class InstanceConfigurationHandler {
     this.authConfigs = authConfigs;
     this.permissionService = permissionService;
     this.clock = clock.orElse(Clock.systemUTC());
+    this.oidcEndpointConfig = oidcEndpointConfig;
     this.kubernetesClientPermissionHelper = kubernetesClientPermissionHelper;
   }
 
@@ -155,12 +159,17 @@ public class InstanceConfigurationHandler {
 
     // if Enterprise configurations are present, set OIDC-specific configs
     if (authConfigs.getAuthMode().equals(AuthMode.OIDC)) {
-      // OIDC depends on Keycloak configuration being present
-      if (authConfigs.getKeycloakConfig() == null) {
-        throw new IllegalStateException("Keycloak configuration is required for OIDC mode.");
+      if (oidcEndpointConfig.isPresent()) {
+        authConfig.setAuthorizationServerUrl(oidcEndpointConfig.get().getAuthorizationServerEndpoint());
+        authConfig.setClientId(oidcEndpointConfig.get().getClientId());
+      } else if (authConfigs.getKeycloakConfig() != null && airbyteUrl.isPresent()) {
+        authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
+        authConfig.setAuthorizationServerUrl(
+            airbyteUrl.get() + "/auth/realms/" + authConfigs.getKeycloakConfig().getAirbyteRealm());
+      } else {
+        // TODO: This is a bad error message. Once we figure out what the final config should look like
+        throw new IllegalStateException("OIDC must be configured either for Keycloak or in generic oidc mode.");
       }
-      authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
-      authConfig.setDefaultRealm(authConfigs.getKeycloakConfig().getAirbyteRealm());
     }
 
     return authConfig;

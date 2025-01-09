@@ -14,6 +14,8 @@ micronaut:
       expire-after-write: 15s
     organization-customer-attributes:
       expire-after-access: 1h
+    user-info-endpoint-response:
+      expire-after-access: 1m
   env:
     cloud-deduction: true
   executors:
@@ -106,6 +108,17 @@ airbyte:
       first-name: ${INITIAL_USER_FIRST_NAME:}
       last-name: ${INITIAL_USER_LAST_NAME:}
       password: ${INITIAL_USER_PASSWORD:}
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}
+      oidc:
+        endpoints:
+          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
+          user-info-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
+          client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
+          fields:
+            sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:sub}
+            email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:email}
+            name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:name}
   cloud:
     storage:
       type: ${STORAGE_TYPE}

@@ -14289,6 +14289,8 @@ components:
         defaultRealm:
           type: string
           default: "airbyte"
+        authorizationServerUrl:
+          type: string
     LicenseStatus:
       type: string
       enum:
