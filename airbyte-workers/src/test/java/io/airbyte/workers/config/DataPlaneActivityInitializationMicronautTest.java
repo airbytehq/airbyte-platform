@@ -18,12 +18,11 @@ import io.airbyte.workers.temporal.sync.WebhookOperationActivityImpl;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
-import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest(environments = {EnvConstants.DATA_PLANE, Environment.KUBERNETES})
+@MicronautTest(environments = {EnvConstants.DATA_PLANE})
 @Property(name = "airbyte.internal-api.base-path",
           value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",

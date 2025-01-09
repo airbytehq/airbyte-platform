@@ -1,8 +1,6 @@
 micronaut:
   application:
     name: airbyte-workers
-  env:
-    cloud-deduction: true
   server:
     netty:
       aggregator:

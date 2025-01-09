@@ -16,6 +16,8 @@ public class MicronautConnectorBuilderServerRunner {
 
   public static void main(final String[] args) {
     Micronaut.build(args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
         .mainClass(MicronautConnectorBuilderServerRunner.class)
         .start();
   }

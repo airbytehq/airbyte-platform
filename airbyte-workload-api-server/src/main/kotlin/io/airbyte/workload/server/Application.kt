@@ -1,6 +1,6 @@
 package io.airbyte.workload.server
 
-import io.micronaut.runtime.Micronaut.run
+import io.micronaut.runtime.Micronaut.build
 import io.swagger.v3.oas.annotations.OpenAPIDefinition
 import io.swagger.v3.oas.annotations.info.Info
 import io.swagger.v3.oas.annotations.servers.Server
@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.servers.Server
 class Application {
   companion object {
     @JvmStatic fun main(args: Array<String>) {
-      run(*args)
+      build(*args).deduceCloudEnvironment(false).deduceEnvironment(false).mainClass(Application::class.java).start()
     }
   }
 }

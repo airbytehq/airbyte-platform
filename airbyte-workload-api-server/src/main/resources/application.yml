@@ -1,8 +1,6 @@
 micronaut:
   application:
     name: airbyte-workload-api-server
-  env:
-    cloud-deduction: true
   executors:
     io:
       type: fixed

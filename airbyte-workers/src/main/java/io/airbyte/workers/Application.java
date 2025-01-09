@@ -12,7 +12,11 @@ import io.micronaut.runtime.Micronaut;
 public class Application {
 
   public static void main(final String[] args) {
-    Micronaut.run(Application.class, args);
+    Micronaut.build(args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
+        .mainClass(Application.class)
+        .start();
   }
 
 }

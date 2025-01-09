@@ -18,6 +18,8 @@ public class MicronautCronRunner {
 
   public static void main(final String[] args) {
     Micronaut.build(args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
         .mainClass(MicronautCronRunner.class)
         .start();
   }

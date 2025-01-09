@@ -4,8 +4,8 @@
 
 package io.airbyte.workload.launcher
 
-import io.micronaut.runtime.Micronaut.run
+import io.micronaut.runtime.Micronaut.build
 
 fun main(args: Array<String>) {
-  run(*args)
+  build(*args).deduceCloudEnvironment(false).deduceEnvironment(false).start()
 }

@@ -31,7 +31,7 @@ private const val PROVIDED_CLIENT_ID_VALUE = "myClientId"
 private const val PROVIDED_CLIENT_SECRET_VALUE = "myClientSecret"
 private const val PROVIDED_JWT_SIGNATURE_VALUE = "myJwtSignature"
 
-@MicronautTest(environments = [Environment.KUBERNETES, Environment.TEST])
+@MicronautTest(environments = [Environment.TEST])
 @Property(name = "airbyte.auth.kubernetes-secret.creation-enabled", value = "true")
 @Property(name = "airbyte.auth.kubernetes-secret.name", value = SECRET_NAME)
 class AuthKubernetesSecretInitializerTest {

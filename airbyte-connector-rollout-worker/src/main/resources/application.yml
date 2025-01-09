@@ -5,8 +5,6 @@ micronaut:
     - io.airbyte.connector.rollout.worker
   inject:
     visibility: all # Enable verbose logging for bean injection
-  env:
-    cloud-deduction: true
   server:
     port: 8016
     netty:

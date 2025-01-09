@@ -4,8 +4,6 @@ micronaut:
   caches:
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
   server:
     port: 9002
   metrics:

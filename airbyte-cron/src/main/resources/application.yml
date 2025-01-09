@@ -14,8 +14,6 @@ micronaut:
       expire-after-write: 15s
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:

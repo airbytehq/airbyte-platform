@@ -12,9 +12,7 @@ import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.context.env.Environment;
 import jakarta.inject.Singleton;
 
 /**
@@ -37,7 +35,6 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  @Requires(env = Environment.KUBERNETES)
   public KubernetesClient kubernetesClient() {
     return new KubernetesClientBuilder().build();
   }

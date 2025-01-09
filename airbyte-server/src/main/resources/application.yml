@@ -16,8 +16,6 @@ micronaut:
       expire-after-access: 1h
     user-info-endpoint-response:
       expire-after-access: 1m
-  env:
-    cloud-deduction: true
   executors:
     # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:

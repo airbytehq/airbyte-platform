@@ -20,7 +20,11 @@ public class Application {
 
   public static void main(final String[] args) {
     try {
-      final ApplicationContext applicationContext = Micronaut.run(Application.class, args);
+      final ApplicationContext applicationContext = Micronaut.build(args)
+          .deduceCloudEnvironment(false)
+          .deduceEnvironment(false)
+          .mainClass(Application.class)
+          .start();
       final Bootloader bootloader = applicationContext.getBean(Bootloader.class);
       bootloader.load();
       System.exit(0);

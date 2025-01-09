@@ -2,7 +2,6 @@ micronaut:
   application:
     name: airbyte-workload-launcher
   env:
-    cloud-deduction: true
     additional-envs: ${MICRONAUT_ENVIRONMENTS:}
   server:
     port: 8016

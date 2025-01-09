@@ -10,8 +10,6 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
-  env:
-    cloud-deduction: true
   server:
     port: 9000 # If this value is modified, update the SERVER_PORT constant in OrchestratorConstants.kt
   executors:

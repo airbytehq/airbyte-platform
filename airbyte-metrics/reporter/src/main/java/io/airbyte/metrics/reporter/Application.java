@@ -17,7 +17,7 @@ public class Application {
 
   public static void main(final String[] args) {
     MetricClientFactory.initialize(MetricEmittingApps.METRICS_REPORTER);
-    Micronaut.run(Application.class, args);
+    Micronaut.build(args).deduceCloudEnvironment(false).deduceEnvironment(false).mainClass(Application.class).start();
   }
 
 }
