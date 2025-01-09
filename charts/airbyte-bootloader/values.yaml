@@ -35,6 +35,8 @@ image:
   repository: airbyte/bootloader
   pullPolicy: IfNotPresent
 
+shareProcessNamespace: false
+
 ##  podAnnotations [object] Add extra annotations to the bootloader pod
 ##
 podAnnotations: {}
