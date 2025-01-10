@@ -235,6 +235,7 @@ class MetricRepository {
             current_running_attempts.connection_id,
             current_running_attempts.source_image,
             current_running_attempts.dest_image,
+            current_running_attempts.workspace_id,
             current_running_attempts.running_time_sec,
             historic_avg_running_attempts.avg_run_sec
             from
@@ -245,7 +246,8 @@ class MetricRepository {
                     jobs.scope as connection_id,
                     extract(epoch from age(NOW(), attempts.created_at)) as running_time_sec,
                     jobs.config->'sync'->>'sourceDockerImage' as source_image,
-                    jobs.config->'sync'->>'destinationDockerImage' as dest_image
+                    jobs.config->'sync'->>'destinationDockerImage' as dest_image,
+                    jobs.config->'sync'->>'workspaceId' as workspace_id
                   from
                     jobs
                   join attempts on
@@ -295,6 +297,7 @@ class MetricRepository {
           return new LongRunningJobMetadata(
               rec.getValue("source_image").toString(),
               rec.getValue("dest_image").toString(),
+              rec.getValue("workspace_id").toString(),
               rec.getValue("connection_id").toString());
         } catch (final Exception e) {
           return null;

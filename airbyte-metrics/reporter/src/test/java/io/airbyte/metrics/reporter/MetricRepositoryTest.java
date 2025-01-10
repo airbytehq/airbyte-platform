@@ -524,7 +524,8 @@ abstract class MetricRepositoryTest {
                                        {
                                         "sync": {
                                            "sourceDockerImage": "airbyte/source-postgres-1.1.0",
-                                           "destinationDockerImage": "airbyte/destination-s3-1.4.0"
+                                           "destinationDockerImage": "airbyte/destination-s3-1.4.0",
+                                           "workspaceId": "81249e08-f71c-4743-98da-ed3c6c893132"
                                          }
                                        }
                                        """);

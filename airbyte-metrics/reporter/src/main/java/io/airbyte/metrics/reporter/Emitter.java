@@ -145,6 +145,7 @@ final class UnusuallyLongSyncs extends Emitter {
           attributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, job.sourceDockerImage()));
           attributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, job.destinationDockerImage()));
           attributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.connectionId()));
+          attributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, job.workspaceId()));
         }
 
         client.count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1, attributes.toArray(new MetricAttribute[0]));
