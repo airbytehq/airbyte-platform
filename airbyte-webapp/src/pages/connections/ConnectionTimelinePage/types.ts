@@ -50,6 +50,8 @@ const connectionAutoDisabledReasons = [
 ];
 
 const connectorChangeReasons = ["SYSTEM", "USER"];
+// TODO: ask BE team to use already defined types - ConnectorType
+const ConnectorType = ["SOURCE", "DESTINATION"];
 
 // property-specific schemas
 /**
@@ -140,20 +142,15 @@ const catalogDiffSchema = yup.object({
   transforms: yup.array().of(streamTransformsSchema).required(),
 });
 
-const sourceDefinitionUpdateSchema = yup.object({
-  name: yup.string().required(),
-  sourceDefinitionId: yup.string().required(),
-  newDockerImageTag: yup.string().required(),
-  oldDockerImageTag: yup.string().required(),
-  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
-});
-
-const destinationDefinitionUpdateSchema = yup.object({
-  name: yup.string().required(),
-  destinationDefinitionId: yup.string().required(),
-  newDockerImageTag: yup.string().required(),
-  oldDockerImageTag: yup.string().required(),
-  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
+const connectorUpdateSchema = yup.object({
+  toVersion: yup.string().required(),
+  fromVersion: yup.string().required(),
+  connectorName: yup.string().required(),
+  connectorType: yup.string().oneOf(ConnectorType).required(),
+  // TODO: ask BE team to add this prop, untill then it is optional
+  changeReason: yup.string().oneOf(connectorChangeReasons).optional(),
+  // TODO: ask BE team how to handle this prop, untill then it is optional
+  triggeredBy: yup.string().oneOf(["BREAKING_CHANGE_MANUAL"]).optional(),
 });
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
@@ -396,14 +393,9 @@ export const schemaUpdateEventSchema = generalEventSchema.shape({
   summary: schemaUpdateSummarySchema.required(),
 });
 
-export const sourceConnectorUpdateEventSchema = generalEventSchema.shape({
+export const connectorUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
-  summary: sourceDefinitionUpdateSchema.required(),
-});
-
-export const destinationConnectorUpdateEventSchema = generalEventSchema.shape({
-  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
-  summary: destinationDefinitionUpdateSchema.required(),
+  summary: connectorUpdateSchema.required(),
 });
 
 export const mappingEventSchema = generalEventSchema.shape({
