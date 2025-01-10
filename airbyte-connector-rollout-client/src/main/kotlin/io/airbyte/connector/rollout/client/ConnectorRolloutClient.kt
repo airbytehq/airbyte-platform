@@ -97,9 +97,21 @@ class ConnectorRolloutClient
       }
     }
 
-    fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    fun doRollout(input: ConnectorRolloutActivityInputRollout) {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeUpdate(input, workflowId) { stub, i -> stub.progressRollout(i) }
+      val workflow =
+        workflowClient.getClient().newWorkflowStub(
+          ConnectorRolloutWorkflow::class.java,
+          workflowId,
+        )
+      logger.info { "Rollout $workflowId starting `doRollout` for workflow: $workflow" }
+      // Send the `update` request async so we don't block waiting for the actors to be pinned
+      WorkflowStub.fromTyped(workflow).startUpdate(
+        "progressRollout",
+        WorkflowUpdateStage.ACCEPTED,
+        ConnectorRolloutOutput::class.java,
+        input,
+      )
     }
 
     fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {

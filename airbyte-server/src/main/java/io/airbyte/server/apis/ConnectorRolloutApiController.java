@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutRead;
 import io.airbyte.api.model.generated.ConnectorRolloutReadRequestBody;
@@ -210,15 +211,8 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead updatedConnectorRollout =
-          connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody);
-
-      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
-      response.setData(updatedConnectorRollout);
-      return response;
-    });
+  public ConnectorRolloutManualRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
+    return ApiHelper.execute(() -> connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody));
   }
 
   @SuppressWarnings("LineLength")

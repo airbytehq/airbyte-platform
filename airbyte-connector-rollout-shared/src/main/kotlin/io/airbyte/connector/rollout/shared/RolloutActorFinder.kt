@@ -23,6 +23,7 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.http.annotation.Trace
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -56,6 +57,7 @@ class RolloutActorFinder(
   private val destinationService: DestinationService,
   private val organizationCustomerAttributesService: OrganizationCustomerAttributesService,
 ) {
+  @Trace
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
@@ -198,6 +200,7 @@ class RolloutActorFinder(
     )
   }
 
+  @Trace
   @VisibleForTesting
   fun getActorJobInfo(
     connectorRollout: ConnectorRollout,
@@ -300,6 +303,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByTier(candidates: Collection<ConfigScopeMapWithId>): Collection<ConfigScopeMapWithId> {
     val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
@@ -313,6 +317,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByAlreadyPinned(
     actorDefinitionId: UUID,
@@ -328,6 +333,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun getActorsPinnedToReleaseCandidate(connectorRollout: ConnectorRollout): List<UUID> {
     val scopedConfigurations =
@@ -354,6 +360,7 @@ class RolloutActorFinder(
     return filtered
   }
 
+  @Trace
   @VisibleForTesting
   fun getSortedActorDefinitionConnections(
     actorIds: List<UUID>,
@@ -395,6 +402,7 @@ class RolloutActorFinder(
     return sortedSyncs
   }
 
+  @Trace
   @VisibleForTesting
   fun getSortedActorDefinitionConnectionsByActorId(
     actorIds: List<UUID>,
@@ -460,6 +468,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByJobStatus(
     connectorRollout: ConnectorRollout,

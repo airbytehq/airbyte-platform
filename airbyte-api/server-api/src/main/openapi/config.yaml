@@ -5484,7 +5484,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutResponse"
+                $ref: "#/components/schemas/ConnectorRolloutManualRolloutResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -7949,6 +7949,14 @@ components:
           type: integer
         num_connections:
           type: integer
+
+    ConnectorRolloutManualRolloutResponse:
+      type: object
+      required:
+        - data
+      properties:
+        status:
+          type: string
 
     ConnectorRolloutManualFinalizeResponse:
       type: object

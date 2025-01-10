@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
@@ -619,7 +620,7 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(rollout.id), false)
     }
 
-    open fun manualDoConnectorRolloutUpdate(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
+    open fun manualDoConnectorRolloutUpdate(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutManualRolloutResponse {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id)
       if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
         try {
@@ -661,7 +662,9 @@ open class ConnectorRolloutHandler
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
       }
-      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id), false)
+      val response = ConnectorRolloutManualRolloutResponse()
+      response.status("ok")
+      return response
     }
 
     open fun manualFinalizeConnectorRollout(
