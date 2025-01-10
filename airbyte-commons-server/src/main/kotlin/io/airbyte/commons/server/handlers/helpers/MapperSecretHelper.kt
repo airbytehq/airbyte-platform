@@ -13,6 +13,8 @@ import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.mapper.configs.EncryptionConfig.Companion.ALGO_AES
+import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -72,17 +74,27 @@ class MapperSecretHelper(
     return SecretsHelpers.getSortedSecretPaths(spec).isNotEmpty()
   }
 
-  private fun getSecretPersistence(organizationId: UUID): RuntimeSecretPersistence? {
+  internal fun shouldRequireRuntimePersistence(
+    mapperConfig: MapperConfig,
+    organizationId: UUID,
+  ): Boolean {
+    if (deploymentMode != DeploymentMode.CLOUD) {
+      return false
+    }
+
+    if (featureFlagClient.boolVariation(AllowMappersDefaultSecretPersistence, Organization(organizationId))) {
+      return false
+    }
+
+    return when (mapperConfig) {
+      is EncryptionMapperConfig -> ALGO_AES == mapperConfig.config.algorithm
+      else -> false
+    }
+  }
+
+  private fun getRuntimeSecretPersistence(organizationId: UUID): RuntimeSecretPersistence? {
     val isRuntimePersistenceEnabled = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))
     if (!isRuntimePersistenceEnabled) {
-      if (deploymentMode == DeploymentMode.CLOUD &&
-        !featureFlagClient.boolVariation(
-          AllowMappersDefaultSecretPersistence,
-          Organization(organizationId),
-        )
-      ) {
-        throw RuntimeSecretsManagerRequiredProblem()
-      }
       return null
     }
     val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
@@ -123,7 +135,12 @@ class MapperSecretHelper(
       return mapperConfig
     }
 
-    val secretPersistence = getSecretPersistence(organizationId)
+    val secretPersistence = getRuntimeSecretPersistence(organizationId)
+    val requireRuntimePersistence = shouldRequireRuntimePersistence(mapperConfig, organizationId)
+    if (requireRuntimePersistence && secretPersistence == null) {
+      throw RuntimeSecretsManagerRequiredProblem()
+    }
+
     val persistedConfigAsJson = existingMapperConfig?.let { Jsons.jsonNode(it.config()) }
     val hydratedPersistedConfig = tryHydrateConfigJson(persistedConfigAsJson, secretPersistence)
 
