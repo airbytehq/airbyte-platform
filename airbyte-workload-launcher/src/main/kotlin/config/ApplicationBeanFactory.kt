@@ -19,6 +19,7 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -40,7 +41,8 @@ class ApplicationBeanFactory {
   fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean {
     return { e: Throwable ->
       e.cause is SocketTimeoutException ||
-        e.cause?.cause is StreamResetException
+        e.cause?.cause is StreamResetException ||
+        (e.cause is IOException && e.cause?.message == "timeout")
     }
   }
 

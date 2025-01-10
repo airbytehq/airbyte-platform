@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -179,6 +180,48 @@ class KubePodLauncherTest {
     every { namespaceable.withLabels(any()) } returns labels
     every { labels.waitUntilCondition(any(), any(), any()) } throws
       KubernetesClientException("An error has occurred", IOException("stream refused", StreamResetException(ErrorCode.INTERNAL_ERROR)))
+    every { kubernetesClient.pods() } returns pods
+
+    val kubePodLauncher =
+      KubePodLauncher(
+        kubernetesClient,
+        metricClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
+        mockk(),
+        null,
+      )
+
+    assertThrows<KubernetesClientException> {
+      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
+    }
+    assertEquals(maxRetries, counter.get())
+  }
+
+  @Test
+  fun `retry on timeout exception`() {
+    val maxRetries = 3
+    val counter = AtomicInteger(0)
+    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
+
+    val kubernetesClientRetryPolicy =
+      RetryPolicy.builder<Any>()
+        .handleIf(handleIf)
+        .onRetry { counter.incrementAndGet() }
+        .withMaxRetries(maxRetries)
+        .build()
+
+    val pods: MixedOperation<Pod, PodList, PodResource> = mockk()
+    val namespaceable: NonNamespaceOperation<Pod, PodList, PodResource> = mockk()
+    val labels: FilterWatchListDeletable<Pod, PodList, PodResource> = mockk()
+
+    every { pods.inNamespace(any()) } returns namespaceable
+    every { namespaceable.withLabels(any()) } returns labels
+    every { labels.waitUntilCondition(any(), any(), any()) } throws
+      KubernetesClientException(
+        "Operation: [list]  for kind: [Pod]  with name: [null]  in namespace: [jobs]  failed.",
+        IOException("timeout", InterruptedIOException("timeout")),
+      )
     every { kubernetesClient.pods() } returns pods
 
     val kubePodLauncher =
