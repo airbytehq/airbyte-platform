@@ -72,8 +72,8 @@ class DeclarativeOAuthSpecHandlerTest {
   @Test
   void testRenderStringTemplate() throws IOException {
     final Map<String, String> templateValues = Map.of("key", "value");
-    final String templateString = "This is a {key}";
-    final String expected = "This is a value";
+    final String templateString = "{{ key }}";
+    final String expected = "value";
     assertEquals(expected, handler.renderStringTemplate(templateValues, templateString));
   }
 
@@ -85,10 +85,10 @@ class DeclarativeOAuthSpecHandlerTest {
 
   @Test
   void testCheckContextRestricted() {
-    final String restrictedString = "This string contains a restricted variable {env:test_value}";
+    final String restrictedString = "This string contains a restricted variable {{ test_value | env }}";
     IOException exception = assertThrows(IOException.class, () -> handler.checkContext(restrictedString));
-    final String expected = "DeclarativeOAuthSpecHandler(): the `env:` usage in "
-        + "`This string contains a restricted variable {env:test_value}` is not allowed for string interpolation.";
+    final String expected = "DeclarativeOAuthSpecHandler(): the `env` usage in "
+        + "`This string contains a restricted variable {{ test_value | env }}` is not allowed for string interpolation.";
     assertEquals(expected, exception.getMessage());
   }
 
