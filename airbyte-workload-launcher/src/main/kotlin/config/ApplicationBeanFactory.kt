@@ -12,6 +12,7 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
+import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
@@ -40,7 +41,8 @@ class ApplicationBeanFactory {
   @Named("kubeHttpErrorRetryPredicate")
   fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean {
     return { e: Throwable ->
-      e.cause is SocketTimeoutException ||
+      e is KubernetesClientTimeoutException ||
+        e.cause is SocketTimeoutException ||
         e.cause?.cause is StreamResetException ||
         (e.cause is IOException && e.cause?.message == "timeout")
     }

@@ -241,6 +241,46 @@ class KubePodLauncherTest {
   }
 
   @Test
+  fun `retry on kubernetes client timeout exception`() {
+    val maxRetries = 3
+    val counter = AtomicInteger(0)
+    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
+
+    val kubernetesClientRetryPolicy =
+      RetryPolicy.builder<Any>()
+        .handleIf(handleIf)
+        .onRetry { counter.incrementAndGet() }
+        .withMaxRetries(maxRetries)
+        .build()
+
+    val pods: MixedOperation<Pod, PodList, PodResource> = mockk()
+    val namespaceable: NonNamespaceOperation<Pod, PodList, PodResource> = mockk()
+    val labels: FilterWatchListDeletable<Pod, PodList, PodResource> = mockk()
+
+    every { pods.inNamespace(any()) } returns namespaceable
+    every { namespaceable.withLabels(any()) } returns labels
+    every { labels.waitUntilCondition(any(), any(), any()) } throws
+      KubernetesClientTimeoutException("Pod", "null", "jobs", 45000, TimeUnit.MILLISECONDS)
+
+    every { kubernetesClient.pods() } returns pods
+
+    val kubePodLauncher =
+      KubePodLauncher(
+        kubernetesClient,
+        metricClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
+        mockk(),
+        null,
+      )
+
+    assertThrows<KubernetesClientException> {
+      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
+    }
+    assertEquals(maxRetries, counter.get())
+  }
+
+  @Test
   fun `retry is skipped on unexpected exception`() {
     val maxRetries = 3
     val counter = AtomicInteger(0)
