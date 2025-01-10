@@ -4,12 +4,10 @@
 
 package io.airbyte.connector.rollout.client
 
-import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
@@ -79,22 +77,6 @@ class ConnectorRolloutClient
       logger.info { "Starting workflow $workflowId" }
       val workflowExecution = WorkflowClient.start(workflowStub::run, input)
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
-
-      if (input.rolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
-        val connectorRolloutActivityInputStart =
-          ConnectorRolloutActivityInputStart(
-            input.dockerRepository,
-            input.dockerImageTag,
-            input.actorDefinitionId,
-            input.rolloutId,
-            input.updatedBy,
-            input.rolloutStrategy,
-            input.migratePins,
-          )
-
-        executeUpdate(connectorRolloutActivityInputStart, workflowId) { stub, i -> stub.startRollout(i) }
-        logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
-      }
     }
 
     fun doRollout(input: ConnectorRolloutActivityInputRollout) {
