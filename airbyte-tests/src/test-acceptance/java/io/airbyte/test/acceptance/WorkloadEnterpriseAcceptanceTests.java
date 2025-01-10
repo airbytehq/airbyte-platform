@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -61,7 +61,7 @@ class WorkloadEnterpriseAcceptanceTests {
     final var attempt = testResources.getTestHarness().getApiClient().getAttemptApi().getAttemptForJob(
         new GetAttemptStatsRequestBody(jobId, attemptNumber));
     final String creatingWorkloadLog = "Starting workload heartbeat";
-    return attempt.getLogs().getLogLines().stream().anyMatch(l -> l.contains(creatingWorkloadLog));
+    return attempt.getLogs().getEvents().stream().anyMatch(l -> l.getMessage().contains(creatingWorkloadLog));
   }
 
   @Test

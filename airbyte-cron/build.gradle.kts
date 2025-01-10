@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -26,7 +24,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
   implementation(libs.sentry.java)
-  implementation(libs.lombok)
   implementation(libs.commons.io)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -74,16 +71,19 @@ airbyte {
   }
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// Once lombok has been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // Copies the connector <> platform compatibility JSON file for use in tests
 tasks.register<Copy>("copyPlatformCompatibilityMatrix") {
-  val platformCompatibilityFile = project.rootProject.layout.projectDirectory.file("tools/connectors/platform-compatibility/platform-compatibility.json")
-  if(file(platformCompatibilityFile).exists()) {
+  val platformCompatibilityFile =
+    project.rootProject.layout.projectDirectory.file(
+      "tools/connectors/platform-compatibility/platform-compatibility.json",
+    )
+  if (file(platformCompatibilityFile).exists()) {
     from(platformCompatibilityFile)
     into(project.layout.projectDirectory.dir("src/test/resources"))
   }

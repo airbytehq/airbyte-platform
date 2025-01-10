@@ -24,6 +24,7 @@ import { SimplifiedSchemaChangeNotificationFormField } from "./SimplifiedSchemaC
 interface SimplifiedConnectionsSettingsCardProps {
   title: string;
   isCreating: boolean;
+  hasConfiguredGeography?: boolean;
   source: SourceRead;
   destination: DestinationRead;
   isDeprecated?: boolean;
@@ -32,6 +33,7 @@ interface SimplifiedConnectionsSettingsCardProps {
 export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSettingsCardProps> = ({
   title,
   isCreating,
+  hasConfiguredGeography = false,
   source,
   destination,
   isDeprecated = false,
@@ -78,7 +80,9 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
         {/* so always render, making the geography request as part of the initial page load */}
         <Box mt="xl">
           <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
-            {canEditDataGeographies && <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />}
+            {canEditDataGeographies && hasConfiguredGeography && (
+              <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />
+            )}
             {!isCreating && (
               <SimplifiedDestinationNamespaceFormField
                 isCreating={isCreating}

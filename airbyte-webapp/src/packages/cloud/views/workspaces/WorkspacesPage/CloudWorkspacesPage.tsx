@@ -70,9 +70,11 @@ export const CloudWorkspacesPageInner: React.FC = () => {
           </Button>
         )}
       </FlexContainer>
-      <Heading as="h1" size="lg" centered>
-        <FormattedMessage id="workspaces.title" />
-      </Heading>
+      <FlexContainer justifyContent="center">
+        <Heading as="h1" size="lg">
+          <FormattedMessage id="workspaces.title" />
+        </Heading>
+      </FlexContainer>
       {showNoWorkspacesContent ? (
         <NoWorkspacePermissionsContent organizations={organizationsMemberOnly} />
       ) : (

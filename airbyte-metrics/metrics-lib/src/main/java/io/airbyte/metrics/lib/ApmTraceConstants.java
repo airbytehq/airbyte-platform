@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -45,6 +45,12 @@ public final class ApmTraceConstants {
      * Name of the APM trace tag that holds the attempt number value associated with the trace.
      */
     public static final String ATTEMPT_NUMBER_KEY = "attempt_number";
+
+    /**
+     * Name of the APM trace tag that holds the connector builder project id value associated with the
+     * trace.
+     */
+    public static final String CONNECTOR_BUILDER_PROJECT_ID_KEY = "connector_builder_project_id";
 
     /**
      * Name of the APM trace tag that holds the destination Docker image value associated with the

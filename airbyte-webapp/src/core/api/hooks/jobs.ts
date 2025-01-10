@@ -1,5 +1,13 @@
-import { UseQueryOptions, useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useIntl } from "react-intl";
 
+import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { trackError } from "core/utils/datadog";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { useNotificationService } from "hooks/services/Notification";
+
+import { useCurrentWorkspace } from "./workspaces";
 import {
   cancelJob,
   getAttemptCombinedStats,
@@ -8,20 +16,12 @@ import {
   getJobInfoWithoutLogs,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AttemptInfoRead, AttemptStats, LogEvents, LogRead } from "../types/AirbyteClient";
+import { AttemptInfoRead, AttemptRead, LogEvents, LogRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
-};
-
-// A disabled useQuery that can be called manually to download job logs
-export const useGetDebugInfoJobManual = (id: number) => {
-  const requestOptions = useRequestOptions();
-  return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
-    enabled: false,
-  });
 };
 
 export const useCancelJob = () => {
@@ -54,7 +54,7 @@ export const useJobInfoWithoutLogs = (id: number) => {
 
 type AttemptInfoReadWithFormattedLogs = AttemptInfoRead & { logType: "formatted"; logs: LogRead };
 type AttemptInfoReadWithStructuredLogs = AttemptInfoRead & { logType: "structured"; logs: LogEvents };
-type AttemptInfoReadWithLogs = AttemptInfoReadWithFormattedLogs | AttemptInfoReadWithStructuredLogs;
+export type AttemptInfoReadWithLogs = AttemptInfoReadWithFormattedLogs | AttemptInfoReadWithStructuredLogs;
 
 export function attemptHasFormattedLogs(attempt: AttemptInfoRead): attempt is AttemptInfoReadWithFormattedLogs {
   return attempt.logType === "formatted";
@@ -66,7 +66,7 @@ export function attemptHasStructuredLogs(attempt: AttemptInfoRead): attempt is A
 
 export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(
+  return useQuery(
     [SCOPE_WORKSPACE, "jobs", "attemptForJob", jobId, attemptNumber],
     () => getAttemptForJob({ jobId, attemptNumber }, requestOptions) as Promise<AttemptInfoReadWithLogs>,
     {
@@ -83,20 +83,96 @@ export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
   );
 };
 
-export const useAttemptCombinedStatsForJob = (
-  jobId: number,
-  attemptNumber: number,
-  options?: Readonly<Omit<UseQueryOptions<AttemptStats>, "queryKey" | "queryFn" | "suspense">>
-) => {
+export const useAttemptCombinedStatsForJob = (jobId: number, attempt: AttemptRead) => {
   const requestOptions = useRequestOptions();
-  // the endpoint returns a 404 if there aren't stats for this attempt
-  try {
-    return useSuspenseQuery(
-      [SCOPE_WORKSPACE, "jobs", "attemptCombinedStatsForJob", jobId, attemptNumber],
-      () => getAttemptCombinedStats({ jobId, attemptNumber }, requestOptions),
-      options
-    );
-  } catch (e) {
-    return undefined;
-  }
+  return useQuery(
+    [SCOPE_WORKSPACE, "jobs", "attemptCombinedStatsForJob", jobId, attempt.id],
+    () => getAttemptCombinedStats({ jobId, attemptNumber: attempt.id }, requestOptions),
+    {
+      refetchInterval: () => {
+        // if the attempt hasn't ended refetch every 2.5 seconds
+        return attempt.endedAt ? false : 2500;
+      },
+    }
+  );
+};
+
+export const useDonwnloadJobLogsFetchQuery = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
+  const workspace = useCurrentWorkspace();
+  const { formatMessage } = useIntl();
+
+  return useCallback(
+    (connectionName: string, jobId: number) => {
+      // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
+      queryClient.fetchQuery({
+        queryKey: [SCOPE_WORKSPACE, "jobs", "getDebugInfo", jobId],
+        queryFn: async () => {
+          const notificationId = `download-logs-${jobId}`;
+          registerNotification({
+            type: "info",
+            text: formatMessage(
+              {
+                id: "jobHistory.logs.logDownloadPending",
+              },
+              { jobId }
+            ),
+            id: notificationId,
+            timeout: false,
+          });
+          try {
+            return await Promise.all([
+              getJobDebugInfo({ id: jobId }, requestOptions)
+                .then((data) => {
+                  if (!data) {
+                    throw new Error("No logs returned from server");
+                  }
+                  const file = new Blob(
+                    [
+                      data.attempts
+                        .flatMap((info, index) => [
+                          `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
+                          ...(attemptHasFormattedLogs(info) ? info.logs.logLines : []),
+                          ...(attemptHasStructuredLogs(info)
+                            ? info.logs.events.map((event) => formatLogEvent(event))
+                            : []),
+                          `\n\n\n`,
+                        ])
+                        .join("\n"),
+                    ],
+                    {
+                      type: FILE_TYPE_DOWNLOAD,
+                    }
+                  );
+                  downloadFile(file, fileizeString(`${connectionName}-logs-${jobId}.txt`));
+                })
+                .catch((e) => {
+                  trackError(e, { workspaceId: workspace.workspaceId, jobId });
+                  registerNotification({
+                    type: "error",
+                    text: formatMessage({
+                      id: "jobHistory.logs.logDownloadFailed",
+                    }),
+                    id: `download-logs-error-${jobId}`,
+                  });
+                }),
+              new Promise((resolve) => setTimeout(resolve, 1000)),
+            ]);
+          } finally {
+            unregisterNotificationById(notificationId);
+          }
+        },
+      });
+    },
+    [
+      formatMessage,
+      queryClient,
+      registerNotification,
+      requestOptions,
+      unregisterNotificationById,
+      workspace.workspaceId,
+    ]
+  );
 };

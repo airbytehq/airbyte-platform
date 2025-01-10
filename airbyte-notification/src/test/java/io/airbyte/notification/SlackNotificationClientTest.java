@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -86,19 +86,17 @@ class SlackNotificationClientTest {
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage("")
-        .jobId(JOB_ID)
-        .isSuccess(true)
-        .startedAt(Instant.MIN)
-        .finishedAt(Instant.MAX)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        true,
+        Instant.MIN,
+        Instant.MAX,
+        0, 0, 0, 0, 0, 0,
+        "");
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
@@ -106,32 +104,32 @@ class SlackNotificationClientTest {
   void testEmptyWebhookUrl() throws IOException, InterruptedException {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration());
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage("Job timed out")
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
   @Test
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage(JOB_DESCRIPTION)
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobFailure(summary, null));
@@ -140,16 +138,16 @@ class SlackNotificationClientTest {
   @Test
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage(JOB_DESCRIPTION)
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobSuccess(summary, null));
@@ -172,13 +170,17 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    final SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
-        .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
-        .errorMessage("job description.")
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, CONNECTION_NAME, "http://connection"),
+        new SourceInfo(null, SOURCE_TEST, null),
+        new DestinationInfo(null, DESTINATION_TEST, null),
+        0,
+        false,
+        null,
+        null,
+        0, 0, 0, 0, 0, 0,
+        "job description.");
     assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
@@ -199,13 +201,18 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    final SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
-        .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
-        .errorMessage("job description.")
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, CONNECTION_NAME, "http://connection"),
+        new SourceInfo(null, SOURCE_TEST, null),
+        new DestinationInfo(null, DESTINATION_TEST, null),
+        0L,
+        false,
+        null,
+        null,
+        0, 0, 0, 0, 0, 0,
+        "job description.");
+
     assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }
 
@@ -229,12 +236,12 @@ class SlackNotificationClientTest {
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
     final UUID workpaceId = UUID.randomUUID();
-    final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .connectionInfo(ConnectionInfo.builder().name(connectionName).id(connectionId).url(connectionUrl).build())
-        .workspace(WorkspaceInfo.builder().name(workspaceName).id(workpaceId).url(workspaceUrl).build())
-        .catalogDiff(diff)
-        .isBreakingChange(isBreaking)
-        .sourceInfo(SourceInfo.builder().name(sourceName).id(sourceId).url(sourceUrl).build()).build();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
     assertTrue(
         client.notifySchemaPropagated(notification, recipient));
 
@@ -260,14 +267,14 @@ class SlackNotificationClientTest {
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
     final UUID workpaceId = UUID.randomUUID();
-    final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .connectionInfo(ConnectionInfo.builder().name(connectionName).id(connectionId).url(connectionUrl).build())
-        .workspace(WorkspaceInfo.builder().name(workspaceName).id(workpaceId).url(workspaceUrl).build())
-        .catalogDiff(diff)
-        .isBreakingChange(isBreaking)
-        .sourceInfo(SourceInfo.builder().name(sourceName).id(sourceId).url(sourceUrl).build()).build();
-    assertTrue(
-        client.notifySchemaDiffToApply(notification, recipient));
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
+
+    assertTrue(client.notifySchemaDiffToApply(notification, recipient));
   }
 
   @Test

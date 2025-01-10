@@ -60,7 +60,7 @@ class ConnectorMessageProcessorTest {
 
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
-  private val catalogClientConverters = CatalogClientConverters(FieldGenerator(), emptyList())
+  private val catalogClientConverters = CatalogClientConverters(FieldGenerator())
 
   @BeforeEach
   fun init() {

@@ -21,9 +21,10 @@ import { Icon } from "../Icon";
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
   isDisabled?: boolean;
+  placeholder?: string;
 }
 
-const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
+const DefaultControlButton = <T,>({ placeholder, selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -41,7 +42,7 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
         </Text>
       ) : (
         <Text as="span" size="lg" color="grey" className={styles.defaultControlButton}>
-          {formatMessage({ id: "form.selectValue" })}
+          {placeholder ?? formatMessage({ id: "form.selectValue" })}
         </Text>
       )}
 
@@ -70,9 +71,18 @@ export interface ListBoxProps<T> {
   buttonClassName?: string;
   id?: string;
   isDisabled?: boolean;
+  /**
+   * Custom button content for the OriginalListboxButton.
+   * This prop allows you to provide custom content to be used inside the control button for the ListBox.
+   */
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
-  "data-testid"?: string;
+  /**
+   * Custom element type for the OriginalListboxButton.
+   * This prop allows you to replace the original ListBox control button with a custom element type.
+   */
+  controlButtonAs?: ComponentPropsWithoutRef<typeof OriginalListboxButton>["as"];
   hasError?: boolean;
+  placeholder?: string;
   /**
    * Floating menu placement
    */
@@ -94,6 +104,7 @@ export interface ListBoxProps<T> {
    */
   footerOption?: React.ReactNode;
   onFocus?: () => void;
+  "data-testid"?: string;
 }
 
 export const MIN_OPTIONS_FOR_VIRTUALIZATION = 30;
@@ -104,7 +115,12 @@ export const ListBox = <T,>({
   selectedValue,
   onSelect,
   buttonClassName,
+  /**
+   * TODO: this is not an actual button, just button content
+   * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
+   */
   controlButton: ControlButton = DefaultControlButton,
+  controlButtonAs,
   optionsMenuClassName,
   optionClassName,
   optionTextAs,
@@ -203,6 +219,10 @@ export const ListBox = <T,>({
       })}
     >
       <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
+        {/**
+         * TODO: extract(or reuse?) Float component as we did in @MultiCatalogComboBox
+         * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
+         */}
         <Float
           adaptiveWidth={adaptiveWidth}
           placement={placement}
@@ -213,12 +233,20 @@ export const ListBox = <T,>({
           }}
         >
           <OriginalListboxButton
+            /**
+             * TODO:
+             * 1. place butttonClassName to the end of the classNames list to allow overriding styles
+             * 2. consider ability to pass Button component props to the ListBoxControlButtonProps
+             * (type="clear" for example)
+             * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
+             * */
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
             {...(testId && {
               "data-testid": `${testId}-listbox-button`,
             })}
             id={id}
+            as={controlButtonAs}
             onFocus={onFocus}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
@@ -228,6 +256,9 @@ export const ListBox = <T,>({
             modal={false}
             onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
             className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth }, optionsMenuClassName)}
+            {...(testId && {
+              "data-testid": `${testId}-listbox-options`,
+            })}
           >
             {options.length && isVirtualized ? (
               <Virtuoso<Option<T>>

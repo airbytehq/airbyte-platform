@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.stages
@@ -40,10 +40,13 @@ class BuildInputStageTest {
     val destConfig = POJONode("baz")
     val sourceConfig1 = POJONode("hello")
     val destConfig1 = POJONode("world")
-    val input = ReplicationActivityInput()
-    input.connectionId = UUID.randomUUID()
-    input.workspaceId = UUID.randomUUID()
-    input.jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L)
+    val input =
+      ReplicationActivityInput(
+        connectionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+      )
+
     val mapped =
       ReplicationInput()
         .withSourceConfiguration(sourceConfig)
@@ -90,17 +93,19 @@ class BuildInputStageTest {
   @Test
   fun `deserializes check input`() {
     val inputStr = "foo"
-    val checkInput = CheckConnectionInput()
-    checkInput.launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID())
+
     val input =
       StandardCheckConnectionInput()
         .withActorId(UUID.randomUUID())
         .withAdditionalProperty("whatever", "random value")
         .withActorType(ActorType.DESTINATION)
+
     val deserialized =
-      checkInput.apply {
-        checkConnectionInput = input
-      }
+      CheckConnectionInput(
+        launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+        checkConnectionInput = input,
+      )
 
     val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
@@ -128,17 +133,18 @@ class BuildInputStageTest {
   @Test
   fun `deserializes discover input`() {
     val inputStr = "foo"
-    val discoverInput = DiscoverCatalogInput()
-    discoverInput.launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID())
     val input =
       StandardDiscoverCatalogInput()
         .withSourceId(UUID.randomUUID().toString())
         .withConfigHash(UUID.randomUUID().toString())
         .withAdditionalProperty("whatever", "random value")
+
     val deserialized =
-      discoverInput.apply {
-        discoverCatalogInput = input
-      }
+      DiscoverCatalogInput(
+        discoverCatalogInput = input,
+        launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+      )
 
     val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
@@ -167,7 +173,7 @@ class BuildInputStageTest {
   @Test
   fun `deserializes spec input`() {
     val inputStr = "foo"
-    val specInput = SpecInput()
+    val specInput = mockk<SpecInput>()
 
     val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()

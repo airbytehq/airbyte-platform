@@ -19,6 +19,7 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";
+import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
 import { useWatchWithPreview } from "../preview";
 
@@ -55,12 +56,17 @@ interface BaseFieldProps {
   preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
-  omitInterpolationContext?: boolean;
   disabled?: boolean;
 }
 
 export type BuilderFieldProps = BaseFieldProps &
   (
+    | {
+        type: "jinja";
+        onChange?: (newValue: string) => void;
+        onBlur?: (value: string) => void;
+        bubbleUpUndoRedo?: boolean;
+      }
     | {
         type: "string" | "number" | "integer";
         onChange?: (newValue: string) => void;
@@ -141,7 +147,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   preview,
   manifestPath,
   manifestOptionPaths,
-  omitInterpolationContext,
   labelAction,
   ...props
 }) => {
@@ -149,6 +154,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   // Must use useWatch instead of field.value from useController because the latter is not updated
   // when setValue is called on a parent path in a way that changes the value of this field.
   const { fieldValue, isPreview } = useWatchWithPreview({ name: path });
+
+  const isPreviewRef = useRef(isPreview);
+  isPreviewRef.current = isPreview;
 
   const hasError = !!fieldState.error;
 
@@ -158,7 +166,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     manifestPath,
     path,
     false,
-    omitInterpolationContext,
     manifestOptionPaths
   );
 
@@ -217,7 +224,35 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       optional={optional}
       ref={elementRef}
     >
-      {(props.type === "number" || props.type === "string" || props.type === "integer") && (
+      {props.type === "jinja" && (
+        <JinjaInput
+          key={path}
+          name={field.name}
+          value={fieldValue || ""}
+          onChange={(newValue) => {
+            // Monaco editor triggers onChange whenever the value is changed, whether by the user or by
+            // changing the value passed to the "value" prop above.
+            // Because we show preview values by changing the value prop, but we don't want to actually
+            // commit that preview value back to the form, we don't want to call setValue in that case.
+            // So, we use a ref to track the current value of isPreview (because onChange gets called
+            // on the old instance of the component which has the old value of isPreview), and if the
+            // current value is true, then we don't commit the change back to the form.
+            if (isPreviewRef.current) {
+              return;
+            }
+            setValue(newValue);
+          }}
+          onBlur={(value) => {
+            field.onBlur();
+            props.onBlur?.(value);
+          }}
+          disabled={isDisabled}
+          manifestPath={manifestPath}
+          error={hasError}
+          bubbleUpUndoRedo={props.bubbleUpUndoRedo}
+        />
+      )}
+      {(props.type === "string" || props.type === "number" || props.type === "integer") && (
         <Input
           {...field}
           onChange={(e) => {
@@ -267,10 +302,12 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <div className={classNames(props.className, styles.jsonEditor)}>
           <CodeEditor
             key={path}
-            automaticLayout
             value={fieldValue || ""}
             language="json"
             onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
               setValue(val);
             }}
             disabled={isDisabled}

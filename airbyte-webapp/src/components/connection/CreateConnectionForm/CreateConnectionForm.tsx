@@ -1,13 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import React, { Suspense, useCallback, useEffect } from "react";
+import { UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
-import { connectionsKeys, useCreateConnection, useDiscoverSchema } from "core/api";
+import { connectionsKeys, HttpError, HttpProblem, useCreateConnection, useDiscoverSchema } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import {
   ConnectionFormServiceProvider,
@@ -20,8 +22,8 @@ import { useNotificationService } from "hooks/services/Notification";
 import styles from "./CreateConnectionForm.module.scss";
 import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
+import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "./SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { ScrollableContainer } from "../../ScrollableContainer";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -78,8 +80,11 @@ const CreateConnectionFormInner: React.FC = () => {
             queryClient.invalidateQueries(connectionsKeys.statuses([createdConnection.connectionId]));
           }, 2000);
         }
-      } catch (e) {
-        setSubmitError(e);
+      } catch (error) {
+        setSubmitError(error);
+        // Needs to be re-thrown so react-hook-form can handle the error. We should probably get rid of setSubmitError
+        // entirely and just use react-hook-form to handle errors.
+        throw error;
       }
     },
     [
@@ -96,6 +101,17 @@ const CreateConnectionFormInner: React.FC = () => {
     ]
   );
 
+  const onError = useCallback(
+    (error: Error, _values: FormConnectionFormValues, methods: UseFormReturn<FormConnectionFormValues>) => {
+      if (error instanceof HttpError && HttpProblem.isType(error, "error:cron-validation/under-one-hour-not-allowed")) {
+        methods.setError("scheduleData.cron.cronExpression", {
+          message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
+        });
+      }
+    },
+    []
+  );
+
   return (
     <div className={styles.container}>
       <Suspense fallback={<LoadingSchema />}>
@@ -103,6 +119,7 @@ const CreateConnectionFormInner: React.FC = () => {
           defaultValues={initialValues}
           schema={validationSchema}
           onSubmit={onSubmit}
+          onError={onError}
           trackDirtyChanges
           formTrackerId={CREATE_CONNECTION_FORM_ID}
         >
@@ -135,9 +152,9 @@ export const CreateConnectionForm: React.FC = () => {
 
   if (schemaErrorStatus) {
     return (
-      <ScrollableContainer>
+      <ScrollParent>
         <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />
-      </ScrollableContainer>
+      </ScrollParent>
     );
   }
   if (!schema) {

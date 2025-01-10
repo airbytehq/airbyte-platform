@@ -10,8 +10,6 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
-  env:
-    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:

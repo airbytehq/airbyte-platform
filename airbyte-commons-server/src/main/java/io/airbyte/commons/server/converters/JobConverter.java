@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -52,10 +52,6 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.StructuredLogs;
-import io.airbyte.featureflag.Workspace;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
@@ -65,12 +61,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Convert between API and internal versions of job models.
@@ -78,24 +71,14 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class JobConverter {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(JobConverter.class);
-
-  private final FeatureFlagClient featureFlagClient;
-
   private final LogClientManager logClientManager;
 
   private final LogUtils logUtils;
 
-  private final WorkspaceHelper workspaceHelper;
-
-  public JobConverter(final FeatureFlagClient featureFlagClient,
-                      final LogClientManager logClientManager,
-                      final LogUtils logUtils,
-                      final WorkspaceHelper workspaceHelper) {
-    this.featureFlagClient = featureFlagClient;
+  public JobConverter(final LogClientManager logClientManager,
+                      final LogUtils logUtils) {
     this.logClientManager = logClientManager;
     this.logUtils = logUtils;
-    this.workspaceHelper = workspaceHelper;
   }
 
   public JobInfoRead getJobInfoRead(final Job job) {
@@ -108,8 +91,11 @@ public class JobConverter {
     return new JobInfoLightRead().job(getJobRead(job));
   }
 
-  public JobOptionalRead getJobOptionalRead(final Job job) {
-    return new JobOptionalRead().job(getJobRead(job));
+  public JobOptionalRead getJobOptionalRead(final Optional<Job> job) {
+    if (job.isEmpty()) {
+      return new JobOptionalRead();
+    }
+    return new JobOptionalRead().job(getJobRead(job.get()));
   }
 
   public static JobDebugRead getDebugJobInfoRead(final JobInfoRead jobInfoRead,
@@ -320,13 +306,12 @@ public class JobConverter {
   }
 
   public AttemptInfoReadLogs getAttemptLogs(final Path logPath, final Long jobId) {
-    if (featureFlagClient.boolVariation(StructuredLogs.INSTANCE, new Workspace(getWorkspaceId(jobId)))) {
-      final LogEvents logEvents = logClientManager.getLogs(logPath);
-      if (CollectionUtils.isNotEmpty(logEvents.getEvents())) {
-        return new AttemptInfoReadLogs().events(toModelLogEvents(logEvents.getEvents(), logUtils)).version(logEvents.getVersion());
-      }
+    final LogEvents logEvents = logClientManager.getLogs(logPath);
+    if (CollectionUtils.isNotEmpty(logEvents.getEvents())) {
+      return new AttemptInfoReadLogs().events(toModelLogEvents(logEvents.getEvents(), logUtils)).version(logEvents.getVersion());
+    } else {
+      return new AttemptInfoReadLogs().logLines(getLogRead(logPath).getLogLines());
     }
-    return new AttemptInfoReadLogs().logLines(getLogRead(logPath).getLogLines());
   }
 
   private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason, final long defaultTimestamp) {
@@ -379,7 +364,7 @@ public class JobConverter {
       logEvent.setLevel(LogLevel.fromString(e.getLevel().toLowerCase(Locale.ROOT)));
       logEvent.setMessage(e.getMessage());
       logEvent.setTimestamp(e.getTimestamp());
-      logEvent.setStrackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));
+      logEvent.setStackTrace(logUtils.convertThrowableToStackTrace(e.getThrowable()));
       logEvent.setCaller(toModelLogCaller(e.getCaller()));
       return logEvent;
     }).toList();
@@ -396,18 +381,6 @@ public class JobConverter {
     } else {
       return null;
     }
-  }
-
-  private UUID getWorkspaceId(final Long jobId) {
-    UUID workspaceId = null;
-    try {
-      workspaceId = workspaceHelper.getWorkspaceForJobId(jobId);
-    } catch (final Exception e) {
-      LOGGER.warn("Unable to retrieve workspace ID for job {}.", jobId, e);
-    }
-
-    // Avoid a null be returning a default workspace UUID.
-    return workspaceId != null ? workspaceId : UUID.fromString("00000000-0000-0000-0000-000000000000");
   }
 
 }

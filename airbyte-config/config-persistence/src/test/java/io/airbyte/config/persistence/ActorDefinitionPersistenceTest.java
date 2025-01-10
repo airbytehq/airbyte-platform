@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -30,6 +30,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -82,6 +83,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
     actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -99,7 +101,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 featureFlagClient,
                 connectionService,
                 actorDefinitionService,
-                scopedConfigurationService)));
+                scopedConfigurationService,
+                connectionTimelineEventService)));
     destinationService = spy(
         new DestinationServiceJooqImpl(
             database,
@@ -112,7 +115,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 featureFlagClient,
                 connectionService,
                 actorDefinitionService,
-                scopedConfigurationService)));
+                scopedConfigurationService,
+                connectionTimelineEventService)));
     workspaceService = spy(
         new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService));
     organizationService.writeOrganization(MockData.defaultOrganization());

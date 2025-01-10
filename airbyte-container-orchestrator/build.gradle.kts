@@ -27,8 +27,6 @@ plugins {
 val airbyteProtocol: Configuration by configurations.creating
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -121,8 +119,8 @@ fun yamlToJson(rawYaml: String): String {
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

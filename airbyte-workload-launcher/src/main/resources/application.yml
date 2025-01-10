@@ -2,7 +2,6 @@ micronaut:
   application:
     name: airbyte-workload-launcher
   env:
-    cloud-deduction: true
     additional-envs: ${MICRONAUT_ENVIRONMENTS:}
   server:
     port: 8016
@@ -19,7 +18,15 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
-
+  caches:
+    network-policy-label-cache:
+      expire-after-write: 10m
+      maximum-size: 100_000
+  executors:
+    kube-client:
+      type: cached
+      n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      core-pool-size: 0
 airbyte:
   connector:
     source:
@@ -78,6 +85,7 @@ airbyte:
       high-priority-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    network-policy-introspection: false
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -132,6 +140,7 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
+        connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -236,6 +245,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:

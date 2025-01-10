@@ -38,50 +38,29 @@ spec:
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.affinity "context" $) | nindent 6 }}
       {{- end }}
       initContainers:
-        - name: keycloak-readiness-check
-          image: {{ include "imageUrl" (list .Values.keycloakSetup.initContainers.keycloakReadinessCheck.image $) }}
-          command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
-          env:
-            - name: KEYCLOAK_INTERNAL_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                  key: KEYCLOAK_INTERNAL_HOST
-          securityContext: 
-            {{- toYaml .Values.keycloakSetup.initContainerSecurityContext | nindent 12 }}
         {{- if .Values.keycloakSetup.extraInitContainers }}
         {{- toYaml .Values.keycloakSetup.extraInitContainers | nindent 8 }}
         {{- end }}
       containers:
         - name: airbyte-keycloak-setup-container
           image: {{ include "imageUrl" (list .Values.keycloakSetup.image $) }}
-          imagePullPolicy: "{{ .Values.keycloakSetup.image.pullPolic }}"
+          imagePullPolicy: "{{ .Values.keycloakSetup.image.pullPolicy }}"
           env:
-            - name: AIRBYTE_URL 
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                  key: AIRBYTE_URL 
-            - name: KEYCLOAK_ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: KEYCLOAK_ADMIN_USER
-            - name: KEYCLOAK_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: KEYCLOAK_ADMIN_PASSWORD
-            - name: KEYCLOAK_INTERNAL_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                  key: KEYCLOAK_INTERNAL_HOST
+            {{- if .Values.keycloakSetup.debug.enabled }}
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.keycloakSetup.debug.remoteDebugPort }},server=y,suspend=y"
+            {{- end}}
 
+            {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.database.envs" . | nindent 12 }}
-            {{- include "airbyte.enterprise.instanceAdmin" . | nindent 12 }} 
-            {{- include "airbyte.enterprise.identityProvider" . | nindent 12 }} 
-            {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.client.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
+
+            {{- if (eq .Values.global.edition "enterprise") }}
+            {{- include "airbyte.enterprise.envs" . | nindent 12 }}
+            {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 12 }}
+            {{- end}}
 
             # Values from secret
             {{- if .Values.keycloakSetup.secrets }}
@@ -107,6 +86,13 @@ spec:
             {{- toYaml .Values.keycloakSetup.extraEnv | nindent 12 }}
             {{- end }}
 
+          {{- if .Values.keycloakSetup.debug.enabled }}
+          ports:
+          - name: debug
+            containerPort: {{ .Values.keycloakSetup.debug.remoteDebugPort }}
+            protocol: TCP
+          {{- end}}
+
           {{- if .Values.keycloakSetup.resources }}
           resources: {{- toYaml .Values.keycloakSetup.resources | nindent 10 }}
           {{- end }}
@@ -118,10 +104,10 @@ spec:
               readOnly: true
             {{- end }}
           {{- if .Values.keycloakSetup.extraVolumeMount }}
-          {{- toYaml .Values.keycloakSetup.extraVolumeMounts | nindent 10 }}
+          {{- toYaml .Values.keycloakSetup.extraVolumeMounts | nindent 12 }}
           {{- end }}
           {{- if .Values.keycloakSetup.containerSecurityContext }}
-          securityContext: {{- toYaml .Values.keycloakSetup.containerSecurityContext | nindent 10 }}
+          securityContext: {{- toYaml .Values.keycloakSetup.containerSecurityContext | nindent 12 }}
           {{- end }}
         {{- if .Values.keycloakSetup.extraContainers }}
         {{ toYaml .Values.keycloakSetup.extraContainers | nindent 8 }}
@@ -129,7 +115,7 @@ spec:
         {{- if .Values.global.extraContainers }}
         {{ toYaml .Values.global.extraContainers | nindent 8 }}
         {{- end }}
-      securityContext: {{- toYaml .Values.keycloakSetup.podSecurityContext | nindent 6 }}
+      securityContext: {{- toYaml .Values.keycloakSetup.podSecurityContext | nindent 8 }}
       volumes:
         {{- if .Values.global.airbyteYml }}
         - name: airbyte-yml-volume

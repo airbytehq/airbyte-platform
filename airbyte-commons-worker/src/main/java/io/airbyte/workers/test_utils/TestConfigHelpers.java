@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.test_utils;
@@ -66,7 +66,9 @@ public class TestConfigHelpers {
         .withWorkspaceId(replicationInput.getWorkspaceId())
         .withConnectionContext(new ConnectionContext()
             .withOrganizationId(organizationId)
-            .withSourceDefinitionId(sourceDefinitionId)));
+            .withSourceDefinitionId(sourceDefinitionId))
+        .withUseAsyncActivities(true)
+        .withUseAsyncReplicate(true));
   }
 
   public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {

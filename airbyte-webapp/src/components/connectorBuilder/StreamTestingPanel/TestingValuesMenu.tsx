@@ -13,6 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import { Spec } from "core/api/types/ConnectorManifest";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   applyTestingValuesDefaults,
@@ -123,6 +124,7 @@ interface TestingValuesFormProps {
 }
 
 const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec, setIsOpen }) => {
+  const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const testingValues = useBuilderWatch("testingValues");
   const { updateTestingValues } = useConnectorBuilderFormState();
   const [connectorFormValues, setConnectorFormValues] = useState(testingValues);
@@ -147,6 +149,7 @@ const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec, setIsOpen }
 
   return (
     <ConnectorForm
+      canEdit={canEditConnector}
       key={`testing-values-form-${connectorFormKey}`}
       formType="source"
       bodyClassName={styles.formContent}

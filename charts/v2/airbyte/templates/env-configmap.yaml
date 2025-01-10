@@ -9,149 +9,45 @@ metadata:
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
-  AIRBYTE_VERSION: {{ .Values.version | default .Chart.AppVersion }}
-  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-  AIRBYTE_EDITION: "pro"
-  {{- else }}
-  AIRBYTE_EDITION: "community"
-  {{- end }}
-
-  {{- if $airbyteYmlDict }}
-  AIRBYTE_URL: {{ (index $airbyteYmlDict "webapp-url") | quote }}
-  {{- else}}
-  AIRBYTE_URL: {{ .Values.global.airbyteUrl | quote }}
-  {{- end }}
-
-  AIRBYTE_SERVER_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
-  API_URL: {{ .Values.webapp.api.url }}
-  CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
-  CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
-  CONFIG_ROOT: /configs
-  CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
-  DATA_DOCKER_MOUNT: airbyte_data
-  DB_DOCKER_MOUNT: airbyte_db
+  {{- include "airbyte.auth.bootstrap.configVars" . | nindent 2 }}
+  {{- include "airbyte.auth.identityProvider.configVars" . | nindent 2 }}
+  {{- include "airbyte.auth.instanceAdmin.enterprise.configVars" . | nindent 2 }}
+  {{- include "airbyte.auth.security.configVars" . | nindent 2 }}
+  {{- include "airbyte.common.configVars" . | nindent 2 }}
+  {{- include "airbyte.connector.configVars" . | nindent 2 }}
+  {{- include "airbyte.cron.configVars" . | nindent 2 }}
   {{- include "airbyte.database.configVars" . | nindent 2 }}
-  KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
-  GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
-  INTERNAL_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
-  WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ .Values.workloadApiServer.service.port }}
-
-
-  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-  INITIAL_USER_FIRST_NAME: {{ .Values.global.auth.instanceAdmin.firstName }}
-  INITIAL_USER_LAST_NAME: {{ .Values.global.auth.instanceAdmin.lastName }}
-    {{- if .Values.global.auth.identityProvider }}
-  IDENTITY_PROVIDER_TYPE: {{ .Values.global.auth.identityProvider.type }}
-  OIDC_DOMAIN: {{ .Values.global.auth.identityProvider.oidc.domain }}
-  OIDC_APP_NAME: {{ .Values.global.auth.identityProvider.oidc.appName }}
-    {{- end }}
-  KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
-  KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
-
-    {{- if $airbyteYmlDict }}
-  KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
-    {{- else }}
-  KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" .Values.global.airbyteUrl | quote }}
-    {{- end }}
-
-  KEYCLOAK_JAVA_OPTS_APPEND: -Djgroups.dns.query={{ .Release.Name }}-airbyte-keycloak-headless-svc
-  {{- else }}
-  KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
-  {{- end }}
-
-  CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ .Values.connectorBuilderServer.service.port }}
-
-  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-    {{- if $airbyteYmlDict }}
-  AIRBYTE_API_HOST: {{ printf "%s/api/public" (index $airbyteYmlDict "webapp-url") | quote }}
-    {{- else }}
-  AIRBYTE_API_HOST: {{ printf "%s/api/public" .Values.global.airbyteUrl | quote }}
-    {{- end }}
-  {{- else if (eq .Values.global.edition "community")}}
-  AIRBYTE_API_HOST: http://localhost:{{ .Values.server.service.port }}/api/public
-  {{- else }}
-  AIRBYTE_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/public
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.annotations }}
-  JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.labels }}
-  JOB_KUBE_LABELS: {{ $.Values.global.jobs.kube.labels | include "airbyte.flattenMap" | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.nodeSelector }}
-  JOB_KUBE_NODE_SELECTORS: {{ $.Values.global.jobs.kube.nodeSelector | include "airbyte.flattenMap" | quote }}
-  {{- end }}
-
-  {{- if $.Values.global.jobs.kube.tolerations }}
-  JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
-  {{- end }}
-
-  JOB_KUBE_BUSYBOX_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.busybox $) }}
-  JOB_KUBE_CURL_IMAGE: {{ include "imageUrl" (list $.Values.global.jobs.kube.images.curl $) }}
-  {{ $workloadLauncher := .Values.workloadLauncher }}
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
-  WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
-  CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
-
-  JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
-  JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
-  JOB_MAIN_CONTAINER_MEMORY_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).memory | default "" | quote }}
-  JOB_MAIN_CONTAINER_MEMORY_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).memory | default "" | quote }}
-
-  {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
-  JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ $.Values.global.jobs.kube.main_container_image_pull_secret }}
-  {{- end }}
-  JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
-  LOCAL_ROOT: /tmp/airbyte_local
-  LOG_LEVEL: {{ default "INFO" (((.Values.global).logging).level) }}
-  MICROMETER_METRICS_ENABLED: "false"
-  MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
-  RUN_DATABASE_MIGRATION_ON_STARTUP: {{ .Values.airbyteBootloader.runDatabaseMigrationsOnStartup | default "true" | quote  }}
-  SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
-  # Storage start
-  STORAGE_TYPE: {{ (((.Values.global).storage).type) | default "minio" | quote }}
-  STORAGE_BUCKET_ACTIVITY_PAYLOAD: {{ ((((.Values.global).storage).bucket).activityPayload) | default "airbyte-storage" | quote }}
-  STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
-  STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
-  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}
-
-  {{- with .Values.global.storage.s3 }}
-  AWS_DEFAULT_REGION: {{ .region | default ""  | quote }}
-  {{- end}}
-
-  MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
-  S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
-  # Storage end
-  STATSD_HOST: "localhost"
-  STATSD_PORT: "8125"
-  TEMPORAL_HOST: {{ .Release.Name }}-temporal:{{ .Values.temporal.service.port }}
-  TEMPORAL_WORKER_PORTS: 9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040
-  TRACKING_STRATEGY: segment
-  WEBAPP_URL: {{ .Values.webapp.url | default (printf "http://%s-airbyte-webapp-svc:%d" .Release.Name (.Values.webapp.service.port | int)) }}
-  WORKER_ENVIRONMENT: kubernetes
-  WORKSPACE_DOCKER_MOUNT: airbyte_workspace
-  WORKSPACE_ROOT: /workspace
-  METRIC_CLIENT: {{ .Values.global.metrics.metricClient | default "" | quote }}
-  OTEL_COLLECTOR_ENDPOINT: {{ .Values.global.metrics.otelCollectorEndpoint | default "" | quote }}
-  ACTIVITY_MAX_ATTEMPT: {{ .Values.worker.activityMaxAttempt | default "" | quote  }}
-  ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
-  ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
-  WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT: 5G
-  FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST: 5G
+  {{- include "airbyte.database.migrations.configVars" . | nindent 2 }}
+  {{- include "airbyte.datadog.configVars" . | nindent 2 }}
+  {{- include "airbyte.featureFlags.configVars" . | nindent 2 }}
+  {{- include "airbyte.java.configVars" . | nindent 2 }}
+  {{- include "airbyte.jobs.configVars" . | nindent 2 }}
+  {{- include "airbyte.keycloak.admin.client.configVars" . | nindent 2 }}
+  {{- include "airbyte.keycloak.configVars" . | nindent 2 }}
+  {{- include "airbyte.keycloak.database.configVars" . | nindent 2 }}
+  {{- include "airbyte.logging.configVars" . | nindent 2 }}
+  {{- include "airbyte.metrics.configVars" . | nindent 2 }}
+  {{- include "airbyte.micronaut.configVars" . | nindent 2 }}
+  {{- include "airbyte.otel.configVars" . | nindent 2 }}
+  {{- include "airbyte.secretsManager.configVars" . | nindent 2 }}
+  {{- include "airbyte.storage.configVars" . | nindent 2 }}
+  {{- include "airbyte.temporal.cli.configVars" . | nindent 2 }}
+  {{- include "airbyte.temporal.cloud.configVars" . | nindent 2 }}
+  {{- include "airbyte.temporal.configVars" . | nindent 2 }}
+  {{- include "airbyte.temporal.sdk.configVars" . | nindent 2 }}
+  {{- include "airbyte.temporal.worker.configVars" . | nindent 2 }}
+  {{- include "airbyte.topology.configVars" . | nindent 2 }}
+  {{- include "airbyte.tracking.configVars" . | nindent 2 }}
+  {{- include "airbyte.webapp.configVars" . | nindent 2 }}
+  {{- include "airbyte.worker.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloadApiServer.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloadLauncher.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloadLauncher.images.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloads.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloads.queues.configVars" . | nindent 2 }}
+  {{- include "airbyte.workloads.resources.configVars" . | nindent 2 }}
 
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
   SERVER_MICRONAUT_ENVIRONMENTS: "control-plane"
-  SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
-  MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
-  KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
-  WORKLOAD_LAUNCHER_PARALLELISM: "10"
-  CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ .Values.connectorBuilderServer.service.port }}
-  PUB_SUB_ENABLED: "false"
-  PUB_SUB_TOPIC_NAME: ""
-  ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v0/connector_stubs.json" }}

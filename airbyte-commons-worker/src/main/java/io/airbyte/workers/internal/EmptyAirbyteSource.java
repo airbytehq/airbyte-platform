@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -23,6 +23,7 @@ import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,15 +34,18 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This source will never emit any messages. It can be used in cases where that is helpful (hint:
  * reset connection jobs).
  */
-@Slf4j
 public class EmptyAirbyteSource implements AirbyteSource {
 
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
+  private final AtomicBoolean hasCustomNamespace;
   private final AtomicBoolean hasEmittedState;
   private final AtomicBoolean hasEmittedStreamStatus;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
@@ -49,7 +53,8 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private boolean isStarted = false;
   private Optional<StateWrapper> stateWrapper = Optional.empty();
 
-  public EmptyAirbyteSource() {
+  public EmptyAirbyteSource(final boolean hasCustomNamespace) {
+    this.hasCustomNamespace = new AtomicBoolean(hasCustomNamespace);
     hasEmittedState = new AtomicBoolean();
     hasEmittedStreamStatus = new AtomicBoolean();
   }
@@ -82,7 +87,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
-    return hasEmittedState.get() && hasEmittedStreamStatus.get();
+    return hasEmittedState.get() && (hasEmittedStreamStatus.get() || hasCustomNamespace.get());
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -137,9 +142,13 @@ public class EmptyAirbyteSource implements AirbyteSource {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
       final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      }
       perStreamMessages.add(buildNullStreamStateMessage(s));
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      }
     }
 
     final AirbyteMessage message = perStreamMessages.poll();
@@ -177,8 +186,10 @@ public class EmptyAirbyteSource implements AirbyteSource {
       // Per stream, we emit one 'started' and one 'complete' message.
       // The single null state message is to be emitted by the caller.
       final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
-      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      if (!hasCustomNamespace.get()) {
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      }
     }
 
     final AirbyteMessage message = perStreamMessages.poll();

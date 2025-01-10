@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -21,20 +21,23 @@ import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Temporal Utility functions.
  */
 // todo (cgardens) - rename? utils implies it's static utility function
-@Slf4j
 @Singleton
 public class TemporalUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final Duration WAIT_INTERVAL = Duration.ofSeconds(2);
   private static final Duration MAX_TIME_TO_CONNECT = Duration.ofMinutes(2);

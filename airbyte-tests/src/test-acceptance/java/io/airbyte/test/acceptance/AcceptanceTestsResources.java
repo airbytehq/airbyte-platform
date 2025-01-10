@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -7,6 +7,7 @@ package io.airbyte.test.acceptance;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,6 +30,7 @@ import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
+import io.airbyte.api.client.model.generated.LogFormatType;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
@@ -141,7 +143,7 @@ public class AcceptanceTestsResources {
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
     assertTrue(stream.getDefaultCursorField().isEmpty());
     assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
@@ -254,7 +256,7 @@ public class AcceptanceTestsResources {
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
     assertTrue(stream.getDefaultCursorField().isEmpty());
     assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
@@ -301,7 +303,10 @@ public class AcceptanceTestsResources {
     final var attemptId = connectionSyncRead1.getAttempts().size() - 1;
     final var attempt = testHarness.getApiClient().getAttemptApi().getAttemptForJob(
         new GetAttemptStatsRequestBody(jobId, attemptId));
-    assertFalse(attempt.getLogs().getLogLines().isEmpty());
+    // Structured logs should exist
+    assertEquals(LogFormatType.STRUCTURED, attempt.getLogType());
+    assertFalse(attempt.getLogs().getEvents().isEmpty());
+    assertTrue(attempt.getLogs().getLogLines().isEmpty());
 
     return new SyncIds(connectionId, jobId, attemptId);
   }

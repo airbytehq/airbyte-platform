@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.config.JobConfig.ConfigType.REFRESH;
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
@@ -39,6 +40,7 @@ import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -50,14 +52,17 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to handle and track job creation and status updates.
  */
-@Slf4j
 @Singleton
 public class JobCreationAndStatusUpdateHelper {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String JOB_ID_METADATA_KEY = "jobId";
   private static final String ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber";
@@ -183,7 +188,7 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric, final Job job, final int attemptNumber) throws IOException {
-    emitAttemptEvent(metric, job, attemptNumber, Collections.emptyList());
+    emitAttemptEvent(metric, job, attemptNumber, imageAttrsFromJob(job));
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric,
@@ -230,7 +235,7 @@ public class JobCreationAndStatusUpdateHelper {
     }
   }
 
-  private void emitAttemptCompletedEvent(final Job job, final Attempt attempt) throws IOException {
+  private void emitAttemptCompletedEvent(final Job job, final Attempt attempt) {
     final Optional<String> failureOrigin = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
         .stream()
         .map(FailureReason::getFailureOrigin)
@@ -245,13 +250,75 @@ public class JobCreationAndStatusUpdateHelper {
         .map(MetricTags::getFailureType)
         .findFirst());
 
-    final List<MetricAttribute> additionalAttributes = List.of(
-        new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()),
-        new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)),
-        new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)),
-        new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    final Optional<String> externalMsg = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
+        .stream()
+        .map(FailureReason::getExternalMessage)
+        .filter(Objects::nonNull)
+        // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
+        .map(s -> StringUtils.abbreviate(s, 50))
+        .findFirst());
 
-    emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
+    final Optional<String> internalMsg = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
+        .stream()
+        .map(FailureReason::getInternalMessage)
+        .filter(Objects::nonNull)
+        // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
+        .map(s -> StringUtils.abbreviate(s, 50))
+        .findFirst());
+
+    final List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.EXTERNAL_MESSAGE, externalMsg.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.INTERNAL_MESSAGE, internalMsg.orElse(null)));
+    additionalAttributes.addAll(imageAttrsFromJob(job));
+    additionalAttributes.addAll(linkAttrsFromJob(job));
+
+    try {
+      emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
+    } catch (final IOException e) {
+      log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.getId());
+    }
+  }
+
+  private List<MetricAttribute> linkAttrsFromJob(final Job job) {
+    final List<MetricAttribute> attrs = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var config = job.getConfig().getSync();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var config = job.getConfig().getRefresh();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == RESET_CONNECTION) {
+      final var config = job.getConfig().getResetConnection();
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    }
+    attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.getScope()));
+
+    return attrs;
+  }
+
+  private List<MetricAttribute> imageAttrsFromJob(final Job job) {
+    final List<MetricAttribute> attrs = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var config = job.getConfig().getSync();
+      attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var config = job.getConfig().getRefresh();
+      attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    } else if (job.getConfigType() == RESET_CONNECTION) {
+      final var config = job.getConfig().getResetConnection();
+      attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
+      attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
+    }
+
+    return attrs;
   }
 
   @VisibleForTesting
@@ -280,31 +347,27 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var refresh = job.getConfig().getRefresh();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
     }
+    additionalAttributes.addAll(imageAttrsFromJob(job));
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
 
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobFailureRequest input) throws IOException {
-    List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    final List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
-      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
+      additionalAttributes.addAll(imageAttrsFromJob(job));
       job.getLastAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(attemptFailureSummary -> {
             for (FailureReason failureReason : attemptFailureSummary.getFailures()) {
@@ -340,7 +403,7 @@ public class JobCreationAndStatusUpdateHelper {
     jobTracker.trackSync(job, Enums.convertTo(status, JobState.class));
   }
 
-  private void emitAttemptCompletedEventIfAttemptPresent(final Job job) throws IOException {
+  public void emitAttemptCompletedEventIfAttemptPresent(final Job job) {
     if (job == null) {
       return;
     }

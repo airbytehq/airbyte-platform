@@ -2,7 +2,7 @@ import { StoryObj } from "@storybook/react";
 
 import { Button } from "components/ui/Button";
 
-import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 
 import { ConnectorForm } from "./ConnectorForm";
@@ -33,7 +33,7 @@ export default {
 
 const Template: StoryObj<typeof ConnectorForm> = {
   render: (args) => {
-    const selectedSpecification = args.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecification;
+    const selectedSpecification = args.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead;
     // Hack to allow devs to not specify sourceDefinitionId
     if (!ConnectorSpecification.id(selectedSpecification)) {
       if (isSourceDefinitionSpecification(selectedSpecification)) {
@@ -301,7 +301,7 @@ const json = {
 
 export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorForm> & PreviewProps>> = {
   render: (props) => {
-    const connectorDefinitionSpecification: ConnectorDefinitionSpecification = {
+    const connectorDefinitionSpecification: ConnectorDefinitionSpecificationRead = {
       ...TempConnector,
       destinationDefinitionId: "some-id",
       jobInfo: {
@@ -315,6 +315,7 @@ export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorFor
     };
     return (
       <ConnectorForm
+        canEdit
         formType={props.formType}
         renderFooter={() => (
           <div>

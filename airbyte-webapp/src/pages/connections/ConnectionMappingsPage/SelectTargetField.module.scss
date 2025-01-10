@@ -1,0 +1,73 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/z-indices";
+
+.comboboxInput {
+  height: variables.$form-input-height;
+
+  // will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
+  // for now setting this as a one off
+  &.disabled {
+    cursor: default;
+  }
+
+  &:focus {
+    &::placeholder {
+      color: colors.$grey-300;
+      text-align: left;
+      font-weight: 400;
+    }
+  }
+}
+
+.caretButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  color: colors.$grey-300;
+  padding-inline: 8px;
+
+  // will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
+  // for now setting this as a one off
+  &:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.comboboxOptions {
+  z-index: z-indices.$listBox;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: variables.$box-shadow-raised;
+  padding: 0;
+  width: variables.$width-extra-wide-menu;
+  max-height: variables.$height-long-listbox-options-list;
+  list-style-type: none;
+  overflow-y: auto;
+}
+
+.comboboxOption {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  cursor: pointer;
+  word-break: break-all;
+
+  &:not(.disabled):hover,
+  &:not(.disabled):focus-within {
+    background-color: colors.$grey-50;
+    height: 100%;
+    width: 100%;
+  }
+}
+
+.selected {
+  background-color: colors.$blue-50;
+}
+
+.disabled {
+  p {
+    color: colors.$grey-300;
+  }
+}

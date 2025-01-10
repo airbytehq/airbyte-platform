@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -9,8 +9,10 @@ import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.PostLoadExecutor;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Default implementation of the tasks that should be executed after a successful bootstrapping of
@@ -24,8 +26,9 @@ import lombok.extern.slf4j.Slf4j;
  * </ul>
  */
 @Singleton
-@Slf4j
 public class DefaultPostLoadExecutor implements PostLoadExecutor {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final ApplyDefinitionsHelper applyDefinitionsHelper;
   private final DeclarativeSourceUpdater declarativeSourceUpdater;

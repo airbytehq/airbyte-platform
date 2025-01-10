@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -57,7 +57,14 @@ private const val KEY = "a"
 private const val DOC1 = "hello"
 private const val DOC2 = "bye"
 
-private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
+private val buckets =
+  StorageBucketConfig(
+    log = "log",
+    state = "state",
+    workloadOutput = "workload",
+    activityPayload = "payload",
+    auditLogging = null,
+  )
 
 internal class DocumentTypeTest {
   @Test
@@ -65,6 +72,7 @@ internal class DocumentTypeTest {
     assertEquals(DocumentType.LOGS.prefix, Path.of("job-logging"))
     assertEquals(DocumentType.STATE.prefix, Path.of("/state"))
     assertEquals(DocumentType.WORKLOAD_OUTPUT.prefix, Path.of("/workload/output"))
+    assertEquals(DocumentType.AUDIT_LOGS.prefix, Path.of("audit-logging"))
   }
 }
 
@@ -427,6 +435,8 @@ internal class LocalStorageClientTest {
         workloadOutput = "workload-output",
         log = "log",
         activityPayload = "activity-payload",
+        // Audit logging is null by default as it is SME feature only
+        auditLogging = null,
       )
     val localStorageConfig =
       LocalStorageConfig(
@@ -439,6 +449,32 @@ internal class LocalStorageClientTest {
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
+    assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
+  }
+
+  @Test
+  internal fun testToEnvVarMapWithAuditLogging() {
+    val root = "/root/path"
+    val bucketConfig =
+      StorageBucketConfig(
+        state = "state",
+        workloadOutput = "workload-output",
+        log = "log",
+        activityPayload = "activity-payload",
+        auditLogging = "audit-logging",
+      )
+    val localStorageConfig =
+      LocalStorageConfig(
+        buckets = bucketConfig,
+        root = root,
+      )
+    val envVarMap = localStorageConfig.toEnvVarMap()
+    assertEquals(6, envVarMap.size)
+    assertEquals(bucketConfig.log, envVarMap[EnvVar.STORAGE_BUCKET_LOG.name])
+    assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
+    assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
+    assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
+    assertEquals(bucketConfig.auditLogging, envVarMap[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING.name])
     assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
   }
 }

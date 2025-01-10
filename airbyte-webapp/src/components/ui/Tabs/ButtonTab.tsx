@@ -5,14 +5,12 @@ import styles from "./ButtonTab.module.scss";
 import { Badge } from "../Badge";
 import { Text } from "../Text";
 
-// TODO: add generic type to restrict using the same exact id: "id:T" and "onSelect(id: T)"
-// issue: https://github.com/airbytehq/airbyte-internal-issues/issues/7520
-interface ButtonTabProps {
-  id: string;
+interface ButtonTabProps<T extends string = string> {
+  id: T;
   name: string | React.ReactNode;
   isActive: boolean;
   disabled?: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: T) => void;
   badge?: string;
 }
 

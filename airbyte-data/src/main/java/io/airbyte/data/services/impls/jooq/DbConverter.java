@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -204,9 +204,7 @@ public class DbConverter {
         .withOrganizationId(record.get(ORGANIZATION.ID))
         .withName(record.get(ORGANIZATION.NAME))
         .withUserId(record.get(ORGANIZATION.USER_ID))
-        .withEmail(record.get(ORGANIZATION.EMAIL))
-        .withPba(record.get(ORGANIZATION.PBA))
-        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+        .withEmail(record.get(ORGANIZATION.EMAIL));
   }
 
   /**

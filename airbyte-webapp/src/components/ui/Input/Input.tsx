@@ -19,12 +19,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ light, error, inline, containerClassName, adornment, "data-testid": testId, ...props }, ref) => {
     const { formatMessage } = useIntl();
 
-    const inputRef = useRef<HTMLInputElement | null>(null);
+    const [inputRef, setInputRef] = useState<HTMLInputElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
     const inputSelectionStartRef = useRef<number | null>(null);
 
     // Necessary to bind a ref passed from the parent in to our internal inputRef
-    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+    useImperativeHandle(ref, () => inputRef as HTMLInputElement, [inputRef]);
 
     const [isContentVisible, toggleIsContentVisible] = useToggle(false);
     const [focused, setFocused] = useState(false);
@@ -34,12 +34,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const type = isPassword ? (isContentVisible ? "text" : "password") : props.type;
 
     const focusOnInputElement = useCallback(() => {
-      if (!inputRef.current) {
+      if (!inputRef) {
         return;
       }
 
-      const { current: element } = inputRef;
-      const selectionStart = inputSelectionStartRef.current ?? inputRef.current?.value.length;
+      const element = inputRef;
+      const selectionStart = inputSelectionStartRef.current ?? inputRef.value.length;
 
       element.focus();
 
@@ -49,23 +49,23 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           element.setSelectionRange(selectionStart, selectionStart);
         }, 0);
       }
-    }, []);
+    }, [inputRef]);
 
     const onContainerFocus: React.FocusEventHandler<HTMLDivElement> = () => {
       setFocused(true);
     };
 
     const onContainerBlur: React.FocusEventHandler<HTMLDivElement> = (event) => {
-      if (isVisibilityButtonVisible && event.target === inputRef.current) {
+      if (isVisibilityButtonVisible && event.target === inputRef) {
         // Save the previous selection
-        inputSelectionStartRef.current = inputRef.current.selectionStart;
+        inputSelectionStartRef.current = inputRef.selectionStart;
       }
 
       setFocused(false);
 
       if (isPassword) {
         window.setTimeout(() => {
-          if (document.activeElement !== inputRef.current && document.activeElement !== buttonRef.current) {
+          if (document.activeElement !== inputRef && document.activeElement !== buttonRef.current) {
             toggleIsContentVisible(false);
             inputSelectionStartRef.current = null;
           }
@@ -91,7 +91,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={error}
           data-testid={testId ?? "input"}
           {...props}
-          ref={inputRef}
+          ref={setInputRef}
           type={type}
           className={classNames(
             styles.input,

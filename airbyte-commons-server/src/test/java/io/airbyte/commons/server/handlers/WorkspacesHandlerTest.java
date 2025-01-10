@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -45,6 +45,8 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.limits.ConsumptionService;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
@@ -63,6 +65,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
@@ -117,6 +120,9 @@ class WorkspacesHandlerTest {
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
   private TrackingClient trackingClient;
+  private ProductLimitsProvider limitsProvider;
+  private ConsumptionService consumptionService;
+  private FeatureFlagClient ffClient;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
@@ -133,6 +139,9 @@ class WorkspacesHandlerTest {
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
     trackingClient = mock(TrackingClient.class);
+    limitsProvider = mock(ProductLimitsProvider.class);
+    consumptionService = mock(ConsumptionService.class);
+    ffClient = mock(TestClient.class);
 
     workspace = generateWorkspace();
     workspacesHandler =
@@ -146,7 +155,10 @@ class WorkspacesHandlerTest {
             uuidSupplier,
             workspaceService,
             trackingClient,
-            apiPojoConverters);
+            apiPojoConverters,
+            limitsProvider,
+            consumptionService,
+            ffClient);
   }
 
   private StandardWorkspace generateWorkspace() {
@@ -173,8 +185,6 @@ class WorkspacesHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withName(TEST_ORGANIZATION_NAME)
         .withEmail(TEST_EMAIL)
-        .withPba(false)
-        .withOrgLevelBilling(false)
         .withSsoRealm(ssoRealm);
   }
 
@@ -598,7 +608,6 @@ class WorkspacesHandlerTest {
 
     assertEquals(organization.getOrganizationId(), orgInfo.getOrganizationId());
     assertEquals(organization.getName(), orgInfo.getOrganizationName());
-    assertEquals(organization.getPba(), orgInfo.getPba());
     assertEquals(isSso, orgInfo.getSso()); // sso is true if ssoRealm is set
   }
 
@@ -882,7 +891,8 @@ class WorkspacesHandlerTest {
     workspacesHandler =
         new WorkspacesHandler(workspacePersistence, organizationPersistence,
             secretsRepositoryWriter, permissionPersistence, connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters);
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters,
+            limitsProvider, consumptionService, ffClient);
 
     final UUID uuid = UUID.randomUUID();
     when(uuidSupplier.get()).thenReturn(uuid);

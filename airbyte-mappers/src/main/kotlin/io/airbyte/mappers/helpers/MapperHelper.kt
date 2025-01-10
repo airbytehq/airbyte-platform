@@ -5,6 +5,7 @@ import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.config.mapper.configs.HashingMapperConfig
 import io.airbyte.config.mapper.configs.HashingMethods
 import io.airbyte.mappers.transformations.HashingMapper
+import java.util.UUID
 
 internal const val DEFAULT_HASHING_METHOD = HashingMapper.SHA256
 internal const val DEFAULT_HASHING_SUFFIX = "_hashed"
@@ -12,8 +13,12 @@ internal const val DEFAULT_HASHING_SUFFIX = "_hashed"
 /**
  * Create a hashing mapper for a given field.
  */
-fun createHashingMapper(fieldName: String): HashingMapperConfig {
+fun createHashingMapper(
+  fieldName: String,
+  id: UUID? = null,
+): HashingMapperConfig {
   return HashingMapperConfig(
+    id = id,
     name = MapperOperationName.HASHING,
     config =
       HashingConfig(
@@ -22,6 +27,10 @@ fun createHashingMapper(fieldName: String): HashingMapperConfig {
         DEFAULT_HASHING_SUFFIX,
       ),
   )
+}
+
+fun createHashingMapper(fieldName: String): HashingMapperConfig {
+  return createHashingMapper(fieldName, null)
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -13,19 +13,16 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
-import io.airbyte.workers.temporal.sync.ReplicationActivity;
-import io.airbyte.workers.temporal.sync.ReplicationActivityImpl;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivityImpl;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
-import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest(environments = {EnvConstants.DATA_PLANE, Environment.KUBERNETES})
+@MicronautTest(environments = {EnvConstants.DATA_PLANE})
 @Property(name = "airbyte.internal-api.base-path",
           value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",
@@ -44,6 +41,8 @@ import org.junit.jupiter.api.Test;
           value = "workload")
 @Property(name = "airbyte.cloud.storage.bucket.activity-payload",
           value = "payload")
+// @Property(name = "airbyte.cloud.storage.bucket.audit-logging",
+// value = "audit")
 class DataPlaneActivityInitializationMicronautTest {
 
   // Ideally this should be broken down into different tests to get a clearer view of which bean
@@ -62,9 +61,6 @@ class DataPlaneActivityInitializationMicronautTest {
   RefreshSchemaActivity refreshSchemaActivity;
 
   @Inject
-  ReplicationActivity replicationActivity;
-
-  @Inject
   WebhookOperationActivity webhookOperationActivity;
 
   @Test
@@ -75,11 +71,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Test
   void testRefreshSchemaActivity() {
     assertEquals(RefreshSchemaActivityImpl.class, refreshSchemaActivity.getClass());
-  }
-
-  @Test
-  void testReplicationActivity() {
-    assertEquals(ReplicationActivityImpl.class, replicationActivity.getClass());
   }
 
   @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -12,6 +12,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OP
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
@@ -331,6 +332,96 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   /**
+   * List connections that use a destination.
+   *
+   * @param destinationId destination id
+   * @param includeDeleted include deleted
+   * @return connections that use the provided destination
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<StandardSync> listConnectionsByDestination(final UUID destinationId, final boolean includeDeleted)
+      throws IOException {
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+        .from(CONNECTION)
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .where(CONNECTION.DESTINATION_ID.eq(destinationId)
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
+  /**
+   * List connections for a given list of sources.
+   *
+   * @param sourceIds source ids
+   * @param includeDeleted include deleted
+   * @param includeInactive include inactive
+   * @return connections that use the provided source
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<StandardSync> listConnectionsBySources(final List<UUID> sourceIds, final boolean includeDeleted, final boolean includeInactive)
+      throws IOException {
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+        .from(CONNECTION)
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .where(CONNECTION.SOURCE_ID.in(sourceIds)
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
+            .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
+  /**
+   * List connections that use a destination.
+   *
+   * @param destinationIds destination id
+   * @param includeDeleted include deleted
+   * @param includeInactive include inactive
+   * @return connections that use the provided destination
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<StandardSync> listConnectionsByDestinations(final List<UUID> destinationIds,
+                                                          final boolean includeDeleted,
+                                                          final boolean includeInactive)
+      throws IOException {
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+        .from(CONNECTION)
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .where(CONNECTION.DESTINATION_ID.in(destinationIds)
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
+            .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive))) // Close parentheses properly here
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
+  /**
    * List connections that use a particular actor definition.
    *
    * @param actorDefinitionId id of the source or destination definition.
@@ -342,7 +433,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   @Override
   public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
                                                                       final String actorTypeValue,
-                                                                      final boolean includeDeleted)
+                                                                      final boolean includeDeleted,
+                                                                      final boolean includeInactive)
       throws IOException {
     final Condition actorDefinitionJoinCondition = switch (ActorType.valueOf(actorTypeValue)) {
       case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
@@ -359,7 +451,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
         .leftJoin(SCHEMA_MANAGEMENT).on(CONNECTION.ID.eq(SCHEMA_MANAGEMENT.CONNECTION_ID))
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
-            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
+            .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
         .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
@@ -458,18 +551,18 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * Disable a list of connections by setting their status to inactive.
    *
    * @param connectionIds list of connection ids to disable
+   * @return set of connection ids that were updated
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
-    database.transaction(ctx -> {
-      ctx.update(CONNECTION)
-          .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
-          .set(CONNECTION.STATUS, StatusType.inactive)
-          .where(CONNECTION.ID.in(connectionIds))
-          .execute();
-      return null;
-    });
+  public Set<UUID> disableConnectionsById(final List<UUID> connectionIds) throws IOException {
+    return database.transaction(ctx -> ctx.update(CONNECTION)
+        .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
+        .set(CONNECTION.STATUS, StatusType.inactive)
+        .where(CONNECTION.ID.in(connectionIds)
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
+        .returning(CONNECTION.ID)
+        .fetchSet(CONNECTION.ID));
   }
 
   @Override
@@ -478,6 +571,17 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .from(CONNECTION)
         .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
         .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .fetchInto(UUID.class));
+  }
+
+  @Override
+  public List<UUID> listConnectionIdsForOrganization(final UUID organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID))
+        .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR.WORKSPACE_ID))
+        .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+        .and(CONNECTION.STATUS.ne(StatusType.deprecated))
         .fetchInto(UUID.class));
   }
 

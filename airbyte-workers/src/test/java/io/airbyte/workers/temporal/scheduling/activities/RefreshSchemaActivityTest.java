@@ -1,16 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -23,11 +18,8 @@ import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.CatalogDiff;
-import io.airbyte.api.client.model.generated.ConnectionAutoPropagateResult;
-import io.airbyte.api.client.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.JobConfigType;
-import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
@@ -38,18 +30,9 @@ import io.airbyte.api.client.model.generated.SynchronousJobRead;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RefreshSchemaPeriod;
-import io.airbyte.featureflag.ShouldRunRefreshSchema;
-import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.workers.helper.CatalogDiffConverter;
-import io.airbyte.workers.models.RefreshSchemaActivityInput;
-import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -72,7 +55,6 @@ class RefreshSchemaActivityTest {
   private ConnectionApi mConnectionApi;
   private WorkspaceApi mWorkspaceApi;
   private TestClient mFeatureFlagClient;
-  private PayloadChecker mPayloadChecker;
 
   private RefreshSchemaActivityImpl refreshSchemaActivity;
 
@@ -94,10 +76,9 @@ class RefreshSchemaActivityTest {
     mConnectionApi = mock(ConnectionApi.class);
     mFeatureFlagClient = mock(TestClient.class, withSettings().strictness(Strictness.LENIENT));
     mWorkspaceApi = mock(WorkspaceApi.class, withSettings().strictness(Strictness.LENIENT));
-    mPayloadChecker = mock(PayloadChecker.class, withSettings().strictness(Strictness.LENIENT));
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
-            null, null, null, null, null, null));
+            null, null, null, null, null, null, null));
     when(mSourceApi.getSource(new SourceIdRequestBody(SOURCE_ID))).thenReturn(
         new SourceRead(SOURCE_DEFINITION_ID, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
             null));
@@ -124,7 +105,7 @@ class RefreshSchemaActivityTest {
                     null));
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
     refreshSchemaActivity =
-        new RefreshSchemaActivityImpl(mAirbyteApiClient, mFeatureFlagClient, mPayloadChecker);
+        new RefreshSchemaActivityImpl(mAirbyteApiClient, mFeatureFlagClient);
   }
 
   @Test
@@ -173,107 +154,6 @@ class RefreshSchemaActivityTest {
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
 
     Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
-  }
-
-  @Test
-  void testRefreshSchema() throws IOException {
-    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(SOURCE_DEFINITION_ID), new Connection(CONNECTION_ID));
-
-    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
-    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
-
-    refreshSchemaActivity.refreshSchema(SOURCE_ID, CONNECTION_ID);
-
-    verify(mSourceApi).discoverSchemaForSource(
-        new SourceDiscoverSchemaRequestBody(SOURCE_ID, CONNECTION_ID, true, true, WorkloadPriority.DEFAULT));
-    verify(mWorkspaceApi).getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID));
-    verify(mSourceApi).applySchemaChangeForSource(new SourceAutoPropagateChange(CATALOG, CATALOG_ID, SOURCE_ID, WORKSPACE_ID));
-  }
-
-  @Test
-  void testRefreshSchemaWithRefreshSchemaFeatureFlagAsFalse() throws IOException {
-    final UUID sourceId = UUID.randomUUID();
-    final UUID connectionId = UUID.randomUUID();
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
-
-    when(mSourceApi.getSource(new SourceIdRequestBody(sourceId))).thenReturn(
-        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
-            null));
-    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(false);
-
-    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
-
-    verify(mSourceApi, times(0)).discoverSchemaForSource(any());
-    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
-  }
-
-  @Test
-  void testRefreshSchemaWithAutoPropagateFeatureFlagAsFalse() throws IOException {
-    final UUID sourceId = UUID.randomUUID();
-    final UUID connectionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
-
-    when(mSourceApi.getSource(new SourceIdRequestBody(sourceId))).thenReturn(
-        new SourceRead(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, Jsons.jsonNode(Map.of()), "name", "source-name", 1L, null, null, null, null,
-            null));
-    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
-    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
-        .thenReturn(new WorkspaceRead(workspaceId, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
-            null, null, null, null, null, null));
-
-    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
-
-    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
-  }
-
-  @Test
-  void testRefreshSchemaForAutoBackfillOnNewColumns() throws IOException {
-    // Test the version of schema refresh that will be used when we want to run backfills.
-
-    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
-    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-
-    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
-        .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
-
-    final var result = refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
-
-    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
-    verify(mConnectionApi, times(1))
-        .applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID));
-    assertEquals(CatalogDiffConverter.toDomain(CATALOG_DIFF), result.getAppliedDiff());
-  }
-
-  @Test
-  void refreshSchemaHandlesNullDiff() throws IOException {
-    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
-    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-
-    final CatalogDiff catalogDiff = null;
-    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
-        .thenReturn(new ConnectionAutoPropagateResult(catalogDiff));
-
-    final var result = refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
-
-    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
-    verify(mConnectionApi, times(1))
-        .applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID));
-    assertNull(result.getAppliedDiff());
-  }
-
-  @Test
-  void refreshV2ValidatesPayloadSize() throws IOException {
-    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
-    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
-        .thenReturn(new ConnectionAutoPropagateResult(CATALOG_DIFF));
-
-    refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
-
-    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CatalogDiffConverter.toDomain(CATALOG_DIFF))), any());
   }
 
 }

@@ -1,10 +1,13 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
+import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -66,7 +69,14 @@ class LaunchPodStageTest {
 
   @Test
   fun `launches check`() {
-    val checkInput = CheckConnectionInput()
+    val launcherConfig: IntegrationLauncherConfig = mockk()
+    val checkConnectionInput: StandardCheckConnectionInput = mockk()
+    val checkInput =
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig(),
+        launcherConfig = launcherConfig,
+        checkConnectionInput = checkConnectionInput,
+      )
     val payload = CheckPayload(checkInput)
 
     val launcher: KubePodClient = mockk()
@@ -88,7 +98,12 @@ class LaunchPodStageTest {
 
   @Test
   fun `launches discover`() {
-    val discoverInput = DiscoverCatalogInput()
+    val discoverInput =
+      DiscoverCatalogInput(
+        jobRunConfig = mockk(),
+        launcherConfig = mockk(),
+        discoverCatalogInput = mockk(),
+      )
     val payload = DiscoverCatalogPayload(discoverInput)
 
     val launcher: KubePodClient = mockk()

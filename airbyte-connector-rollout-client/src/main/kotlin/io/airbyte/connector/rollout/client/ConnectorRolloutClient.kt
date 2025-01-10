@@ -1,14 +1,15 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.client
 
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
@@ -56,8 +57,8 @@ class ConnectorRolloutClient
       }
     }
 
-    fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
-      logger.info { "ConnectorRolloutService.startWorkflow with input: $input" }
+    fun startRollout(input: ConnectorRolloutWorkflowInput) {
+      logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
       if (input.rolloutId == null) {
         throw RuntimeException("Rollout ID is required to start a rollout workflow")
       }
@@ -76,14 +77,28 @@ class ConnectorRolloutClient
       logger.info { "Starting workflow $workflowId" }
       val workflowExecution = WorkflowClient.start(workflowStub::run, input)
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
-      val startOutput = executeUpdate(input, workflowId) { stub, i -> stub.startRollout(i) }
-      logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
-      return startOutput
     }
 
-    fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    fun doRollout(input: ConnectorRolloutActivityInputRollout) {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeUpdate(input, workflowId) { stub, i -> stub.doRollout(i) }
+      val workflow =
+        workflowClient.getClient().newWorkflowStub(
+          ConnectorRolloutWorkflow::class.java,
+          workflowId,
+        )
+      logger.info { "Rollout $workflowId starting `doRollout` for workflow: $workflow" }
+      // Send the `update` request async so we don't block waiting for the actors to be pinned
+      WorkflowStub.fromTyped(workflow).startUpdate(
+        "progressRollout",
+        WorkflowUpdateStage.ACCEPTED,
+        ConnectorRolloutOutput::class.java,
+        input,
+      )
+    }
+
+    fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+      return executeUpdate(input, workflowId) { stub, i -> stub.pauseRollout(i) }
     }
 
     fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize) {

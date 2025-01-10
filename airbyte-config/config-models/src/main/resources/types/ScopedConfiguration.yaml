@@ -8,8 +8,6 @@ required:
   - id
   - key
   - value
-  - resourceType
-  - resourceId
   - scopeType
   - scopeId
   - originType

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -430,6 +430,28 @@ class DefaultJobPersistenceTest {
         jobId,
         SYNC_JOB_CONFIG,
         JobStatus.INCOMPLETE,
+        Lists.newArrayList(
+            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
+            createAttempt(1, jobId, AttemptStatus.FAILED, LOG_PATH)),
+        NOW.getEpochSecond());
+
+    assertEquals(Optional.of(expected), actual);
+  }
+
+  @Test
+  @DisplayName("When getting the last replication job should return the most recently created job")
+  void testGetLastSyncJobWithCancel() throws IOException {
+    final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
+    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
+    jobPersistence.cancelJob(jobId);
+
+    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE));
+
+    final Job expected = createJob(
+        jobId,
+        SYNC_JOB_CONFIG,
+        JobStatus.CANCELLED,
         Lists.newArrayList(
             createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
             createAttempt(1, jobId, AttemptStatus.FAILED, LOG_PATH)),

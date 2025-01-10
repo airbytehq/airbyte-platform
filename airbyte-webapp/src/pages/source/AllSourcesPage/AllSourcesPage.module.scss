@@ -11,7 +11,7 @@ $filters-fixed-height: 108px;
 
 .pageBody {
   grid-area: page-content;
-  overflow-y: auto;
+  padding-top: 0;
 }
 
 .card {

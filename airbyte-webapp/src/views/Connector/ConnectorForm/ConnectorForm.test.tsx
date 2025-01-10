@@ -4,13 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 
-import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
@@ -32,11 +31,6 @@ jest.mock("core/api", () => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
   })),
-  useCurrentWorkspace: () => mockWorkspace,
-}));
-
-jest.mock("core/utils/rbac", () => ({
-  useIntent: () => true,
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
@@ -291,11 +285,12 @@ describe("Connector form", () => {
   }: {
     disableOAuth?: boolean;
     formValuesOverride?: Record<string, unknown>;
-    specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+    specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
+        canEdit
         formType="source"
         formValues={{ name: "test-name", connectionConfiguration: { ...formValuesOverride } }}
         onSubmit={async (values) => {
@@ -953,7 +948,7 @@ describe("Connector form", () => {
       props: {
         disableOAuth?: boolean;
         formValuesOverride?: Record<string, unknown>;
-        specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+        specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
       } = {}
     ) {
       return renderForm({
@@ -1007,11 +1002,6 @@ describe("Connector form", () => {
         },
       });
     }
-    it("should render regular inputs for auth fields", async () => {
-      const container = await renderNewOAuthForm({ disableOAuth: true });
-      expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
-      expect(getOAuthButton(container)).not.toBeInTheDocument();
-    });
 
     it("should render the oauth button", async () => {
       const container = await renderNewOAuthForm();

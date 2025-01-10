@@ -1,5 +1,7 @@
 package io.airbyte.connector.rollout.shared.models
 
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import java.time.OffsetDateTime
@@ -25,4 +27,7 @@ data class ConnectorRolloutOutput(
   var expiresAt: OffsetDateTime? = null,
   var errorMsg: String? = null,
   var failedReason: String? = null,
+  var pausedReason: String? = null,
+  var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
+  var actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
 )

@@ -19,17 +19,23 @@ import io.airbyte.config.helpers.StreamBreakingChangeScope
 import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
+import io.airbyte.data.services.shared.ConnectorUpdate
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseBreakingChangeScopes
 import io.airbyte.featureflag.Workspace
+import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.http.annotation.Trace
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.UUID
 import java.util.stream.Collectors
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ActorDefinitionVersionUpdater(
@@ -37,6 +43,7 @@ class ActorDefinitionVersionUpdater(
   private val connectionService: ConnectionService,
   private val actorDefinitionService: ActorDefinitionService,
   private val scopedConfigurationService: ScopedConfigurationService,
+  private val connectionTimelineEventService: ConnectionTimelineEventService,
 ) {
   fun updateDestinationDefaultVersion(
     destinationDefinition: StandardDestinationDefinition,
@@ -73,6 +80,7 @@ class ActorDefinitionVersionUpdater(
       source.sourceId,
       sourceDefinition.sourceDefinitionId,
       ActorType.SOURCE,
+      source.name,
     )
   }
 
@@ -87,6 +95,7 @@ class ActorDefinitionVersionUpdater(
       destination.destinationId,
       destinationDefinition.destinationDefinitionId,
       ActorType.DESTINATION,
+      destination.name,
     )
   }
 
@@ -95,6 +104,7 @@ class ActorDefinitionVersionUpdater(
     actorId: UUID,
     actorDefinitionId: UUID,
     actorType: ActorType,
+    actorName: String,
   ) {
     val versionPinConfigOpt =
       scopedConfigurationService.getScopedConfiguration(
@@ -111,6 +121,32 @@ class ActorDefinitionVersionUpdater(
       }
 
       scopedConfigurationService.deleteScopedConfiguration(versionPinConfig.id)
+      try {
+        val previousVersion = actorDefinitionService.getActorDefinitionVersion(UUID.fromString(versionPinConfig.value)).dockerImageTag
+        val newVersion = actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId).get().dockerImageTag
+        val connections =
+          if (actorType == ActorType.SOURCE) {
+            connectionService.listConnectionsBySource(actorId, true)
+          } else {
+            connectionService.listConnectionsByDestination(actorId, true)
+          }
+        connections
+          .forEach {
+            connectionTimelineEventService.writeEvent(
+              it.connectionId,
+              ConnectorUpdate(
+                previousVersion,
+                newVersion,
+                ConnectorUpdate.ConnectorType.SOURCE,
+                actorName,
+                ConnectorUpdate.UpdateType.BREAKING_CHANGE_MANUAL.name,
+              ),
+              null,
+            )
+          }
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to write connector upgrade timeline event for actor $actorDefinitionId: $e" }
+      }
     }
   }
 
@@ -143,6 +179,7 @@ class ActorDefinitionVersionUpdater(
     processBreakingChangePinRollbacks(actorDefinitionId, newDefaultVersion, breakingChangesForDefinition)
   }
 
+  @Trace
   @VisibleForTesting
   fun getConfigScopeMaps(actorDefinitionId: UUID): Collection<ConfigScopeMapWithId> {
     val actorScopes = actorDefinitionService.getActorIdsForDefinition(actorDefinitionId)
@@ -297,6 +334,23 @@ class ActorDefinitionVersionUpdater(
           .withOrigin(rolloutId.toString())
       }.toList()
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
+  }
+
+  fun migrateReleaseCandidatePins(
+    actorDefinitionId: UUID,
+    origins: List<String>,
+    newOrigin: String,
+    newReleaseCandidateVersionId: UUID,
+  ) {
+    scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+      ConnectorVersionKey.key,
+      ConfigResourceType.ACTOR_DEFINITION,
+      actorDefinitionId,
+      ConfigOriginType.CONNECTOR_ROLLOUT,
+      origins,
+      newOrigin,
+      newReleaseCandidateVersionId.toString(),
+    )
   }
 
   @VisibleForTesting

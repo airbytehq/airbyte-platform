@@ -10,7 +10,6 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.fabric8.kubernetes.api.model.Toleration
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -24,8 +23,8 @@ data class ReplicationPodFactory(
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
+  private val nodeSelectionFactory: NodeSelectionFactory,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
-  @Named("replicationPodTolerations") private val tolerations: List<Toleration>,
 ) {
   fun create(
     podName: String,
@@ -75,6 +74,8 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -91,8 +92,9 @@ data class ReplicationPodFactory(
       .withContainers(orchContainer, sourceContainer, destContainer)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
-      .withNodeSelector<Any, Any>(nodeSelectors)
-      .withTolerations(tolerations)
+      .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
+      .withTolerations(nodeSelection.tolerations)
+      .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()
@@ -136,6 +138,8 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors, allLabels)
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -152,8 +156,9 @@ data class ReplicationPodFactory(
       .withContainers(orchContainer, destContainer)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
-      .withNodeSelector<Any, Any>(nodeSelectors)
-      .withTolerations(tolerations)
+      .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
+      .withTolerations(nodeSelection.tolerations)
+      .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()

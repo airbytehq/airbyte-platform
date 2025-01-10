@@ -9,6 +9,4 @@ interface OrganizationPaymentConfigService {
   fun findByPaymentProviderId(paymentProviderId: String): OrganizationPaymentConfig?
 
   fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig)
-
-  fun deletePaymentConfig(organizationId: UUID)
 }

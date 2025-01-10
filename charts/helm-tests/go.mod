@@ -3,8 +3,8 @@ module github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests
 go 1.23.1
 
 require (
-	github.com/gruntwork-io/terratest v0.46.14
-	github.com/stretchr/testify v1.8.4
+	github.com/gruntwork-io/terratest v0.47.2
+	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0

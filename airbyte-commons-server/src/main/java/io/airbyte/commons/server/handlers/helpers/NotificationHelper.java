@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -65,13 +65,12 @@ public class NotificationHelper {
       final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
       final boolean isBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
 
-      final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-          .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
-          .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
-          .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
-          .catalogDiff(diff)
-          .isBreakingChange(isBreakingChange)
-          .build();
+      final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+          new WorkspaceInfo(workspace.getWorkspaceId(), workspace.getName(), workspaceUrl),
+          new ConnectionInfo(connection.getConnectionId(), connection.getName(), connectionUrl),
+          new SourceInfo(source.getSourceId(), source.getName(), sourceUrl),
+          isBreakingChange,
+          diff);
       return notification;
     } catch (final Exception e) {
       LOGGER.error("Failed to build notification {}: {}", workspace, e);

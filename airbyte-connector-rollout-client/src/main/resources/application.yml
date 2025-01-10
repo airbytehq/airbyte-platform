@@ -5,8 +5,6 @@ micronaut:
     - io.airbyte.connector.rollout.client
   inject:
     visibility: all # Enable verbose logging for bean injection
-  env:
-    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:

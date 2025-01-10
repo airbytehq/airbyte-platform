@@ -20,7 +20,6 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.podLabels "context" $) | nindent 8 }}
         {{- end }}
       annotations:
-        checksum/sweep-pod-script: {{ include (print $.Template.BasePath "/airbyte-pod-sweeper/configmap.yaml") . | sha256sum }}
       {{- if .Values.podSweeper.podAnnotations }}
         {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
@@ -60,9 +59,6 @@ spec:
         securityContext: {{- toYaml .Values.podSweeper.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - mountPath: /script/sweep-pod.sh
-          subPath: sweep-pod.sh
-          name: sweep-pod-script
         - mountPath: /.kube
           name: kube-config
         command: ["/bin/bash", "-c", /script/sweep-pod.sh]
@@ -99,7 +95,3 @@ spec:
       volumes:
       - name: kube-config
         emptyDir: {}
-      - name: sweep-pod-script
-        configMap:
-          name: {{ .Release.Name }}-pod-sweeper-sweep-pod-script
-          defaultMode: 0755

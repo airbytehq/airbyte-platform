@@ -1,14 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
-import static java.time.temporal.ChronoUnit.DAYS;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -47,7 +45,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FailureOrigin;
 import io.airbyte.api.model.generated.FailureReason;
 import io.airbyte.api.model.generated.FailureType;
-import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobAggregatedStats;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobSyncResultRead;
@@ -55,7 +52,6 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
-import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
@@ -82,12 +78,14 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper.Update
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptWithJobInfo;
@@ -101,7 +99,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.config.JobWithStatusAndTimestamp;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.ScopeType;
@@ -110,7 +107,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
-import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -145,11 +141,9 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -181,9 +175,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ *
+ * @deprecated New connection-related functionality should be added to the ConnectionService
  */
 @Singleton
 @SuppressWarnings("PMD.PreserveStackTrace")
+@Deprecated
 public class ConnectionsHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionsHandler.class);
@@ -199,9 +196,6 @@ public class ConnectionsHandler {
   private final FeatureFlagClient featureFlagClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ConnectorDefinitionSpecificationHandler connectorSpecHandler;
-  private final JobNotifier jobNotifier;
-  private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-  private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final StreamGenerationRepository streamGenerationRepository;
@@ -212,6 +206,7 @@ public class ConnectionsHandler {
   private final ConnectionTimelineEventService connectionTimelineEventService;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final StatePersistence statePersistence;
+  private final MapperSecretHelper mapperSecretHelper;
 
   private final CatalogService catalogService;
   private final SourceService sourceService;
@@ -238,9 +233,6 @@ public class ConnectionsHandler {
                             final FeatureFlagClient featureFlagClient,
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
-                            final JobNotifier jobNotifier,
-                            @Value("${airbyte.server.connection.limits.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
-                            @Value("${airbyte.server.connection.limits.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
                             final StreamGenerationRepository streamGenerationRepository,
                             final CatalogGenerationSetter catalogGenerationSetter,
                             final CatalogValidator catalogValidator,
@@ -257,7 +249,8 @@ public class ConnectionsHandler {
                             final CatalogConverter catalogConverter,
                             final ApplySchemaChangeHelper applySchemaChangeHelper,
                             final ApiPojoConverters apiPojoConverters,
-                            final ConnectionScheduleHelper connectionScheduleHelper) {
+                            final ConnectionScheduleHelper connectionScheduleHelper,
+                            final MapperSecretHelper mapperSecretHelper) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -268,9 +261,6 @@ public class ConnectionsHandler {
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.connectorSpecHandler = connectorSpecHandler;
-    this.jobNotifier = jobNotifier;
-    this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-    this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.streamGenerationRepository = streamGenerationRepository;
     this.catalogGenerationSetter = catalogGenerationSetter;
@@ -289,6 +279,7 @@ public class ConnectionsHandler {
     this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
     this.connectionScheduleHelper = connectionScheduleHelper;
+    this.mapperSecretHelper = mapperSecretHelper;
   }
 
   /**
@@ -296,7 +287,7 @@ public class ConnectionsHandler {
    * patch. Any fields that are null in the patch will be left unchanged.
    */
   private void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
-      throws JsonValidationException {
+      throws JsonValidationException, ConfigNotFoundException {
     // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
     // the helper to ensure both fields
     // make sense together.
@@ -312,10 +303,13 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
+      assignIdsToIncomingMappers(patch.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(patch.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
 
-      sync.setCatalog(configuredCatalog);
+      final ConfiguredAirbyteCatalog configuredCatalogNoSecrets =
+          mapperSecretHelper.updateAndReplaceMapperSecrets(workspaceId, sync.getCatalog(), configuredCatalog);
+      sync.setCatalog(configuredCatalogNoSecrets);
       sync.withFieldSelectionData(catalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
@@ -394,161 +388,12 @@ public class ConnectionsHandler {
     }
   }
 
-  public InternalOperationResult autoDisableConnection(final UUID connectionId)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    return autoDisableConnection(connectionId, Instant.now());
-  }
-
-  @VisibleForTesting
-  InternalOperationResult autoDisableConnection(final UUID connectionId, final Instant timestamp)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    // if connection is already inactive, no need to disable
-    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
-    if (standardSync.getStatus() == Status.INACTIVE) {
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final int maxDaysOfOnlyFailedJobs = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
-    final int maxDaysOfOnlyFailedJobsBeforeWarning = maxDaysOfOnlyFailedJobs / 2;
-    final int maxFailedJobsInARowBeforeConnectionDisableWarning = maxFailedJobsInARowBeforeConnectionDisable / 2;
-    final long currTimestampInSeconds = timestamp.getEpochSecond();
-    final Optional<Job> optionalLastJob = jobPersistence.getLastReplicationJob(connectionId);
-    final Optional<Job> optionalFirstJob = jobPersistence.getFirstReplicationJob(connectionId);
-
-    if (optionalLastJob.isEmpty()) {
-      LOGGER.error("Auto-Disable Connection should not have been attempted if can't get latest replication job.");
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    if (optionalFirstJob.isEmpty()) {
-      LOGGER.error("Auto-Disable Connection should not have been attempted if no replication job has been run.");
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final List<JobWithStatusAndTimestamp> jobs = jobPersistence.listJobStatusAndTimestampWithConnection(connectionId,
-        REPLICATION_TYPES, timestamp.minus(maxDaysOfOnlyFailedJobs, DAYS));
-
-    int numFailures = 0;
-    Optional<Long> successTimestamp = Optional.empty();
-
-    for (final JobWithStatusAndTimestamp job : jobs) {
-      final JobStatus jobStatus = job.getStatus();
-      if (jobStatus == JobStatus.FAILED) {
-        numFailures++;
-      } else if (jobStatus == JobStatus.SUCCEEDED) {
-        successTimestamp = Optional.of(job.getUpdatedAtInSecond());
-        break;
+  private void assignIdsToIncomingMappers(final AirbyteCatalog catalog) {
+    catalog.getStreams().forEach(stream -> stream.getConfig().getMappers().forEach(mapper -> {
+      if (mapper.getId() == null) {
+        mapper.setId(uuidGenerator.get());
       }
-    }
-
-    final boolean warningPreviouslySentForMaxDays =
-        warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (final Attempt attempt : optionalLastJob.get().getAttempts()) {
-      attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
-    }
-    if (numFailures == 0) {
-      return new InternalOperationResult().succeeded(false);
-    } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
-      // disable connection if max consecutive failed jobs limit has been hit
-      autoDisableConnection(standardSync, optionalLastJob.get(),
-          ConnectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW);
-      return new InternalOperationResult().succeeded(true);
-    } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
-      // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    // calculate the number of days this connection first tried a replication job, used to ensure not to
-    // disable or warn for `maxDaysOfOnlyFailedJobs` if the first job is younger than
-    // `maxDaysOfOnlyFailedJobs` days, This avoids cases such as "the very first job run was a failure".
-    final int numDaysSinceFirstReplicationJob = getDaysSinceTimestamp(currTimestampInSeconds, optionalFirstJob.get().getCreatedAtInSecond());
-    final boolean firstReplicationOlderThanMaxDisableDays = numDaysSinceFirstReplicationJob >= maxDaysOfOnlyFailedJobs;
-    final boolean noPreviousSuccess = successTimestamp.isEmpty();
-
-    // disable connection if only failed jobs in the past maxDaysOfOnlyFailedJobs days
-    if (firstReplicationOlderThanMaxDisableDays && noPreviousSuccess) {
-      autoDisableConnection(standardSync, optionalLastJob.get(), ConnectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY);
-      return new InternalOperationResult().succeeded(true);
-    }
-
-    // skip warning if previously sent
-    if (warningPreviouslySentForMaxDays || numFailures > maxFailedJobsInARowBeforeConnectionDisableWarning) {
-      LOGGER.info("Warning was previously sent for connection: {}", connectionId);
-      return new InternalOperationResult().succeeded(false);
-    }
-
-    final boolean firstReplicationOlderThanMaxDisableWarningDays = numDaysSinceFirstReplicationJob >= maxDaysOfOnlyFailedJobsBeforeWarning;
-    final boolean successOlderThanPrevFailureByMaxWarningDays = // set to true if no previous success is found
-        noPreviousSuccess || getDaysSinceTimestamp(currTimestampInSeconds, successTimestamp.get()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-
-    // send warning if there are only failed jobs in the past maxDaysOfOnlyFailedJobsBeforeWarning days
-    // _unless_ a warning should have already been sent in the previous failure
-    if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
-
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-    }
-    return new InternalOperationResult().succeeded(false);
-  }
-
-  private void autoDisableConnection(final StandardSync standardSync, final Job lastJob, final ConnectionAutoDisabledReason disabledReason)
-      throws IOException {
-    // apply patch to connection
-    standardSync.setStatus(Status.INACTIVE);
-    connectionService.writeStandardSync(standardSync);
-    // log connection disabled event in connection timeline
-    connectionTimelineEventHelper.logStatusChangedEventInConnectionTimeline(standardSync.getConnectionId(), ConnectionStatus.INACTIVE,
-        disabledReason.name(), true);
-
-    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (final Attempt attempt : lastJob.getAttempts()) {
-      attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
-    }
-    jobNotifier.autoDisableConnection(lastJob, attemptStats);
-  }
-
-  private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
-    return Math.toIntExact(TimeUnit.SECONDS.toDays(currentTimestampInSeconds - timestampInSeconds));
-  }
-
-  // Checks to see if warning should have been sent in the previous failure, if so skip sending of
-  // warning to avoid spam
-  // Assume warning has been sent if either of the following is true:
-  // 1. no success found in the time span and the previous failure occurred
-  // maxDaysOfOnlyFailedJobsBeforeWarning days after the first job
-  // 2. success found and the previous failure occurred maxDaysOfOnlyFailedJobsBeforeWarning days
-  // after that success
-  private boolean warningPreviouslySentForMaxDays(final int numFailures,
-                                                  final Optional<Long> successTimestamp,
-                                                  final int maxDaysOfOnlyFailedJobsBeforeWarning,
-                                                  final Job firstJob,
-                                                  final List<JobWithStatusAndTimestamp> jobs) {
-    // no previous warning sent if there was no previous failure
-    if (numFailures <= 1 || jobs.size() <= 1) {
-      return false;
-    }
-
-    // get previous failed job (skipping first job since that's considered "current" job)
-    JobWithStatusAndTimestamp prevFailedJob = jobs.get(1);
-    for (int i = 2; i < jobs.size(); i++) {
-      if (prevFailedJob.getStatus() == JobStatus.FAILED) {
-        break;
-      }
-      prevFailedJob = jobs.get(i);
-    }
-
-    final boolean successExists = successTimestamp.isPresent();
-    boolean successOlderThanPrevFailureByMaxWarningDays = false;
-    if (successExists) {
-      successOlderThanPrevFailureByMaxWarningDays =
-          getDaysSinceTimestamp(prevFailedJob.getUpdatedAtInSecond(), successTimestamp.get()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-    }
-    final boolean prevFailureOlderThanFirstJobByMaxWarningDays =
-        getDaysSinceTimestamp(prevFailedJob.getUpdatedAtInSecond(), firstJob.getUpdatedAtInSecond()) >= maxDaysOfOnlyFailedJobsBeforeWarning;
-
-    return (successExists && successOlderThanPrevFailureByMaxWarningDays)
-        || (!successExists && prevFailureOlderThanFirstJobByMaxWarningDays);
+    }));
   }
 
   private void validateConfiguredMappers(final ConfiguredAirbyteCatalog configuredCatalog) {
@@ -563,6 +408,7 @@ public class ConnectionsHandler {
             .error(mapperError.getValue().getType().name())
             .mapper(
                 new ProblemMapperErrorDataMapper()
+                    .id(mapperError.getKey().id())
                     .type(mapperError.getKey().name())
                     .mapperConfiguration(mapperError.getKey().config()))))
         .toList();
@@ -625,10 +471,13 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
+      assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
           catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
       validateConfiguredMappers(configuredCatalog);
-      standardSync.withCatalog(configuredCatalog);
+
+      final ConfiguredAirbyteCatalog configuredCatalogNoSecrets = mapperSecretHelper.createAndReplaceMapperSecrets(workspaceId, configuredCatalog);
+      standardSync.withCatalog(configuredCatalogNoSecrets);
       standardSync.withFieldSelectionData(catalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
@@ -843,7 +692,6 @@ public class ConnectionsHandler {
         case CRON -> Preconditions.checkArgument(
             patch.getScheduleData() != null,
             "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON.");
-
         // shouldn't be possible to reach this case
         default -> throw new RuntimeException("Unrecognized scheduleType!");
       }
@@ -967,19 +815,7 @@ public class ConnectionsHandler {
     final Set<List<String>> convertedNewPrimaryKey = new HashSet<>(newConfig.getPrimaryKey());
     final boolean hasPrimaryKeyChanged = !(convertedOldPrimaryKey.equals(convertedNewPrimaryKey));
 
-    // TODO(pedro): This should be checked by generating the destination catalog to support all mappers
-    final List<SelectedFieldInfo> oldHashedFields =
-        oldConfig.getHashedFields() == null ? new ArrayList() : new ArrayList(oldConfig.getHashedFields());
-    final List<SelectedFieldInfo> newHashedFields =
-        newConfig.getHashedFields() == null ? new ArrayList() : new ArrayList(newConfig.getHashedFields());
-
-    final Comparator<SelectedFieldInfo> fieldPathComparator = Comparator.comparing(
-        field -> String.join(".", field.getFieldPath()));
-    oldHashedFields.sort(fieldPathComparator);
-    newHashedFields.sort(fieldPathComparator);
-    final boolean hasHashedFieldsChanged = !oldHashedFields.equals(newHashedFields);
-
-    return hasCursorChanged || hasSyncModeChanged || hasDestinationSyncModeChanged || hasPrimaryKeyChanged || hasHashedFieldsChanged;
+    return hasCursorChanged || hasSyncModeChanged || hasDestinationSyncModeChanged || hasPrimaryKeyChanged;
   }
 
   private Map<StreamDescriptor, AirbyteStreamConfiguration> catalogToPerStreamConfiguration(final AirbyteCatalog catalog) {
@@ -1026,6 +862,10 @@ public class ConnectionsHandler {
   public ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSync standardSync = connectionService.getStandardSync(connectionId);
+
+    final ConfiguredAirbyteCatalog maskedCatalog = mapperSecretHelper.maskMapperSecrets(standardSync.getCatalog());
+    standardSync.setCatalog(maskedCatalog);
+
     return apiPojoConverters.internalToConnectionRead(standardSync);
   }
 
@@ -1091,7 +931,7 @@ public class ConnectionsHandler {
     final List<StandardSync> standardSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         actorDefinitionRequestBody.getActorDefinitionId(),
         actorDefinitionRequestBody.getActorType().toString(),
-        false);
+        false, true);
 
     for (final StandardSync standardSync : standardSyncs) {
       final ConnectionRead connectionRead = apiPojoConverters.internalToConnectionRead(standardSync);
@@ -1647,10 +1487,13 @@ public class ConnectionsHandler {
    */
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
+    final var connection = connectionService.getStandardSync(connectionId);
+    final var mostRecentCatalog = catalogService.getMostRecentSourceActorCatalog(connection.getSourceId());
+    final var mostRecentCatalogId = mostRecentCatalog.map(ActorCatalogWithUpdatedAt::getId).orElse(discoveredCatalogId);
+    final var read = diffCatalogAndConditionallyDisable(connectionId, mostRecentCatalogId);
 
     final var autoPropResult =
-        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog(), true);
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), mostRecentCatalogId, read.getCatalog(), true);
     final var diff = autoPropResult.getPropagatedDiff();
 
     return new PostprocessDiscoveredCatalogResult().appliedDiff(diff);

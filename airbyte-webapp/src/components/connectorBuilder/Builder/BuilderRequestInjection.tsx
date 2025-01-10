@@ -2,7 +2,6 @@ import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { useWatchWithPreview } from "../preview";
 import { InjectIntoValue, injectIntoOptions } from "../useBuilderValidationSchema";
 
@@ -44,8 +43,8 @@ export const BuilderRequestInjection: React.FC<BuilderRequestInjectionProps> = (
         tooltip={tooltip || formatMessage({ id: "connectorBuilder.injectInto.tooltip" }, { descriptor })}
       />
       {value !== "path" && (
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={`${path}.field_name`}
           label={
             injectIntoOptions.find((option) => option.value === value)?.fieldLabel ??

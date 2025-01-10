@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 /**
@@ -83,10 +83,6 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
-object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
-
-object BillingInArrearsForNewSignups : Temporary<Boolean>(key = "billing.inArrearsForNewSignups", default = false)
-
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
@@ -162,8 +158,6 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
-object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
-
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
@@ -172,16 +166,18 @@ object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", defaul
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
 
-object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
-
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
-
-object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
-
-object UseAsyncActivities : Temporary<Boolean>(key = "platform.use-async-activities", default = false)
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
-object StructuredLogs : Temporary<Boolean>(key = "platform.structured-logs", default = false)
+object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = true)
+
+object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
+
+object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)
+
+object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
+
+object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)

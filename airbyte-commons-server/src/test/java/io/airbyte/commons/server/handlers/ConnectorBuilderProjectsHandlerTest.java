@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -27,6 +27,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.BaseActorDefinitionVersionInfo;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
+import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest;
+import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest.HttpMethodEnum;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
@@ -46,6 +49,7 @@ import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
@@ -86,13 +90,18 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.oauth.OAuthImplementationFactory;
+import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
+import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -163,6 +172,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private ActorDefinitionService actorDefinitionService;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private ConnectorSpecification adaptedConnectorSpecification;
+  private OAuthImplementationFactory oauthImplementationFactory;
   private UUID workspaceId;
   private final String specString =
       """
@@ -219,6 +229,7 @@ class ConnectorBuilderProjectsHandlerTest {
     actorDefinitionService = mock(ActorDefinitionService.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
+    oauthImplementationFactory = mock(OAuthImplementationFactory.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
@@ -227,7 +238,7 @@ class ConnectorBuilderProjectsHandlerTest {
             manifestInjector,
             workspaceService, featureFlagClient,
             secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, sourceService, secretsProcessor,
-            connectorBuilderServerApiClient, actorDefinitionService, remoteDefinitionsProvider);
+            connectorBuilderServerApiClient, actorDefinitionService, remoteDefinitionsProvider, oauthImplementationFactory);
 
     when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
     when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
@@ -999,6 +1010,80 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest),
             eq(baseActorDefinitionVersionId), eq(null), eq(null));
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectOAuthConsent() throws Exception {
+    final UUID projectId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    final String redirectUrl = "https://airbyte.com/auth_flow";
+    final String consentUrl = "https://consent.url";
+
+    final OAuthConfigSpecification oAuthConfigSpecification = mock(OAuthConfigSpecification.class);
+    final ConnectorSpecification spec =
+        new ConnectorSpecification().withAdvancedAuth(new AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification));
+    final ConnectorBuilderProject project =
+        new ConnectorBuilderProject().withManifestDraft(Jsons.jsonNode(Map.of("spec", spec))).withTestingValues(testingValuesWithSecretCoordinates);
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, true)).thenReturn(project);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+
+    final DeclarativeOAuthFlow oAuthFlowImplementation = mock(DeclarativeOAuthFlow.class);
+    when(oAuthFlowImplementation.getSourceConsentUrl(eq(workspaceId), eq(null), eq(redirectUrl), eq(testingValues),
+        any(OAuthConfigSpecification.class), eq(testingValues)))
+            .thenReturn(consentUrl);
+
+    when(oauthImplementationFactory.createDeclarativeOAuthImplementation(any(ConnectorSpecification.class)))
+        .thenReturn(oAuthFlowImplementation);
+
+    final BuilderProjectOauthConsentRequest request = new BuilderProjectOauthConsentRequest()
+        .builderProjectId(projectId)
+        .workspaceId(workspaceId)
+        .redirectUrl(redirectUrl);
+
+    final OAuthConsentRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectOAuthConsent(request);
+
+    verify(oAuthFlowImplementation, times(1)).getSourceConsentUrl(eq(workspaceId), eq(null), eq(redirectUrl), eq(testingValues),
+        any(OAuthConfigSpecification.class), eq(testingValues));
+    assertEquals(consentUrl, response.getConsentUrl());
+  }
+
+  @Test
+  void testCompleteConnectorBuilderProjectOAuth() throws Exception {
+    final UUID projectId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    final String redirectUrl = "https://airbyte.com/auth_flow";
+    final Map<String, Object> queryParams = Map.of("code", "12345");
+    final Map<String, Object> oAuthResponse = Map.of("accessToken", "token");
+
+    final OAuthConfigSpecification oAuthConfigSpecification = mock(OAuthConfigSpecification.class);
+    final ConnectorSpecification spec =
+        new ConnectorSpecification().withAdvancedAuth(new AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification));
+    final ConnectorBuilderProject project =
+        new ConnectorBuilderProject().withManifestDraft(Jsons.jsonNode(Map.of("spec", spec))).withTestingValues(testingValuesWithSecretCoordinates);
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, true)).thenReturn(project);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+
+    final DeclarativeOAuthFlow oAuthFlowMock = mock(DeclarativeOAuthFlow.class);
+    when(oAuthFlowMock.completeSourceOAuth(eq(workspaceId), eq(null), eq(queryParams), eq(redirectUrl), eq(testingValues),
+        any(OAuthConfigSpecification.class), eq(testingValues)))
+            .thenReturn(oAuthResponse);
+
+    when(oauthImplementationFactory.createDeclarativeOAuthImplementation(any(ConnectorSpecification.class)))
+        .thenReturn(oAuthFlowMock);
+
+    when(connectorBuilderService.getConnectorBuilderProject(eq(projectId), eq(true))).thenReturn(project);
+
+    final CompleteConnectorBuilderProjectOauthRequest request = new CompleteConnectorBuilderProjectOauthRequest()
+        .builderProjectId(projectId)
+        .workspaceId(workspaceId)
+        .queryParams(queryParams)
+        .redirectUrl(redirectUrl);
+
+    final CompleteOAuthResponse response = connectorBuilderProjectsHandler.completeConnectorBuilderProjectOAuth(request);
+    final CompleteOAuthResponse expectedResponse = new CompleteOAuthResponse().requestSucceeded(true).authPayload(oAuthResponse);
+    verify(oAuthFlowMock, times(1)).completeSourceOAuth(eq(workspaceId), eq(null), eq(queryParams), eq(redirectUrl), eq(testingValues),
+        any(OAuthConfigSpecification.class), eq(testingValues));
+    assertEquals(expectedResponse, response);
   }
 
 }

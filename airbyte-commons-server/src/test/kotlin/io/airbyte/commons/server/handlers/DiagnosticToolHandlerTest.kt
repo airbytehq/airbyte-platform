@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.commons.server.handlers
 
@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.commons.csp.CheckResult
 import io.airbyte.commons.csp.CspChecker
 import io.airbyte.commons.csp.Storage
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
 import io.airbyte.commons.storage.StorageType
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationConnection
@@ -33,6 +34,8 @@ import io.fabric8.kubernetes.api.model.PodStatus
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
+import io.fabric8.kubernetes.client.dsl.Resource
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -50,7 +53,7 @@ import java.util.zip.ZipInputStream
 internal class DiagnosticToolHandlerTest {
   @Test
   fun testGenerateDiagnosticReport() {
-    val diagnosticToolHandler = mockDiagnosticToolHandler()
+    val diagnosticToolHandler = mockDiagnosticToolHandler(true)
     val zipFile: File? = diagnosticToolHandler.generateDiagnosticReport()
     Assertions.assertTrue(zipFile!!.exists())
     FileInputStream(zipFile).use { fis ->
@@ -106,9 +109,68 @@ internal class DiagnosticToolHandlerTest {
       }
     }
   }
+
+  @Test
+  fun testGenerateDiagnosticReportWithoutNodeViewerPermissionContainsNoDeploymnetYaml() {
+    val diagnosticToolHandler = mockDiagnosticToolHandler(false)
+    val zipFile: File? = diagnosticToolHandler.generateDiagnosticReport()
+    Assertions.assertTrue(zipFile!!.exists())
+    FileInputStream(zipFile).use { fis ->
+      ZipInputStream(fis).use { zis ->
+        var entry: ZipEntry?
+        var foundInstanceYaml: Boolean = false
+        var foundDeploymentYaml: Boolean = false
+        var foundCspChecksYaml: Boolean = false
+
+        // Iterate through the entries in the zip
+        while ((zis.nextEntry.also { entry = it }) != null) {
+          if (entry!!.name == AIRBYTE_INSTANCE_YAML) {
+            foundInstanceYaml = true
+
+            // Check the content of airbyte_instance.yaml
+            val buffer: ByteArray = ByteArray(1024)
+            var bytesRead: Int
+            val content: StringBuilder = StringBuilder()
+            while ((zis.read(buffer).also { bytesRead = it }) != -1) {
+              content.append(String(buffer, 0, bytesRead))
+            }
+            // workspace information
+            Assertions.assertTrue(content.toString().contains("workspaces"))
+            Assertions.assertTrue(content.toString().contains("connections"))
+            Assertions.assertTrue(content.toString().contains("connectors"))
+            // license information
+            Assertions.assertTrue(content.toString().contains("license"))
+            Assertions.assertTrue(content.toString().contains("expiryDate"))
+            Assertions.assertTrue(content.toString().contains("usedNodes"))
+          } else if (entry!!.name == AIRBYTE_DEPLOYMENT_YAML) {
+            foundDeploymentYaml = true
+
+            // Check the content of airbyte_deployment.yaml
+            val buffer: ByteArray = ByteArray(1024)
+            var bytesRead: Int
+            val content: StringBuilder = StringBuilder()
+            while ((zis.read(buffer).also { bytesRead = it }) != -1) {
+              content.append(String(buffer, 0, bytesRead))
+            }
+            // k8s information
+            Assertions.assertTrue(content.toString().contains("k8s"))
+            Assertions.assertTrue(content.toString().contains("nodes"))
+            Assertions.assertTrue(content.toString().contains("pods"))
+          } else if (entry!!.name == AIRBYTE_CSP_CHECKS) {
+            foundCspChecksYaml = true
+          }
+        }
+
+        // Ensure all yaml files are present in the zip
+        Assertions.assertTrue(foundInstanceYaml)
+        Assertions.assertFalse(foundDeploymentYaml)
+        Assertions.assertTrue(foundCspChecksYaml)
+      }
+    }
+  }
 }
 
-private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
+private fun mockDiagnosticToolHandler(withNodes: Boolean): DiagnosticToolHandler {
   val workspaceService: WorkspaceService =
     mockk {
       every { listStandardWorkspaces(false) } returns listOf(standardWorkspace)
@@ -156,6 +218,7 @@ private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
     }
 
   val kubernetesClient: KubernetesClient = mockk {}
+  val kubernetesClientPermissionHelper: KubernetesClientPermissionHelper = mockk {}
 
   val diagnosticToolHandler =
     DiagnosticToolHandler(
@@ -166,6 +229,7 @@ private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
       actorDefinitionVersionHelper,
       instanceConfigurationHandler,
       kubernetesClient,
+      kubernetesClientPermissionHelper,
       cspChecker,
     )
 
@@ -207,7 +271,7 @@ private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
     }
 
   val podList = PodList().apply { items = listOf(pod) }
-
+  every { kubernetesClient.namespace } returns "ab"
   every { kubernetesClient.pods() } returns
     mockk {
       every { inNamespace("ab") } returns
@@ -215,6 +279,12 @@ private fun mockDiagnosticToolHandler(): DiagnosticToolHandler {
           every { list() } returns podList
         }
     }
+
+  if (withNodes) {
+    val mockNodeOperation = mockk<NonNamespaceOperation<Node, NodeList, Resource<Node>>>()
+    every { mockNodeOperation.list() } returns NodeList().apply { items = listOf(node) }
+    every { kubernetesClientPermissionHelper.listNodes() } returns mockNodeOperation
+  }
 
   return diagnosticToolHandler
 }

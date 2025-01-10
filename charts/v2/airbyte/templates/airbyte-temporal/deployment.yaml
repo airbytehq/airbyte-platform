@@ -56,29 +56,8 @@ spec:
         image: {{ include "imageUrl" (list .Values.temporal.image $) }}
         imagePullPolicy: {{ .Values.temporal.image.pullPolicy }}
         env:
-        {{- if eq .Values.global.deploymentMode "oss"}}
-          - name: AUTO_SETUP
-            value: "true"
-          - name: DB # The DB engine to use
-            value: "postgresql"
-          - name: DYNAMIC_CONFIG_FILE_PATH
-            value: "config/dynamicconfig/development.yaml"
 
-          {{- include "airbyte.temporal.database.envs" . | nindent 10 }}
-          
-        {{- end }}
-
-        {{- if eq .Values.global.database.type "external" }}
-        # Assume an external database requires SSL.
-          - name: POSTGRES_TLS_ENABLED
-            value: "true"
-          - name: POSTGRES_TLS_DISABLE_HOST_VERIFICATION
-            value: "true"
-          - name: SQL_TLS_ENABLED
-            value: "true"
-          - name: SQL_TLS_DISABLE_HOST_VERIFICATION
-            value: "true"
-        {{- end }}
+          {{- include "airbyte.temporal.envs" . | nindent 10 }}
 
         {{- if .Values.temporal.extraEnv }}
         {{ .Values.temporal.extraEnv | toYaml | nindent 10 }}

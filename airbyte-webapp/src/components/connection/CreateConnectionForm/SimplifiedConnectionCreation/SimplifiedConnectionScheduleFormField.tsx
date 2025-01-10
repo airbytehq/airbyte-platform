@@ -10,8 +10,7 @@ import {
   useBasicFrequencyDropdownData,
 } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "components/connection/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
-import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/ConnectionForm/schema";
-import { FormControlFooterError, FormControlFooter, FormControlFooterInfo } from "components/forms/FormControl";
+import { FormControlFooter, FormControlFooterInfo, FormControlErrorMessage } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
@@ -27,6 +26,8 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 
 import { InputContainer } from "./InputContainer";
 import styles from "./SimplifiedConnectionScheduleFormField.module.scss";
+
+export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
 
 export const SimplifiedConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
@@ -268,20 +269,21 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
               {!cronExpressionDescription.isFetching && (
                 <>
                   {error ? (
-                    <FormControlFooterError>
-                      {error?.message === I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED ? (
-                        <FormattedMessage
-                          id={I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED}
-                          values={{
-                            lnk: (btnText: React.ReactNode) => (
-                              <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
-                            ),
-                          }}
-                        />
-                      ) : (
-                        <FormattedMessage id={error.message} />
-                      )}
-                    </FormControlFooterError>
+                    <FormControlErrorMessage<FormConnectionFormValues>
+                      name="scheduleData.cron.cronExpression"
+                      message={
+                        error?.message === I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED ? (
+                          <FormattedMessage
+                            id={I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED}
+                            values={{
+                              lnk: (btnText: React.ReactNode) => (
+                                <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
+                              ),
+                            }}
+                          />
+                        ) : undefined
+                      }
+                    />
                   ) : (
                     cronExpressionDescription.data?.isValid && (
                       <FormControlFooterInfo>{cronExpressionDescription.data.cronDescription}</FormControlFooterInfo>

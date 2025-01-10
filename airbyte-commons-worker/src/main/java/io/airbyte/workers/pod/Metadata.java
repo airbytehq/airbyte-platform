@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.pod;
@@ -19,6 +19,7 @@ public final class Metadata {
   public static final String WORKER_POD_LABEL_KEY = "airbyte";
   public static final String WORKER_POD_LABEL_VALUE = "job-pod";
   public static final String CONNECTION_ID_LABEL_KEY = "connection_id";
+  public static final String ACTOR_ID_LABEL_KEY = "actor_id";
   public static final String IMAGE_NAME = "image_name";
   public static final String IMAGE_VERSION = "image_version";
   public static final String ACTOR_TYPE = "actor_type";

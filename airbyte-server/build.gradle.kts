@@ -6,8 +6,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -32,7 +30,6 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.reactor.core)
-  implementation(libs.slugify)
   implementation(libs.temporal.sdk)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
@@ -47,6 +44,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:public-api"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-audit-logging"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
@@ -65,6 +63,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
@@ -83,8 +82,6 @@ dependencies {
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)
@@ -185,9 +182,8 @@ tasks.named<Test>("test") {
   )
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// By default, Gradle runs all annotation processors and disables annotation processing by javac, however.  Once lombok has
-// been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

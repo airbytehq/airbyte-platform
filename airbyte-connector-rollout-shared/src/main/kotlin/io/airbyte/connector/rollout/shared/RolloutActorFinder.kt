@@ -14,13 +14,16 @@ import io.airbyte.config.StandardSync
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.JobService
+import io.airbyte.data.services.OrganizationCustomerAttributesService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.http.annotation.Trace
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -36,7 +39,6 @@ data class ActorSelectionInfo(
   val nActorsEligibleOrAlreadyPinned: Int,
   val nNewPinned: Int = actorIdsToPin.size,
   val nPreviouslyPinned: Int,
-  val percentagePinned: Int,
 )
 
 data class ActorSyncJobInfo(
@@ -53,12 +55,14 @@ class RolloutActorFinder(
   private val scopedConfigurationService: ScopedConfigurationService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val organizationCustomerAttributesService: OrganizationCustomerAttributesService,
 ) {
+  @Trace
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
   ): ActorSelectionInfo {
-    logger.info { "Finding actors to pin for rollout ${connectorRollout.id}" }
+    logger.info { "Finding actors to pin for rollout ${connectorRollout.id} targetPercent=$targetPercent" }
 
     var candidates = actorDefinitionVersionUpdater.getConfigScopeMaps(connectorRollout.actorDefinitionId)
     val initialNCandidates = candidates.size
@@ -88,26 +92,32 @@ class RolloutActorFinder(
     logger.info { "Rollout ${connectorRollout.id}: $nEligibleOrAlreadyPinned including eligible & already pinned to the release candidate" }
     logger.info { "Rollout ${connectorRollout.id}: ${nEligibleOrAlreadyPinned - candidates.size - nPreviouslyPinned} pinned to a non-RC" }
 
-    if (targetPercent == null) {
+    if (targetPercent == null || targetPercent == 0) {
       return ActorSelectionInfo(
         actorIdsToPin = emptyList(),
         nActors = initialNCandidates,
         nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
         nPreviouslyPinned = nPreviouslyPinned,
-        percentagePinned = ceil(nPreviouslyPinned * 100.0 / nEligibleOrAlreadyPinned).toInt(),
       )
     }
 
     // Calculate the number to pin based on the input percentage
-    val targetTotalToPin = ceil(nEligibleOrAlreadyPinned * targetPercent / 100.0).toInt()
+    val targetTotalToPin = getTargetTotalToPin(nEligibleOrAlreadyPinned, nPreviouslyPinned, targetPercent)
+    val filteredActorDefinitionConnections = filterByConnectionActorId(candidates, sortedActorDefinitionConnections, actorType)
+    logger.info {
+      "Rollout ${connectorRollout.id}: " +
+        "candidates.size=$candidates.size " +
+        "sortedActorDefinitionConnections.size=${sortedActorDefinitionConnections.size} " +
+        "filteredActorDefinitionConnections.size=${filteredActorDefinitionConnections.size}"
+    }
 
     // From the eligible actors, choose the ones with the next sync
     // TODO: filter out those with lots of data
     // TODO: prioritize internal connections
     val actorIdsToPin =
       getUniqueActorIds(
-        sortedActorDefinitionConnections.filter { candidates.map { it.id }.contains(it.sourceId ?: it.destinationId) },
-        targetTotalToPin - nPreviouslyPinned,
+        filteredActorDefinitionConnections,
+        targetTotalToPin,
         actorType,
       )
 
@@ -119,15 +129,51 @@ class RolloutActorFinder(
       nActorsEligibleOrAlreadyPinned = nEligibleOrAlreadyPinned,
       nNewPinned = actorIdsToPin.size,
       nPreviouslyPinned = nPreviouslyPinned,
-      // Total percentage pinned out of all eligible, including new and previously pinned
-      // This could end up being >100% if the number of eligible actors changes between rollout increments.
-      percentagePinned =
-        if (nEligibleOrAlreadyPinned == 0) {
-          0
-        } else {
-          ceil((nPreviouslyPinned + actorIdsToPin.size) * 100.0 / nEligibleOrAlreadyPinned).toInt()
-        },
     )
+  }
+
+  @VisibleForTesting
+  internal fun getTargetTotalToPin(
+    nEligibleOrAlreadyPinned: Int,
+    nPreviouslyPinned: Int,
+    targetPercentage: Int,
+  ): Int {
+    logger.info {
+      "getTargetTotalToPin nEligibleOrAlreadyPinned=$nEligibleOrAlreadyPinned nPreviouslyPinned=$nPreviouslyPinned targetPercentage=$targetPercentage"
+    }
+    if (nEligibleOrAlreadyPinned == 0 || targetPercentage <= 0) {
+      return 0
+    }
+
+    val targetTotal = ceil(nEligibleOrAlreadyPinned.toDouble() * targetPercentage / 100).toInt()
+    logger.info { "getTargetTotalToPin targetTotal=$targetTotal" }
+
+    if (nPreviouslyPinned >= targetTotal) {
+      return 0
+    }
+
+    val actorsToPin = targetTotal - nPreviouslyPinned
+
+    return minOf(actorsToPin, nEligibleOrAlreadyPinned - nPreviouslyPinned)
+  }
+
+  @VisibleForTesting
+  internal fun filterByConnectionActorId(
+    candidates: Collection<ConfigScopeMapWithId>,
+    sortedActorDefinitionConnections: List<StandardSync>,
+    actorType: ActorType,
+  ): List<StandardSync> {
+    val candidateIds = candidates.map { it.id }.toSet()
+
+    return sortedActorDefinitionConnections.filter { connection ->
+      val relevantId =
+        if (actorType == ActorType.SOURCE) {
+          connection.sourceId
+        } else {
+          connection.destinationId
+        }
+      candidateIds.contains(relevantId)
+    }
   }
 
   fun getSyncInfoForPinnedActors(connectorRollout: ConnectorRollout): Map<UUID, ActorSyncJobInfo> {
@@ -137,7 +183,7 @@ class RolloutActorFinder(
     logger.info { "Connector rollout getting sync info for pinned actors: connectorRollout=${connectorRollout.id} pinnedActors=$pinnedActors" }
 
     val pinnedActorSyncs =
-      getSortedActorDefinitionConnections(
+      getSortedActorDefinitionConnectionsByActorId(
         pinnedActors,
         connectorRollout.actorDefinitionId,
         actorType,
@@ -154,6 +200,7 @@ class RolloutActorFinder(
     )
   }
 
+  @Trace
   @VisibleForTesting
   fun getActorJobInfo(
     connectorRollout: ConnectorRollout,
@@ -256,30 +303,21 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByTier(candidates: Collection<ConfigScopeMapWithId>): Collection<ConfigScopeMapWithId> {
-    // TODO - filter out the ineligible actors (workspace in the list of tier 0/1 customers)
-    // Query from https://airbytehq-team.slack.com/archives/C06AZD64PDJ/p1727885479202429?thread_ts=1727885477.845219&cid=C06AZD64PDJ -
-    // val priorityWorkspaces =
-    // SELECT
-    //  w.workspace_id,
-    //  w.account_id,
-    //  sc.customer_tier
-    // FROM
-    //  airbyte-data-prod.airbyte_warehouse.workspace w
-    // JOIN
-    //  airbyte-data-prod.airbyte_warehouse.support_case sc
-    // ON
-    //  w.account_id = sc.account_id
-    // WHERE
-    //  lower(sc.customer_tier) IN ('tier 1', 'tier 0')
-    //
-    // candidates = candidates.filter {
-    //   !priorityWorkspaces.contains(it.workspaceId)
-    // }
-    return candidates
+    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
+    logger.debug { "RolloutActorFinder.filterByTier: organizationTiers=$organizationTiers" }
+    return candidates.filter { candidate ->
+      val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
+      // Include the candidate if the organization ID is not in the map or if the CustomerTier is not TIER_0 or TIER_1
+      organizationId == null || organizationTiers[organizationId]?.let { tier ->
+        tier != CustomerTier.TIER_0 && tier != CustomerTier.TIER_1
+      } ?: true
+    }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByAlreadyPinned(
     actorDefinitionId: UUID,
@@ -295,6 +333,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun getActorsPinnedToReleaseCandidate(connectorRollout: ConnectorRollout): List<UUID> {
     val scopedConfigurations =
@@ -321,6 +360,7 @@ class RolloutActorFinder(
     return filtered
   }
 
+  @Trace
   @VisibleForTesting
   fun getSortedActorDefinitionConnections(
     actorIds: List<UUID>,
@@ -336,10 +376,11 @@ class RolloutActorFinder(
         actorDefinitionId,
         actorType.toString(),
         false,
+        false,
       )
     logger.info { "getSortedActorDefinitionConnections connections=${connections.size}" }
     for (connection in connections) {
-      logger.info { "getSortedActorDefinitionConnections connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
+      logger.debug { "getSortedActorDefinitionConnections connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
     }
 
     val sortedSyncs =
@@ -356,7 +397,57 @@ class RolloutActorFinder(
 
     logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
     for (sync in sortedSyncs) {
-      logger.info { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
+      logger.debug { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
+    }
+    return sortedSyncs
+  }
+
+  @Trace
+  @VisibleForTesting
+  fun getSortedActorDefinitionConnectionsByActorId(
+    actorIds: List<UUID>,
+    actorDefinitionId: UUID,
+    actorType: ActorType,
+  ): List<StandardSync> {
+    logger.info {
+      "Connector rollout getting sorted actor definition connections for actor Ids: " +
+        "actorIds=$actorIds actorDefinitionId=$actorDefinitionId actorType=$actorType"
+    }
+    var connections: List<StandardSync>
+
+    if (actorType == ActorType.SOURCE) {
+      connections =
+        connectionService.listConnectionsBySources(
+          actorIds,
+          false,
+          false,
+        )
+    } else {
+      connections =
+        connectionService.listConnectionsByDestinations(
+          actorIds,
+          false,
+          false,
+        )
+    }
+    logger.info { "getSortedActorDefinitionConnectionsByActorId connections=${connections.size}" }
+    for (connection in connections) {
+      logger.debug { "getSortedActorDefinitionConnectionsByActorId connection sourceId=${connection.sourceId} destId=${connection.destinationId}" }
+    }
+
+    val sortedSyncs =
+      connections.filter { connection ->
+        when (actorType) {
+          ActorType.SOURCE -> connection.sourceId in actorIds
+          ActorType.DESTINATION -> connection.destinationId in actorIds
+        }
+      }.sortedBy { connection ->
+        getFrequencyInMinutes(connection.schedule)
+      }
+
+    logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
+    for (sync in sortedSyncs) {
+      logger.debug { "getSortedActorDefinitionConnections sorted sourceId=${sync.sourceId} destId=${sync.destinationId}" }
     }
     return sortedSyncs
   }
@@ -377,6 +468,7 @@ class RolloutActorFinder(
     }
   }
 
+  @Trace
   @VisibleForTesting
   fun filterByJobStatus(
     connectorRollout: ConnectorRollout,

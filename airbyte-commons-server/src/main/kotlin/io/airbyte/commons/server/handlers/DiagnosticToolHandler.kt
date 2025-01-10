@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ActorType
 import io.airbyte.commons.csp.CspChecker
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
+import io.airbyte.commons.server.helpers.PermissionDeniedException
 import io.airbyte.commons.yaml.Yamls
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
@@ -16,8 +18,12 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.fabric8.kubernetes.api.model.Node
+import io.fabric8.kubernetes.api.model.NodeList
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
+import io.fabric8.kubernetes.client.dsl.Resource
 import jakarta.inject.Singleton
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
@@ -50,6 +56,7 @@ open class DiagnosticToolHandler(
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
   private val instanceConfigurationHandler: InstanceConfigurationHandler,
   private val kubernetesClient: KubernetesClient,
+  private val kubernetesClientPermissionHelper: KubernetesClientPermissionHelper,
   private val cspChecker: CspChecker,
 ) {
   private val yaml = Yaml(DumperOptions().apply { defaultFlowStyle = DumperOptions.FlowStyle.BLOCK })
@@ -84,7 +91,14 @@ open class DiagnosticToolHandler(
       logger.error { "Error in writing airbyte instance yaml. Message: ${it.message}" }
     }
     runCatching {
-      addAirbyteDeploymentYaml(zipOut)
+      val nodes =
+        try {
+          kubernetesClientPermissionHelper.listNodes()
+        } catch (e: PermissionDeniedException) {
+          logger.warn { "Skipping writing deployment yaml; node viewer permission denied. Message: ${e.message}" }
+          null
+        }
+      nodes?.let { addAirbyteDeploymentYaml(zipOut, it) }
     }.onFailure {
       logger.error { "Error in writing deployment yaml. Message: ${it.message}" }
     }
@@ -268,36 +282,38 @@ open class DiagnosticToolHandler(
     return licenseInfo
   }
 
-  private fun addAirbyteDeploymentYaml(zipOut: ZipOutputStream) {
+  private fun addAirbyteDeploymentYaml(
+    zipOut: ZipOutputStream,
+    nodes: NonNamespaceOperation<Node, NodeList, Resource<Node>>?,
+  ) {
     val zipEntry = ZipEntry(AIRBYTE_DEPLOYMENT_YAML)
     zipOut.putNextEntry(zipEntry)
-    val deploymentYamlContent = generateDeploymentYaml()
+    val deploymentYamlContent = generateDeploymentYaml(nodes)
     zipOut.write(deploymentYamlContent.toByteArray())
     zipOut.closeEntry()
   }
 
-  private fun generateDeploymentYaml(): String {
+  private fun generateDeploymentYaml(nodes: NonNamespaceOperation<Node, NodeList, Resource<Node>>?): String {
     // Collect cluster information
-    val deploymentYamlData = mapOf("k8s" to collectK8sInfo())
+    val deploymentYamlData = mapOf("k8s" to collectK8sInfo(nodes))
     return yaml.dump(deploymentYamlData)
   }
 
-  private fun collectK8sInfo(): Map<String, Any> {
+  private fun collectK8sInfo(nodes: NonNamespaceOperation<Node, NodeList, Resource<Node>>?): Map<String, Any> {
     logger.info { "Collecting k8s data..." }
     val kubernetesInfo =
       mapOf(
-        "nodes" to collectNodeInfo(kubernetesClient),
+        "nodes" to collectNodeInfo(nodes),
         "pods" to collectPodInfo(kubernetesClient),
       )
     return kubernetesInfo
   }
 
-  private fun collectNodeInfo(client: KubernetesClient): List<Map<String, Any>> {
+  private fun collectNodeInfo(nodes: NonNamespaceOperation<Node, NodeList, Resource<Node>>?): List<Map<String, Any>> {
     logger.info { "Collecting nodes data..." }
 
     val nodeList: List<Map<String, Any>> =
-      client
-        .nodes()
+      nodes
         ?.list()
         ?.items
         ?.map { node ->
@@ -320,10 +336,12 @@ open class DiagnosticToolHandler(
 
   private fun collectPodInfo(client: KubernetesClient): List<Map<String, Any>> {
     logger.info { "Collecting pods data..." }
+    val currentNamespace = client.namespace
+    logger.info { "Current namespace from client: $currentNamespace" }
     val pods =
       client
         .pods()
-        ?.inNamespace("ab")
+        ?.inNamespace(currentNamespace)
         ?.list()
         ?.items ?: emptyList()
 

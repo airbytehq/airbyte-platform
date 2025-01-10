@@ -5,6 +5,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
@@ -58,9 +59,12 @@ class CheckHydrationProcessorTest {
     val input = Fixtures.workload
 
     val unhydrated = StandardCheckConnectionInput()
-    val parsed = CheckConnectionInput()
-    parsed.checkConnectionInput = unhydrated
-    parsed.launcherConfig = IntegrationLauncherConfig()
+    val parsed =
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig(),
+        checkConnectionInput = unhydrated,
+        launcherConfig = IntegrationLauncherConfig(),
+      )
 
     val connectionConfiguration = Jsons.jsonNode(mapOf("key-1" to "value-1"))
     val hydrated = StandardCheckConnectionInput()

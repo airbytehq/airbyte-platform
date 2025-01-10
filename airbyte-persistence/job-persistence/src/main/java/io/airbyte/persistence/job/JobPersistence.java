@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -377,6 +377,8 @@ public interface JobPersistence {
       throws IOException;
 
   Optional<Job> getLastReplicationJob(UUID connectionId) throws IOException;
+
+  Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException;
 
   Optional<Job> getLastSyncJob(UUID connectionId) throws IOException;
 

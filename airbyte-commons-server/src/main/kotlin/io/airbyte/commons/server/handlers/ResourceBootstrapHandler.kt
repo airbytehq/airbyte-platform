@@ -21,10 +21,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.BillingInArrearsForNewSignups
-import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -92,27 +89,22 @@ open class ResourceBootstrapHandler(
 
   fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
     findExistingOrganization(user)?.let { return it }
-    val billingInArrears = featureFlagClient.boolVariation(BillingInArrearsForNewSignups, User(user.userId, EmailAttribute(user.email)))
     val organization =
       Organization().apply {
         this.organizationId = uuidSupplier.get()
         this.userId = user.userId
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
-        this.orgLevelBilling = billingInArrears
-        this.pba = false
       }
     organizationService.writeOrganization(organization)
 
-    if (billingInArrears) {
-      logger.info { "Creating organization ${organization.organizationId} with billing in arrears enabled" }
-      val paymentConfig =
-        OrganizationPaymentConfig()
-          .withOrganizationId(organization.organizationId)
-          .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+    val paymentConfig =
+      OrganizationPaymentConfig()
+        .withOrganizationId(organization.organizationId)
+        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
 
-      organizationPaymentConfigService.savePaymentConfig(paymentConfig)
-    }
+    organizationPaymentConfigService.savePaymentConfig(paymentConfig)
 
     val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
     permissionService.createPermission(organizationPermission)
@@ -151,29 +143,27 @@ open class ResourceBootstrapHandler(
   private fun buildDefaultWorkspacePermission(
     userId: UUID,
     workspaceId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.workspaceId = workspaceId
       this.permissionType = DEFAULT_WORKSPACE_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
   private fun buildDefaultOrganizationPermission(
     userId: UUID,
     organizationId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.organizationId = organizationId
       this.permissionType = DEFAULT_ORGANIZATION_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
-  private fun getDefaultOrganizationName(user: AuthenticatedUser): String {
-    return when {
+  private fun getDefaultOrganizationName(user: AuthenticatedUser): String =
+    when {
       user.companyName != null -> {
         "${user.companyName}'s Organization"
       }
@@ -186,5 +176,4 @@ open class ResourceBootstrapHandler(
         "${user.email.split("@").first()}'s Organization"
       }
     }
-  }
 }

@@ -835,28 +835,22 @@ exports[`CreateConnectionForm should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r16:"
-                                      type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite + Deduped
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite + Deduped
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
@@ -899,11 +893,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -996,28 +986,22 @@ exports[`CreateConnectionForm should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1c:"
-                                      type="button"
                                     >
-                                      <button
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        type="button"
                                       >
-                                        <span
+                                        <p
                                           class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
-                                          <p
-                                            class="<removed-for-snapshot-test>"
-                                            data-type="text"
-                                          >
-                                            Full refresh | Overwrite + Deduped
-                                          </p>
-                                        </span>
-                                        <div
-                                          class="<removed-for-snapshot-test>"
-                                          data-icon="caret-down"
-                                          data-testid="mocksvg"
-                                        />
-                                      </button>
+                                          Full refresh | Overwrite + Deduped
+                                        </p>
+                                      </span>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="caret-down"
+                                        data-testid="mocksvg"
+                                      />
                                     </button>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
@@ -1060,11 +1044,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"

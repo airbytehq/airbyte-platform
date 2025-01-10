@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker.activities
@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutStartResponse
-import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -37,8 +36,9 @@ class StartRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) :
       ConnectorRolloutStartRequestBody(
         input.rolloutId,
         workflowRunId,
-        ConnectorRolloutStrategy.MANUAL,
+        getRolloutStrategyFromInput(input.rolloutStrategy),
         input.updatedBy,
+        true,
       )
 
     return try {

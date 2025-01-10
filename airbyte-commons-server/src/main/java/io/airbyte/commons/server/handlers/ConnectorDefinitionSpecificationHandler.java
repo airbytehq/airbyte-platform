@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AdvancedAuth;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
@@ -17,13 +18,16 @@ import io.airbyte.commons.server.converters.OauthModelConverter;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -45,15 +49,18 @@ public class ConnectorDefinitionSpecificationHandler {
   private final JobConverter jobConverter;
   private final SourceService sourceService;
   private final DestinationService destinationService;
+  private final OAuthService oAuthService;
 
   public ConnectorDefinitionSpecificationHandler(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                                  final JobConverter jobConverter,
                                                  final SourceService sourceService,
-                                                 final DestinationService destinationService) {
+                                                 final DestinationService destinationService,
+                                                 final OAuthService oauthService) {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.jobConverter = jobConverter;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
+    this.oAuthService = oauthService;
   }
 
   /**
@@ -73,7 +80,7 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), sourceIdRequestBody.getSourceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
 
-    return getSourceSpecificationRead(sourceDefinition, spec);
+    return getSourceSpecificationRead(sourceDefinition, spec, source.getWorkspaceId());
   }
 
   /**
@@ -93,7 +100,7 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getSourceVersion(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
 
-    return getSourceSpecificationRead(source, spec);
+    return getSourceSpecificationRead(source, spec, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
   }
 
   /**
@@ -114,7 +121,7 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
             destinationIdRequestBody.getDestinationId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
-    return getDestinationSpecificationRead(destinationDefinition, spec, destinationVersion.getSupportsRefreshes());
+    return getDestinationSpecificationRead(destinationDefinition, spec, destinationVersion.getSupportsRefreshes(), destination.getWorkspaceId());
   }
 
   /**
@@ -136,11 +143,15 @@ public class ConnectorDefinitionSpecificationHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
 
-    return getDestinationSpecificationRead(destination, spec, destinationVersion.getSupportsRefreshes());
+    return getDestinationSpecificationRead(destination, spec, destinationVersion.getSupportsRefreshes(),
+        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
   }
 
-  private SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
-                                                                       final io.airbyte.protocol.models.ConnectorSpecification spec) {
+  @VisibleForTesting
+  SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
+                                                               final io.airbyte.protocol.models.ConnectorSpecification spec,
+                                                               final UUID workspaceId)
+      throws IOException {
     final SourceDefinitionSpecificationRead specRead = new SourceDefinitionSpecificationRead()
         .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(JobConfig.ConfigType.GET_SPEC)))
         .connectionSpecification(spec.getConnectionSpecification())
@@ -152,13 +163,21 @@ public class ConnectorDefinitionSpecificationHandler {
 
     final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
     advancedAuth.ifPresent(specRead::setAdvancedAuth);
+    if (advancedAuth.isPresent()) {
+      final Optional<SourceOAuthParameter> sourceOAuthParameter =
+          oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinition.getSourceDefinitionId());
+      specRead.setAdvancedAuthGlobalCredentialsAvailable(sourceOAuthParameter.isPresent());
+    }
 
     return specRead;
   }
 
-  private DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
-                                                                                 final io.airbyte.protocol.models.ConnectorSpecification spec,
-                                                                                 final boolean supportsRefreshes) {
+  @VisibleForTesting
+  DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
+                                                                         final io.airbyte.protocol.models.ConnectorSpecification spec,
+                                                                         final boolean supportsRefreshes,
+                                                                         final UUID workspaceId)
+      throws IOException {
     final DestinationDefinitionSpecificationRead specRead = new DestinationDefinitionSpecificationRead()
         .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(JobConfig.ConfigType.GET_SPEC)))
         .supportedDestinationSyncModes(getFinalDestinationSyncModes(spec.getSupportedDestinationSyncModes(), supportsRefreshes))
@@ -168,12 +187,17 @@ public class ConnectorDefinitionSpecificationHandler {
 
     final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
     advancedAuth.ifPresent(specRead::setAdvancedAuth);
+    if (advancedAuth.isPresent()) {
+      final Optional<DestinationOAuthParameter> destinationOAuthParameter =
+          oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinition.getDestinationDefinitionId());
+      specRead.setAdvancedAuthGlobalCredentialsAvailable(destinationOAuthParameter.isPresent());
+    }
 
     return specRead;
   }
 
   private List<DestinationSyncMode> getFinalDestinationSyncModes(final List<io.airbyte.protocol.models.DestinationSyncMode> syncModes,
-                                                                 boolean supportsRefreshes) {
+                                                                 final boolean supportsRefreshes) {
     final List<DestinationSyncMode> finalSyncModes = new ArrayList<>();
     boolean hasDedup = false;
     boolean hasOverwrite = false;

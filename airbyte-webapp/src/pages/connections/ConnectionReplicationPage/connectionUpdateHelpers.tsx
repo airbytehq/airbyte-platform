@@ -39,7 +39,12 @@ export const determineRecommendRefresh = (formSyncCatalog: AirbyteCatalog, store
 
     const promptBecauseOfHashing = !equal(formStream.config?.hashedFields, connectionStream.config?.hashedFields);
 
-    return promptBecauseOfSyncModes || promptBecauseOfHashing;
+    const promptBecauseOfMappingsChanges =
+      connectionStream.config?.mappers &&
+      connectionStream.config.mappers.length > 0 &&
+      !equal(formStream.config?.mappers, connectionStream.config?.mappers);
+
+    return promptBecauseOfSyncModes || promptBecauseOfHashing || promptBecauseOfMappingsChanges;
   });
 };
 

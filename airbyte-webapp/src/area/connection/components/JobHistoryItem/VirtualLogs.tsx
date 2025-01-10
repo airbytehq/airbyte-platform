@@ -1,11 +1,11 @@
 import Anser from "anser";
 import classNames from "classnames";
 import React, { HTMLAttributes, useEffect, useRef } from "react";
+import Highlighter from "react-highlight-words";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso, ItemContent, VirtuosoHandle } from "react-virtuoso";
 import sanitize from "sanitize-html";
 
-import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { CleanedLogLines } from "./useCleanLogs";
@@ -15,9 +15,9 @@ interface VirtualLogsProps {
   logLines: CleanedLogLines;
   searchTerm?: string;
   scrollTo?: number;
-  selectedAttempt?: number;
+  attemptId: number;
   hasFailure: boolean;
-  attemptHasStructuredLogs: boolean;
+  showStructuredLogs: boolean;
 }
 
 function escapeRegex(string: string) {
@@ -45,6 +45,7 @@ export const sanitizeHtml = (logLine: string) => {
 interface RowContext {
   searchTerm?: string;
   highlightedRowIndex?: number;
+  showStructuredLogs: boolean;
 }
 
 const LogLine: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => (
@@ -56,9 +57,9 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
   logLines,
   searchTerm,
   scrollTo,
-  selectedAttempt,
+  attemptId,
   hasFailure,
-  attemptHasStructuredLogs,
+  showStructuredLogs,
 }) => {
   const listRef = useRef<VirtuosoHandle | null>(null);
   const highlightedRowIndex = scrollTo;
@@ -77,15 +78,6 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
         </Text>
       )}
 
-      {/**
-       * Structured logs are currently not supported in the UI
-       * https://github.com/airbytehq/airbyte-internal-issues/issues/10476
-       */}
-      {attemptHasStructuredLogs && (
-        <FlexContainer justifyContent="center">
-          <Text>Structured logs are currently not supported in the UI. Download the logs to view them.</Text>
-        </FlexContainer>
-      )}
       {logLines && (
         <Virtuoso<CleanedLogLines[number], RowContext>
           ref={listRef}
@@ -96,11 +88,11 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
             // scroll, which results in not positioning at the bottom
             (isAtBottom) => isAtBottom && (hasFailure ? true : "smooth")
           }
-          key={selectedAttempt}
+          key={attemptId}
           style={{ width: "100%", height: "100%" }}
           data={logLines}
           itemContent={Row}
-          context={{ searchTerm, highlightedRowIndex }}
+          context={{ searchTerm, highlightedRowIndex, showStructuredLogs }}
           atBottomThreshold={50 /* covers edge case(s) where Virtuoso doesn't scroll all the way to the bottom */}
           increaseViewportBy={150}
           components={{
@@ -162,10 +154,31 @@ export const getSearchMatchesInLine = (text: string, searchTerm?: string) => {
   return matchIndices;
 };
 
-const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
+const HighlightedSearchMatches = React.memo(({ text, searchTerm }: { text: string; searchTerm?: string }) => {
+  const searchMatchesInLine = getSearchMatchesInLine(expandTabs(text), searchTerm);
+
+  return (
+    <>
+      {searchMatchesInLine.map((match, index) => (
+        <span
+          key={index}
+          className={styles.virtualLogs__searchMatch}
+          style={{
+            top: `${match.precedingNewlines * 1.5}em`,
+            left: `${match.characterOffsetLeft}ch`,
+          }}
+        >
+          {searchTerm}
+        </span>
+      ))}
+    </>
+  );
+});
+HighlightedSearchMatches.displayName = "HighlightedSearchMatches";
+
+export const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
   const rowIsHighlighted = context.highlightedRowIndex === index;
   const html = Anser.ansiToHtml(expandTabs(item.original), { use_classes: true });
-  const searchMatchesInLine = getSearchMatchesInLine(expandTabs(item.text), context.searchTerm);
 
   return (
     <div
@@ -175,23 +188,56 @@ const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, cont
     >
       <div className={styles.virtualLogs__lineNumber}>{item.lineNumber}</div>
       <div className={styles.virtualLogs__lineLogContent}>
-        {searchMatchesInLine.length > 0 &&
-          searchMatchesInLine.map(({ characterOffsetLeft: characterIndex, precedingNewlines }, matchIndex) => (
-            <div
-              className={styles.virtualLogs__searchMatch}
-              key={matchIndex}
-              style={{
-                left: `${characterIndex}ch`,
-                width: `${context.searchTerm?.length}ch`,
-                top: `${parseFloat(styles.logLineHeight) * precedingNewlines}em`,
-              }}
+        {context.showStructuredLogs && (
+          <>
+            <Highlighter
+              autoEscape
+              className={styles.virtualLogs__timestamp}
+              searchWords={[context.searchTerm || ""]}
+              textToHighlight={item.timestamp || ""}
             />
-          ))}
-        <DangerousHTML html={html} />
+            <SpaceForCopy />
+            <Highlighter
+              className={classNames(styles.virtualLogs__logSource, {
+                [styles["virtualLogs__logSource--replicationOrchestrator"]]: item.source === "replication-orchestrator",
+                [styles["virtualLogs__logSource--source"]]: item.source === "source",
+                [styles["virtualLogs__logSource--destination"]]: item.source === "destination",
+                [styles["virtualLogs__logSource--platform"]]: item.source === "platform",
+              })}
+              autoEscape
+              searchWords={[context.searchTerm || ""]}
+              textToHighlight={item.source || ""}
+            />
+            <SpaceForCopy />
+            <Highlighter
+              className={classNames(styles.virtualLogs__level, {
+                [styles["virtualLogs__level--info"]]: item.level === "info",
+                [styles["virtualLogs__level--warn"]]: item.level === "warn",
+                [styles["virtualLogs__level--error"]]: item.level === "error",
+                [styles["virtualLogs__level--debug"]]: item.level === "debug",
+                [styles["virtualLogs__level--trace"]]: item.level === "trace",
+              })}
+              autoEscape
+              searchWords={[context.searchTerm || ""]}
+              textToHighlight={item.level?.toUpperCase() || ""}
+            />
+            <SpaceForCopy />
+            <Highlighter autoEscape searchWords={[context.searchTerm || ""]} textToHighlight={item.text} />
+          </>
+        )}
+        {!context.showStructuredLogs && (
+          <>
+            <DangerousHTML html={html} />
+            <HighlightedSearchMatches text={item.text} searchTerm={context.searchTerm} />
+          </>
+        )}
       </div>
     </div>
   );
 };
+
+// JSX makes this hard. When copy and pasting, we want a space between the elements.
+const SpaceForCopy = () => <> </>;
 
 // The length of the logLines is a fine proxy to tell if they have changed, which can avoid re-renders
 export const VirtualLogs = React.memo(
@@ -200,6 +246,6 @@ export const VirtualLogs = React.memo(
     prevProps.logLines.length === nextProps.logLines.length &&
     prevProps.searchTerm === nextProps.searchTerm &&
     prevProps.scrollTo === nextProps.scrollTo &&
-    prevProps.selectedAttempt === nextProps.selectedAttempt &&
-    prevProps.attemptHasStructuredLogs === nextProps.attemptHasStructuredLogs
+    prevProps.attemptId === nextProps.attemptId &&
+    prevProps.showStructuredLogs === nextProps.showStructuredLogs
 );

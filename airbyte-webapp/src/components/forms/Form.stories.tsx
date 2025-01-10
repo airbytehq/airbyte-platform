@@ -49,13 +49,16 @@ const listBoxOptions: Array<Option<string>> = ["one", "two", "three"].map((v) =>
 
 const MyFormControl = FormControl<MyFormValues>;
 
-export const Primary: StoryObj<typeof Form> = {
+const MyForm = Form<MyFormValues>;
+
+export const Primary: StoryObj<typeof MyForm> = {
   render: (props) => (
     <div style={{ maxWidth: "1200px" }}>
       <Card>
-        <Form
+        <MyForm
           {...props}
           schema={schema}
+          onError={props.onError}
           defaultValues={defaultValues}
           onSuccess={action("onSuccess")}
           onSubmit={() => new Promise((resolve) => window.setTimeout(resolve, 1000))}
@@ -87,17 +90,17 @@ export const Primary: StoryObj<typeof Form> = {
           <MyFormControl fieldType="dropdown" name="some_select" label="DropDown input" options={listBoxOptions} />
           <FormSubmissionButtons />
           <button>Click to submit, even if there are errors</button>
-        </Form>
+        </MyForm>
       </Card>
     </div>
   ),
 };
 
-export const InlineFormControls: StoryObj<typeof Form> = {
+export const InlineFormControls: StoryObj<typeof MyForm> = {
   render: (props) => (
     <div style={{ maxWidth: "1200px" }}>
       <Card>
-        <Form
+        <MyForm
           {...props}
           schema={schema}
           defaultValues={defaultValues}
@@ -138,7 +141,7 @@ export const InlineFormControls: StoryObj<typeof Form> = {
           />
           <FormSubmissionButtons />
           <button>Click to submit, even if there are errors</button>
-        </Form>
+        </MyForm>
       </Card>
     </div>
   ),

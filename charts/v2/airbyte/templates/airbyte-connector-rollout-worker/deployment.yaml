@@ -63,78 +63,16 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorRolloutWorker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
-        {{- if eq .Values.global.deploymentMode "oss" }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: INTERNAL_API_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: INTERNAL_API_HOST
-        - name: MICROMETER_METRICS_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_ENABLED
-        - name: MICROMETER_METRICS_STATSD_FLAVOR
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STATSD_FLAVOR
-        - name: SEGMENT_WRITE_KEY
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: SEGMENT_WRITE_KEY
-        - name: STATSD_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_HOST
-        - name: STATSD_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: STATSD_PORT
-        - name: TRACKING_STRATEGY
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TRACKING_STRATEGY
-        - name: WEBAPP_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: WEBAPP_URL
-        - name: TEMPORAL_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TEMPORAL_HOST
-        - name: TEMPORAL_WORKER_PORTS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: TEMPORAL_WORKER_PORTS
-        - name: LOG_LEVEL
-          value: "{{ .Values.connectorRolloutWorker.log.level }}"
-        {{- end }}
-        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
+
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
-        {{- else if and (eq .Values.global.deploymentMode "oss") .Values.global.auth.enabled }}
-        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
-        # splitting into two separate blocks for readability.
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- end }}
+
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.tracking.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
 
         # Values from secret
         {{- if .Values.connectorRolloutWorker.secrets }}

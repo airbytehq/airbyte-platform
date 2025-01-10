@@ -53,7 +53,7 @@ export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
         optional
       />
       <BuilderField
-        type="string"
+        type="jinja"
         path={streamFieldPath("recordSelector.filterCondition")}
         label={getLabelByManifest("RecordFilter")}
         manifestPath="RecordFilter.properties.condition"

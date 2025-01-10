@@ -86,8 +86,10 @@ class ReplicationHydrationProcessorTest {
           ),
         ),
       )
-    val activityInput = ReplicationActivityInput()
-    activityInput.connectionId = UUID.randomUUID()
+    val activityInput =
+      ReplicationActivityInput(
+        connectionId = UUID.randomUUID(),
+      )
     val hydrated =
       ReplicationInput()
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
@@ -146,13 +148,12 @@ class ReplicationHydrationProcessorTest {
   companion object {
     // Validates empty or null states serialize as "{}"
     @JvmStatic
-    private fun stateMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun stateMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(State().withState(null), 0),
         Arguments.of(null, 0),
         Arguments.of(State().withState(Jsons.jsonNode("this is" to "nested for some reason")), 1),
       )
-    }
   }
 
   object Fixtures {

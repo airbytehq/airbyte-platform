@@ -2,18 +2,18 @@ openapi: 3.1.0
 info:
   title: airbyte-api
   version: 1.0.0
-  description: Programatically control Airbyte Cloud, OSS & Enterprise.
+  description: Programmatically control Airbyte Cloud, OSS & Enterprise.
 servers:
-  - url: https://api.airbyte.com/v1
-    description: Airbyte API v1
+- url: https://api.airbyte.com/v1
+  description: Airbyte API v1
 paths:
   /:
     get:
       tags:
-        - public_root
-        - public
+      - public_root
+      - public
       responses:
-        "200":
+        '200':
           content:
             text/html: {}
           description: Redirects to documentation
@@ -24,10 +24,10 @@ paths:
   /health:
     get:
       tags:
-        - public_health
-        - public
+      - public_health
+      - public
       responses:
-        "200":
+        '200':
           description: Successful operation
       operationId: getHealthCheck
       summary: Health Check
@@ -37,26 +37,26 @@ paths:
   /applications:
     get:
       tags:
-        - public_applications
-        - public
-        - Applications
+      - public_applications
+      - public
+      - Applications
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationReadList"
+                $ref: '#/components/schemas/ApplicationReadList'
               examples:
                 Application List Response Example:
                   value:
                     applications:
-                      - id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
-                        name: test application
-                        clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
-                        clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
-                        createdAt: 1717969830000
+                    - id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                      name: test application
+                      clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                      clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                      createdAt: 1717969830000
           description: List all Applications a User has permission to view.
-        "403":
+        '403':
           description: Not allowed
       operationId: listApplications
       summary: List Applications
@@ -67,22 +67,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationCreate"
+              $ref: '#/components/schemas/ApplicationCreate'
             examples:
               Application Creation Request Example:
                 value:
                   name: test application
         required: true
       tags:
-        - public_applications
-        - public
-        - Applications
+      - public_applications
+      - public
+      - Applications
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationRead"
+                $ref: '#/components/schemas/ApplicationRead'
               examples:
                 Application Creation Response Example:
                   value:
@@ -92,9 +92,9 @@ paths:
                     clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
                     createdAt: 1717969830000
           description: Creates a new Application.
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createApplication
       summary: Create an Application
@@ -103,15 +103,15 @@ paths:
   /applications/{applicationId}:
     get:
       tags:
-        - public_applications
-        - public
-        - Applications
+      - public_applications
+      - public
+      - Applications
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationRead"
+                $ref: '#/components/schemas/ApplicationRead'
               examples:
                 Application Get Response Example:
                   value:
@@ -121,9 +121,9 @@ paths:
                     clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
                     createdAt: 1717969830000
           description: Get an Application by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getApplication
       x-speakeasy-alias: getApplication
@@ -131,15 +131,15 @@ paths:
       summary: Get an Application detail
     delete:
       tags:
-        - public_applications
-        - public
-        - Applications
+      - public_applications
+      - public
+      - Applications
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApplicationRead"
+                $ref: '#/components/schemas/ApplicationRead'
               examples:
                 Application Delete Response Example:
                   value:
@@ -149,30 +149,30 @@ paths:
                     clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
                     createdAt: 1717969830000
           description: Delete an Application.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: deleteApplication
       x-speakeasy-alias: deleteApplication
       x-speakeasy-group: Applications
       summary: Deletes an Application
     parameters:
-      - name: applicationId
-        schema:
-          type: string
-        in: path
-        required: true
+    - name: applicationId
+      schema:
+        type: string
+      in: path
+      required: true
   /applications/token:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
+              $ref: '#/components/schemas/ApplicationTokenRequestWithGrant'
           application/x-www-form-urlencoded:
             schema:
-              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
+              $ref: '#/components/schemas/ApplicationTokenRequestWithGrant'
             examples:
               Application Token Request Example:
                 value:
@@ -180,23 +180,23 @@ paths:
                   clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
         required: true
       tags:
-        - public_applications
-        - public
-        - Applications
+      - public_applications
+      - public
+      - Applications
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PublicAccessTokenResponse"
+                $ref: '#/components/schemas/PublicAccessTokenResponse'
               examples:
                 Application Creation Response Example:
                   value:
                     access_token: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
           description: Creates an Access Token.
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createAccessToken
       summary: Get an Access Token
@@ -206,117 +206,114 @@ paths:
   /jobs:
     get:
       tags:
-        - public_jobs
-        - public
-        - Jobs
+      - public_jobs
+      - public
+      - Jobs
       parameters:
-        - name: connectionId
-          description: Filter the Jobs by connectionId.
-          schema:
-            format: UUID
+      - name: connectionId
+        description: Filter the Jobs by connectionId.
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: false
+      - name: limit
+        description: Set the limit on the number of Jobs returned. The default is
+          20 Jobs.
+        schema:
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning Jobs. The default is
+          0.
+        schema:
+          format: int32
+          default: 0
+          minimum: 0
+          type: integer
+        in: query
+      - name: jobType
+        description: Filter the Jobs by jobType.
+        schema:
+          $ref: '#/components/schemas/JobTypeEnum'
+        in: query
+      - name: workspaceIds
+        description: The UUIDs of the workspaces you wish to list jobs for. Empty
+          list will retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
             type: string
-          in: query
-          required: false
-        - name: limit
-          description:
-            Set the limit on the number of Jobs returned. The default is
-            20 Jobs.
-          schema:
-            format: int32
-            default: 20
-            maximum: 100
-            minimum: 1
-            type: integer
-          in: query
-        - name: offset
-          description:
-            Set the offset to start at when returning Jobs. The default is
-            0.
-          schema:
-            format: int32
-            default: 0
-            minimum: 0
-            type: integer
-          in: query
-        - name: jobType
-          description: Filter the Jobs by jobType.
-          schema:
-            $ref: "#/components/schemas/JobTypeEnum"
-          in: query
-        - name: workspaceIds
-          description:
-            The UUIDs of the workspaces you wish to list jobs for. Empty
-            list will retrieve all allowed workspaces.
-          schema:
-            type: array
-            items:
-              format: uuid
-              type: string
-          in: query
-          required: false
-        - name: status
-          description: The Job status you want to filter by
-          schema:
-            $ref: "#/components/schemas/JobStatusEnum"
-          in: query
-          required: false
-        - name: createdAtStart
-          description: The start date to filter by
-          schema:
-            type: string
-            format: date-time
-          in: query
-          required: false
-          example: 1687450500000
-        - name: createdAtEnd
-          description: The end date to filter by
-          schema:
-            type: string
-            format: date-time
-          in: query
-          required: false
-          example: 1687450500000
-        - name: updatedAtStart
-          description: The start date to filter by
-          schema:
-            type: string
-            format: date-time
-          example: 1687450500000
-          in: query
-          required: false
-        - name: updatedAtEnd
-          description: The end date to filter by
-          schema:
-            type: string
-            format: date-time
-          in: query
-          required: false
-          example: 1687450500000
-        - name: orderBy
-          description: The field and method to use for ordering
-          schema:
-            type: string
-            pattern: \w+|(ASC|DESC)
-          in: query
-          required: false
-          example: updatedAt|DESC
+        in: query
+        required: false
+      - name: status
+        description: The Job status you want to filter by
+        schema:
+          $ref: '#/components/schemas/JobStatusEnum'
+        in: query
+        required: false
+      - name: createdAtStart
+        description: The start date to filter by
+        schema:
+          type: string
+          format: date-time
+        in: query
+        required: false
+        example: 1687450500000
+      - name: createdAtEnd
+        description: The end date to filter by
+        schema:
+          type: string
+          format: date-time
+        in: query
+        required: false
+        example: 1687450500000
+      - name: updatedAtStart
+        description: The start date to filter by
+        schema:
+          type: string
+          format: date-time
+        example: 1687450500000
+        in: query
+        required: false
+      - name: updatedAtEnd
+        description: The end date to filter by
+        schema:
+          type: string
+          format: date-time
+        in: query
+        required: false
+        example: 1687450500000
+      - name: orderBy
+        description: The field and method to use for ordering
+        schema:
+          type: string
+          pattern: \w+|(ASC|DESC)
+        in: query
+        required: false
+        example: updatedAt|DESC
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobsResponse"
+                $ref: '#/components/schemas/JobsResponse'
               examples:
                 Job List Response Example:
                   value:
                     next: https://api.airbyte.com/v1/jobs?limit=5&offset=10
                     previous: https://api.airbyte.com/v1/jobs?limit=5&offset=0
                     data:
-                      - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
-                        status: running
-                        jobType: sync
+                    - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                      status: running
+                      jobType: sync
           description: List all the Jobs by connectionId.
-        "403":
+        '403':
           description: Not allowed
       operationId: listJobs
       summary: List Jobs by sync type
@@ -327,7 +324,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/JobCreateRequest"
+              $ref: '#/components/schemas/JobCreateRequest'
             examples:
               Job Creation Request Example:
                 value:
@@ -335,27 +332,26 @@ paths:
                   jobType: sync
         required: true
       tags:
-        - public_jobs
-        - public
-        - Jobs
+      - public_jobs
+      - public
+      - Jobs
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobResponse"
+                $ref: '#/components/schemas/JobResponse'
               examples:
                 Job Creation Response Example:
                   value:
                     jobId: 1234
                     status: running
                     jobType: sync
-          description:
-            Kicks off a new Job based on the JobType. The connectionId
+          description: Kicks off a new Job based on the JobType. The connectionId
             is the resource that Job will be run for.
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createJob
       summary: Trigger a sync or reset job of a connection
@@ -364,15 +360,15 @@ paths:
   /jobs/{jobId}:
     get:
       tags:
-        - public_jobs
-        - public
-        - Jobs
+      - public_jobs
+      - public
+      - Jobs
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobResponse"
+                $ref: '#/components/schemas/JobResponse'
               examples:
                 Job Get Response Example:
                   value:
@@ -380,9 +376,9 @@ paths:
                     status: running
                     jobType: sync
           description: Get a Job by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getJob
       x-speakeasy-alias: getJob
@@ -390,186 +386,181 @@ paths:
       summary: Get Job status and details
     delete:
       tags:
-        - public_jobs
-        - public
-        - Jobs
+      - public_jobs
+      - public
+      - Jobs
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobResponse"
+                $ref: '#/components/schemas/JobResponse'
           description: Cancel a Job.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: cancelJob
       x-speakeasy-alias: cancelJob
       x-speakeasy-group: Jobs
       summary: Cancel a running Job
     parameters:
-      - name: jobId
-        schema:
-          format: int64
-          type: integer
-        in: path
-        required: true
+    - name: jobId
+      schema:
+        format: int64
+        type: integer
+      in: path
+      required: true
   /connector_definitions:
     get:
       tags:
-        - public_connector_definitions
-        - public
-        - ConnectorDefinitions
+      - public_connector_definitions
+      - public
+      - ConnectorDefinitions
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorDefinitionsResponse"
+                $ref: '#/components/schemas/ConnectorDefinitionsResponse'
           description: Successful operation
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listConnectorDefinitions
       x-speakeasy-alias: listConnectorDefinitions
       x-speakeasy-group: ConnectorDefinitions
       summary: List connector definitions
       parameters:
-        - name: type
-          description: The type of connector definition to list
-          schema:
-            $ref: "#/components/schemas/ConnectorType"
-          in: query
-          required: true
-        - name: workspaceId
-          description:
-            The UUID of the workspace you wish to list connector definitions
-            for. One of this or organizationId must be populated.
-          schema:
-            type: string
-            format: uuid
-          example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
-          in: query
-          required: false
+      - name: type
+        description: The type of connector definition to list
+        schema:
+          $ref: '#/components/schemas/ConnectorType'
+        in: query
+        required: true
+      - name: workspaceId
+        description: The UUID of the workspace you wish to list connector definitions
+          for. One of this or organizationId must be populated.
+        schema:
+          type: string
+          format: uuid
+        example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
+        in: query
+        required: false
   /sources:
     get:
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourcesResponse"
+                $ref: '#/components/schemas/SourcesResponse'
           description: Successful operation
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listSources
       x-speakeasy-alias: listSources
       x-speakeasy-group: Sources
       summary: List sources
       parameters:
-        - name: workspaceIds
-          description:
-            The UUIDs of the workspaces you wish to list sources for. Empty
-            list will retrieve all allowed workspaces.
-          schema:
-            type: array
-            items:
-              format: uuid
-              type: string
-          example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2,b0796797-de23-4fc7-a5e2-7e131314718c
-          in: query
-          required: false
-        - name: includeDeleted
-          description: Include deleted sources in the returned results.
-          schema:
-            default: false
-            type: boolean
-          in: query
-          required: false
-        - name: limit
-          description:
-            Set the limit on the number of sources returned. The default
-            is 20.
-          schema:
-            format: int32
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-          in: query
-        - name: offset
-          description:
-            Set the offset to start at when returning sources. The default
-            is 0
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          in: query
+      - name: workspaceIds
+        description: The UUIDs of the workspaces you wish to list sources for. Empty
+          list will retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2,b0796797-de23-4fc7-a5e2-7e131314718c
+        in: query
+        required: false
+      - name: includeDeleted
+        description: Include deleted sources in the returned results.
+        schema:
+          default: false
+          type: boolean
+        in: query
+        required: false
+      - name: limit
+        description: Set the limit on the number of sources returned. The default
+          is 20.
+        schema:
+          format: int32
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning sources. The default
+          is 0
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+        in: query
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceCreateRequest"
+              $ref: '#/components/schemas/SourceCreateRequest'
             examples:
               Source Creation Request Example:
                 value:
                   configuration:
                     airbyte_source_name: google-ads
                     conversion_window_days: 14
-                    customer_id: "1234567890"
+                    customer_id: '1234567890'
                     start_date: 1672531200000
                     end_date: 1704067200000
                   name: My Source
                   workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourceResponse"
+                $ref: '#/components/schemas/SourceResponse'
               examples:
                 Source Creation Response Example:
                   value:
                     sourceId: 0c31738c-0b2d-4887-b506-e2cd1c39cc35
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createSource
       x-speakeasy-alias: createSource
       x-speakeasy-group: Sources
       summary: Create a source
-      description:
-        Creates a source given a name, workspace id, and a json blob containing
+      description: Creates a source given a name, workspace id, and a json blob containing
         the configuration for the source.
   /sources/{sourceId}:
     get:
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourceResponse"
+                $ref: '#/components/schemas/SourceResponse'
               examples:
                 Source Get Response Example:
                   value:
@@ -578,9 +569,9 @@ paths:
                     sourceType: postgres
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
           description: Get a Source by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getSource
       x-speakeasy-alias: getSource
@@ -588,31 +579,31 @@ paths:
       summary: Get Source details
     patch:
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourcePatchRequest"
+              $ref: '#/components/schemas/SourcePatchRequest'
             examples:
               Source Update Request Example:
                 value:
                   configuration:
                     airbyte_source_name: google-ads
                     conversion_window_days: 14
-                    customer_id: "1234567890"
+                    customer_id: '1234567890'
                     start_date: 1672531200000
                     end_date: 1704067200000
                   name: My Source
                   workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourceResponse"
+                $ref: '#/components/schemas/SourceResponse'
               examples:
                 Source Update Response Example:
                   value:
@@ -621,9 +612,9 @@ paths:
                     sourceType: postgres
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
           description: Update a Source
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: patchSource
       x-speakeasy-alias: patchSource
@@ -631,31 +622,31 @@ paths:
       summary: Update a Source
     put:
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourcePutRequest"
+              $ref: '#/components/schemas/SourcePutRequest'
             examples:
               Source Update Request Example:
                 value:
                   configuration:
                     airbyte_source_name: google-ads
                     conversion_window_days: 14
-                    customer_id: "1234567890"
+                    customer_id: '1234567890'
                     start_date: 1672531200000
                     end_date: 1704067200000
                   name: My Source
                   workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourceResponse"
+                $ref: '#/components/schemas/SourceResponse'
               examples:
                 Source Update Response Example:
                   value:
@@ -664,9 +655,9 @@ paths:
                     sourceType: postgres
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
           description: Update a source and fully overwrite it
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: putSource
       x-speakeasy-alias: putSource
@@ -675,94 +666,91 @@ paths:
       x-speakeasy-entity-operation: Source#update
     delete:
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       responses:
-        "204":
+        '204':
           description: The resource was deleted successfully
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: deleteSource
       x-speakeasy-alias: deleteSource
       x-speakeasy-group: Sources
       summary: Delete a Source
     parameters:
-      - name: sourceId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: sourceId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
   /destinations:
     get:
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DestinationsResponse"
+                $ref: '#/components/schemas/DestinationsResponse'
           description: Successful operation
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listDestinations
       x-speakeasy-alias: listDestinations
       x-speakeasy-group: Destinations
       summary: List destinations
       parameters:
-        - name: workspaceIds
-          description:
-            The UUIDs of the workspaces you wish to list destinations for.
-            Empty list will retrieve all allowed workspaces.
-          schema:
-            type: array
-            items:
-              format: uuid
-              type: string
-          in: query
-          required: false
-        - name: includeDeleted
-          description: Include deleted destinations in the returned results.
-          schema:
-            default: false
-            type: boolean
-          in: query
-          required: false
-        - name: limit
-          description:
-            Set the limit on the number of destinations returned. The default
-            is 20.
-          schema:
-            format: int32
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-          in: query
-        - name: offset
-          description:
-            Set the offset to start at when returning destinations. The default
-            is 0
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          in: query
+      - name: workspaceIds
+        description: The UUIDs of the workspaces you wish to list destinations for.
+          Empty list will retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        in: query
+        required: false
+      - name: includeDeleted
+        description: Include deleted destinations in the returned results.
+        schema:
+          default: false
+          type: boolean
+        in: query
+        required: false
+      - name: limit
+        description: Set the limit on the number of destinations returned. The default
+          is 20.
+        schema:
+          format: int32
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning destinations. The default
+          is 0
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+        in: query
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationCreateRequest"
+              $ref: '#/components/schemas/DestinationCreateRequest'
             examples:
               Destination Creation Request Example:
                 value:
@@ -781,45 +769,44 @@ paths:
                     username: postgres
                     password: test
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DestinationResponse"
+                $ref: '#/components/schemas/DestinationResponse'
               examples:
                 Destination Creation Response Example:
                   value:
                     destinationId: af0c3c67-aa61-419f-8922-95b0bf840e86
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: createDestination
       x-speakeasy-alias: createDestination
       x-speakeasy-group: Destinations
       summary: Create a destination
-      description:
-        Creates a destination given a name, workspace id, and a json blob
+      description: Creates a destination given a name, workspace id, and a json blob
         containing the configuration for the source.
   /destinations/{destinationId}:
     get:
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DestinationResponse"
+                $ref: '#/components/schemas/DestinationResponse'
               examples:
                 Destination Get Response Example:
                   value:
@@ -829,13 +816,13 @@ paths:
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
                     configuration:
                       conversion_window_days: 14
-                      customer_id: "1234567890"
+                      customer_id: '1234567890'
                       start_date: 1672531200000
                       end_date: 1704067200000
           description: Get a Destination by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getDestination
       x-speakeasy-alias: getDestination
@@ -843,15 +830,15 @@ paths:
       summary: Get Destination details
     delete:
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       responses:
-        "204":
+        '204':
           description: The resource was deleted successfully
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: deleteDestination
       x-speakeasy-alias: deleteDestination
@@ -859,29 +846,29 @@ paths:
       summary: Delete a Destination
     patch:
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationPatchRequest"
+              $ref: '#/components/schemas/DestinationPatchRequest'
             examples:
               Destination Update Request Example:
                 value:
                   configuration:
                     conversion_window_days: 14
-                    customer_id: "1234567890"
+                    customer_id: '1234567890'
                     start_date: 1672531200000
                     end_date: 1704067200000
                   name: My Destination
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DestinationResponse"
+                $ref: '#/components/schemas/DestinationResponse'
               examples:
                 Destination Update Response Example:
                   value:
@@ -891,13 +878,13 @@ paths:
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
                     configuration:
                       conversion_window_days: 14
-                      customer_id: "1234567890"
+                      customer_id: '1234567890'
                       start_date: 1672531200000
                       end_date: 1704067200000
           description: Update a Destination
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: patchDestination
       x-speakeasy-alias: patchDestination
@@ -905,29 +892,29 @@ paths:
       summary: Update a Destination
     put:
       tags:
-        - public_destinations
-        - public
-        - Destinations
+      - public_destinations
+      - public
+      - Destinations
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationPutRequest"
+              $ref: '#/components/schemas/DestinationPutRequest'
             examples:
               Destination Update Request Example:
                 value:
                   configuration:
                     conversion_window_days: 14
-                    customer_id: "1234567890"
+                    customer_id: '1234567890'
                     start_date: 1672531200000
                     end_date: 1704067200000
                   name: My Destination
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DestinationResponse"
+                $ref: '#/components/schemas/DestinationResponse'
               examples:
                 Destination Update Response Example:
                   value:
@@ -937,13 +924,13 @@ paths:
                     workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
                     configuration:
                       conversion_window_days: 14
-                      customer_id: "1234567890"
+                      customer_id: '1234567890'
                       start_date: 1672531200000
                       end_date: 1704067200000
           description: Update a Destination and fully overwrite it
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: putDestination
       x-speakeasy-alias: putDestination
@@ -951,31 +938,30 @@ paths:
       summary: Update a Destination and fully overwrite it
       x-speakeasy-entity-operation: Destination#update
     parameters:
-      - name: destinationId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: destinationId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
   /oauth/callback:
     get:
       tags:
-        - public_oauth
-        - public
-        - OAuth
+      - public_oauth
+      - public
+      - OAuth
       parameters:
-        - name: queryParams
-          description: Query parameters. Should contain state and code.
-          required: false
-          schema:
-            type: object
-            additionalProperties:
-              type: string
-          in: query
+      - name: queryParams
+        description: Query parameters. Should contain state and code.
+        required: false
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+        in: query
       responses:
-        "302":
-          description:
-            Redirect to the URL requested in the initiate call with the
+        '302':
+          description: Redirect to the URL requested in the initiate call with the
             created secret ID.
       operationId: oauthCallback
       x-speakeasy-alias: oauthCallback
@@ -989,18 +975,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InitiateOauthRequest"
+              $ref: '#/components/schemas/InitiateOauthRequest'
         required: true
       tags:
-        - public_sources
-        - public
-        - Sources
+      - public_sources
+      - public
+      - Sources
       responses:
-        "200":
-          $ref: "#/components/responses/InitiateOauthResponse"
-        "400":
+        '200':
+          $ref: '#/components/responses/InitiateOauthResponse'
+        '400':
           description: A field in the body has not been set appropriately.
-        "403":
+        '403':
           description: API key is invalid.
       operationId: initiateOAuth
       x-speakeasy-alias: initiateOAuth
@@ -1018,7 +1004,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectionCreateRequest"
+              $ref: '#/components/schemas/ConnectionCreateRequest'
             examples:
               Connection Creation Request Example:
                 value:
@@ -1027,23 +1013,23 @@ paths:
                   name: Postgres-to-Bigquery
         required: true
       tags:
-        - public_connections
-        - public
-        - Connections
+      - public_connections
+      - public
+      - Connections
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: '#/components/schemas/ConnectionResponse'
               examples:
                 Connection Creation Response Example:
                   value:
                     connectionId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createConnection
       x-speakeasy-alias: createConnection
@@ -1052,19 +1038,19 @@ paths:
       x-speakeasy-entity-operation: Connection#create
     get:
       tags:
-        - public_connections
-        - public
-        - Connections
+      - public_connections
+      - public
+      - Connections
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionsResponse"
+                $ref: '#/components/schemas/ConnectionsResponse'
           description: Successful operation
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listConnections
       x-speakeasy-alias: listConnections
@@ -1072,57 +1058,54 @@ paths:
       summary: List connections
       x-speakeasy-entity-operation: Connection#list
       parameters:
-        - name: workspaceIds
-          description:
-            The UUIDs of the workspaces you wish to list connections for.
-            Empty list will retrieve all allowed workspaces.
-          schema:
-            type: array
-            items:
-              format: uuid
-              type: string
-          in: query
-          required: false
-        - name: includeDeleted
-          description: Include deleted connections in the returned results.
-          schema:
-            default: false
-            type: boolean
-          in: query
-          required: false
-        - name: limit
-          description:
-            Set the limit on the number of Connections returned. The default
-            is 20.
-          schema:
-            format: int32
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-          in: query
-        - name: offset
-          description:
-            Set the offset to start at when returning Connections. The default
-            is 0
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          in: query
+      - name: workspaceIds
+        description: The UUIDs of the workspaces you wish to list connections for.
+          Empty list will retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        in: query
+        required: false
+      - name: includeDeleted
+        description: Include deleted connections in the returned results.
+        schema:
+          default: false
+          type: boolean
+        in: query
+        required: false
+      - name: limit
+        description: Set the limit on the number of Connections returned. The default
+          is 20.
+        schema:
+          format: int32
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning Connections. The default
+          is 0
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+        in: query
   /connections/{connectionId}:
     get:
       tags:
-        - public_connections
-        - public
-        - Connections
+      - public_connections
+      - public
+      - Connections
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: '#/components/schemas/ConnectionResponse'
               examples:
                 Connection Get Response Example:
                   value:
@@ -1131,9 +1114,9 @@ paths:
                     sourceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
                     destinationId: 744cc0ed-7f05-4949-9e60-2a814f90c035
           description: Get a Connection by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getConnection
       x-speakeasy-alias: getConnection
@@ -1142,14 +1125,14 @@ paths:
       x-speakeasy-entity-operation: Connection#read
     patch:
       tags:
-        - public_connections
-        - public
-        - Connections
+      - public_connections
+      - public
+      - Connections
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectionPatchRequest"
+              $ref: '#/components/schemas/ConnectionPatchRequest'
             examples:
               Connection Update Request Example:
                 value:
@@ -1158,11 +1141,11 @@ paths:
                   name: Postgres-to-Bigquery
         required: true
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: '#/components/schemas/ConnectionResponse'
               examples:
                 Connection Get Response Example:
                   value:
@@ -1171,9 +1154,9 @@ paths:
                     sourceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
                     destinationId: 744cc0ed-7f05-4949-9e60-2a814f90c035
           description: Update a Connection by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: patchConnection
       x-speakeasy-alias: patchConnection
@@ -1182,15 +1165,15 @@ paths:
       x-speakeasy-entity-operation: Connection#update
     delete:
       tags:
-        - public_connections
-        - public
-        - Connections
+      - public_connections
+      - public
+      - Connections
       responses:
-        "204":
+        '204':
           description: The resource was deleted successfully
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: deleteConnection
       x-speakeasy-alias: deleteConnection
@@ -1198,77 +1181,75 @@ paths:
       summary: Delete a Connection
       x-speakeasy-entity-operation: Connection#delete
     parameters:
-      - name: connectionId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: connectionId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
   /streams:
     get:
       tags:
-        - public_streams
-        - public
-        - Streams
+      - public_streams
+      - public
+      - Streams
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StreamPropertiesResponse"
-          description:
-            Get the available streams properties for a source/destination
+                $ref: '#/components/schemas/StreamPropertiesResponse'
+          description: Get the available streams properties for a source/destination
             pair.
-        "400":
+        '400':
           description: Required parameters are missing
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getStreamProperties
       x-speakeasy-alias: getStreamProperties
       x-speakeasy-group: Streams
       summary: Get stream properties
       parameters:
-        - name: sourceId
-          description: ID of the source
-          schema:
-            format: UUID
-            type: string
-          in: query
-          required: true
-        - name: destinationId
-          description: ID of the destination
-          schema:
-            format: UUID
-            type: string
-          in: query
-          required: false
-        - name: ignoreCache
-          description:
-            If true pull the latest schema from the source, else pull from
-            cache (default false)
-          schema:
-            type: boolean
-            default: false
-          in: query
-          required: false
+      - name: sourceId
+        description: ID of the source
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: true
+      - name: destinationId
+        description: ID of the destination
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: false
+      - name: ignoreCache
+        description: If true pull the latest schema from the source, else pull from
+          cache (default false)
+        schema:
+          type: boolean
+          default: false
+        in: query
+        required: false
   /workspaces:
     get:
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspacesResponse"
+                $ref: '#/components/schemas/WorkspacesResponse'
           description: Successful operation
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listWorkspaces
       x-speakeasy-alias: listWorkspaces
@@ -1276,74 +1257,71 @@ paths:
       summary: List workspaces
       x-speakeasy-entity-operation: Workspace#list
       parameters:
-        - name: workspaceIds
-          description:
-            The UUIDs of the workspaces you wish to fetch. Empty list will
-            retrieve all allowed workspaces.
-          schema:
-            type: array
-            items:
-              format: uuid
-              type: string
-          in: query
-          required: false
-        - name: includeDeleted
-          description: Include deleted workspaces in the returned results.
-          schema:
-            default: false
-            type: boolean
-          in: query
-          required: false
-        - name: limit
-          description:
-            Set the limit on the number of workspaces returned. The default
-            is 20.
-          schema:
-            format: int32
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-          in: query
-        - name: offset
-          description:
-            Set the offset to start at when returning workspaces. The default
-            is 0
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          in: query
+      - name: workspaceIds
+        description: The UUIDs of the workspaces you wish to fetch. Empty list will
+          retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        in: query
+        required: false
+      - name: includeDeleted
+        description: Include deleted workspaces in the returned results.
+        schema:
+          default: false
+          type: boolean
+        in: query
+        required: false
+      - name: limit
+        description: Set the limit on the number of workspaces returned. The default
+          is 20.
+        schema:
+          format: int32
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning workspaces. The default
+          is 0
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+        in: query
     post:
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceCreateRequest"
+              $ref: '#/components/schemas/WorkspaceCreateRequest'
             examples:
               Workspace Creation Request Example:
                 value:
                   name: Company Workspace Name
         required: true
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceResponse"
+                $ref: '#/components/schemas/WorkspaceResponse'
               examples:
                 Workspace Creation Response Example:
                   value:
                     workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createWorkspace
       x-speakeasy-alias: createWorkspace
@@ -1352,23 +1330,23 @@ paths:
       x-speakeasy-entity-operation: Workspace#create
   /workspaces/{workspaceId}:
     parameters:
-      - name: workspaceId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: workspaceId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
     get:
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceResponse"
+                $ref: '#/components/schemas/WorkspaceResponse'
               examples:
                 Workspace Get Response Example:
                   value:
@@ -1376,9 +1354,9 @@ paths:
                     name: Acme Company
                     dataResidency: auto
           description: Get a Workspace by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: getWorkspace
       x-speakeasy-alias: getWorkspace
@@ -1387,33 +1365,33 @@ paths:
       x-speakeasy-entity-operation: Workspace#read
     patch:
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceUpdateRequest"
+              $ref: '#/components/schemas/WorkspaceUpdateRequest'
             examples:
               Workspace Update Request Example:
                 value:
                   name: Company Workspace Name
         required: true
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceResponse"
+                $ref: '#/components/schemas/WorkspaceResponse'
               examples:
                 Workspace Update Response Example:
                   value:
                     workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: updateWorkspace
       x-speakeasy-alias: updateWorkspace
@@ -1422,15 +1400,15 @@ paths:
       x-speakeasy-entity-operation: Workspace#update
     delete:
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       responses:
-        "204":
+        '204':
           description: The resource was deleted successfully
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: deleteWorkspace
       x-speakeasy-alias: deleteWorkspace
@@ -1443,18 +1421,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceOAuthCredentialsRequest"
+              $ref: '#/components/schemas/WorkspaceOAuthCredentialsRequest'
         required: true
       tags:
-        - public_workspaces
-        - public
-        - Workspaces
+      - public_workspaces
+      - public
+      - Workspaces
       responses:
-        "200":
+        '200':
           description: OAuth credential override was successful.
-        "400":
+        '400':
           description: A field in the body has not been set appropriately.
-        "403":
+        '403':
           description: API key is invalid.
       operationId: createOrUpdateWorkspaceOAuthCredentials
       x-speakeasy-alias: createOrUpdateWorkspaceOAuthCredentials
@@ -1464,37 +1442,37 @@ paths:
         Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
         In order to determine what the credential configuration needs to be, please see the connector specification of the relevant source/destination.
     parameters:
-      - name: workspaceId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: workspaceId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
   /permissions/{permissionId}:
     parameters:
-      - name: permissionId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
+    - name: permissionId
+      schema:
+        format: UUID
+        type: string
+      in: path
+      required: true
     get:
       tags:
-        - public_permissions
-        - public
-        - Permissions
+      - public_permissions
+      - public
+      - Permissions
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PermissionResponse"
+                $ref: '#/components/schemas/PermissionResponse'
           description: Get a Permission by the id in the path.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
-        "422":
+        '422':
           description: Data issue
       operationId: getPermission
       summary: Get Permission details
@@ -1503,29 +1481,29 @@ paths:
       x-speakeasy-entity-operation: Permission#read
     patch:
       tags:
-        - public_permissions
-        - public
-        - Permissions
+      - public_permissions
+      - public
+      - Permissions
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PermissionUpdateRequest"
+              $ref: '#/components/schemas/PermissionUpdateRequest'
         required: true
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PermissionResponse"
+                $ref: '#/components/schemas/PermissionResponse'
           description: Successful updated
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
-        "422":
+        '422':
           description: Data issue
       operationId: updatePermission
       summary: Update a permission
@@ -1534,17 +1512,17 @@ paths:
       x-speakeasy-entity-operation: Permission#update
     delete:
       tags:
-        - public_permissions
-        - public
-        - Permissions
+      - public_permissions
+      - public
+      - Permissions
       responses:
-        "204":
+        '204':
           description: The resource was deleted successfully
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
-        "422":
+        '422':
           description: Data issue
       operationId: deletePermission
       x-speakeasy-alias: deletePermission
@@ -1554,36 +1532,35 @@ paths:
   /permissions:
     get:
       tags:
-        - public_permissions
-        - public
-        - Permissions
+      - public_permissions
+      - public
+      - Permissions
       parameters:
-        - name: userId
-          description: User Id in permission.
-          schema:
-            format: UUID
-            type: string
-          in: query
-          required: false
-        - name: organizationId
-          description:
-            This is required if you want to read someone else's permissions,
-            and you should have organization admin or a higher role.
-          schema:
-            format: UUID
-            type: string
-          in: query
-          required: false
+      - name: userId
+        description: User Id in permission.
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: false
+      - name: organizationId
+        description: This is required if you want to read someone else's permissions,
+          and you should have organization admin or a higher role.
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: false
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PermissionsResponse"
+                $ref: '#/components/schemas/PermissionsResponse'
           description: List Permissions.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listPermissions
       x-speakeasy-alias: listPermissions
@@ -1591,14 +1568,14 @@ paths:
       summary: List Permissions by user id
     post:
       tags:
-        - public_permissions
-        - public
-        - Permissions
+      - public_permissions
+      - public
+      - Permissions
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PermissionCreateRequest"
+              $ref: '#/components/schemas/PermissionCreateRequest'
             examples:
               Permission Creation Request Example:
                 value:
@@ -1607,11 +1584,11 @@ paths:
                   workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
         required: true
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PermissionResponse"
+                $ref: '#/components/schemas/PermissionResponse'
               examples:
                 Permission Creation Response Example:
                   value:
@@ -1619,9 +1596,9 @@ paths:
                     permissionType: workspace_admin
                     userId: 7d08fd6c-531e-4a00-937e-3d355f253e63
           description: Successful operation
-        "400":
+        '400':
           description: Invalid data
-        "403":
+        '403':
           description: Not allowed
       operationId: createPermission
       x-speakeasy-alias: createPermission
@@ -1631,21 +1608,21 @@ paths:
   /organizations:
     get:
       tags:
-        - public_organizations
-        - public
-        - Organizations
+      - public_organizations
+      - public
+      - Organizations
       summary: List all organizations for a user
       description: Lists users organizations.
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationsResponse"
+                $ref: '#/components/schemas/OrganizationsResponse'
           description: List user's organizations.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listOrganizationsForUser
       x-speakeasy-alias: listOrganizationsForUser
@@ -1653,46 +1630,45 @@ paths:
   /users:
     get:
       tags:
-        - public_users
-        - public
-        - Users
+      - public_users
+      - public
+      - Users
       summary: List all users within an organization
-      description:
-        Organization Admin user can list all users within the same organization.
+      description: Organization Admin user can list all users within the same organization.
         Also provide filtering on a list of user IDs or/and a list of user emails.
       parameters:
-        - in: query
-          name: organizationId
-          schema:
+      - in: query
+        name: organizationId
+        schema:
+          type: string
+          format: UUID
+        required: true
+      - in: query
+        name: ids
+        schema:
+          type: array
+          items:
             type: string
             format: UUID
-          required: true
-        - in: query
-          name: ids
-          schema:
-            type: array
-            items:
-              type: string
-              format: UUID
-          description: List of user IDs to filter by
-        - in: query
-          name: emails
-          schema:
-            type: array
-            items:
-              type: string
-              format: email
-          description: List of user emails to filter by
+        description: List of user IDs to filter by
+      - in: query
+        name: emails
+        schema:
+          type: array
+          items:
+            type: string
+            format: email
+        description: List of user emails to filter by
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UsersResponse"
+                $ref: '#/components/schemas/UsersResponse'
           description: List Users.
-        "403":
+        '403':
           description: Not allowed
-        "404":
+        '404':
           description: Not found
       operationId: listUsersWithinAnOrganization
       x-speakeasy-alias: listUsersWithinAnOrganization
@@ -1702,8 +1678,7 @@ components:
     InitiateOauthResponse:
       content:
         application/json: {}
-      description:
-        Response from the initiate OAuth call should be an object with
+      description: Response from the initiate OAuth call should be an object with
         a single property which will be the `redirect_url`. If a user is redirected
         to this URL, they'll be prompted by the identity provider to authenticate.
       x-speakeasy-component: true
@@ -1713,16 +1688,14 @@ components:
       format: uuid
       x-speakeasy-component: true
     SourceConfiguration:
-      description:
-        The values required to configure the source. The schema for this
+      description: The values required to configure the source. The schema for this
         must match the schema return by source_definition_specifications/get for the
         source.
       example:
         user: charles
       x-speakeasy-component: true
     DestinationConfiguration:
-      description:
-        The values required to configure the destination. The schema for
+      description: The values required to configure the destination. The schema for
         this must match the schema return by destination_definition_specifications/get
         for the destinationDefinition.
       example:
@@ -1736,33 +1709,32 @@ components:
       type: string
       description: Describes what actions/endpoints the permission entitles to
       enum:
-        - instance_admin
-        - organization_admin
-        - organization_editor
-        - organization_runner
-        - organization_reader
-        - organization_member
-        - workspace_owner
-        - workspace_admin
-        - workspace_runner
-        - workspace_editor
-        - workspace_reader
+      - instance_admin
+      - organization_admin
+      - organization_editor
+      - organization_runner
+      - organization_reader
+      - organization_member
+      - workspace_owner
+      - workspace_admin
+      - workspace_runner
+      - workspace_editor
+      - workspace_reader
       x-speakeasy-component: true
     PublicPermissionType:
       type: string
-      description:
-        Subset of `PermissionType` (removing `instance_admin`), could be
+      description: Subset of `PermissionType` (removing `instance_admin`), could be
         used in public-api.
       enum:
-        - organization_admin
-        - organization_editor
-        - organization_runner
-        - organization_reader
-        - organization_member
-        - workspace_admin
-        - workspace_editor
-        - workspace_runner
-        - workspace_reader
+      - organization_admin
+      - organization_editor
+      - organization_runner
+      - organization_reader
+      - organization_member
+      - workspace_admin
+      - workspace_editor
+      - workspace_runner
+      - workspace_reader
       x-speakeasy-component: true
     UserId:
       type: string
@@ -1774,23 +1746,22 @@ components:
       description: Auth Provider
       default: airbyte
       enum:
-        - airbyte
-        - google_identity_platform
-        - keycloak
+      - airbyte
+      - google_identity_platform
+      - keycloak
       x-speakeasy-component: true
     UserStatus:
       type: string
       description: user status
       enum:
-        - invited
-        - registered
-        - disabled
+      - invited
+      - registered
+      - disabled
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     SelectedFieldInfo:
       type: object
-      description:
-        Path to a field/column/property in a stream to be selected. For
+      description: Path to a field/column/property in a stream to be selected. For
         example, if the field to be selected is a database column called "foo", this
         will be ["foo"]. Use multiple path elements for nested schemas.
       properties:
@@ -1802,43 +1773,229 @@ components:
     StreamMapperType:
       type: string
       enum:
-        - hashing
-        - field-renaming
-        - row-filtering
+      - hashing
+      - field-renaming
+      - row-filtering
+      - encryption
       x-speakeasy-component: true
     ConfiguredStreamMapper:
       type: object
       required:
-        - type
-        - mapperConfiguration
+      - type
+      - mapperConfiguration
       properties:
+        id:
+          type: string
+          format: uuid
         type:
-          $ref: "#/components/schemas/StreamMapperType"
+          $ref: '#/components/schemas/StreamMapperType'
         mapperConfiguration:
-          $ref: "#/components/schemas/MapperConfiguration"
+          $ref: '#/components/schemas/MapperConfiguration'
       x-speakeasy-component: true
     MapperConfiguration:
       type: object
       description: The values required to configure the mapper.
+      oneOf:
+      - $ref: '#/components/schemas/HashingMapperConfiguration'
+      - $ref: '#/components/schemas/FieldRenamingMapperConfiguration'
+      - $ref: '#/components/schemas/RowFilteringMapperConfiguration'
+      - $ref: '#/components/schemas/EncryptionMapperConfiguration'
+      x-speakeasy-component: true
+    HashingMapperConfiguration:
+      title: Hashing
+      type: object
+      properties:
+        fieldNameSuffix:
+          type: string
+          title: Field name suffix
+          description: The suffix to append to the field name after hashing.
+        method:
+          type: string
+          enum:
+          - MD2
+          - MD5
+          - SHA-1
+          - SHA-224
+          - SHA-256
+          - SHA-384
+          - SHA-512
+          title: Hashing method
+          description: The hashing algorithm to use.
+        targetField:
+          type: string
+          title: Original Field Name
+          description: The name of the field to be hashed.
+      required:
+      - fieldNameSuffix
+      - method
+      - targetField
+      x-speakeasy-component: true
+    FieldRenamingMapperConfiguration:
+      title: Field Renaming
+      type: object
+      properties:
+        newFieldName:
+          type: string
+          title: New Field Name
+          description: The new name for the field after renaming.
+        originalFieldName:
+          type: string
+          title: Original Field Name
+          description: The current name of the field to rename.
+      required:
+      - newFieldName
+      - originalFieldName
+      x-speakeasy-component: true
+    RowFilteringOperationType:
+      type: string
+      enum:
+      - EQUAL
+      - NOT
+      x-speakeasy-component: true
+    RowFilteringOperationEqual:
+      type: object
+      title: EQUAL
+      required:
+      - comparisonValue
+      - fieldName
+      - type
+      properties:
+        comparisonValue:
+          type: string
+          title: Comparison Value
+          description: The value to compare the field against.
+        fieldName:
+          type: string
+          title: Field Name
+          description: The name of the field to apply the operation on.
+        type:
+          $ref: '#/components/schemas/RowFilteringOperationType'
+      x-speakeasy-component: true
+    RowFilteringOperationNot:
+      type: object
+      title: NOT
+      required:
+      - conditions
+      - type
+      properties:
+        conditions:
+          title: Sub-Conditions (NOT)
+          description: Conditions to evaluate with the NOT operator.
+          minItems: 1
+          type: array
+          items:
+            $ref: '#/components/schemas/RowFilteringOperation'
+        type:
+          $ref: '#/components/schemas/RowFilteringOperationType'
+      x-speakeasy-component: true
+    RowFilteringOperation:
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/RowFilteringOperationEqual'
+      - $ref: '#/components/schemas/RowFilteringOperationNot'
+      discriminator:
+        propertyName: type
+        mapping:
+          EQUAL: '#/components/schemas/RowFilteringOperationEqual'
+          NOT: '#/components/schemas/RowFilteringOperationNot'
+      x-speakeasy-component: true
+    RowFilteringMapperConfiguration:
+      title: Row Filtering
+      type: object
+      properties:
+        conditions:
+          $ref: '#/components/schemas/RowFilteringOperation'
+      required:
+      - conditions
+      x-speakeasy-component: true
+    EncryptionMapperAlgorithm:
+      type: string
+      enum:
+      - RSA
+      - AES
+      x-speakeasy-component: true
+    EncryptionMapperConfiguration:
+      title: Encryption
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/EncryptionMapperRSAConfiguration'
+      - $ref: '#/components/schemas/EncryptionMapperAESConfiguration'
+      discriminator:
+        propertyName: algorithm
+        mapping:
+          RSA: '#/components/schemas/EncryptionMapperRSAConfiguration'
+          AES: '#/components/schemas/EncryptionMapperAESConfiguration'
+      x-speakeasy-component: true
+    EncryptionMapperRSAConfiguration:
+      title: Encryption - RSA
+      type: object
+      properties:
+        algorithm:
+          $ref: '#/components/schemas/EncryptionMapperAlgorithm'
+        fieldNameSuffix:
+          type: string
+        publicKey:
+          type: string
+        targetField:
+          type: string
+      required:
+      - algorithm
+      - publicKey
+      - targetField
+      - fieldNameSuffix
+      x-speakeasy-component: true
+    EncryptionMapperAESConfiguration:
+      title: Encryption - AES
+      type: object
+      properties:
+        algorithm:
+          $ref: '#/components/schemas/EncryptionMapperAlgorithm'
+        fieldNameSuffix:
+          type: string
+        key:
+          type: string
+          x-speakeasy-param-sensitive: true
+        mode:
+          type: string
+          enum:
+          - CBC
+          - CFB
+          - OFB
+          - CTR
+          - GCM
+          - ECB
+        padding:
+          type: string
+          enum:
+          - NoPadding
+          - PKCS5Padding
+        targetField:
+          type: string
+      required:
+      - algorithm
+      - key
+      - mode
+      - padding
+      - targetField
+      - fieldNameSuffix
       x-speakeasy-component: true
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
       type: array
       items:
-        $ref: "#/components/schemas/SelectedFieldInfo"
+        $ref: '#/components/schemas/SelectedFieldInfo'
       x-speakeasy-component: true
     OAuthConfiguration:
-      description:
-        The values required to configure OAuth flows. The schema for this
+      description: The values required to configure OAuth flows. The schema for this
         must match the `OAuthConfigSpecification.oauthUserInputFromConnectorConfigSpecification`
         schema.
       x-speakeasy-component: true
     OAuthInputConfiguration:
-      $ref: "#/components/schemas/OAuthConfiguration"
+      $ref: '#/components/schemas/OAuthConfiguration'
       x-speakeasy-component: true
     ApplicationCreate:
       required:
-        - name
+      - name
       type: object
       properties:
         name:
@@ -1846,21 +2003,21 @@ components:
       x-speakeasy-component: true
     ApplicationReadList:
       required:
-        - applications
+      - applications
       type: object
       properties:
         applications:
           type: array
           items:
-            $ref: "#/components/schemas/ApplicationRead"
+            $ref: '#/components/schemas/ApplicationRead'
       x-speakeasy-component: true
     ApplicationRead:
       required:
-        - id
-        - name
-        - clientId
-        - clientSecret
-        - createdAt
+      - id
+      - name
+      - clientId
+      - clientSecret
+      - createdAt
       type: object
       properties:
         id:
@@ -1877,9 +2034,9 @@ components:
       x-speakeasy-component: true
     ApplicationTokenRequestWithGrant:
       required:
-        - client_id
-        - client_secret
-        - grant_type
+      - client_id
+      - client_secret
+      - grant_type
       type: object
       properties:
         client_id:
@@ -1888,27 +2045,27 @@ components:
           type: string
         grant-type:
           enum:
-            - client_credentials
+          - client_credentials
       x-speakeasy-component: true
     PublicAccessTokenResponse:
       required:
-        - access_token
-        - token_type
-        - expires_in
+      - access_token
+      - token_type
+      - expires_in
       type: object
       properties:
         access_token:
           type: string
         token_type:
           enum:
-            - Bearer
+          - Bearer
         expires_in:
           type: integer
           format: int64
       x-speakeasy-component: true
     RedirectUrlResponse:
       title: Root Type for RedirectUrlResponse
-      description: ""
+      description: ''
       type: object
       properties:
         redirectUrl:
@@ -1921,20 +2078,20 @@ components:
       title: Root Type for JobResponse
       description: Provides details of a single job.
       required:
-        - jobId
-        - status
-        - jobType
-        - startTime
-        - connectionId
+      - jobId
+      - status
+      - jobType
+      - startTime
+      - connectionId
       type: object
       properties:
         jobId:
           format: int64
           type: integer
         status:
-          $ref: "#/components/schemas/JobStatusEnum"
+          $ref: '#/components/schemas/JobStatusEnum'
         jobType:
-          $ref: "#/components/schemas/JobTypeEnum"
+          $ref: '#/components/schemas/JobTypeEnum'
         startTime:
           type: string
         connectionId:
@@ -1960,9 +2117,9 @@ components:
       x-speakeasy-component: true
     JobsResponse:
       title: Root Type for JobsResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         previous:
@@ -1972,20 +2129,20 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/JobResponse"
+            $ref: '#/components/schemas/JobResponse'
       example:
         next: https://api.airbyte.com/v1/jobs?limit=5&offset=10
         previous: https://api.airbyte.com/v1/jobs?limit=5&offset=0
         data:
-          - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
-            status: running
-            jobType: sync
-            startTime: 2023-03-25T01:30:50Z
+        - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+          status: running
+          jobType: sync
+          startTime: 2023-03-25T01:30:50Z
       x-speakeasy-component: true
     ConnectionCreateRequest:
       required:
-        - sourceId
-        - destinationId
+      - sourceId
+      - destinationId
       type: object
       properties:
         name:
@@ -1998,31 +2155,29 @@ components:
           format: uuid
           type: string
         configurations:
-          $ref: "#/components/schemas/StreamConfigurations"
+          $ref: '#/components/schemas/StreamConfigurations'
         schedule:
-          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          $ref: '#/components/schemas/GeographyEnum'
         namespaceDefinition:
-          $ref: "#/components/schemas/NamespaceDefinitionEnum"
+          $ref: '#/components/schemas/NamespaceDefinitionEnum'
         namespaceFormat:
           type: string
-          description:
-            Used when namespaceDefinition is 'custom_format'. If blank
+          description: Used when namespaceDefinition is 'custom_format'. If blank
             then behaves like namespaceDefinition = 'destination'. If "${SOURCE_NAMESPACE}"
             then behaves like namespaceDefinition = 'source'.
           default: null
           example: ${SOURCE_NAMESPACE}
         prefix:
           type: string
-          description:
-            Prefix that will be prepended to the name of each stream when
+          description: Prefix that will be prepended to the name of each stream when
             it is written to the destination (ex. “airbyte_” causes “projects” =>
             “airbyte_projects”).
         nonBreakingSchemaUpdatesBehavior:
-          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+          $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum'
         status:
-          $ref: "#/components/schemas/ConnectionStatusEnum"
+          $ref: '#/components/schemas/ConnectionStatusEnum'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2033,87 +2188,82 @@ components:
           description: Optional name of the connection
           type: string
         configurations:
-          $ref: "#/components/schemas/StreamConfigurations"
+          $ref: '#/components/schemas/StreamConfigurations'
         schedule:
-          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          $ref: '#/components/schemas/GeographyEnumNoDefault'
         namespaceDefinition:
-          $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
+          $ref: '#/components/schemas/NamespaceDefinitionEnumNoDefault'
         namespaceFormat:
           type: string
-          description:
-            Used when namespaceDefinition is 'custom_format'. If blank
+          description: Used when namespaceDefinition is 'custom_format'. If blank
             then behaves like namespaceDefinition = 'destination'. If "${SOURCE_NAMESPACE}"
             then behaves like namespaceDefinition = 'source'.
           default: null
           example: ${SOURCE_NAMESPACE}
         prefix:
           type: string
-          description:
-            Prefix that will be prepended to the name of each stream when
+          description: Prefix that will be prepended to the name of each stream when
             it is written to the destination (ex. “airbyte_” causes “projects” =>
             “airbyte_projects”).
         nonBreakingSchemaUpdatesBehavior:
-          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
+          $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault'
         status:
-          $ref: "#/components/schemas/ConnectionStatusEnum"
+          $ref: '#/components/schemas/ConnectionStatusEnum'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     JobCreateRequest:
       title: Root Type for JobCreate
-      description:
-        Creates a new Job from the configuration provided in the request
+      description: Creates a new Job from the configuration provided in the request
         body.
       required:
-        - jobType
-        - connectionId
+      - jobType
+      - connectionId
       type: object
       properties:
         connectionId:
           format: UUID
           type: string
         jobType:
-          $ref: "#/components/schemas/JobTypeEnum"
+          $ref: '#/components/schemas/JobTypeEnum'
       example:
         connectionId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         jobType: sync
       x-speakeasy-component: true
     JobStatusEnum:
       enum:
-        - pending
-        - running
-        - incomplete
-        - failed
-        - succeeded
-        - cancelled
+      - pending
+      - running
+      - incomplete
+      - failed
+      - succeeded
+      - cancelled
       type: string
       x-speakeasy-component: true
     JobTypeEnum:
-      description:
-        Enum that describes the different types of jobs that the platform
+      description: Enum that describes the different types of jobs that the platform
         runs.
       enum:
-        - sync
-        - reset
-        - refresh
-        - clear
+      - sync
+      - reset
+      - refresh
+      - clear
       type: string
       x-speakeasy-component: true
     SourceCreateRequest:
       required:
-        - name
-        - workspaceId
-        - configuration
+      - name
+      - workspaceId
+      - configuration
       type: object
       properties:
         name:
           description: Name of the source e.g. dev-mysql-instance.
           type: string
         definitionId:
-          description:
-            The UUID of the connector definition. One of configuration.sourceType
+          description: The UUID of the connector definition. One of configuration.sourceType
             or definitionId must be provided.
           format: uuid
           type: string
@@ -2121,7 +2271,7 @@ components:
           format: uuid
           type: string
         configuration:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: '#/components/schemas/SourceConfiguration'
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
@@ -2131,14 +2281,14 @@ components:
       x-speakeasy-component: true
     SourcePutRequest:
       required:
-        - name
-        - configuration
+      - name
+      - configuration
       type: object
       properties:
         name:
           type: string
         configuration:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: '#/components/schemas/SourceConfiguration'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Source
       x-speakeasy-param-suppress-computed-diff: true
@@ -2153,7 +2303,7 @@ components:
           format: uuid
           type: string
         configuration:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: '#/components/schemas/SourceConfiguration'
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
@@ -2164,31 +2314,28 @@ components:
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       required:
-        - redirectUrl
-        - workspaceId
+      - redirectUrl
+      - workspaceId
       type: object
       properties:
         name:
-          description:
-            The name of the source to authenticate to. Deprecated - use
+          description: The name of the source to authenticate to. Deprecated - use
             sourceType instead.
           type: string
         sourceType:
           description: The name of the source to authenticate to
           type: string
         redirectUrl:
-          description:
-            The URL to redirect the user to with the OAuth secret stored
+          description: The URL to redirect the user to with the OAuth secret stored
             in the secret_id query string parameter after authentication is complete.
           type: string
         workspaceId:
           format: uuid
-          description:
-            The workspace to create the secret and eventually the full
+          description: The workspace to create the secret and eventually the full
             source.
           type: string
         oAuthInputConfiguration:
-          $ref: "#/components/schemas/OAuthInputConfiguration"
+          $ref: '#/components/schemas/OAuthInputConfiguration'
           description: Input configuration for OAuth required by some sources.
       example:
         redirectUrl: https://cloud.airbyte.io/v1/api/oauth/callback
@@ -2199,22 +2346,21 @@ components:
       title: Root Type for WorkspaceOAuthCredentials
       description: POST body for creating/updating workspace level OAuth credentials
       required:
-        - actorType
-        - name
-        - configuration
+      - actorType
+      - name
+      - configuration
       type: object
       properties:
         actorType:
-          $ref: "#/components/schemas/ActorTypeEnum"
+          $ref: '#/components/schemas/ActorTypeEnum'
         name:
           type: string
           description: The name of the source i.e. google-ads
         configuration:
-          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+          $ref: '#/components/schemas/OAuthCredentialsConfiguration'
       x-speakeasy-component: true
     OAuthCredentialsConfiguration:
-      description:
-        The configuration for this source/destination based on the OAuth
+      description: The configuration for this source/destination based on the OAuth
         section of the relevant specification.
       type: object
       example:
@@ -2227,15 +2373,16 @@ components:
       description: Provides details of a single connection.
       type: object
       required:
-        - connectionId
-        - name
-        - sourceId
-        - destinationId
-        - workspaceId
-        - status
-        - schedule
-        - dataResidency
-        - configurations
+      - connectionId
+      - name
+      - sourceId
+      - destinationId
+      - workspaceId
+      - status
+      - schedule
+      - dataResidency
+      - configurations
+      - createdAt
       properties:
         connectionId:
           format: UUID
@@ -2252,53 +2399,54 @@ components:
           format: UUID
           type: string
         status:
-          $ref: "#/components/schemas/ConnectionStatusEnum"
+          $ref: '#/components/schemas/ConnectionStatusEnum'
         schedule:
-          $ref: "#/components/schemas/ConnectionScheduleResponse"
+          $ref: '#/components/schemas/ConnectionScheduleResponse'
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          $ref: '#/components/schemas/GeographyEnum'
         nonBreakingSchemaUpdatesBehavior:
-          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+          $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum'
         namespaceDefinition:
-          $ref: "#/components/schemas/NamespaceDefinitionEnum"
+          $ref: '#/components/schemas/NamespaceDefinitionEnum'
         namespaceFormat:
           type: string
         prefix:
           type: string
         configurations:
-          $ref: "#/components/schemas/StreamConfigurations"
+          $ref: '#/components/schemas/StreamConfigurations'
+        createdAt:
+          format: int64
+          type: integer
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     AirbyteApiConnectionSchedule:
-      description:
-        schedule for when the the connection should run, per the schedule
+      description: schedule for when the the connection should run, per the schedule
         type
       type: object
       required:
-        - scheduleType
+      - scheduleType
       properties:
         scheduleType:
-          $ref: "#/components/schemas/ScheduleTypeEnum"
+          $ref: '#/components/schemas/ScheduleTypeEnum'
         cronExpression:
           type: string
       x-speakeasy-component: true
     ScheduleTypeEnum:
       type: string
       enum:
-        - manual
-        - cron
+      - manual
+      - cron
       x-speakeasy-component: true
     ConnectionScheduleResponse:
-      description:
-        schedule for when the the connection should run, per the schedule
+      description: schedule for when the the connection should run, per the schedule
         type
       type: object
       required:
-        - scheduleType
+      - scheduleType
       properties:
         scheduleType:
-          $ref: "#/components/schemas/ScheduleTypeWithBasicEnum"
+          $ref: '#/components/schemas/ScheduleTypeWithBasicEnum'
         cronExpression:
           type: string
         basicTiming:
@@ -2307,83 +2455,82 @@ components:
     ScheduleTypeWithBasicEnum:
       type: string
       enum:
-        - manual
-        - cron
-        - basic
+      - manual
+      - cron
+      - basic
       x-speakeasy-component: true
     GeographyEnum:
       type: string
       enum:
-        - auto
-        - us
-        - eu
+      - auto
+      - us
+      - eu
       default: auto
       x-speakeasy-component: true
     GeographyEnumNoDefault:
       type: string
       enum:
-        - auto
-        - us
-        - eu
+      - auto
+      - us
+      - eu
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: string
       enum:
-        - active
-        - inactive
-        - deprecated
+      - active
+      - inactive
+      - deprecated
       x-speakeasy-component: true
     NamespaceDefinitionEnum:
       type: string
       description: Define the location where the data will be stored in the destination
       enum:
-        - source
-        - destination
-        - custom_format
+      - source
+      - destination
+      - custom_format
       default: destination
       x-speakeasy-component: true
     NonBreakingSchemaUpdatesBehaviorEnum:
       type: string
-      description:
-        Set how Airbyte handles syncs when it detects a non-breaking schema
+      description: Set how Airbyte handles syncs when it detects a non-breaking schema
         change in the source
       enum:
-        - ignore
-        - disable_connection
-        - propagate_columns
-        - propagate_fully
+      - ignore
+      - disable_connection
+      - propagate_columns
+      - propagate_fully
       default: ignore
       x-speakeasy-component: true
     NamespaceDefinitionEnumNoDefault:
       type: string
       description: Define the location where the data will be stored in the destination
       enum:
-        - source
-        - destination
-        - custom_format
+      - source
+      - destination
+      - custom_format
       x-speakeasy-component: true
     NonBreakingSchemaUpdatesBehaviorEnumNoDefault:
       type: string
-      description:
-        Set how Airbyte handles syncs when it detects a non-breaking schema
+      description: Set how Airbyte handles syncs when it detects a non-breaking schema
         change in the source
       enum:
-        - ignore
-        - disable_connection
-        - propagate_columns
-        - propagate_fully
+      - ignore
+      - disable_connection
+      - propagate_columns
+      - propagate_fully
       x-speakeasy-component: true
     DestinationResponse:
       title: Root Type for DestinationResponse
       description: Provides details of a single destination.
       type: object
       required:
-        - destinationId
-        - name
-        - destinationType
-        - definitionId
-        - workspaceId
-        - configuration
+      - destinationId
+      - name
+      - destinationType
+      - definitionId
+      - workspaceId
+      - configuration
+      - createdAt
       properties:
         destinationId:
           format: UUID
@@ -2399,7 +2546,10 @@ components:
           format: UUID
           type: string
         configuration:
-          $ref: "#/components/schemas/DestinationConfiguration"
+          $ref: '#/components/schemas/DestinationConfiguration'
+        createdAt:
+          format: int64
+          type: integer
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -2412,12 +2562,13 @@ components:
       description: Provides details of a single source.
       type: object
       required:
-        - sourceId
-        - name
-        - sourceType
-        - workspaceId
-        - configuration
-        - definitionId
+      - sourceId
+      - name
+      - sourceType
+      - workspaceId
+      - configuration
+      - definitionId
+      - createdAt
       properties:
         sourceId:
           format: UUID
@@ -2433,7 +2584,10 @@ components:
           format: UUID
           type: string
         configuration:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: '#/components/schemas/SourceConfiguration'
+        createdAt:
+          format: int64
+          type: integer
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -2446,10 +2600,10 @@ components:
       description: Provides details of a single connector definition.
       type: object
       required:
-        - id
-        - connectorDefinitionType
-        - name
-        - version
+      - id
+      - connectorDefinitionType
+      - name
+      - version
       properties:
         id:
           format: UUID
@@ -2457,7 +2611,7 @@ components:
         name:
           type: string
         connectorDefinitionType:
-          $ref: "#/components/schemas/ConnectorType"
+          $ref: '#/components/schemas/ConnectorType'
         version:
           type: string
       example:
@@ -2469,22 +2623,21 @@ components:
     ConnectorType:
       type: string
       enum:
-        - source
-        - destination
+      - source
+      - destination
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
-        - name
-        - workspaceId
-        - configuration
+      - name
+      - workspaceId
+      - configuration
       type: object
       properties:
         name:
           description: Name of the destination e.g. dev-mysql-instance.
           type: string
         definitionId:
-          description:
-            The UUID of the connector definition. One of configuration.destinationType
+          description: The UUID of the connector definition. One of configuration.destinationType
             or definitionId must be provided.
           format: uuid
           type: string
@@ -2492,7 +2645,7 @@ components:
           format: uuid
           type: string
         configuration:
-          $ref: "#/components/schemas/DestinationConfiguration"
+          $ref: '#/components/schemas/DestinationConfiguration'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
@@ -2503,28 +2656,28 @@ components:
         name:
           type: string
         configuration:
-          $ref: "#/components/schemas/DestinationConfiguration"
+          $ref: '#/components/schemas/DestinationConfiguration'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     DestinationPutRequest:
       required:
-        - name
-        - configuration
+      - name
+      - configuration
       type: object
       properties:
         name:
           type: string
         configuration:
-          $ref: "#/components/schemas/DestinationConfiguration"
+          $ref: '#/components/schemas/DestinationConfiguration'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     WorkspaceCreateRequest:
       required:
-        - name
+      - name
       type: object
       properties:
         name:
@@ -2539,7 +2692,7 @@ components:
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
       required:
-        - name
+      - name
       type: object
       properties:
         name:
@@ -2553,9 +2706,9 @@ components:
       description: Provides details of a single workspace.
       type: object
       required:
-        - workspaceId
-        - name
-        - dataResidency
+      - workspaceId
+      - name
+      - dataResidency
       properties:
         workspaceId:
           format: UUID
@@ -2563,7 +2716,7 @@ components:
         name:
           type: string
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          $ref: '#/components/schemas/GeographyEnum'
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2572,15 +2725,15 @@ components:
       description: Provides details of a single user in an organization.
       type: object
       required:
-        - id
-        - name
-        - email
+      - id
+      - name
+      - email
       properties:
         name:
           description: Name of the user
           type: string
         id:
-          $ref: "#/components/schemas/UserId"
+          $ref: '#/components/schemas/UserId'
         email:
           type: string
           format: email
@@ -2591,40 +2744,40 @@ components:
       title: Root Type for UsersResponse
       description: List/Array of multiple users in an organization
       required:
-        - data
+      - data
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/UserResponse"
+            $ref: '#/components/schemas/UserResponse'
       x-speakeasy-component: true
       x-speakeasy-entity: User
       x-speakeasy-param-suppress-computed-diff: true
     PermissionCreateRequest:
       required:
-        - permissionType
-        - userId
+      - permissionType
+      - userId
       type: object
       properties:
         permissionType:
-          $ref: "#/components/schemas/PublicPermissionType"
+          $ref: '#/components/schemas/PublicPermissionType'
         userId:
-          $ref: "#/components/schemas/UserId"
+          $ref: '#/components/schemas/UserId'
         workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
+          $ref: '#/components/schemas/WorkspaceId'
         organizationId:
-          $ref: "#/components/schemas/OrganizationId"
+          $ref: '#/components/schemas/OrganizationId'
       x-speakeasy-entity: Permission
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     PermissionUpdateRequest:
       required:
-        - permissionType
+      - permissionType
       type: object
       properties:
         permissionType:
-          $ref: "#/components/schemas/PermissionType"
+          $ref: '#/components/schemas/PermissionType'
       x-speakeasy-entity: Permission
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2633,21 +2786,21 @@ components:
       description: Provides details of a single permission.
       type: object
       required:
-        - permissionId
-        - permissionType
-        - userId
+      - permissionId
+      - permissionType
+      - userId
       properties:
         permissionId:
           type: string
           format: uuid
         permissionType:
-          $ref: "#/components/schemas/PermissionType"
+          $ref: '#/components/schemas/PermissionType'
         userId:
-          $ref: "#/components/schemas/UserId"
+          $ref: '#/components/schemas/UserId'
         workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
+          $ref: '#/components/schemas/WorkspaceId'
         organizationId:
-          $ref: "#/components/schemas/OrganizationId"
+          $ref: '#/components/schemas/OrganizationId'
       x-speakeasy-entity: Permission
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2655,33 +2808,33 @@ components:
       description: Scope of a single permission, e.g. workspace, organization
       type: string
       enum:
-        - workspace
-        - organization
-        - none
+      - workspace
+      - organization
+      - none
       x-speakeasy-component: true
     PermissionResponseRead:
       title: Root type for PermissionResponseRead
       description: Reformat PermissionResponse with permission scope
       type: object
       required:
-        - permissionId
-        - permissionType
-        - userId
-        - scope
-        - scopeId
+      - permissionId
+      - permissionType
+      - userId
+      - scope
+      - scopeId
       properties:
         permissionId:
           type: string
           format: uuid
         permissionType:
-          $ref: "#/components/schemas/PermissionType"
+          $ref: '#/components/schemas/PermissionType'
         userId:
-          $ref: "#/components/schemas/UserId"
+          $ref: '#/components/schemas/UserId'
         scopeId:
           type: string
           format: uuid
         scope:
-          $ref: "#/components/schemas/PermissionScope"
+          $ref: '#/components/schemas/PermissionScope'
       x-speakeasy-entity: Permission
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2689,25 +2842,25 @@ components:
       title: Root Type for PermissionsResponse
       description: List/Array of multiple permissions
       required:
-        - data
+      - data
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/PermissionResponseRead"
+            $ref: '#/components/schemas/PermissionResponseRead'
       x-speakeasy-component: true
     OrganizationResponse:
       title: Root Type for OrganizationResponse
       description: Provides details of a single organization for a user.
       type: object
       required:
-        - organizationId
-        - organizationName
-        - email
+      - organizationId
+      - organizationName
+      - email
       properties:
         organizationId:
-          $ref: "#/components/schemas/OrganizationId"
+          $ref: '#/components/schemas/OrganizationId'
         organizationName:
           type: string
         email:
@@ -2719,19 +2872,19 @@ components:
       title: Root Type for OrganizationsResponse
       description: List/Array of multiple organizations.
       required:
-        - data
+      - data
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/OrganizationResponse"
+            $ref: '#/components/schemas/OrganizationResponse'
       x-speakeasy-component: true
     ConnectionsResponse:
       title: Root Type for ConnectionsResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         previous:
@@ -2741,26 +2894,26 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectionResponse"
+            $ref: '#/components/schemas/ConnectionResponse'
           default: []
       example:
         next: https://api.airbyte.com/v1/connections?limit=5&offset=10
         previous: https://api.airbyte.com/v1/connections?limit=5&offset=0
         data:
-          - name: test-connection
-          - connection_id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
-          - sourceId: 49237019-645d-47d4-b45b-5eddf97775ce
-          - destinationId: al312fs-0ab1-4f72-9ed7-0b8fc27c5826
-          - schedule:
-              scheduleType: manual
-          - status: active
-          - dataResidency: auto
+        - name: test-connection
+        - connection_id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        - sourceId: 49237019-645d-47d4-b45b-5eddf97775ce
+        - destinationId: al312fs-0ab1-4f72-9ed7-0b8fc27c5826
+        - schedule:
+            scheduleType: manual
+        - status: active
+        - dataResidency: auto
       x-speakeasy-component: true
     SourcesResponse:
       title: Root Type for SourcesResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         previous:
@@ -2770,7 +2923,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/SourceResponse"
+            $ref: '#/components/schemas/SourceResponse'
       example:
         next: https://api.airbyte.com/v1/sources?limit=5&offset=10
         previous: https://api.airbyte.com/v1/sources?limit=5&offset=0
@@ -2782,9 +2935,9 @@ components:
       x-speakeasy-component: true
     DestinationsResponse:
       title: Root Type for DestinationsResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         previous:
@@ -2794,7 +2947,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/DestinationResponse"
+            $ref: '#/components/schemas/DestinationResponse'
       example:
         next: https://api.airbyte.com/v1/destinations?limit=5&offset=10
         previous: https://api.airbyte.com/v1/destinations?limit=5&offset=0
@@ -2806,21 +2959,21 @@ components:
       x-speakeasy-component: true
     ConnectorDefinitionsResponse:
       title: Root Type for DefinitionsResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectorDefinitionResponse"
+            $ref: '#/components/schemas/ConnectorDefinitionResponse'
       x-speakeasy-component: true
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse
-      description: ""
+      description: ''
       required:
-        - data
+      - data
       type: object
       properties:
         previous:
@@ -2830,7 +2983,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/WorkspaceResponse"
+            $ref: '#/components/schemas/WorkspaceResponse'
       example:
         next: https://api.airbyte.com/v1/workspaces?limit=5&offset=10
         previous: https://api.airbyte.com/v1/workspaces?limit=5&offset=0
@@ -2843,23 +2996,21 @@ components:
       description: Configurations for a single stream.
       type: object
       required:
-        - name
+      - name
       properties:
         name:
           type: string
         syncMode:
-          $ref: "#/components/schemas/ConnectionSyncModeEnum"
+          $ref: '#/components/schemas/ConnectionSyncModeEnum'
         cursorField:
-          description:
-            Path to the field that will be used to determine if a record
+          description: Path to the field that will be used to determine if a record
             is new or modified since the last sync. This field is REQUIRED if `sync_mode`
             is `incremental` unless there is a default.
           type: array
           items:
             type: string
         primaryKey:
-          description:
-            Paths to the fields that will be used as primary key. This
+          description: Paths to the fields that will be used as primary key. This
             field is REQUIRED if `destination_sync_mode` is `*_dedup` unless it is
             already supplied by the source schema.
           type: array
@@ -2868,17 +3019,15 @@ components:
             items:
               type: string
         selectedFields:
-          description:
-            By default (if not provided in the request) all fields will
+          description: By default (if not provided in the request) all fields will
             be synced. Otherwise, only the fields in this list will be synced.
-          $ref: "#/components/schemas/SelectedFields"
+          $ref: '#/components/schemas/SelectedFields'
         mappers:
-          description:
-            Mappers that should be applied to the stream before writing
+          description: Mappers that should be applied to the stream before writing
             to the destination.
           type: array
           items:
-            $ref: "#/components/schemas/ConfiguredStreamMapper"
+            $ref: '#/components/schemas/ConfiguredStreamMapper'
       x-speakeasy-component: true
     StreamConfigurations:
       description: A list of configured stream options for a connection.
@@ -2887,13 +3036,13 @@ components:
         streams:
           type: array
           items:
-            $ref: "#/components/schemas/StreamConfiguration"
+            $ref: '#/components/schemas/StreamConfiguration'
       x-speakeasy-component: true
     StreamPropertiesResponse:
       description: A list of stream properties.
       type: array
       items:
-        $ref: "#/components/schemas/StreamProperties"
+        $ref: '#/components/schemas/StreamProperties'
       x-speakeasy-component: true
     StreamProperties:
       description: The stream properties associated with a connection.
@@ -2904,7 +3053,7 @@ components:
         syncModes:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectionSyncModeEnum"
+            $ref: '#/components/schemas/ConnectionSyncModeEnum'
         defaultCursorField:
           type: array
           items:
@@ -2926,14 +3075,14 @@ components:
       x-speakeasy-component: true
     ConnectionSyncModeEnum:
       enum:
-        - full_refresh_overwrite
-        - full_refresh_append
-        - incremental_append
-        - incremental_deduped_history
+      - full_refresh_overwrite
+      - full_refresh_append
+      - incremental_append
+      - incremental_deduped_history
       x-speakeasy-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
       enum:
-        - source
-        - destination
+      - source
+      - destination
       x-speakeasy-component: true

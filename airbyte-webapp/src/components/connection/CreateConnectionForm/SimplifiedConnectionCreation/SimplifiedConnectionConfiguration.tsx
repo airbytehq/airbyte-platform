@@ -27,7 +27,6 @@ import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
-import { ScrollableContainer } from "../../../ScrollableContainer";
 import { SyncCatalogTable } from "../../SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
@@ -69,7 +68,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <ScrollParent props={{ className: styles.container }}>
+    <ScrollParent>
       <FlexContainer direction="column" gap="lg">
         <Card
           title={formatMessage({ id: "connectionForm.selectSyncMode" })}
@@ -102,14 +101,14 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   });
 
   return (
-    <ScrollableContainer className={styles.container}>
+    <ScrollParent>
       <SimplifiedConnectionsSettingsCard
         title={formatMessage({ id: "connectionForm.configureConnection" })}
         source={source}
         destination={destination}
         isCreating
       />
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };
 

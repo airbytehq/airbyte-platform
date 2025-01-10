@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -45,6 +45,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
@@ -112,12 +113,14 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     connectionService = new ConnectionServiceJooqImpl(database);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         new ActorDefinitionServiceJooqImpl(database),
-        mock(ScopedConfigurationService.class));
+        mock(ScopedConfigurationService.class),
+        connectionTimelineEventService);
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
@@ -368,7 +371,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var expectedSync = createStandardSync(source1, destination1);
     final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
-        ActorType.DESTINATION.value(), false);
+        ActorType.DESTINATION.value(), false, false);
     assertThat(actualSyncs.size()).isEqualTo(1);
     assertThat(actualSyncs.get(0)).isEqualTo(expectedSync);
   }

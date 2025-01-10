@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -7,10 +7,8 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * AutoDisableConnectionActivity.
@@ -21,9 +19,6 @@ public interface AutoDisableConnectionActivity {
   /**
    * AutoDisableConnectionActivityInput.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   class AutoDisableConnectionActivityInput {
 
     private UUID connectionId;
@@ -31,17 +26,84 @@ public interface AutoDisableConnectionActivity {
     @Deprecated(forRemoval = true)
     private Instant currTimestamp;
 
+    public AutoDisableConnectionActivityInput() {}
+
+    public UUID getConnectionId() {
+      return connectionId;
+    }
+
+    public void setConnectionId(UUID connectionId) {
+      this.connectionId = connectionId;
+    }
+
+    public Instant getCurrTimestamp() {
+      return currTimestamp;
+    }
+
+    public void setCurrTimestamp(Instant currTimestamp) {
+      this.currTimestamp = currTimestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      AutoDisableConnectionActivityInput that = (AutoDisableConnectionActivityInput) o;
+      return Objects.equals(connectionId, that.connectionId) && Objects.equals(currTimestamp, that.currTimestamp);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(connectionId, currTimestamp);
+    }
+
+    @Override
+    public String toString() {
+      return "AutoDisableConnectionActivityInput{connectionId=" + connectionId + ", currTimestamp=" + currTimestamp + '}';
+    }
+
   }
 
   /**
    * AutoDisableConnectionOutput.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   class AutoDisableConnectionOutput {
 
     private boolean disabled;
+
+    public AutoDisableConnectionOutput(boolean disabled) {
+      this.disabled = disabled;
+    }
+
+    public AutoDisableConnectionOutput() {}
+
+    public boolean isDisabled() {
+      return disabled;
+    }
+
+    public void setDisabled(boolean disabled) {
+      this.disabled = disabled;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      AutoDisableConnectionOutput that = (AutoDisableConnectionOutput) o;
+      return disabled == that.disabled;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(disabled);
+    }
+
+    @Override
+    public String toString() {
+      return "AutoDisableConnectionOutput{disabled=" + disabled + '}';
+    }
 
   }
 

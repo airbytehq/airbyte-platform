@@ -40,6 +40,9 @@ import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CancellationException
 
+private const val JOB_ID = 13L
+private const val ATTEMPT_NUMBER = 37
+
 internal class WorkloadApiWorkerTest {
   private var workloadIdGenerator: WorkloadIdGenerator = mockk()
   private var storageClient: StorageClient = mockk()
@@ -60,14 +63,35 @@ internal class WorkloadApiWorkerTest {
     every { apiClient.connectionApi } returns connectionApi
     every { workloadApiClient.workloadApi } returns workloadApi
     every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args.first().toString(), DEFAULT_LOG_FILENAME).toString() }
+
     featureFlagClient = TestClient()
     jobRoot = Path.of("test", "path")
-    replicationActivityInput = ReplicationActivityInput()
-    replicationInput = ReplicationInput()
+
+    val workspaceId = UUID.randomUUID()
+    val connectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    val jobRunConfig = JobRunConfig().withJobId(JOB_ID.toString()).withAttemptId(ATTEMPT_NUMBER.toLong())
+
+    replicationActivityInput =
+      ReplicationActivityInput(
+        workspaceId = workspaceId,
+        connectionId = connectionId,
+        sourceId = sourceId,
+        destinationId = destinationId,
+        jobRunConfig = jobRunConfig,
+      )
+    replicationInput =
+      ReplicationInput().apply {
+        this.workspaceId = workspaceId
+        this.connectionId = connectionId
+        this.jobRunConfig = jobRunConfig
+        this.signalInput = "signalInputValue"
+      }
+
     workloadApiWorker =
       WorkloadApiWorker(
         jobOutputDocStore,
-        apiClient,
         workloadApiClient,
         WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
@@ -85,7 +109,6 @@ internal class WorkloadApiWorkerTest {
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
-    initializeReplicationInput(jobId, attemptNumber)
 
     every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
 
@@ -113,15 +136,12 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testFailedReplicationWithOutput() {
-    val jobId = 13L
-    val attemptNumber = 37
     val workloadId = "my-workload"
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -148,15 +168,12 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testResumeReplicationThatAlreadyStarted() {
-    val jobId = 313L
-    val attemptNumber = 37
     val workloadId = "my-workload"
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -182,13 +199,10 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testReplicationWithMissingOutput() {
-    val jobId = 42L
-    val attemptNumber = 1
     val workloadId = "my-failed-workload"
-    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
-    initializeReplicationInput(jobId, attemptNumber)
+    val expectedDocPrefix = "testNs/orchestrator-repl-job-$JOB_ID-attempt-$ATTEMPT_NUMBER"
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -212,12 +226,9 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testCancelledReplication() {
-    val jobId = 42L
-    val attemptNumber = 1
     val workloadId = "my-failed-workload"
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -245,12 +256,9 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testFailedReplicationWithPlatformFailure() {
-    val jobId = 42L
-    val attemptNumber = 1
     val workloadId = "my-failed-workload"
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -278,12 +286,9 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testFailedReplicationWithSourceFailure() {
-    val jobId = 43L
-    val attemptNumber = 1
     val workloadId = "my-failed-workload"
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -311,12 +316,9 @@ internal class WorkloadApiWorkerTest {
 
   @Test
   fun testFailedReplicationWithDestinationFailure() {
-    val jobId = 44L
-    val attemptNumber = 1
     val workloadId = "my-failed-workload"
-    initializeReplicationInput(jobId, attemptNumber)
 
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, JOB_ID, ATTEMPT_NUMBER) } returns workloadId
 
     every {
       connectionApi.getConnection(any())
@@ -340,32 +342,6 @@ internal class WorkloadApiWorkerTest {
       )
 
     assertThrows<DestinationException> { workloadApiWorker.run(replicationInput, jobRoot) }
-  }
-
-  private fun initializeReplicationInput(
-    jobId: Long,
-    attemptNumber: Int,
-  ) {
-    val workspaceId = UUID.randomUUID()
-    val connectionId = UUID.randomUUID()
-    val sourceId = UUID.randomUUID()
-    val destinationId = UUID.randomUUID()
-    val jobRunConfig = JobRunConfig().withJobId(jobId.toString()).withAttemptId(attemptNumber.toLong())
-
-    replicationInput.apply {
-      this.workspaceId = workspaceId
-      this.connectionId = connectionId
-      this.jobRunConfig = jobRunConfig
-      this.signalInput = "signalInputValue"
-    }
-
-    replicationActivityInput.apply {
-      this.workspaceId = workspaceId
-      this.connectionId = connectionId
-      this.sourceId = sourceId
-      this.destinationId = destinationId
-      this.jobRunConfig = jobRunConfig
-    }
   }
 
   private fun mockWorkload(

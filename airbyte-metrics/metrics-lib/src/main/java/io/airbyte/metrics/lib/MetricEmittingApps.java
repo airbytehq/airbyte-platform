@@ -1,10 +1,8 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
-
-import lombok.AllArgsConstructor;
 
 /**
  * Enum containing all applications metrics are emitted for. Used to initialize
@@ -21,7 +19,6 @@ import lombok.AllArgsConstructor;
  * Note: These names are used as metric name prefixes. Changing these names will affect
  * dashboard/alerts and our public Datadog integration. Please consult the platform teams if unsure.
  */
-@AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
 
   BILLING("billing"),
@@ -34,9 +31,14 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   WORKER("worker"),
   WORKLOAD_API("workload-api"),
   WORKLOAD_INIT("workload-init"),
-  WORKLOAD_LAUNCHER("workload-launcher");
+  WORKLOAD_LAUNCHER("workload-launcher"),
+  CONNECTOR_BUILDER_SERVER("connector-builder-server");
 
   private final String applicationName;
+
+  MetricEmittingApps(final String applicationName) {
+    this.applicationName = applicationName;
+  }
 
   @Override
   public String getApplicationName() {

@@ -2,6 +2,7 @@ import { load } from "js-yaml";
 import { JSONSchema7 } from "json-schema";
 import isString from "lodash/isString";
 import merge from "lodash/merge";
+import omit from "lodash/omit";
 import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import { match } from "ts-pattern";
@@ -47,6 +48,7 @@ import {
   NoAuthType,
   HttpRequester,
   OAuthAuthenticatorRefreshTokenUpdater,
+  OAuthConfigSpecificationOauthConnectorInputSpecification,
   RecordSelector,
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
@@ -88,7 +90,7 @@ export interface BuilderFormInput {
 
 type BuilderHttpMethod = "GET" | "POST";
 
-export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable"] as const;
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "gzip JSON"] as const;
 export type BuilderDecoder = (typeof BUILDER_DECODER_TYPES)[number];
 
 interface BuilderRequestOptions {
@@ -112,15 +114,31 @@ export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "
 export type BuilderFormAuthenticator =
   | NoAuth
   | BuilderFormOAuthAuthenticator
+  | BuilderFormDeclarativeOAuthAuthenticator
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
   | BuilderSessionTokenAuthenticator;
 
+export const DeclarativeOAuthAuthenticatorType = "DeclarativeOAuthAuthenticator" as const;
+
+export type BuilderFormDeclarativeOAuthAuthenticator = Omit<BuilderFormOAuthAuthenticator, "type"> & {
+  type: typeof DeclarativeOAuthAuthenticatorType;
+  declarative: Omit<OAuthConfigSpecificationOauthConnectorInputSpecification, "extract_output"> & {
+    access_token_key: string; // extract_output is partially generated from this
+  };
+};
+
+const isAuthenticatorDeclarativeOAuth = (
+  authenticator: BuilderFormValues["global"]["authenticator"]
+): authenticator is BuilderFormDeclarativeOAuthAuthenticator =>
+  typeof authenticator === "object" && authenticator.type === DeclarativeOAuthAuthenticatorType;
+
 export type BuilderFormOAuthAuthenticator = Omit<
   OAuthAuthenticator,
-  "refresh_request_body" | "refresh_token_updater"
+  "type" | "refresh_request_body" | "refresh_token_updater"
 > & {
+  type: OAuthAuthenticatorType | typeof DeclarativeOAuthAuthenticatorType;
   refresh_request_body: Array<[string, string]>;
   refresh_token_updater?: Omit<
     OAuthAuthenticatorRefreshTokenUpdater,
@@ -497,10 +515,11 @@ export function builderAuthenticatorToManifest(
   if (authenticator.type === "NoAuth") {
     return undefined;
   }
-  if (authenticator.type === "OAuthAuthenticator") {
+  if (authenticator.type === OAUTH_AUTHENTICATOR || authenticator.type === DeclarativeOAuthAuthenticatorType) {
     const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
     return {
-      ...authenticator,
+      ...omit(authenticator, "declarative", "type"),
+      type: OAUTH_AUTHENTICATOR,
       refresh_token: authenticator.grant_type === "client_credentials" ? undefined : authenticator.refresh_token,
       refresh_token_updater:
         authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
@@ -516,7 +535,7 @@ export function builderAuthenticatorToManifest(
               refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
             },
       refresh_request_body: Object.fromEntries(authenticator.refresh_request_body),
-    };
+    } satisfies OAuthAuthenticator;
   }
   if (authenticator.type === "ApiKeyAuthenticator") {
     return {
@@ -896,6 +915,8 @@ const builderDecoderToManifest = (decoder: BuilderDecoder): SimpleRetrieverDecod
       return { type: "JsonlDecoder" };
     case "Iterable":
       return { type: "IterableDecoder" };
+    case "gzip JSON":
+      return { type: "GzipJsonDecoder" };
   }
 };
 
@@ -991,6 +1012,78 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   };
 };
 
+export const addDeclarativeOAuthAuthenticatorToSpec = (
+  spec: Spec,
+  authenticator: BuilderFormDeclarativeOAuthAuthenticator
+): Spec => {
+  const updatedSpec = structuredClone(spec);
+
+  const accessTokenKey = authenticator.declarative.access_token_key;
+
+  updatedSpec.advanced_auth = {
+    auth_flow_type: "oauth2.0",
+    oauth_config_specification: {
+      oauth_connector_input_specification: {
+        ...omit(authenticator.declarative, [
+          "access_token_key",
+          "access_token_headers",
+          "access_token_params",
+          "state",
+        ]),
+        extract_output: [authenticator.declarative.access_token_key, "refresh_token"],
+        state: authenticator.declarative.state ? JSON.parse(authenticator.declarative.state) : undefined,
+
+        access_token_headers: authenticator.declarative.access_token_headers
+          ? Object.fromEntries(authenticator.declarative.access_token_headers)
+          : undefined,
+
+        access_token_params: authenticator.declarative.access_token_params
+          ? Object.fromEntries(authenticator.declarative.access_token_params)
+          : undefined,
+      } as OAuthConfigSpecificationOauthConnectorInputSpecification,
+      complete_oauth_output_specification: {
+        required: [accessTokenKey, "refresh_token"],
+        properties: {
+          [accessTokenKey]: {
+            type: "string",
+            path_in_connector_config: [accessTokenKey],
+          },
+          refresh_token: {
+            type: "string",
+            path_in_connector_config: ["refresh_token"],
+          },
+        },
+      },
+      complete_oauth_server_input_specification: {
+        required: ["client_id", "client_secret"],
+        properties: {
+          client_id: {
+            type: "string",
+          },
+          client_secret: {
+            type: "string",
+          },
+        },
+      },
+      complete_oauth_server_output_specification: {
+        required: ["client_id", "client_secret"],
+        properties: {
+          client_id: {
+            type: "string",
+            path_in_connector_config: ["client_id"],
+          },
+          client_secret: {
+            type: "string",
+            path_in_connector_config: ["client_secret"],
+          },
+        },
+      },
+    },
+  };
+
+  return updatedSpec;
+};
+
 export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -1042,6 +1135,11 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     authenticator: convertOrLoadYamlString(values.global.authenticator, builderAuthenticatorToManifest),
   };
 
+  let spec = builderInputsToSpec(values.inputs);
+  if (isAuthenticatorDeclarativeOAuth(values.global.authenticator)) {
+    spec = addDeclarativeOAuthAuthenticatorToSpec(spec, values.global.authenticator);
+  }
+
   return {
     version: CDK_VERSION,
     type: "DeclarativeSource",
@@ -1055,7 +1153,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: streamRefs,
     schemas: streamNameToSchema,
-    spec: builderInputsToSpec(values.inputs),
+    spec,
     metadata: builderFormValuesToMetadata(values),
     description: values.description,
   };

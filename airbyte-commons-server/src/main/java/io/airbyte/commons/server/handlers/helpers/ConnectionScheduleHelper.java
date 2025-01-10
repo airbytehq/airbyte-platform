@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -13,17 +13,28 @@ import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressi
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
+import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.helpers.CronExpressionHelper;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.Cron;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.SubOneHourSyncSchedules;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.text.ParseException;
+import java.util.List;
 import java.util.TimeZone;
+import java.util.UUID;
 import org.joda.time.DateTimeZone;
 import org.quartz.CronExpression;
 
@@ -36,9 +47,18 @@ import org.quartz.CronExpression;
 public class ConnectionScheduleHelper {
 
   private final ApiPojoConverters apiPojoConverters;
+  private final CronExpressionHelper cronExpressionHelper;
+  private final FeatureFlagClient featureFlagClient;
+  private final WorkspaceHelper workspaceHelper;
 
-  public ConnectionScheduleHelper(final ApiPojoConverters apiPojoConverters) {
+  public ConnectionScheduleHelper(final ApiPojoConverters apiPojoConverters,
+                                  final CronExpressionHelper cronExpressionHelper,
+                                  final FeatureFlagClient featureFlagClient,
+                                  final WorkspaceHelper workspaceHelper) {
     this.apiPojoConverters = apiPojoConverters;
+    this.cronExpressionHelper = cronExpressionHelper;
+    this.featureFlagClient = featureFlagClient;
+    this.workspaceHelper = workspaceHelper;
   }
 
   /**
@@ -52,7 +72,8 @@ public class ConnectionScheduleHelper {
   public void populateSyncFromScheduleTypeAndData(final StandardSync standardSync,
                                                   final ConnectionScheduleType scheduleType,
                                                   final ConnectionScheduleData scheduleData)
-      throws JsonValidationException {
+      throws JsonValidationException, ConfigNotFoundException {
+
     if (scheduleType != ConnectionScheduleType.MANUAL && scheduleData == null) {
       throw new JsonValidationException("schedule data must be populated if schedule type is populated");
     }
@@ -88,7 +109,6 @@ public class ConnectionScheduleHelper {
         if (scheduleData.getCron() == null) {
           throw new CronValidationMissingCronProblem();
         }
-        // Validate that this is a valid cron expression and timezone.
         final String cronExpression = scheduleData.getCron().getCronExpression();
         final String cronTimeZone = scheduleData.getCron().getCronTimeZone();
         if (cronExpression == null || cronTimeZone == null) {
@@ -97,23 +117,15 @@ public class ConnectionScheduleHelper {
               .cronExpression(cronExpression)
               .cronTimezone(cronTimeZone));
         }
-        if (cronTimeZone.toLowerCase().startsWith("etc")) {
-          throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
-              .connectionId(connectionId)
-              .cronTimezone(cronTimeZone));
-        }
-        try {
-          final TimeZone timeZone = DateTimeZone.forID(cronTimeZone).toTimeZone();
-          final CronExpression parsedCronExpression = new CronExpression(cronExpression);
-          parsedCronExpression.setTimeZone(timeZone);
-        } catch (final ParseException e) {
-          throw new CronValidationInvalidExpressionProblem(new ProblemCronExpressionData()
-              .cronExpression(cronExpression));
-        } catch (final IllegalArgumentException e) {
-          throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
-              .connectionId(connectionId)
-              .cronTimezone(cronTimeZone));
-        }
+
+        final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
+        final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+        final boolean canSyncUnderOneHour = featureFlagClient.boolVariation(SubOneHourSyncSchedules.INSTANCE, new Multi(
+            List.of(new Organization(organizationId), new Workspace(workspaceId))));
+        validateCronFrequency(cronExpression, canSyncUnderOneHour);
+
+        validateCronExpressionAndTimezone(cronTimeZone, cronExpression, connectionId);
+
         standardSync
             .withScheduleType(ScheduleType.CRON)
             .withScheduleData(new ScheduleData().withCron(new Cron()
@@ -127,6 +139,48 @@ public class ConnectionScheduleHelper {
       default -> {
         // no op
       }
+    }
+  }
+
+  private void validateCronExpressionAndTimezone(final String cronTimeZone, final String cronExpression, final String connectionId) {
+    if (cronTimeZone.toLowerCase().startsWith("etc")) {
+      throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
+          .connectionId(connectionId)
+          .cronTimezone(cronTimeZone));
+    }
+
+    try {
+      final TimeZone timeZone = DateTimeZone.forID(cronTimeZone).toTimeZone();
+      final CronExpression parsedCronExpression = new CronExpression(cronExpression);
+      parsedCronExpression.setTimeZone(timeZone);
+    } catch (final ParseException e) {
+      throw new CronValidationInvalidExpressionProblem(new ProblemCronExpressionData()
+          .cronExpression(cronExpression));
+    } catch (final IllegalArgumentException e) {
+      throw new CronValidationInvalidTimezoneProblem(new ProblemCronTimezoneData()
+          .connectionId(connectionId)
+          .cronTimezone(cronTimeZone));
+    }
+  }
+
+  private void validateCronFrequency(final String cronExpression, final Boolean canSyncUnderOneHour) {
+    final com.cronutils.model.Cron cronUtilsModel;
+
+    try {
+      cronUtilsModel = cronExpressionHelper.validateCronExpression(cronExpression);
+    } catch (final IllegalArgumentException e) {
+      throw new CronValidationInvalidExpressionProblem(new ProblemCronExpressionData()
+          .cronExpression(cronExpression));
+    }
+
+    try {
+      if (!canSyncUnderOneHour) {
+        cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerHour(cronUtilsModel);
+      }
+    } catch (final IllegalArgumentException e) {
+      throw new CronValidationUnderOneHourNotAllowedProblem(new ProblemCronExpressionData()
+          .cronExpression(cronExpression)
+          .validationErrorMessage(e.getMessage()));
     }
   }
 

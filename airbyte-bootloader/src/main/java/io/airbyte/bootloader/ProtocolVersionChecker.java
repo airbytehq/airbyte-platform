@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -20,6 +20,7 @@ import io.airbyte.persistence.job.JobPersistence;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,14 +29,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Validates that all connectors support the desired target Airbyte protocol version.
  */
 @Singleton
-@Slf4j
 public class ProtocolVersionChecker {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final JobPersistence jobPersistence;
   private final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange;

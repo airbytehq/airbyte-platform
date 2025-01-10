@@ -20,7 +20,6 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
       annotations:
-        checksum/sweep-pod-script: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
       {{- if .Values.podAnnotations }}
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
@@ -60,12 +59,8 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - mountPath: /script/sweep-pod.sh
-          subPath: sweep-pod.sh
-          name: sweep-pod-script
         - mountPath: /.kube
           name: kube-config
-        command: ["/bin/bash", "-c", /script/sweep-pod.sh]
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}
@@ -99,7 +94,3 @@ spec:
       volumes:
       - name: kube-config
         emptyDir: {}
-      - name: sweep-pod-script
-        configMap:
-          name: {{ include "common.names.fullname" . }}-sweep-pod-script
-          defaultMode: 0755

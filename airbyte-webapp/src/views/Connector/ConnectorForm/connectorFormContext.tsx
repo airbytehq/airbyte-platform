@@ -4,7 +4,7 @@ import { AnySchema } from "yup";
 
 import {
   ConnectorDefinition,
-  ConnectorDefinitionSpecification,
+  ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
 
@@ -15,7 +15,7 @@ interface ConnectorFormContext {
   getValues: <T = unknown>(values: ConnectorFormValues<T>) => ConnectorFormValues<T>;
   resetConnectorForm: () => void;
   selectedConnectorDefinition?: ConnectorDefinition;
-  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecification | SourceDefinitionSpecificationDraft;
+  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   isEditMode?: boolean;
   validationSchema: AnySchema;
   connectorId?: string;
@@ -36,7 +36,7 @@ interface ConnectorFormContextProviderProps {
   formType: "source" | "destination";
   isEditMode?: boolean;
   getValues: <T = unknown>(values: ConnectorFormValues<T>) => ConnectorFormValues<T>;
-  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecification | SourceDefinitionSpecificationDraft;
+  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   validationSchema: AnySchema;
   connectorId?: string;
 }

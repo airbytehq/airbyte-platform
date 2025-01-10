@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -64,13 +64,6 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.StructuredLogs;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
-import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.validation.json.JsonValidationException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,11 +81,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class JobConverterTest {
 
-  private FeatureFlagClient featureFlagClient;
   private JobConverter jobConverter;
   private LogClientManager logClientManager;
   private LogUtils logUtils;
-  private WorkspaceHelper workspaceHelper;
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;
   private static final Path LOG_PATH = Path.of("log_path");
   private static final String FAILURE_EXTERNAL_MESSAGE = "something went wrong";
@@ -255,11 +246,9 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      featureFlagClient = mock(TestClient.class);
       logClientManager = mock(LogClientManager.class);
       logUtils = mock(LogUtils.class);
-      workspaceHelper = mock(WorkspaceHelper.class);
-      jobConverter = new JobConverter(featureFlagClient, logClientManager, logUtils, workspaceHelper);
+      jobConverter = new JobConverter(logClientManager, logUtils);
       job = mock(Job.class);
       final Attempt attempt = mock(Attempt.class);
       when(job.getId()).thenReturn(JOB_ID);
@@ -282,6 +271,7 @@ class JobConverterTest {
 
     @Test
     void testGetJobInfoRead() {
+      when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
       assertEquals(JOB_INFO_UNSTRUCTURED_LOGS, jobConverter.getJobInfoRead(job));
     }
 
@@ -303,13 +293,10 @@ class JobConverterTest {
     }
 
     @Test
-    void testGetJobWithAttemptsReadStructuredLogs() throws JsonValidationException, ConfigNotFoundException {
+    void testGetJobWithAttemptsReadStructuredLogs() {
       final String logEventVersion = "1";
-      final UUID workspaceId = UUID.randomUUID();
-      when(featureFlagClient.boolVariation(StructuredLogs.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
       when(logClientManager.getLogs(any())).thenReturn(
           new LogEvents(List.of(new LogEvent(System.currentTimeMillis(), "message", "INFO", LogSource.PLATFORM, null, null)), logEventVersion));
-      when(workspaceHelper.getWorkspaceForJobId(any())).thenReturn(workspaceId);
       final JobInfoRead jobInfoRead = jobConverter.getJobInfoRead(job);
       assertEquals(LogFormatType.STRUCTURED, jobInfoRead.getAttempts().getFirst().getLogType());
       assertEquals(logEventVersion, jobInfoRead.getAttempts().getFirst().getLogs().getVersion());
@@ -390,9 +377,8 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      featureFlagClient = mock(TestClient.class);
-      workspaceHelper = mock(WorkspaceHelper.class);
-      jobConverter = new JobConverter(featureFlagClient, mock(LogClientManager.class), mock(LogUtils.class), workspaceHelper);
+      logClientManager = mock(LogClientManager.class);
+      jobConverter = new JobConverter(logClientManager, logUtils);
       metadata = mock(SynchronousJobMetadata.class);
       when(metadata.getId()).thenReturn(JOB_ID);
       when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);
@@ -407,6 +393,7 @@ class JobConverterTest {
 
     @Test
     void testSynchronousJobRead() {
+      when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
       assertEquals(SYNCHRONOUS_JOB_INFO_UNSTRUCTURED_LOGS, jobConverter.getSynchronousJobRead(metadata));
     }
 

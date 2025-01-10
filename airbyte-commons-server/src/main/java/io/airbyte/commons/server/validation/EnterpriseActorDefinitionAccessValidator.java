@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.validation;
@@ -15,7 +15,6 @@ import io.micronaut.context.annotation.Replaces;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Enterprise edition implementation of {@link ActorDefinitionAccessValidator}. Allows any
@@ -27,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @RequiresAirbyteProEnabled
-@Slf4j
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
 @Replaces(CommunityActorDefinitionAccessValidator.class)
 public class EnterpriseActorDefinitionAccessValidator implements ActorDefinitionAccessValidator {

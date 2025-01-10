@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging
@@ -13,6 +13,9 @@ const val DEFAULT_LOG_FILENAME = "logs.log"
 
 /** The default MDC key that holds the job log path for log storage. */
 const val DEFAULT_JOB_LOG_PATH_MDC_KEY = "job_log_path"
+
+/** The default MDC key that holds the audit log path. */
+const val DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY = "audit_logging_path"
 
 /**
  * Defines methods for setting various MDC key/values related to logging

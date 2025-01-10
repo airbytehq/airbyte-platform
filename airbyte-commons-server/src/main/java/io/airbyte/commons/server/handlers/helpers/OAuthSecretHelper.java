@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -18,12 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Holds helpers to handle OAuth secrets.
  */
-@Slf4j
 public class OAuthSecretHelper {
 
   /**
@@ -56,7 +54,8 @@ public class OAuthSecretHelper {
    * path_in_connector_config i.e. { client_id: ['credentials', 'client_id']}
    */
   @VisibleForTesting
-  public static Map<String, List<String>> getAdvancedAuthOAuthPaths(final ConnectorSpecification connectorSpecification, boolean includeOutputPaths)
+  public static Map<String, List<String>> getAdvancedAuthOAuthPaths(final ConnectorSpecification connectorSpecification,
+                                                                    final boolean includeOutputPaths)
       throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
       final JsonNode completeOAuthOutputSpecification =
@@ -65,9 +64,9 @@ public class OAuthSecretHelper {
           connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
 
       // Merge all the mappings into one map
-      Map<String, List<String>> result = new HashMap<>(OAuthPathExtractor.extractOauthConfigurationPaths(completeOAuthServerOutputSpecification));
+      final Map<String, List<String>> result = new HashMap<>(OAuthHelper.extractOauthConfigurationPaths(completeOAuthServerOutputSpecification));
       if (includeOutputPaths) {
-        result.putAll(OAuthPathExtractor.extractOauthConfigurationPaths(completeOAuthOutputSpecification));
+        result.putAll(OAuthHelper.extractOauthConfigurationPaths(completeOAuthOutputSpecification));
       }
       return result;
     } else {
@@ -83,7 +82,7 @@ public class OAuthSecretHelper {
    * @param spec - connector specification to get paths for
    * @return Map where the key = the property and the value = the path to the property in list form.
    */
-  public static Map<String, List<String>> getOAuthConfigPaths(ConnectorSpecification spec) throws JsonValidationException {
+  public static Map<String, List<String>> getOAuthConfigPaths(final ConnectorSpecification spec) throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, true);
     } else {
@@ -98,7 +97,7 @@ public class OAuthSecretHelper {
    * @param spec - connector specification to get paths for
    * @return Map where the key = the property and the value = the path to the property in list form.
    */
-  public static Map<String, List<String>> getOAuthInputPaths(ConnectorSpecification spec) throws JsonValidationException {
+  public static Map<String, List<String>> getOAuthInputPaths(final ConnectorSpecification spec) throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, false);
     } else {
@@ -121,7 +120,7 @@ public class OAuthSecretHelper {
           connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
 
       // Merge all the mappings into one map
-      return new HashMap<>(OAuthPathExtractor.extractOauthConfigurationPaths(completeOAuthServerOutputSpecification));
+      return new HashMap<>(OAuthHelper.extractOauthConfigurationPaths(completeOAuthServerOutputSpecification));
     } else {
       throw new JsonValidationException(
           String.format("Error parsing advancedAuth - see [%s]", connectorSpecification.getDocumentationUrl()));
@@ -150,10 +149,10 @@ public class OAuthSecretHelper {
                                                                                                final JsonNode oauthParamConfiguration)
       throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
-      JsonNode newConnectorSpecificationNode = Jsons.emptyObject();
-      Map<String, Boolean> airbyteSecret = Map.of("airbyte_secret", true);
+      final JsonNode newConnectorSpecificationNode = Jsons.emptyObject();
+      final Map<String, Boolean> airbyteSecret = Map.of("airbyte_secret", true);
       final Map<String, List<String>> oauthPaths = OAuthSecretHelper.getCompleteOauthServerOutputPaths(connectorSpecification);
-      for (Entry<String, List<String>> entry : oauthPaths.entrySet()) {
+      for (final Entry<String, List<String>> entry : oauthPaths.entrySet()) {
         final List<String> jsonPathList = entry.getValue();
         if (Jsons.navigateTo(oauthParamConfiguration, jsonPathList) == null) {
           throw new BadObjectSchemaKnownException(String.format("Missing OAuth param for key at %s", jsonPathList));
@@ -177,9 +176,9 @@ public class OAuthSecretHelper {
    */
   private static List<String> alternatingList(final String property,
                                               final List<String> list) {
-    List<String> result = new ArrayList<String>(list.size() * 2);
+    final List<String> result = new ArrayList<String>(list.size() * 2);
 
-    for (String item : list) {
+    for (final String item : list) {
       result.add(property);
       result.add(item);
     }
@@ -194,7 +193,7 @@ public class OAuthSecretHelper {
                                                       final JsonNode connectionConfiguration)
       throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
-      Map<String, List<String>> oauthPaths = getOAuthInputPaths(spec);
+      final Map<String, List<String>> oauthPaths = getOAuthInputPaths(spec);
       for (final Entry<String, List<String>> entry : oauthPaths.entrySet()) {
         final String key = entry.getKey();
         final List<String> jsonPathList = entry.getValue();
@@ -204,11 +203,11 @@ public class OAuthSecretHelper {
     }
   }
 
-  private static void throwIfKeyExistsInConfig(JsonNode connectionConfiguration, String key, List<String> jsonPathList) {
+  private static void throwIfKeyExistsInConfig(final JsonNode connectionConfiguration, final String key, final List<String> jsonPathList) {
     if (Jsons.navigateTo(connectionConfiguration, jsonPathList) != null) {
       // The API referenced by this message is a Cloud feature and not yet available in the open source
       // project but will be added.
-      String errorMessage = String.format(
+      final String errorMessage = String.format(
           "Cannot set key '%s', please create an OAuth credentials override instead - https://reference.airbyte.com/reference/workspaceoauthcredentials",
           key);
       throw new BadObjectSchemaKnownException(errorMessage);

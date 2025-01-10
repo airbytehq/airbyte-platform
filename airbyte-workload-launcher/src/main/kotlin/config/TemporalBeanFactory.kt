@@ -31,7 +31,7 @@ import java.time.Duration
 class TemporalBeanFactory {
   @Singleton
   @Named("queueActivityOptions")
-  fun specActivityOptions(
+  fun queueActivityOptions(
     @Property(name = "airbyte.workload-launcher.workload-start-timeout") workloadStartTimeout: Duration,
   ): ActivityOptions {
     return ActivityOptions.newBuilder()

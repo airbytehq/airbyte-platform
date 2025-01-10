@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -44,7 +46,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import java.lang.RuntimeException
 import java.util.UUID
 import java.util.concurrent.TimeoutException
 
@@ -103,8 +104,6 @@ class KubePodClientTest {
         checkPodFactory = checkPodFactory,
         discoverPodFactory = discoverPodFactory,
         specPodFactory = specPodFactory,
-        featureFlagClient = featureFlagClient,
-        contexts = listOf(),
       )
 
     replInput =
@@ -127,14 +126,14 @@ class KubePodClientTest {
       CheckConnectionInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
-        null,
+        StandardCheckConnectionInput(),
       )
 
     discoverInput =
       DiscoverCatalogInput(
         JobRunConfig().withJobId("jobId").withAttemptId(1),
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
-        null,
+        StandardDiscoverCatalogInput(),
       )
 
     specInput =
@@ -143,7 +142,7 @@ class KubePodClientTest {
         IntegrationLauncherConfig().withDockerImage("dockerImage").withWorkspaceId(workspaceId),
       )
 
-    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
+    every { labeler.getSharedLabels(any(), any(), any(), any(), any(), any()) } returns sharedLabels
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
@@ -223,8 +222,21 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
-        any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -239,8 +251,21 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.create(
-        any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -300,8 +325,18 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
-        any(), any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -316,8 +351,18 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
-        any(), any(), any(), any(), any(), any(), any(),
-        any(), any(), any(), any(), any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")
@@ -468,10 +513,14 @@ class KubePodClientTest {
         "orchestrator-image",
         "source-image",
         "destination-image",
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
         emptyList(),
         emptyList(),
         emptyList(),
@@ -484,8 +533,10 @@ class KubePodClientTest {
         mapOf("test-selector" to "val3"),
         KubePodInfo("test-namespace", "test-name", null),
         mapOf("test-annotation" to "val5"),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
-        io.fabric8.kubernetes.api.model.ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
+        io.fabric8.kubernetes.api.model
+          .ResourceRequirements(),
         listOf(EnvVar("extra-env", "val6", null)),
         workspaceId,
       )

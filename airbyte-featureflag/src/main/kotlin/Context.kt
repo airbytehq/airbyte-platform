@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.featureflag
@@ -268,6 +268,17 @@ data class Priority(override val key: String) : Context {
   }
 }
 
+/**
+ * Context for representing an attempt number.
+ *
+ * For example: 0
+ *
+ * @param [key] the number of the attempt.
+ */
+data class Attempt(override val key: String) : Context {
+  override val kind = "attempt"
+}
+
 data class UserAgent(override val key: String) : Context {
   override val kind: String = "user-agent"
 }
@@ -283,4 +294,29 @@ data class RequestId(override val key: String) : Context {
 data object Empty : Context {
   override val kind: String = "empty"
   override val key: String = ""
+}
+
+data class CloudProvider(override val key: String) : Context {
+  override val kind: String = "cloud-provider"
+
+  companion object {
+    const val AWS = "aws"
+  }
+}
+
+data class GeographicRegion(override val key: String) : Context {
+  override val kind: String = "geographic-region"
+
+  companion object {
+    const val US = "us"
+    const val EU = "eu"
+  }
+}
+
+data class CloudProviderRegion(override val key: String) : Context {
+  override val kind: String = "cloud-provider-region"
+
+  companion object {
+    const val AWS_US_EAST_1 = "us-east-1"
+  }
 }

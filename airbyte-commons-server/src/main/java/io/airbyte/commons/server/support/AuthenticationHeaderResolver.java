@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -33,6 +33,7 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,14 +41,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Resolves organization or workspace IDs from HTTP headers.
  */
-@Slf4j
 @Singleton
 public class AuthenticationHeaderResolver {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final WorkspaceHelper workspaceHelper;
   private final PermissionHandler permissionHandler;
@@ -100,7 +103,7 @@ public class AuthenticationHeaderResolver {
         }
       }
       return organizationIds;
-    } catch (final ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
+    } catch (final IllegalArgumentException | ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve organization ID.", e);
       return null;
     } catch (final IOException e) {
@@ -169,7 +172,8 @@ public class AuthenticationHeaderResolver {
         log.debug("Request does not contain any headers that resolve to a workspace ID.");
         return null;
       }
-    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
+    } catch (final IllegalArgumentException | JsonValidationException | ConfigNotFoundException
+        | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve workspace ID.", e);
       return null;
     } catch (final IOException e) {

@@ -1,27 +1,6 @@
 # airbyte
 
-![Version: 1.1.1](https://img.shields.io/badge/Version-1.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.1.0](https://img.shields.io/badge/AppVersion-1.1.0-informational?style=flat-square)
-
 Helm chart to deploy airbyte
-
-## Requirements
-
-| Repository | Name | Version |
-|------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | cron | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | keycloak | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | worker | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | workload-api-server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | workload-launcher | 1.1.1 |
-| https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
 
@@ -154,8 +133,6 @@ Helm chart to deploy airbyte
 | global.enterprise.secretName | string | `"airbyte-config-secrets"` | Secret name where an Airbyte license key is stored                                                                                                                      |
 | global.env_vars | object | `{}` | Environment variables                                                                                                                                                   |
 | global.jobs.kube.annotations | object | `{}` | key/value annotations applied to kube jobs                                                                                                                              |
-| global.jobs.kube.images.busybox | string | `""` | busybox image used by the job pod                                                                                                                                       |
-| global.jobs.kube.images.curl | string | `""` | curl image used by the job pod                                                                                                                                          |
 | global.jobs.kube.labels | object | `{}` | key/value labels applied to kube jobs                                                                                                                                   |
 | global.jobs.kube.main_container_image_pull_secret | string | `""` | image pull secret to use for job pod                                                                                                                                    |
 | global.jobs.kube.nodeSelector | object | `{}` | Node labels for pod assignment                                                                                                                                          |
@@ -350,7 +327,7 @@ Helm chart to deploy airbyte
 | temporal.extraVolumes | list | `[]` | Additional volumes for temporal pods                                                                                                                                    |
 | temporal.image.pullPolicy | string | `"IfNotPresent"` | The pull policy for the temporal image                                                                                                                                  |
 | temporal.image.repository | string | `"temporalio/auto-setup"` | The temporal image repository to use                                                                                                                                    |
-| temporal.image.tag | string | `"1.23.0"` | The temporal image tag to use                                                                                                                                           |
+| temporal.image.tag | string | `"1.26"` | The temporal image tag to use                                                                                                                                           |
 | temporal.livenessProbe.enabled | bool | `false` | Enable livenessProbe on the temporal                                                                                                                                    |
 | temporal.nodeSelector | object | `{}` | Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/                                                                      |
 | temporal.podAnnotations | object | `{}` | Add extra annotations to the temporal pod                                                                                                                               |

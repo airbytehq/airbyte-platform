@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -100,6 +100,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static final String WHERE = "WHERE ";
   private static final String AND = " AND ";
   private static final String SCOPE_CLAUSE = "scope = ? AND ";
+  private static final String SCOPE_WITHOUT_AND_CLAUSE = "scope = ? ";
   private static final String DEPLOYMENT_ID_KEY = "deployment_id";
   private static final String METADATA_KEY_COL = "key";
   private static final String METADATA_VAL_COL = "value";
@@ -1333,6 +1334,26 @@ public class DefaultJobPersistence implements JobPersistence {
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
+        .stream()
+        .findFirst()
+        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+  }
+
+  /**
+   * Get all the terminal jobs for a connection including the cancelled jobs. (The method above does
+   * not include the cancelled jobs
+   *
+   * @param connectionId the connection id for which we want to get the last job
+   * @return the last job for the connection including the cancelled jobs
+   */
+  @Override
+  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException {
+    return jobDatabase.query(ctx -> ctx
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+            + SCOPE_WITHOUT_AND_CLAUSE
+            + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
+            connectionId.toString())
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));

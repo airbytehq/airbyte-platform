@@ -1,4 +1,13 @@
 intents:
+  CreateOrEditConnector:
+    name: Create or edit connector
+    description: Create a source or destination connector, or change the settings of an existing connector
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
   UploadCustomConnector:
     name: Create custom docker connector
     description: Upload a custom docker connector to be used in the workspace

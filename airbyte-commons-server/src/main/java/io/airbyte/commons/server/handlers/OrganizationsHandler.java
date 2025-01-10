@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -58,8 +58,6 @@ public class OrganizationsHandler {
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
         .email(organization.getEmail())
-        .pba(organization.getPba())
-        .orgLevelBilling(organization.getOrgLevelBilling())
         .ssoRealm(organization.getSsoRealm());
   }
 
@@ -69,15 +67,11 @@ public class OrganizationsHandler {
     final String email = organizationCreateRequestBody.getEmail();
     final UUID userId = organizationCreateRequestBody.getUserId();
     final UUID orgId = uuidGenerator.get();
-    final Boolean pba = organizationCreateRequestBody.getPba() != null && organizationCreateRequestBody.getPba();
-    final Boolean orgLevelBilling = organizationCreateRequestBody.getOrgLevelBilling() != null && organizationCreateRequestBody.getOrgLevelBilling();
     final Organization organization = new Organization()
         .withOrganizationId(orgId)
         .withName(organizationName)
         .withEmail(email)
-        .withUserId(userId)
-        .withPba(pba)
-        .withOrgLevelBilling(orgLevelBilling);
+        .withUserId(userId);
     organizationPersistence.createOrganization(organization);
 
     try {
@@ -101,15 +95,6 @@ public class OrganizationsHandler {
     boolean hasChanged = false;
     if (!organization.getName().equals(organizationUpdateRequestBody.getOrganizationName())) {
       organization.setName(organizationUpdateRequestBody.getOrganizationName());
-      hasChanged = true;
-    }
-    if (organizationUpdateRequestBody.getPba() != null && !organization.getPba().equals(organizationUpdateRequestBody.getPba())) {
-      organization.setPba(organizationUpdateRequestBody.getPba());
-      hasChanged = true;
-    }
-    if (organizationUpdateRequestBody.getOrgLevelBilling() != null && !organization.getOrgLevelBilling()
-        .equals(organizationUpdateRequestBody.getOrgLevelBilling())) {
-      organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
       hasChanged = true;
     }
     if (organizationUpdateRequestBody.getEmail() != null && !organizationUpdateRequestBody.getEmail()

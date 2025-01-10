@@ -50,31 +50,11 @@ spec:
         image: {{ include "imageUrl" (list .Values.metrics.image $) }}
         imagePullPolicy: "{{ .Values.metrics.image.pullPolicy }}"
         env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-        - name: METRIC_CLIENT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: METRIC_CLIENT
-        - name: OTEL_COLLECTOR_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: OTEL_COLLECTOR_ENDPOINT
-
+        {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
 
-        {{- end }}
         # Values from secret
         {{- if .Values.metrics.secrets }}
         {{- range $k, $v := .Values.metrics.secrets }}

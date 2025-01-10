@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -73,6 +73,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.validation.json.JsonValidationException;
@@ -110,6 +111,7 @@ public class WebBackendConnectionsHandler {
   private final EventRunner eventRunner;
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final FieldGenerator fieldGenerator;
 
   private final CatalogService catalogService;
@@ -139,7 +141,8 @@ public class WebBackendConnectionsHandler {
                                       final WorkspaceService workspaceService,
                                       final CatalogConverter catalogConverter,
                                       final ApplySchemaChangeHelper applySchemaChangeHelper,
-                                      final ApiPojoConverters apiPojoConverters) {
+                                      final ApiPojoConverters apiPojoConverters,
+                                      final DestinationCatalogGenerator destinationCatalogGenerator) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
@@ -159,6 +162,7 @@ public class WebBackendConnectionsHandler {
     this.catalogConverter = catalogConverter;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
+    this.destinationCatalogGenerator = destinationCatalogGenerator;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -315,7 +319,10 @@ public class WebBackendConnectionsHandler {
         .isSyncing(latestRunningSyncJob.isPresent())
         .schemaChange(schemaChange)
         .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
-        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead);
+        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
+        // Temporarily set to an empty list:
+        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
+        .tags(Collections.emptyList());
 
     latestSyncJob.ifPresent(job -> {
       listItem.setLatestSyncJobCreatedAt(job.createdAt());
@@ -401,7 +408,10 @@ public class WebBackendConnectionsHandler {
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
         .createdAt(connectionRead.getCreatedAt())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
-        .backfillPreference(connectionRead.getBackfillPreference());
+        .backfillPreference(connectionRead.getBackfillPreference())
+        // Temporarily set to an empty list:
+        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
+        .tags(Collections.emptyList());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
@@ -706,36 +716,46 @@ public class WebBackendConnectionsHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
-    final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
-    if (!skipReset) {
-      final AirbyteCatalog apiExistingCatalog = catalogConverter.toApi(oldConfiguredCatalog,
-          catalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
-      final AirbyteCatalog upToDateAirbyteCatalog = updatedConnectionRead.getSyncCatalog();
-      final CatalogDiff catalogDiff =
-          connectionsHandler.getDiff(apiExistingCatalog, upToDateAirbyteCatalog,
-              catalogConverter.toConfiguredInternal(upToDateAirbyteCatalog), connectionId);
-      final List<StreamDescriptor> apiStreamsToReset = getStreamsToReset(catalogDiff);
-      final Set<StreamDescriptor> changedConfigStreamDescriptors =
-          connectionsHandler.getConfigurationDiff(apiExistingCatalog, upToDateAirbyteCatalog);
-      final Set<StreamDescriptor> allStreamToReset = new HashSet<>();
-      allStreamToReset.addAll(apiStreamsToReset);
-      allStreamToReset.addAll(changedConfigStreamDescriptors);
-      final List<io.airbyte.config.StreamDescriptor> streamsToReset =
-          allStreamToReset.stream().map(ApiConverters::toInternal).toList();
+    final boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
+    if (skipReset) {
+      return;
+    }
 
-      if (!streamsToReset.isEmpty()) {
-        final var destinationVersion = actorDefinitionVersionHandler
-            .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
-        if (destinationVersion.getSupportsRefreshes()) {
-          eventRunner.refreshConnectionAsync(
-              connectionId,
-              streamsToReset,
-              RefreshType.MERGE);
-        } else {
-          eventRunner.resetConnectionAsync(
-              connectionId,
-              streamsToReset);
-        }
+    // Use destination catalogs when computing diffs so mappings are taken into account
+    final ConfiguredAirbyteCatalog updatedConfiguredCatalog = catalogConverter.toConfiguredInternal(updatedConnectionRead.getSyncCatalog());
+    final ConfiguredAirbyteCatalog updatedDestinationCatalog = destinationCatalogGenerator
+        .generateDestinationCatalog(updatedConfiguredCatalog).getCatalog();
+    final ConfiguredAirbyteCatalog oldDestinationCatalog = destinationCatalogGenerator
+        .generateDestinationCatalog(oldConfiguredCatalog).getCatalog();
+
+    final AirbyteCatalog apiExistingCatalog = catalogConverter.toApi(oldDestinationCatalog,
+        catalogConverter.getFieldSelectionData(oldConnectionRead.getSyncCatalog()));
+    final AirbyteCatalog apiUpdatedCatalog = catalogConverter.toApi(updatedDestinationCatalog,
+        catalogConverter.getFieldSelectionData(updatedConnectionRead.getSyncCatalog()));
+
+    final CatalogDiff catalogDiff =
+        connectionsHandler.getDiff(apiExistingCatalog, apiUpdatedCatalog, updatedDestinationCatalog, connectionId);
+    final List<StreamDescriptor> apiStreamsToReset = getStreamsToReset(catalogDiff);
+    final Set<StreamDescriptor> changedConfigStreamDescriptors =
+        connectionsHandler.getConfigurationDiff(apiExistingCatalog, apiUpdatedCatalog);
+    final Set<StreamDescriptor> allStreamToReset = new HashSet<>();
+    allStreamToReset.addAll(apiStreamsToReset);
+    allStreamToReset.addAll(changedConfigStreamDescriptors);
+    final List<io.airbyte.config.StreamDescriptor> streamsToReset =
+        allStreamToReset.stream().map(ApiConverters::toInternal).toList();
+
+    if (!streamsToReset.isEmpty()) {
+      final var destinationVersion = actorDefinitionVersionHandler
+          .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
+      if (destinationVersion.getSupportsRefreshes()) {
+        eventRunner.refreshConnectionAsync(
+            connectionId,
+            streamsToReset,
+            RefreshType.MERGE);
+      } else {
+        eventRunner.resetConnectionAsync(
+            connectionId,
+            streamsToReset);
       }
     }
   }

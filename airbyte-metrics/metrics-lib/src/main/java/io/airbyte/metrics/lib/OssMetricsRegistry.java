@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -130,6 +130,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "keycloak_token_validation",
       "increments when a keycloak auth token validation occurs"),
 
+  OIDC_TOKEN_VALIDATION(
+      MetricEmittingApps.SERVER,
+      "oidc_token_validation",
+      "increments when a oidc auth token validation occurs"),
+
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
       "a breaking schema change has been detected"),
@@ -257,6 +262,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "running_pods_found_for_connection_id",
       "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
 
+  REPLICATION_THROUGHPUT_BPS(MetricEmittingApps.WORKER,
+      "replication_throughput_bps",
+      "throughput of replication in bytes per second"),
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),

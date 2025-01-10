@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.config;
@@ -9,6 +9,7 @@ import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectUpdater;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
@@ -30,6 +31,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
+import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -44,9 +46,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.context.env.Environment;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
@@ -220,6 +220,12 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
+  @Named("oauthImplementationFactory")
+  public OAuthImplementationFactory oauthImplementationFactory() {
+    return new OAuthImplementationFactory(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build());
+  }
+
+  @Singleton
   public BuilderProjectUpdater builderProjectUpdater(final ConnectorBuilderService connectorBuilderService) {
     final var pathToConnectors = io.airbyte.commons.envvar.EnvVar.PATH_TO_CONNECTORS.fetch();
     final ConfigRepositoryBuilderProjectUpdater configRepositoryProjectUpdater = new ConfigRepositoryBuilderProjectUpdater(connectorBuilderService);
@@ -231,9 +237,23 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  @Requires(env = Environment.KUBERNETES)
   public KubernetesClient kubernetesClient() {
     return new KubernetesClientBuilder().build();
+  }
+
+  @Singleton
+  public ProductLimitsProvider.WorkspaceLimits defaultWorkspaceLimits(
+                                                                      @Value("${airbyte.server.limits.connections}") final long maxConnections,
+                                                                      @Value("${airbyte.server.limits.sources}") final long maxSources,
+                                                                      @Value("${airbyte.server.limits.destinations}") final long maxDestinations) {
+    return new ProductLimitsProvider.WorkspaceLimits(maxConnections, maxSources, maxDestinations);
+  }
+
+  @Singleton
+  public ProductLimitsProvider.OrganizationLimits defaultOrganizationLimits(
+                                                                            @Value("${airbyte.server.limits.workspaces}") final long maxWorkspaces,
+                                                                            @Value("${airbyte.server.limits.users}") final long maxUsers) {
+    return new ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers);
   }
 
 }

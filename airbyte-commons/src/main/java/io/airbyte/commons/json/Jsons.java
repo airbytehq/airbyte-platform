@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -463,6 +463,21 @@ public class Jsons {
   }
 
   /**
+   * Get the {@link JsonNode} at a location in a {@link JsonNode} object. Empty object node if no
+   * value at the specified location or the value at the specified location is null.
+   *
+   * @param json object to navigate
+   * @param keys keys to follow to a value
+   * @return value at location specified by keys wrapped in an optional. if no value there, empty
+   *         node.
+   */
+  public static JsonNode getNodeOrEmptyObject(final JsonNode json, final String... keys) {
+    final JsonNode defaultValue = emptyObject();
+    final Optional<JsonNode> valueOptional = getOptional(json, Arrays.asList(keys));
+    return valueOptional.filter(node -> !node.isNull()).orElse(defaultValue);
+  }
+
+  /**
    * Get the {@link String} at a location in a {@link JsonNode} object. Returns null, if no value at
    * the specified location.
    *
@@ -607,6 +622,26 @@ public class Jsons {
    * @return json as string-to-string map
    */
   public static Map<String, Object> deserializeToMap(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
+   * Convert a {@link JsonNode} as a string-to-integer map.
+   *
+   * @param json to convert
+   * @return json as string-to-integer map
+   */
+  public static Map<String, Integer> deserializeToIntegerMap(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
+   * Convert a {@link JsonNode} as a list of string.
+   *
+   * @param json to convert
+   * @return json as list of string
+   */
+  public static List<String> deserializeToStringList(final JsonNode json) {
     return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
   }
 

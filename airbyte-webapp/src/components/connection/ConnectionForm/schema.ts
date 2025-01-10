@@ -15,24 +15,12 @@ import {
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog";
-import { FeatureItem, useFeature } from "core/services/features";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
-
-export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
-
-function nextExecutionsMoreFrequentThanOncePerHour(nextExecutions: number[]): boolean {
-  if (nextExecutions.length > 1) {
-    const [firstExecution, secondExecution] = nextExecutions;
-    return secondExecution - firstExecution < 3600;
-  }
-  return false;
-}
 
 /**
  * yup schema for the schedule data
  */
 export const useGetScheduleDataSchema = () => {
-  const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const validateCronExpression = useDescribeCronExpressionFetchQuery();
 
   return useMemo(() => {
@@ -75,15 +63,6 @@ export const useGetScheduleDataSchema = () => {
                       type: NON_I18N_ERROR_TYPE,
                     });
                   }
-                  if (
-                    !allowSubOneHourCronExpressions &&
-                    nextExecutionsMoreFrequentThanOncePerHour(response.nextExecutions)
-                  ) {
-                    return createError({
-                      path,
-                      message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
-                    });
-                  }
                 } catch (error) {
                   return createError({
                     path,
@@ -98,7 +77,7 @@ export const useGetScheduleDataSchema = () => {
           .defined("form.empty.error"),
       });
     });
-  }, [validateCronExpression, allowSubOneHourCronExpressions]);
+  }, [validateCronExpression]);
 };
 
 /**
@@ -216,14 +195,6 @@ export const syncCatalogSchema = yup.object({
       "syncCatalog.streams.required",
       "connectionForm.streams.required",
       (streams) => streams?.some(({ config }) => !!config?.selected) ?? false
-    )
-    .test(
-      "syncCatalog.streams.mappers",
-      "connectionForm.streams.existingMappers",
-      (streams) =>
-        !streams?.some(
-          (stream) => stream.config?.mappers?.some((mapper) => mapper.type !== StreamMapperType.hashing)
-        ) ?? true
     )
     .test("syncCatalog.streams.hash", "connectionForm.streams.hashFieldCollision", (streams) => {
       // group all top-level included fields by stream name & namespace

@@ -7,8 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -44,39 +42,45 @@ tasks.named<Test>("test") {
   maxHeapSize = "2g"
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// Once lombok has been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-val generateIntents = tasks.register("generateIntents") {
+val generateIntents =
+  tasks.register("generateIntents") {
 
-  doLast {
-    // Load YAML data
-    val intentsYaml = file("src/main/resources/intents.yaml")
-    val yaml = Yaml()
-    val data = yaml.load<Map<String, Any>>(FileReader(intentsYaml))
-    val intentsData = data["intents"] as? Map<*, *>
+    doLast {
+      // Load YAML data
+      val intentsYaml = file("src/main/resources/intents.yaml")
+      val yaml = Yaml()
+      val data = yaml.load<Map<String, Any>>(FileReader(intentsYaml))
+      val intentsData = data["intents"] as? Map<*, *>
 
-    // Generate the Intent enum class as a string
-    val enumEntries = intentsData?.map { (key, value) ->
-      // Safely cast value and extract roles
-      val details = value as? Map<*, *>
-      val roles = (details?.get("roles") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-      val rolesString = roles.joinToString(", ") { "\"$it\"" }
-      "$key(setOf($rolesString))"
-    }?.joinToString(",\n  ") ?: ""
+      // Generate the Intent enum class as a string
+      val enumEntries =
+        intentsData
+          ?.map { (key, value) ->
+            // Safely cast value and extract roles
+            val details = value as? Map<*, *>
+            val roles = (details?.get("roles") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+            val rolesString = roles.joinToString(", ") { "\"$it\"" }
+            "$key(setOf($rolesString))"
+          }?.joinToString(",\n  ") ?: ""
 
-    // read the intent-template.txt and replace <enum-entries> with the generated enum entries
-    val intentClassContent = file("src/main/resources/intent-class-template.txt").readText().replace("<enum-entries>", enumEntries)
+      // read the intent-template.txt and replace <enum-entries> with the generated enum entries
+      val intentClassContent = file("src/main/resources/intent-class-template.txt").readText().replace("<enum-entries>", enumEntries)
 
-    val buildDirPath = layout.buildDirectory.asFile.get().absolutePath
-    val outputDir = File(buildDirPath, "generated/intents/io/airbyte-commons-auth/generated")
-    outputDir.mkdirs()
-    File(outputDir, "Intent.kt").writeText(intentClassContent)
+      val buildDirPath =
+        layout.buildDirectory.asFile
+          .get()
+          .absolutePath
+      val outputDir = File(buildDirPath, "generated/intents/io/airbyte-commons-auth/generated")
+      outputDir.mkdirs()
+      File(outputDir, "Intent.kt").writeText(intentClassContent)
+    }
   }
-}
 
 tasks.named("compileKotlin") {
   dependsOn(generateIntents)
@@ -85,7 +89,7 @@ tasks.named("compileKotlin") {
 kotlin {
   sourceSets["main"].apply {
     kotlin.srcDir(
-      "${project.layout.buildDirectory.get()}/generated/intents/io/airbyte-commons-auth/generated"
+      "${project.layout.buildDirectory.get()}/generated/intents/io/airbyte-commons-auth/generated",
     )
   }
 }

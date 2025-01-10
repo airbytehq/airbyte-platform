@@ -55,6 +55,25 @@ class StartRolloutActivityImplTest {
     verify { connectorRolloutApi.startConnectorRollout(any()) }
   }
 
+  @Test
+  fun `test startRollout calls connectorRolloutApi with null values`() {
+    every { connectorRolloutApi.startConnectorRollout(any()) } returns getMockConnectorRolloutResponse()
+
+    val input =
+      ConnectorRolloutActivityInputStart(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        rolloutId = ROLLOUT_ID,
+        updatedBy = USER_ID,
+        rolloutStrategy = null,
+      )
+
+    startRolloutActivity.startRollout("workflowRunId", input)
+
+    verify { connectorRolloutApi.startConnectorRollout(any()) }
+  }
+
   private fun getMockConnectorRolloutResponse(): ConnectorRolloutStartResponse {
     return ConnectorRolloutStartResponse(
       ConnectorRolloutRead(

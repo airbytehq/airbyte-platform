@@ -78,7 +78,7 @@ enum class EnvVar {
   OTEL_COLLECTOR_ENDPOINT,
 
   PATH_TO_CONNECTORS,
-
+  PLATFORM_LOG_FORMAT,
   PUBLISH_METRICS,
   PUB_SUB_ENABLED,
   PUB_SUB_TOPIC_NAME,
@@ -91,6 +91,12 @@ enum class EnvVar {
   SIDECAR_KUBE_CPU_LIMIT,
   SIDECAR_MEMORY_REQUEST,
   STORAGE_BUCKET_ACTIVITY_PAYLOAD,
+
+  /**
+   * STORAGE_BUCKET_AUDIT_LOGGING is separate from other log storage buckets.
+   * It is by default unset unless the SME customer enables the audit-logging feature via `values.yaml`.
+   */
+  STORAGE_BUCKET_AUDIT_LOGGING,
   STORAGE_BUCKET_LOG,
   STORAGE_BUCKET_STATE,
   STORAGE_BUCKET_WORKLOAD_OUTPUT,

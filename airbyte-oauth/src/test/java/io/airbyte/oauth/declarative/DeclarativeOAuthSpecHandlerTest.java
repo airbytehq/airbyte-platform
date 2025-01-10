@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.declarative;
@@ -25,6 +25,9 @@ class DeclarativeOAuthSpecHandlerTest {
   private final SecureRandom secureRandom = mock(SecureRandom.class);
   private final DeclarativeOAuthSpecHandler handler = new DeclarativeOAuthSpecHandler();
 
+  private static final String ACCESS_TOKEN_TEST_VALUE = "access_token_value";
+  private static final String REFRESH_TOKEN_TEST_VALUE = "refresh_token_value";
+  private static final String TEST_ACCESS_TOKEN_URL = "test_access_token_url";
   private static final String TEST_CLIENT_ID = "test_client_id";
   private static final String TEST_REDIRECT_URI = "test_redirect_uri";
   private static final String TEST_STATE = "test_state";
@@ -69,8 +72,8 @@ class DeclarativeOAuthSpecHandlerTest {
   @Test
   void testRenderStringTemplate() throws IOException {
     final Map<String, String> templateValues = Map.of("key", "value");
-    final String templateString = "This is a {key}";
-    final String expected = "This is a value";
+    final String templateString = "{{ key }}";
+    final String expected = "value";
     assertEquals(expected, handler.renderStringTemplate(templateValues, templateString));
   }
 
@@ -82,10 +85,10 @@ class DeclarativeOAuthSpecHandlerTest {
 
   @Test
   void testCheckContextRestricted() {
-    final String restrictedString = "This string contains a restricted variable {env:test_value}";
+    final String restrictedString = "This string contains a restricted variable {{ test_value | env }}";
     IOException exception = assertThrows(IOException.class, () -> handler.checkContext(restrictedString));
-    final String expected = "DeclarativeOAuthSpecHandler(): the `env:` usage in "
-        + "`This string contains a restricted variable {env:test_value}` is not allowed for string interpolation.";
+    final String expected = "DeclarativeOAuthSpecHandler(): the `env` usage in "
+        + "`This string contains a restricted variable {{ test_value | env }}` is not allowed for string interpolation.";
     assertEquals(expected, exception.getMessage());
   }
 
@@ -110,15 +113,65 @@ class DeclarativeOAuthSpecHandlerTest {
     assertEquals("header_value", headers.get("header_key"));
   }
 
+  /**
+   * Tests the processOAuthOutput method of the DeclarativeOAuthSpecHandler class.
+   *
+   * Examples:
+   *
+   * Input: ["access_token", "refresh_token"] Output: {"access_token": "access_token_value",
+   * "refresh_token": "refresh_token_value"}
+   *
+   * This test verifies that the processOAuthOutput method correctly extracts the access token from
+   * the provided user configuration and data.
+   *
+   */
   @Test
   void testProcessOAuthOutput() throws IOException {
-    final JsonNode userConfig = Jsons.jsonNode(
-        Map.of(
-            DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY, List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN)));
+    final List<String> extractOutputInputValues = List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, DeclarativeOAuthSpecHandler.REFRESH_TOKEN);
 
-    final JsonNode data = Jsons.jsonNode(Map.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, "token_value"));
-    final Map<String, Object> output = handler.processOAuthOutput(userConfig, data, DeclarativeOAuthSpecHandler.ACCESS_TOKEN_KEY);
-    assertEquals("token_value", output.get(DeclarativeOAuthSpecHandler.ACCESS_TOKEN));
+    final JsonNode userConfig = Jsons.jsonNode(Map.of(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY, extractOutputInputValues));
+    final JsonNode jsonData = Jsons.jsonNode(
+        Map.of(
+            DeclarativeOAuthSpecHandler.ACCESS_TOKEN, ACCESS_TOKEN_TEST_VALUE,
+            DeclarativeOAuthSpecHandler.REFRESH_TOKEN, REFRESH_TOKEN_TEST_VALUE));
+
+    final Map<String, Object> output = handler.processOAuthOutput(userConfig, jsonData, TEST_ACCESS_TOKEN_URL);
+
+    assertEquals(ACCESS_TOKEN_TEST_VALUE, output.get(DeclarativeOAuthSpecHandler.ACCESS_TOKEN));
+    assertEquals(REFRESH_TOKEN_TEST_VALUE, output.get(DeclarativeOAuthSpecHandler.REFRESH_TOKEN));
+  }
+
+  /**
+   * Tests the processOAuthOutput method to ensure it correctly extracts OAuth tokens from a nested
+   * JSON data structure.
+   *
+   * Examples:
+   *
+   * Input: ["main_data.nested_data.auth_data.access_token", "main_data.nested_data.refresh_token"]
+   * Output: {"access_token": "access_token_value", "refresh_token": "refresh_token_value"}
+   *
+   * The test constructs a JSON input with nested data, specifies the paths to the access token and
+   * refresh token, and verifies that the processOAuthOutput method correctly extracts these tokens
+   * into a map.
+   */
+  @Test
+  void testProcessOAuthOutputFromNestedDataObject() throws IOException {
+    final String accessTokenEntry = "data.nested.auth." + DeclarativeOAuthSpecHandler.ACCESS_TOKEN;
+    final String refreshTokenEntry = "data.nested." + DeclarativeOAuthSpecHandler.REFRESH_TOKEN;
+    final List<String> extractOutputInputValues = List.of(accessTokenEntry, refreshTokenEntry);
+
+    final JsonNode userConfig = Jsons.jsonNode(Map.of(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY, extractOutputInputValues));
+    final JsonNode jsonData = Jsons.jsonNode(
+        Map.of(
+            "data", Map.of(
+                "nested", Map.of(
+                    DeclarativeOAuthSpecHandler.REFRESH_TOKEN, REFRESH_TOKEN_TEST_VALUE,
+                    "auth", Map.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, ACCESS_TOKEN_TEST_VALUE)))));
+
+    final Map<String, Object> output = handler.processOAuthOutput(userConfig, jsonData, TEST_ACCESS_TOKEN_URL);
+
+    assertEquals(ACCESS_TOKEN_TEST_VALUE, output.get(DeclarativeOAuthSpecHandler.ACCESS_TOKEN));
+    assertEquals(REFRESH_TOKEN_TEST_VALUE, output.get(DeclarativeOAuthSpecHandler.REFRESH_TOKEN));
   }
 
 }

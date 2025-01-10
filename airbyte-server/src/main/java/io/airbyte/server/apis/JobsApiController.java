@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -152,6 +152,14 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobOptionalRead getLastReplicationJob(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
+  }
+
+  @Post("/get_last_replication_job_with_cancel")
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobOptionalRead getLastReplicationJobWithCancel(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody));
   }
 
   @Post("/job_failure")

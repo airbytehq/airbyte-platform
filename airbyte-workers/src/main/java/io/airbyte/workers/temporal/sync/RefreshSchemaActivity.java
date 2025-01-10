@@ -1,11 +1,9 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
 
-import io.airbyte.workers.models.RefreshSchemaActivityInput;
-import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.UUID;
@@ -18,13 +16,5 @@ public interface RefreshSchemaActivity {
 
   @ActivityMethod
   boolean shouldRefreshSchema(UUID sourceCatalogId);
-
-  /**
-   * Refresh the schema. This will eventually replace the one above.
-   *
-   * @param input includes the source catalog id, connection id, and workspace id
-   * @return any diff that was auto-propagated
-   */
-  RefreshSchemaActivityOutput refreshSchemaV2(final RefreshSchemaActivityInput input) throws Exception;
 
 }

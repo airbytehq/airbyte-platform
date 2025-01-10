@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
@@ -517,13 +517,65 @@ abstract class MetricRepositoryTest {
   class UnusuallyLongJobs {
 
     @Test
-    void shouldCountInJobsWithUnusuallyLongTime() throws SQLException {
+    void shouldCountJobsWithUnusuallyLongTime() throws SQLException {
       final var connectionId = UUID.randomUUID();
       final var syncConfigType = JobConfigType.sync;
+      final var config = JSONB.valueOf("""
+                                       {
+                                        "sync": {
+                                           "sourceDockerImage": "airbyte/source-postgres-1.1.0",
+                                           "destinationDockerImage": "airbyte/destination-s3-1.4.0"
+                                         }
+                                       }
+                                       """);
 
       // Current job has been running for 12 hours while the previous 5 jobs runs 2 hours. Avg will be 2
       // hours.
       // Thus latest job will be counted as an unusually long-running job.
+      ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT, JOBS.UPDATED_AT, JOBS.CONFIG_TYPE, JOBS.CONFIG)
+          .values(100L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(28, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(26, ChronoUnit.HOURS), syncConfigType, config)
+          .values(1L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(20, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(18, ChronoUnit.HOURS), syncConfigType, config)
+          .values(2L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(18, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(16, ChronoUnit.HOURS), syncConfigType, config)
+          .values(3L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(16, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(14, ChronoUnit.HOURS), syncConfigType, config)
+          .values(4L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(14, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(12, ChronoUnit.HOURS), syncConfigType, config)
+          .values(5L, connectionId.toString(), JobStatus.running, OffsetDateTime.now().minus(12, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(12, ChronoUnit.HOURS), syncConfigType, config)
+          .execute();
+
+      ctx.insertInto(ATTEMPTS, ATTEMPTS.ID, ATTEMPTS.JOB_ID, ATTEMPTS.STATUS, ATTEMPTS.CREATED_AT, ATTEMPTS.UPDATED_AT)
+          .values(100L, 100L, AttemptStatus.succeeded, OffsetDateTime.now().minus(28, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(26, ChronoUnit.HOURS))
+          .values(1L, 1L, AttemptStatus.succeeded, OffsetDateTime.now().minus(20, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(18, ChronoUnit.HOURS))
+          .values(2L, 2L, AttemptStatus.succeeded, OffsetDateTime.now().minus(18, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(16, ChronoUnit.HOURS))
+          .values(3L, 3L, AttemptStatus.succeeded, OffsetDateTime.now().minus(16, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(14, ChronoUnit.HOURS))
+          .values(4L, 4L, AttemptStatus.succeeded, OffsetDateTime.now().minus(14, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(12, ChronoUnit.HOURS))
+          .values(5L, 5L, AttemptStatus.running, OffsetDateTime.now().minus(12, ChronoUnit.HOURS),
+              OffsetDateTime.now().minus(12, ChronoUnit.HOURS))
+          .execute();
+
+      final var longRunningJobs = db.unusuallyLongRunningJobs();
+      assertEquals(1, longRunningJobs.size());
+      final var job = longRunningJobs.get(0);
+      assertEquals("airbyte/source-postgres-1.1.0", job.sourceDockerImage());
+      assertEquals("airbyte/destination-s3-1.4.0", job.destinationDockerImage());
+      assertEquals(connectionId.toString(), job.connectionId());
+    }
+
+    @Test
+    void handlesNullConfigRows() throws SQLException {
+      final var connectionId = UUID.randomUUID();
+      final var syncConfigType = JobConfigType.sync;
+
+      // same as above but no value passed for `config`
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT, JOBS.UPDATED_AT, JOBS.CONFIG_TYPE)
           .values(100L, connectionId.toString(), JobStatus.succeeded, OffsetDateTime.now().minus(28, ChronoUnit.HOURS),
               OffsetDateTime.now().minus(26, ChronoUnit.HOURS), syncConfigType)
@@ -554,8 +606,8 @@ abstract class MetricRepositoryTest {
               OffsetDateTime.now().minus(12, ChronoUnit.HOURS))
           .execute();
 
-      final var numOfJubsRunningUnusallyLong = db.numberOfJobsRunningUnusuallyLong();
-      assertEquals(1, numOfJubsRunningUnusallyLong);
+      final var longRunningJobs = db.unusuallyLongRunningJobs();
+      assertEquals(1, longRunningJobs.size());
     }
 
     @Test
@@ -597,8 +649,8 @@ abstract class MetricRepositoryTest {
               OffsetDateTime.now().minus(14, ChronoUnit.MINUTES))
           .execute();
 
-      final var numOfJubsRunningUnusallyLong = db.numberOfJobsRunningUnusuallyLong();
-      assertEquals(0, numOfJubsRunningUnusallyLong);
+      final var numOfUnusuallyLongRunningJobs = db.unusuallyLongRunningJobs().size();
+      assertEquals(0, numOfUnusuallyLongRunningJobs);
     }
 
     @Test
@@ -625,8 +677,8 @@ abstract class MetricRepositoryTest {
               OffsetDateTime.now().minus(1, ChronoUnit.HOURS))
           .execute();
 
-      final var numOfJubsRunningUnusallyLong = db.numberOfJobsRunningUnusuallyLong();
-      assertEquals(0, numOfJubsRunningUnusallyLong);
+      final var numOfUnusuallyLongRunningJobs = db.unusuallyLongRunningJobs().size();
+      assertEquals(0, numOfUnusuallyLongRunningJobs);
     }
 
   }

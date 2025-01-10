@@ -26,3 +26,8 @@ properties:
     description: Context object with IDs relevant to the actor.
     type: object
     "$ref": ActorContext.yaml
+  networkSecurityTokens:
+    description: Workload launcher will use these to grant pods additional network access
+    type: array
+    items:
+      type: string

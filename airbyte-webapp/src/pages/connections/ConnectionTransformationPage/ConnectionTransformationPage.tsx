@@ -1,8 +1,8 @@
 import React from "react";
 
 import { PageContainer } from "components/PageContainer";
-import { ScrollableContainer } from "components/ScrollableContainer";
 import { FlexContainer } from "components/ui/Flex";
+import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
@@ -12,12 +12,12 @@ export const ConnectionTransformationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TRANSFORMATION);
 
   return (
-    <ScrollableContainer>
+    <ScrollParent>
       <PageContainer centered>
         <FlexContainer direction="column" gap="lg">
           <DbtCloudTransformations />
         </FlexContainer>
       </PageContainer>
-    </ScrollableContainer>
+    </ScrollParent>
   );
 };

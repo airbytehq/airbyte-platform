@@ -133,6 +133,7 @@ object ConnectionReadMapper {
   private fun convertMappers(mappers: List<ConfiguredStreamMapper>?): List<io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper>? {
     return mappers?.map { mapper ->
       io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper(
+        id = mapper.id,
         type = StreamMapperType.decode(mapper.type.toString()) ?: throw IllegalArgumentException("Invalid stream mapper type"),
         mapperConfiguration = mapper.mapperConfiguration,
       )

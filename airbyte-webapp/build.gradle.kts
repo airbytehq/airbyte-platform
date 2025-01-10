@@ -7,6 +7,7 @@ import java.io.FileReader
 plugins {
     id("base")
     id("io.airbyte.gradle.docker")
+    id("io.airbyte.gradle.kube-reload")
     alias(libs.plugins.node.gradle)
 }
 
@@ -59,6 +60,11 @@ configure<NodeExtension> {
 airbyte {
     docker {
         imageName = "webapp"
+    }
+
+    kubeReload {
+        deployment = "ab-webapp"
+        container = "airbyte-webapp-container"
     }
 }
 

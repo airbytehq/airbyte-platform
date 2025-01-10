@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -45,6 +45,7 @@ import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -101,6 +102,7 @@ class JobInputHandlerTest {
   private SourceService sourceService;
   private DestinationService destinatinonService;
   private ConnectionService connectionService;
+  private ScopedConfigurationService scopedConfigurationService;
 
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
@@ -121,6 +123,7 @@ class JobInputHandlerTest {
     sourceService = mock(SourceService.class);
     destinatinonService = mock(DestinationService.class);
     connectionService = mock(ConnectionService.class);
+    scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         featureFlagClient,
@@ -133,7 +136,8 @@ class JobInputHandlerTest {
         connectionService,
         sourceService,
         destinatinonService,
-        apiPojoConverters);
+        apiPojoConverters,
+        scopedConfigurationService);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
@@ -201,8 +205,8 @@ class JobInputHandlerTest {
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withIsReset(false)
-        .withUseAsyncReplicate(false)
-        .withUseAsyncActivities(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -277,8 +281,8 @@ class JobInputHandlerTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true)
-        .withUseAsyncReplicate(false)
-        .withUseAsyncActivities(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))

@@ -10,7 +10,6 @@ import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
@@ -238,13 +237,13 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                       },
                       children: (
                         <>
-                          <BuilderFieldWithInputs
-                            type="string"
+                          <BuilderField
+                            type="jinja"
                             path={streamFieldPath("paginator.strategy.cursor.cursor_value")}
                             manifestPath="CursorPagination.properties.cursor_value"
                           />
-                          <BuilderFieldWithInputs
-                            type="string"
+                          <BuilderField
+                            type="jinja"
                             path={streamFieldPath("paginator.strategy.cursor.stop_condition")}
                             manifestPath="CursorPagination.properties.stop_condition"
                             pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}

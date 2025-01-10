@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -8,16 +8,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class that facilitates the extraction of values from HTTP request POST bodies.
  */
 @Singleton
-@Slf4j
 public class AirbyteHttpRequestFieldExtractor {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   // For some APIs we asked for a list of ids, such as workspace IDs and connection IDs. We will
   // validate if user has permission

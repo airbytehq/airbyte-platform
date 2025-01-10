@@ -1,22 +1,17 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.api
 
 import datadog.trace.api.Trace
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.ActorType
+import io.airbyte.api.client.model.generated.DataplaneGetIdRequestBody
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Context
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Geography
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Priority
-import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
-import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.metrics.CustomMetricPublisher
@@ -36,10 +31,13 @@ import java.util.UUID
 open class WorkloadService(
   private val messageProducer: TemporalMessageProducer<LauncherInputMessage>,
   private val metricPublisher: CustomMetricPublisher,
-  private val featureFlagClient: FeatureFlagClient,
+  private val airbyteApiClient: AirbyteApiClient,
 ) {
   companion object {
     const val CONNECTION_ID_LABEL_KEY = "connection_id"
+    const val ACTOR_ID_LABEL_KEY = "actor_id"
+    const val ACTOR_TYPE_LABEL_KEY = "actor_type"
+    const val WORKSPACE_ID_LABEL_KEY = "workspace_id"
   }
 
   @Trace(operationName = WORKLOAD_PUBLISHER_OPERATION_NAME)
@@ -48,7 +46,6 @@ open class WorkloadService(
     workloadInput: String,
     labels: Map<String, String>,
     logPath: String,
-    geography: String,
     mutexKey: String?,
     workloadType: WorkloadType,
     autoId: UUID,
@@ -56,7 +53,7 @@ open class WorkloadService(
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    val queue = getQueueName(geography, labels, priority)
+    val queue = getQueueName(labels, priority)
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
@@ -74,17 +71,28 @@ open class WorkloadService(
   }
 
   private fun getQueueName(
-    geography: String,
     labels: Map<String, String>,
     priority: WorkloadPriority,
   ): String {
-    val context = mutableListOf<Context>(Geography(geography))
-    if (WorkloadPriority.HIGH == priority) {
-      context.add(Priority(HIGH_PRIORITY))
-    }
-    labels[CONNECTION_ID_LABEL_KEY]?.let {
-      context.add(Connection(it))
-    }
-    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
+    val connectionId = labels[CONNECTION_ID_LABEL_KEY]
+    val actorId = labels[ACTOR_ID_LABEL_KEY]
+    val actorType = labels[ACTOR_TYPE_LABEL_KEY]
+    val workspaceId = labels[WORKSPACE_ID_LABEL_KEY]
+    val dataplaneGetIdRequestBody =
+      DataplaneGetIdRequestBody(
+        priority.toApiRequest(),
+        connectionId?.let { UUID.fromString(it) },
+        actorType?.let { ActorType.decode(it) },
+        actorId?.let { UUID.fromString(it) },
+        workspaceId?.let { UUID.fromString(it) },
+      )
+    return airbyteApiClient.dataplaneApi.getDataplaneId(dataplaneGetIdRequestBody).id
+  }
+}
+
+fun WorkloadPriority.toApiRequest(): io.airbyte.api.client.model.generated.WorkloadPriority {
+  return when (this) {
+    WorkloadPriority.HIGH -> io.airbyte.api.client.model.generated.WorkloadPriority.HIGH
+    WorkloadPriority.DEFAULT -> io.airbyte.api.client.model.generated.WorkloadPriority.DEFAULT
   }
 }

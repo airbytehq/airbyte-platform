@@ -3051,6 +3051,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/get_oauth_consent_url:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a connector builder project ID, return the URL to the consent screen where to redirect the user to.
+      operationId: getConnectorBuilderProjectOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectOauthConsentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthConsentRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/source_oauths/complete_oauth:
     post:
       tags:
@@ -3062,6 +3085,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CompleteSourceOauthRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteOAuthResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/complete_oauth:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a builder project Id generate an access/refresh token etc.
+      operationId: completeConnectorBuilderProjectOauth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteConnectorBuilderProjectOauthRequest"
         required: true
       responses:
         "200":
@@ -3175,6 +3221,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebBackendCheckUpdatesRead"
+  /v1/web_backend/mappers/validate:
+    post:
+      tags:
+        - web_backend
+      summary: Validates a draft set of mappers against a connection's configured streams
+      operationId: webBackendValidateMappers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebBackendValidateMappersRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebBackendValidateMappersResponse"
   /v1/web_backend/connections/list:
     post:
       tags:
@@ -3490,7 +3555,32 @@ paths:
     post:
       tags:
         - jobs
+      summary: Get the latest job not including the cancel jobs.
       operationId: getLastReplicationJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOptionalRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/get_last_replication_job_with_cancel:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the latest job including the cancel jobs. This is used for scheduling in order to make sure that we don't immediately start a new job after a cancel.
+      operationId: getLastReplicationJobWithCancel
       requestBody:
         content:
           application/json:
@@ -4658,13 +4748,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
-  /v1/billing/organization_balance:
+  /v1/billing/subscription_info:
     post:
-      summary: Get the current balance of an organization
+      summary: Get the current information about the organization's subscription
       tags:
         - billing
         - cloud-only
-      operationId: getOrganizationBalance
+      operationId: getSubscriptionInfo
       requestBody:
         content:
           application/json:
@@ -4672,11 +4762,11 @@ paths:
               $ref: "#/components/schemas/OrganizationIdRequestBody"
       responses:
         "200":
-          description: Successfully got organization's balance
+          description: Successfully got organization subscription info
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationBalanceRead"
+                $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
   /v1/billing/trial_status:
     post:
       summary: Get the current trial status of an organization
@@ -4696,6 +4786,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationTrialStatusRead"
+  /v1/billing/cancel_subscription:
+    post:
+      summary: Schedule canceling the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: cancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully scheduled cancelation of the subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelSubscriptionRead"
+  /v1/billing/unschedule_cancel_subscription:
+    post:
+      summary: Unschedule a scheduled cancelation of the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: unscheduleCancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "204":
+          description: Successfully unscheduled cancelation of the subscription
   /v1/organization_payment_config/{organizationId}:
     get:
       summary: Get an organization payment config
@@ -4719,26 +4843,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-    delete:
-      summary: Delete an organization payment config
-      tags:
-        - organization_payment_config
-        - billing
-        - cloud-only
-        - admin-api
-      operationId: deleteOrganizationPaymentConfig
-      parameters:
-        - in: path
-          name: organizationId
-          schema:
-            type: string
-            format: uuid
-          required: true
-      responses:
-        "204":
-          description: Successfully deleted organization payment config
-        "404":
-          description: Payment config didn't exist
   /v1/organization_payment_config:
     post:
       summary: Create or update an organization payment config
@@ -5380,7 +5484,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutResponse"
+                $ref: "#/components/schemas/ConnectorRolloutManualRolloutResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -5412,6 +5516,30 @@ paths:
 
       summary: Manually finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
       operationId: manualFinalizeConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_pause:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateStateRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update rollout state to paused
+      operationId: manualPauseConnectorRollout
       tags:
         - connector_rollout
 
@@ -5574,6 +5702,29 @@ paths:
           description: Successful operation
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/get_dataplane_id:
+    post:
+      summary: Get a dataplane ID given the provided request body params
+      tags:
+        - dataplane
+      operationId: getDataplaneId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGetIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -7313,8 +7464,6 @@ components:
       required:
         - value
         - config_key
-        - resource_id
-        - resource_type
         - scope_id
         - scope_type
         - origin
@@ -7355,8 +7504,6 @@ components:
       type: object
       required:
         - config_key
-        - resource_id
-        - resource_type
         - scope_id
         - scope_type
       properties:
@@ -7507,8 +7654,16 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        actor_selection_info:
+          $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
+        actor_syncs:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutState:
       type: string
@@ -7644,6 +7799,9 @@ components:
         updated_by:
           type: string
           format: uuid
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutStartResponse:
       type: object
@@ -7705,6 +7863,11 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutFinalizeRequestBody:
       type: object
@@ -7727,6 +7890,9 @@ components:
         updated_by:
           type: string
           format: uuid
+        retain_pins_on_cancellation:
+          type: boolean
+          default: true
 
     ConnectorRolloutGetActorSyncInfoRequestBody:
       type: object
@@ -7748,41 +7914,49 @@ components:
             actor_selection_info:
               $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
             syncs:
-              type: array
-              items:
+              type: object
+              additionalProperties:
                 $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutActorSelectionInfo:
       type: object
       required:
-        - n_actors
-        - n_actors_eligible_or_already_pinned
-        - n_pinned_to_connector_rollout
+        - num_actors
+        - num_actors_eligible_or_already_pinned
+        - num_pinned_to_connector_rollout
       properties:
-        n_actors:
+        num_actors:
           type: integer
-        n_actors_eligible_or_already_pinned:
+        num_actors_eligible_or_already_pinned:
           type: integer
-        n_pinned_to_connector_rollout:
+        num_pinned_to_connector_rollout:
           type: integer
 
     ConnectorRolloutActorSyncInfo:
       type: object
       required:
         - actor_id
-        - n_succeeded
-        - n_failed
-        - n_connections
+        - num_succeeded
+        - num_failed
+        - num_connections
       properties:
         actor_id:
           type: string
           format: uuid
-        n_succeeded:
+        num_succeeded:
           type: integer
-        n_failed:
+        num_failed:
           type: integer
-        n_connections:
+        num_connections:
           type: integer
+
+    ConnectorRolloutManualRolloutResponse:
+      type: object
+      required:
+        - data
+      properties:
+        status:
+          type: string
 
     ConnectorRolloutManualFinalizeResponse:
       type: object
@@ -7821,6 +7995,19 @@ components:
           format: uuid
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
+        initial_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        final_target_rollout_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          format: int32
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutManualRolloutRequestBody:
       type: object
@@ -7853,6 +8040,9 @@ components:
           format: int32
           minimum: 1
           maximum: 100
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutManualFinalizeRequestBody:
       type: object
@@ -7883,6 +8073,9 @@ components:
           type: string
         failed_reason:
           type: string
+        retain_pins_on_cancellation:
+          type: boolean
+          default: true
 
     # WORKSPACE
     WorkspaceId:
@@ -8173,13 +8366,27 @@ components:
           $ref: "#/components/schemas/OrganizationId"
         tombstone:
           type: boolean
+        workspaceLimits:
+          $ref: "#/components/schemas/WorkspaceLimits"
+    WorkspaceLimits:
+      type: object
+      required:
+        - sources
+        - destinations
+        - activeConnections
+      properties:
+        sources:
+          $ref: "#/components/schemas/Limit"
+        destinations:
+          $ref: "#/components/schemas/Limit"
+        activeConnections:
+          $ref: "#/components/schemas/Limit"
     WorkspaceOrganizationInfoRead:
       type: object
       description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
       required:
         - organizationId
         - organizationName
-        - pba
         - sso
       properties:
         organizationId:
@@ -8187,8 +8394,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
         sso:
           type: boolean
         billing:
@@ -8196,6 +8401,12 @@ components:
           required:
             - paymentStatus
           properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
             paymentStatus:
               type: string
               enum:
@@ -9170,6 +9381,8 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"
     # SOURCE
@@ -9613,6 +9826,8 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"
         supportedDestinationSyncModes:
@@ -10123,6 +10338,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -10251,6 +10470,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionRead:
       type: object
       required:
@@ -10870,6 +11093,22 @@ components:
       properties:
         propagatedDiff:
           $ref: "#/components/schemas/CatalogDiff"
+    Tag:
+      description: A tag that can be associated with a connection. Useful for grouping and organizing connections in a workspace.
+      type: object
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+
     # Operations
     OperationId:
       type: string
@@ -11027,6 +11266,7 @@ components:
           enum:
             - portal
             - payment_method
+            - setup
           default: portal
     CustomerPortalRead:
       type: object
@@ -11132,22 +11372,22 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
-    OrganizationBalanceRead:
+    OrganizationSubscriptionInfoRead:
       type: object
       required:
-        - hidden
-        - planType
+        - name
+        - selfServeSubscription
+        - balanceHidden
       properties:
-        hidden:
+        name:
+          type: string
+        selfServeSubscription:
+          type: boolean
+        cancellationDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        balanceHidden:
           description: Whether the organization balance is hidden and should not be shown to the user.
           type: boolean
-        planType:
-          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
-          type: string
-          enum:
-            - in_arrears
-            - prepaid
-          deprecated: true
         upcomingInvoice:
           type: object
           description: Describe the current state of the upcoming invoice. If `hidden` is `true`, this will be `null`, since no balance should be shown.
@@ -11204,9 +11444,50 @@ components:
             - The organization has left the trial already
         trialEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
+    CancelSubscriptionRead:
+      type: object
+      required:
+        - subscriptionEndsAt
+      properties:
+        subscriptionEndsAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
 
     # Organization payment config
     OrganizationPaymentConfigRead:
+      type: object
+      required:
+        - organizationId
+        - paymentStatus
+        - subscriptionStatus
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum:
+            - uninitialized
+            - okay
+            - grace_period
+            - disabled
+            - locked
+            - manual
+        subscriptionStatus:
+          type: string
+          enum:
+            - pre_subscription
+            - subscribed
+            - unsubscribed
+        paymentProviderId:
+          type: string
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        usageCategoryOverwrite:
+          type: string
+          enum:
+            - free
+            - internal
+    OrganizationPaymentConfigUpdateRequestBody:
       type: object
       required:
         - organizationId
@@ -11226,16 +11507,11 @@ components:
             - manual
         paymentProviderId:
           type: string
-        gracePeriodEndAt:
-          $ref: "#/components/schemas/ISO8601DateTime"
         usageCategoryOverwrite:
           type: string
           enum:
             - free
             - internal
-    OrganizationPaymentConfigUpdateRequestBody:
-      $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-
     # ORGANIZATIONS
     OrganizationId:
       type: string
@@ -11259,10 +11535,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         email:
           type: string
     OrganizationCreateRequestBody:
@@ -11278,18 +11550,12 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
     OrganizationRead:
       type: object
       required:
         - organizationId
         - organizationName
         - email
-        - pba
-        - orgLevelBilling
       properties:
         organizationId:
           type: string
@@ -11298,12 +11564,29 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         ssoRealm:
           type: string
+        organizationLimits:
+          $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationLimits:
+      type: object
+      properties:
+        users:
+          $ref: "#/components/schemas/Limit"
+        workspaces:
+          $ref: "#/components/schemas/Limit"
+    Limit:
+      type: object
+      required:
+        - current
+        - max
+      properties:
+        current:
+          type: integer
+          format: int64
+        max:
+          type: integer
+          format: int64
     OrganizationReadList:
       type: object
       required:
@@ -11828,6 +12111,7 @@ components:
         - hashing
         - field-renaming
         - row-filtering
+        - encryption
       x-sdk-component: true
     ConfiguredStreamMapper:
       type: object
@@ -11835,6 +12119,9 @@ components:
         - type
         - mapperConfiguration
       properties:
+        id:
+          type: string
+          format: uuid
         type:
           $ref: "#/components/schemas/StreamMapperType"
         mapperConfiguration:
@@ -11843,6 +12130,189 @@ components:
     MapperConfiguration:
       type: object
       description: The values required to configure the mapper.
+      oneOf:
+        - $ref: "#/components/schemas/HashingMapperConfiguration"
+        - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
+        - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperConfiguration"
+      x-sdk-component: true
+    HashingMapperConfiguration:
+      title: "Hashing"
+      type: "object"
+      properties:
+        fieldNameSuffix:
+          type: "string"
+          title: "Field name suffix"
+          description: "The suffix to append to the field name after hashing."
+        method:
+          type: "string"
+          enum:
+            - "MD2"
+            - "MD5"
+            - "SHA-1"
+            - "SHA-224"
+            - "SHA-256"
+            - "SHA-384"
+            - "SHA-512"
+          title: "Hashing method"
+          description: "The hashing algorithm to use."
+        targetField:
+          type: "string"
+          title: "Original Field Name"
+          description: "The name of the field to be hashed."
+      required:
+        - "fieldNameSuffix"
+        - "method"
+        - "targetField"
+      x-sdk-component: true
+    FieldRenamingMapperConfiguration:
+      title: "Field Renaming"
+      type: "object"
+      properties:
+        newFieldName:
+          type: "string"
+          title: "New Field Name"
+          description: "The new name for the field after renaming."
+        originalFieldName:
+          type: "string"
+          title: "Original Field Name"
+          description: "The current name of the field to rename."
+      required:
+        - "newFieldName"
+        - "originalFieldName"
+      x-sdk-component: true
+    RowFilteringOperationType:
+      type: "string"
+      enum:
+        - "EQUAL"
+        - "NOT"
+      x-sdk-component: true
+    RowFilteringOperationEqual:
+      type: "object"
+      title: "EQUAL"
+      required:
+        - "comparisonValue"
+        - "fieldName"
+        - "type"
+      properties:
+        comparisonValue:
+          type: "string"
+          title: "Comparison Value"
+          description: "The value to compare the field against."
+        fieldName:
+          type: "string"
+          title: "Field Name"
+          description: "The name of the field to apply the operation on."
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-sdk-component: true
+    RowFilteringOperationNot:
+      type: "object"
+      title: "NOT"
+      required:
+        - "conditions"
+        - "type"
+      properties:
+        conditions:
+          title: "Sub-Conditions (NOT)"
+          description: "Conditions to evaluate with the NOT operator."
+          minItems: 1
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RowFilteringOperation"
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-sdk-component: true
+    RowFilteringOperation:
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/RowFilteringOperationEqual"
+        - $ref: "#/components/schemas/RowFilteringOperationNot"
+      discriminator:
+        propertyName: type
+        mapping:
+          EQUAL: "#/components/schemas/RowFilteringOperationEqual"
+          NOT: "#/components/schemas/RowFilteringOperationNot"
+      x-sdk-component: true
+    RowFilteringMapperConfiguration:
+      title: "Row Filtering"
+      type: "object"
+      properties:
+        conditions:
+          $ref: "#/components/schemas/RowFilteringOperation"
+      required:
+        - "conditions"
+      x-sdk-component: true
+    EncryptionMapperAlgorithm:
+      type: string
+      enum:
+        - RSA
+        - AES
+      x-sdk-component: true
+    EncryptionMapperConfiguration:
+      title: Encryption
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/EncryptionMapperRSAConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperAESConfiguration"
+      discriminator:
+        propertyName: algorithm
+        mapping:
+          RSA: "#/components/schemas/EncryptionMapperRSAConfiguration"
+          AES: "#/components/schemas/EncryptionMapperAESConfiguration"
+      x-sdk-component: true
+    EncryptionMapperRSAConfiguration:
+      title: "Encryption - RSA"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        publicKey:
+          type: "string"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "publicKey"
+        - "targetField"
+        - "fieldNameSuffix"
+      x-sdk-component: true
+    EncryptionMapperAESConfiguration:
+      title: "Encryption - AES"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        key:
+          type: string
+          x-sdk-param-sensitive: true
+        mode:
+          type: "string"
+          enum:
+            - "CBC"
+            - "CFB"
+            - "OFB"
+            - "CTR"
+            - "GCM"
+            - "ECB"
+        padding:
+          type: "string"
+          enum:
+            - "NoPadding"
+            - "PKCS5Padding"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "key"
+        - "mode"
+        - "padding"
+        - "targetField"
+        - "fieldNameSuffix"
       x-sdk-component: true
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
@@ -12446,7 +12916,7 @@ components:
           $ref: "#/components/schemas/LogSource"
         caller:
           $ref: "#/components/schemas/LogCaller"
-        strackTrace:
+        stackTrace:
           type: string
     LogRead:
       type: object
@@ -13057,6 +13527,22 @@ components:
           $ref: "#/components/schemas/OAuthInputConfiguration"
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    BuilderProjectOauthConsentRequest:
+      type: object
+      required:
+        - builderProjectId
+        - workspaceId
+        - redirectUrl
+      properties:
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        redirectUrl:
+          description: The url to redirect to after getting the user consent
+          type: string
+        oAuthInputConfiguration:
+          $ref: "#/components/schemas/OAuthInputConfiguration"
     DestinationOauthConsentRequest:
       type: object
       required:
@@ -13081,6 +13567,23 @@ components:
         - consentUrl
       properties:
         consentUrl:
+          type: string
+    CompleteConnectorBuilderProjectOauthRequest:
+      type: object
+      required:
+        - builderProjectId
+        - workspaceId
+      properties:
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        queryParams:
+          description: The query parameters present in the redirect URL after a user granted consent e.g auth code
+          type: object
+          additionalProperties: true # Oauth parameters like code, state, etc.. will be different per API so we don't specify them in advance
+        redirectUrl:
+          description: When completing OAuth flow to gain an access token, some API sometimes requires to verify that the app re-send the redirectUrl that was used when consent was given.
           type: string
     CompleteSourceOauthRequest:
       type: object
@@ -13211,6 +13714,107 @@ components:
           type: integer
         sourceDefinitions:
           type: integer
+    WebBackendValidateMappersRequestBody:
+      type: object
+      required:
+        - connectionId
+        - mappers
+        - streamDescriptor
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        streamDescriptor:
+          $ref: "#/components/schemas/StreamDescriptor"
+        mappers:
+          description: Mappers that should be applied to the stream before writing to the destination.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfiguredStreamMapper"
+    WebBackendValidateMappersResponse:
+      type: object
+      required:
+        - initialFields
+        - outputFields
+        - mappers
+      properties:
+        initialFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        outputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        mappers:
+          type: array
+          items:
+            $ref: "#/components/schemas/MapperValidationResult"
+    FieldSpec:
+      type: object
+      required:
+        - name
+        - type
+        - isSelectedPrimaryKey
+        - isSelectedCursor
+      properties:
+        name:
+          type: string
+        isSelectedPrimaryKey:
+          type: boolean
+        isSelectedCursor:
+          type: boolean
+        type:
+          type: string
+          enum:
+            - STRING
+            - BOOLEAN
+            - DATE
+            - TIMESTAMP_WITHOUT_TIMEZONE
+            - TIMESTAMP_WITH_TIMEZONE
+            - TIME_WITHOUT_TIMEZONE
+            - TIME_WITH_TIMEZONE
+            - INTEGER
+            - NUMBER
+            - ARRAY
+            - OBJECT
+            - MULTI
+            - UNKNOWN
+    MapperValidationResult:
+      type: object
+      required:
+        - outputFields
+        - inputFields
+      properties:
+        id:
+          type: string
+          format: uuid
+        outputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        inputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        validationError:
+          $ref: "#/components/schemas/MapperValidationError"
+    MapperValidationError:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          $ref: "#/components/schemas/MapperValidationErrorType"
+        message:
+          type: string
+    MapperValidationErrorType:
+      type: string
+      enum:
+        - MISSING_MAPPER
+        - INVALID_MAPPER_CONFIG
+        - FIELD_NOT_FOUND
+        - FIELD_ALREADY_EXISTS
     WebBackendConnectionListRequestBody:
       type: object
       required:
@@ -13239,6 +13843,7 @@ components:
         - schemaChange
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13266,6 +13871,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendConnectionRead:
       type: object
       required:
@@ -13284,6 +13893,7 @@ components:
         - nonBreakingChangesPreference
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13357,6 +13967,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendDescribeCronExpressionRequestBody:
       type: object
       required:
@@ -13683,6 +14297,8 @@ components:
         defaultRealm:
           type: string
           default: "airbyte"
+        authorizationServerUrl:
+          type: string
     LicenseStatus:
       type: string
       enum:
@@ -15411,6 +16027,29 @@ components:
           type: string
         workflowId:
           type: string
+    DataplaneGetIdRequestBody:
+      type: object
+      required:
+        - workloadPriority
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorId:
+          $ref: "#/components/schemas/ActorId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        workloadPriority:
+          $ref: "#/components/schemas/WorkloadPriority"
+    DataplaneRead:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+
   responses:
     NotFoundResponse:
       description: Object with given id was not found.

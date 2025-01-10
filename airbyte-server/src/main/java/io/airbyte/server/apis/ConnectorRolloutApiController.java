@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutRead;
 import io.airbyte.api.model.generated.ConnectorRolloutReadRequestBody;
@@ -38,8 +39,9 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Controller("/api/v1/connector_rollout")
 @Context
@@ -157,7 +159,13 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   public ConnectorRolloutActorSyncInfoResponse getConnectorRolloutActorSyncInfo(@Body final ConnectorRolloutGetActorSyncInfoRequestBody connectorRolloutGetActorSyncInfoRequestBody) {
     return ApiHelper.execute(() -> {
       final UUID connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.getId();
-      final List<ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo = connectorRolloutHandler.getActorSyncInfo(connectorRolloutId);
+      final Map<String, ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo =
+          connectorRolloutHandler.getActorSyncInfo(connectorRolloutId)
+              .entrySet()
+              .stream()
+              .collect(Collectors.toMap(
+                  entry -> entry.getKey().toString(),
+                  Map.Entry::getValue));
       final ConnectorRolloutActorSelectionInfo actorSelectionInfo = connectorRolloutHandler.getPinnedActorInfo(connectorRolloutId);
 
       final ConnectorRolloutActorSyncInfoResponseData responseData = new ConnectorRolloutActorSyncInfoResponseData();
@@ -203,15 +211,8 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead updatedConnectorRollout =
-          connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody);
-
-      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
-      response.setData(updatedConnectorRollout);
-      return response;
-    });
+  public ConnectorRolloutManualRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
+    return ApiHelper.execute(() -> connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody));
   }
 
   @SuppressWarnings("LineLength")
@@ -221,6 +222,22 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   @Override
   public ConnectorRolloutManualFinalizeResponse manualFinalizeConnectorRollout(@Body final ConnectorRolloutManualFinalizeRequestBody connectorRolloutFinalizeRequestBody) {
     return ApiHelper.execute(() -> connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeRequestBody));
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/manual_pause")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutResponse manualPauseConnectorRollout(@Body final ConnectorRolloutUpdateStateRequestBody connectorRolloutPauseRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead updatedConnectorRollout =
+          connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutPauseRequestBody);
+
+      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
+      response.setData(updatedConnectorRollout);
+      return response;
+    });
   }
 
 }

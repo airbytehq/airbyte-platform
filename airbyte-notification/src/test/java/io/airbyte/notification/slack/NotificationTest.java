@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification.slack;
@@ -92,21 +92,22 @@ class NotificationTest {
     UUID destinationId = UUID.fromString("5621c38f-8048-4abb-85ca-b34ff8d9a298");
     long jobId = 9988L;
 
-    SyncSummary syncSummary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().name("Workspace1").id(workspaceId).url("https://link/to/ws").build())
-        .connection(ConnectionInfo.builder().name("Connection").id(connectionId).url("https://link/to/connection").build())
-        .source(SourceInfo.builder().name("Source").id(sourceId).url("https://link/to/source").build())
-        .destination(DestinationInfo.builder().name("Destination").id(destinationId).url("https://link/to/destination").build())
-        .errorMessage("Something failed")
-        .jobId(jobId)
-        .isSuccess(false)
-        .startedAt(Instant.ofEpochSecond(1704067200))
-        .finishedAt(Instant.ofEpochSecond(1704070800))
-        .bytesEmitted(1000L)
-        .bytesCommitted(90L)
-        .recordsEmitted(89L)
-        .recordsCommitted(45L)
-        .build();
+    SyncSummary syncSummary = new SyncSummary(
+        new WorkspaceInfo(workspaceId, "Workspace1", "https://link/to/ws"),
+        new ConnectionInfo(connectionId, "Connection", "https://link/to/connection"),
+        new SourceInfo(sourceId, "Source", "https://link/to/source"),
+        new DestinationInfo(destinationId, "Destination", "https://link/to/destination"),
+        jobId,
+        false,
+        Instant.ofEpochSecond(1704067200),
+        Instant.ofEpochSecond(1704070800),
+        1000L,
+        90L,
+        89L,
+        45L,
+        0,
+        0,
+        "Something failed");
     Notification notification = new Notification();
     notification.setData(syncSummary);
 

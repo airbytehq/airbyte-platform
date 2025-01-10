@@ -5,6 +5,7 @@ import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  DeclarativeOAuthAuthenticatorType,
   BuilderFormAuthenticator,
   BuilderFormInput,
   BuilderFormValues,
@@ -147,6 +148,7 @@ export function getAuthKeyToDesiredLockedInput(
       };
 
     case OAUTH_AUTHENTICATOR:
+    case DeclarativeOAuthAuthenticatorType:
       const clientIdKey = extractInterpolatedConfigKey(authenticator.client_id);
       const clientSecretKey = extractInterpolatedConfigKey(authenticator.client_secret);
       const refreshTokenKey = extractInterpolatedConfigKey(authenticator.refresh_token);

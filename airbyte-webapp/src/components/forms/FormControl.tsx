@@ -113,7 +113,6 @@ export const FormControl = <T extends FormValues>({
   footer,
   ...props
 }: ControlProps<T>) => {
-  const { formatMessage } = useIntl();
   // only retrieve new form state if form state of current field has changed
   const { errors } = useFormState<T>({ name: props.name });
   const error = get(errors, props.name);
@@ -172,11 +171,7 @@ export const FormControl = <T extends FormValues>({
       <div className={styles.control__field}>{renderControl()}</div>
       {displayFooter && (
         <FormControlFooter>
-          {error && (
-            <FormControlFooterError>
-              {error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })}
-            </FormControlFooterError>
-          )}
+          <FormControlErrorMessage<FormValues> name={props.name} />
           {!error && footer && <FormControlFooterInfo>{footer}</FormControlFooterInfo>}
         </FormControlFooter>
       )}
@@ -227,6 +222,31 @@ export const FormControlFooterError: React.FC<React.PropsWithChildren> = ({ chil
   return (
     <Text color="red" size="xs" className={styles.control__footerText}>
       {children}
+    </Text>
+  );
+};
+
+interface FormControlErrorProps<TFormValues> {
+  // An override for the message. If it isn't provided, the error from the RHF schema validation will be shown.
+  message?: React.ReactNode;
+  name: Path<TFormValues>;
+}
+
+export const FormControlErrorMessage = <TFormValues extends FormValues>({
+  message,
+  name,
+}: FormControlErrorProps<TFormValues>) => {
+  const { formatMessage } = useIntl();
+  const { errors } = useFormState<TFormValues>({ name });
+  const error = get(errors, name);
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <Text color="red" size="xs" className={styles.control__footerText}>
+      {!message && (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message }))}
+      {message && message}
     </Text>
   );
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -315,7 +315,7 @@ class ReplicationWorkerHelperTest {
   @Test
   void testApplyTransformationNoMapper() throws IOException {
     mockSupportRefreshes(false);
-    ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
+    final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     // Need to pass in a replication context
@@ -353,6 +353,12 @@ class ReplicationWorkerHelperTest {
       @Nullable
       @Override
       public String documentationUrl() {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public UUID id() {
         return null;
       }
 

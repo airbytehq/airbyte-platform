@@ -1,23 +1,30 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
 
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.runtime.Micronaut;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main application entry point responsible for starting the server and invoking the bootstrapping
  * of the Airbyte environment.
  */
-@Slf4j
 public class Application {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static void main(final String[] args) {
     try {
-      final ApplicationContext applicationContext = Micronaut.run(Application.class, args);
+      final ApplicationContext applicationContext = Micronaut.build(args)
+          .deduceCloudEnvironment(false)
+          .deduceEnvironment(false)
+          .mainClass(Application.class)
+          .start();
       final Bootloader bootloader = applicationContext.getBean(Bootloader.class);
       bootloader.load();
       System.exit(0);

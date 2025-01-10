@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -264,39 +264,40 @@ public class JobNotifier {
         .map(FailureReason::getExternalMessage)
         .orElse(null);
 
-    SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder()
-            .name(workspace.getName()).id(workspaceId).url(webUrlHelper.getWorkspaceUrl(workspaceId)).build())
-        .connection(ConnectionInfo.builder().name(standardSync.getName()).id(standardSync.getConnectionId())
-            .url(webUrlHelper.getConnectionUrl(workspaceId, standardSync.getConnectionId())).build())
-        .source(
-            SourceInfo.builder()
-                .name(source.getName()).id(source.getSourceId()).url(webUrlHelper.getSourceUrl(workspaceId, source.getSourceId())).build())
-        .destination(DestinationInfo.builder()
-            .name(destination.getName()).id(destination.getDestinationId())
-            .url(webUrlHelper.getDestinationUrl(workspaceId, destination.getDestinationId())).build())
-        .startedAt(Instant.ofEpochSecond(job.getCreatedAtInSecond()))
-        .finishedAt(Instant.ofEpochSecond(job.getUpdatedAtInSecond()))
-        .isSuccess(job.getStatus() == JobStatus.SUCCEEDED)
-        .jobId(job.getId())
-        .errorMessage(failureMessage);
+    long bytesEmitted = 0;
+    long bytesCommitted = 0;
+    long recordsEmitted = 0;
+    long recordsFilteredOut = 0;
+    long bytesFilteredOut = 0;
+    long recordsCommitted = 0;
 
     if (syncStats != null) {
-      long bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;
-      long bytesCommitted = syncStats.getBytesCommitted() != null ? syncStats.getBytesCommitted() : 0;
-      long recordsEmitted = syncStats.getRecordsEmitted() != null ? syncStats.getRecordsEmitted() : 0;
-      long recordsFilteredOut = syncStats.getRecordsFilteredOut() != null ? syncStats.getRecordsFilteredOut() : 0;
-      long bytesFilteredOut = syncStats.getBytesFilteredOut() != null ? syncStats.getBytesFilteredOut() : 0;
-      long recordsCommitted = syncStats.getRecordsCommitted() != null ? syncStats.getRecordsCommitted() : 0;
-      summaryBuilder.bytesEmitted(bytesEmitted)
-          .bytesCommitted(bytesCommitted)
-          .recordsEmitted(recordsEmitted)
-          .recordsFilteredOut(recordsFilteredOut)
-          .bytesFilteredOut(bytesFilteredOut)
-          .recordsCommitted(recordsCommitted);
+      bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;
+      bytesCommitted = syncStats.getBytesCommitted() != null ? syncStats.getBytesCommitted() : 0;
+      recordsEmitted = syncStats.getRecordsEmitted() != null ? syncStats.getRecordsEmitted() : 0;
+      recordsFilteredOut = syncStats.getRecordsFilteredOut() != null ? syncStats.getRecordsFilteredOut() : 0;
+      bytesFilteredOut = syncStats.getBytesFilteredOut() != null ? syncStats.getBytesFilteredOut() : 0;
+      recordsCommitted = syncStats.getRecordsCommitted() != null ? syncStats.getRecordsCommitted() : 0;
     }
 
-    SyncSummary summary = summaryBuilder.build();
+    SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(workspaceId, workspace.getName(), webUrlHelper.getWorkspaceUrl(workspaceId)),
+        new ConnectionInfo(standardSync.getConnectionId(), standardSync.getName(),
+            webUrlHelper.getConnectionUrl(workspaceId, standardSync.getConnectionId())),
+        new SourceInfo(source.getSourceId(), source.getName(), webUrlHelper.getSourceUrl(workspaceId, source.getSourceId())),
+        new DestinationInfo(destination.getDestinationId(), destination.getName(),
+            webUrlHelper.getDestinationUrl(workspaceId, destination.getDestinationId())),
+        job.getId(),
+        job.getStatus() == JobStatus.SUCCEEDED,
+        Instant.ofEpochSecond(job.getCreatedAtInSecond()),
+        Instant.ofEpochSecond(job.getUpdatedAtInSecond()),
+        bytesEmitted,
+        bytesCommitted,
+        recordsEmitted,
+        recordsCommitted,
+        recordsFilteredOut,
+        bytesFilteredOut,
+        failureMessage);
 
     if (notificationSettings != null) {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.keycloak;
@@ -16,6 +16,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -27,13 +28,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.ClientsResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.ClientRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Application Service for Keycloak.
@@ -41,10 +43,11 @@ import org.keycloak.representations.idm.ClientRepresentation;
  * An Application for a user or non-user entity i.e. an organization.
  */
 @Singleton
-@Slf4j
 @RequiresAuthMode(AuthMode.OIDC)
 @SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   // This number should be kept low or this code will start to do a lot of work.
   public static final int MAX_CREDENTIALS = 2;

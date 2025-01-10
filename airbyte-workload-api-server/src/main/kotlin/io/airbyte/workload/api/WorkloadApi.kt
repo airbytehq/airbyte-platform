@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.api
@@ -24,7 +24,6 @@ import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.handler.DefaultDeadlineValues
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.DATA_PLANE_ID_TAG
-import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.GEOGRAPHY_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_CANCEL_REASON_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_CANCEL_SOURCE_TAG
@@ -89,7 +88,6 @@ open class WorkloadApi(
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf<String, Any?>(
-        GEOGRAPHY_TAG to workloadCreateRequest.geography,
         MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
         WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
         WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
@@ -106,7 +104,6 @@ open class WorkloadApi(
       workloadCreateRequest.labels,
       workloadCreateRequest.workloadInput,
       workloadCreateRequest.logPath,
-      workloadCreateRequest.geography,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
       autoId,
@@ -118,7 +115,6 @@ open class WorkloadApi(
       workloadInput = workloadCreateRequest.workloadInput,
       workloadCreateRequest.labels.associate { it.key to it.value },
       workloadCreateRequest.logPath,
-      workloadCreateRequest.geography,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
       autoId,

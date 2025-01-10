@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth;
@@ -123,13 +123,30 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
     return result;
   }
 
+  /**
+   * Retrieves the OAuth declarative input specification from the provided OAuthConfigSpecification.
+   * If the specification contains a "properties" field, it returns the value of that field.
+   * Otherwise, it returns the entire OAuth declarative input specification. If the provided
+   * OAuthConfigSpecification is null or does not contain an OAuth connector input specification, it
+   * returns an empty JSON object.
+   *
+   * @param oauthConfigSpecification the OAuth configuration specification containing the input
+   *        specification
+   * @return the OAuth declarative input specification or an empty JSON object if the input
+   *         specification is not available
+   */
   protected static JsonNode getOAuthDeclarativeInputSpec(final OAuthConfigSpecification oauthConfigSpecification) {
     if (oauthConfigSpecification != null && oauthConfigSpecification.getOauthConnectorInputSpecification() != null) {
-      JsonNode oauthDeclarativeInputSpec = oauthConfigSpecification.getOauthConnectorInputSpecification().get(PROPERTIES);
-      if (oauthDeclarativeInputSpec != null) {
-        return oauthDeclarativeInputSpec;
+      JsonNode oauthDeclarativeInputSpec = oauthConfigSpecification.getOauthConnectorInputSpecification();
+
+      // support the JsonSchema (Legacy) configs
+      if (oauthDeclarativeInputSpec.has(PROPERTIES)) {
+        return oauthDeclarativeInputSpec.get(PROPERTIES);
       }
+
+      return oauthDeclarativeInputSpec;
     }
+
     return Jsons.emptyObject();
   }
 

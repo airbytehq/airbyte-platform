@@ -6,7 +6,7 @@ global:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
     # Image tag to use for airbyte images. 
-    # Does not include non-airbyte images such as busybox, temporal, minio, etc.
+    # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
 enabled: true
@@ -14,9 +14,8 @@ enabled: true
 ##  podSweeper.image.pullPolicy The pull policy for the pod sweeper image
 ##  podSweeper.image.tag The pod sweeper image tag to use
 image:
-  repository: bitnami/kubectl
+  repository: airbyte/pod-sweeper
   pullPolicy: IfNotPresent
-  tag: latest
 
 ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
 ##

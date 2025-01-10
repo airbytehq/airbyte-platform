@@ -482,6 +482,27 @@ components:
               default: The specified cron timezone is invalid
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
+    CronValidationUnderOneHourNotAllowedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/under-one-hour-not-allowed
+            title:
+              type: string
+              default: Cron sync schedules more frequent than once per hour are not allowed
+            detail:
+              type: string
+              default: Syncs
+            data:
+              $ref: "#/components/schemas/ProblemCronExpressionData"
     MapperValidationProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -503,6 +524,89 @@ components:
               default: The mapper configuration is invalid
             data:
               $ref: "#/components/schemas/ProblemMapperErrorsData"
+    MapperValidationMissingRequiredParamProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/missing-required-param
+            title:
+              type: string
+              default: Mapper configuration missing required parameter
+            detail:
+              type: string
+              default: The mapper configuration is missing a required parameter
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+    MapperValidationInvalidConfigProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/invalid-config
+            title:
+              type: string
+              default: Invalid Mapper Configuration
+            detail:
+              type: string
+              default: The mapper configuration is invalid and cannot be parsed
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+    MapperSecretNotFoundProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/secret-not-found
+            title:
+              type: string
+              default: Mapper secret not found
+            detail:
+              type: string
+              default: Attempted to use pre-existing secret values, but an existing secret for that mapper was not found. Please provide the secret values.
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+
+    RuntimeSecretsManagerRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:mapper-validation/runtime-secrets-manager-required
+            title:
+              type: string
+              default: Runtime Secrets Manager Required
+            detail:
+              type: string
+              default: The requested operation requires a runtime secrets manager to be configured.
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -628,23 +732,7 @@ components:
             title:
               type: string
               default: A subscription is required for this operation to succeed.
-    BillingTooManyNonPrepaidSubscriptionsProblemResponse:
-      x-implements: io.airbyte.api.problems.ProblemResponse
-      type: object
-      allOf:
-        - $ref: "#/components/schemas/BaseProblemFields"
-        - type: object
-          properties:
-            status:
-              type: integer
-              default: 400
-            type:
-              type: string
-              default: error:billing/subscription/too-many-incompatible-subscriptions
-            title:
-              type: string
-              default: Found more than one subscription with some not being prepaid.
-    BillingInsufficientPaymentStatusProblemResponse:
+    BillingInvalidStatusProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
       allOf:
@@ -661,7 +749,7 @@ components:
               type: string
               default: The payment status of the associated Organization is insufficient.
             data:
-              $ref: "#/components/schemas/BillingInsufficientPaymentStatusProblemData"
+              $ref: "#/components/schemas/BillingInvalidStatusProblemData"
     BillingInsufficientCreditBalanceProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -680,6 +768,54 @@ components:
               default: The credit balance of the associated Workspace or Organization is insufficient.
             data:
               $ref: "#/components/schemas/BillingInsufficientCreditBalanceProblemData"
+    BillingNoActiveSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:billing/no-active-subscription
+            title:
+              type: string
+              default: The organization doesn't have an active subscription.
+    BillingNoCancelableSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:billing/no-cancelable-subscription
+            title:
+              type: string
+              default: The organization doesn't have any active cancelable subscription.
+    BillingNoScheduledCancellationSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:billing/no-scheduled-cancellation-subscription
+            title:
+              type: string
+              default: The organization doesn't have any cancelable subscription with a scheduled cancellation.
     ConnectorRolloutInvalidRequestProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -699,6 +835,27 @@ components:
             detail:
               type: string
               default: Invalid connector rollout request.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/rollout-percentage-reached
+            title:
+              type: string
+              default: Max rollout percentage already reached
+            detail:
+              type: string
+              default: Cannot pin more actors; the maximum rollout percentage was already reached
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ConnectorRolloutNotEnoughActorsProblemResponse:
@@ -750,6 +907,18 @@ components:
           type: string
         cronTimezone:
           type: string
+    ProblemMapperIdData:
+      type: object
+      required:
+        - mapperType
+      properties:
+        mapperId:
+          type: string
+          format: uuid
+        mapperType:
+          type: string
+        message:
+          type: string
     ProblemMapperErrorsData:
       type: object
       required:
@@ -776,6 +945,9 @@ components:
             - type
             - mapperConfiguration
           properties:
+            id:
+              type: string
+              format: uuid
             type:
               type: string
             mapperConfiguration:
@@ -840,18 +1012,13 @@ components:
           type: integer
         message:
           type: string
-    BillingInsufficientPaymentStatusProblemData:
+    BillingInvalidStatusProblemData:
       type: object
-      required:
-        - requiredStatuses
-        - currentStatus
       properties:
-        validPaymentStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/PaymentStatusEnum"
-        currentPaymentStatus:
+        invalidPaymentStatus:
           $ref: "#/components/schemas/PaymentStatusEnum"
+        invalidSubscriptionStatus:
+          $ref: "#/components/schemas/SubscriptionStatusEnum"
     PaymentStatusEnum:
       type: string
       enum:
@@ -861,6 +1028,12 @@ components:
         - disabled
         - locked
         - manual
+    SubscriptionStatusEnum:
+      type: string
+      enum:
+        - pre_subscription
+        - subscribed
+        - unsubscribed
     BillingInsufficientCreditBalanceProblemData:
       type: object
       required:

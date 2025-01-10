@@ -8,7 +8,6 @@ import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
@@ -86,8 +85,8 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
                   label: formatMessage({ id: "connectorBuilder.parameterizedRequests.values.userInput" }),
                   default: { type: "variable", value: "" },
                   children: (
-                    <BuilderFieldWithInputs
-                      type="string"
+                    <BuilderField
+                      type="jinja"
                       path={buildPath("values.value")}
                       label={formatMessage({
                         id: "connectorBuilder.parameterizedRequests.values.userInput.value.label",
@@ -107,8 +106,8 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
                 },
               ]}
             />
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={buildPath("cursor_field")}
               label={formatMessage({ id: "connectorBuilder.parameterizedRequests.cursorField.label" })}
               tooltip={

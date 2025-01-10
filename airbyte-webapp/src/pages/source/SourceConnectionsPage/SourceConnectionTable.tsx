@@ -2,23 +2,22 @@ import React from "react";
 
 import { ConnectionTable } from "components/EntityTable";
 import { getConnectionTableData } from "components/EntityTable/utils";
-import { Box } from "components/ui/Box";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
-interface IProps {
+import styles from "./SourceConnectionTable.module.scss";
+
+interface SourceConnectionTableProps {
   connections: WebBackendConnectionListItem[];
 }
 
-const SourceConnectionTable: React.FC<IProps> = ({ connections }) => {
+const SourceConnectionTable: React.FC<SourceConnectionTableProps> = ({ connections }) => {
   const data = getConnectionTableData(connections, "source");
 
   return (
-    <ScrollParent>
-      <Box m="xl" mt="none">
-        <ConnectionTable data={data} entity="source" />
-      </Box>
+    <ScrollParent props={{ className: styles.container }}>
+      <ConnectionTable data={data} entity="source" />
     </ScrollParent>
   );
 };

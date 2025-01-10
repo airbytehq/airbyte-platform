@@ -14,8 +14,6 @@ micronaut:
       expire-after-write: 15s
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
@@ -62,7 +60,6 @@ airbyte:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
   workload:
     monitor:
-      enabled: ${WORKLOAD_MONITOR_ENABLED:false}
       claim-check-rate: PT1M
       heartbeat-check-rate: PT1M
       not-started-check-rate: PT1M

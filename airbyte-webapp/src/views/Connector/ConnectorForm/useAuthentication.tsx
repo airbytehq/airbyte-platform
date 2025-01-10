@@ -50,6 +50,12 @@ interface AuthenticationHook {
    * whether we will render "authenticate" or "re-authenticate" on the OAuth button text
    */
   hasAuthFieldValues: boolean;
+  /**
+   * This will return true if Airbyte global credentials are unavailable for the connector.
+   * This is used to determine whether we should render an info tooltip for the user to
+   * tell them what the redirect URL of their OAuth app should be.
+   */
+  shouldShowRedirectUrlTooltip: boolean;
 }
 
 export const useAuthentication = (): AuthenticationHook => {
@@ -99,6 +105,8 @@ export const useAuthentication = (): AuthenticationHook => {
       ),
     [advancedAuth, valuesWithDefaults, allowOAuthConnector]
   );
+
+  const shouldShowRedirectUrlTooltip = connectorSpec?.advancedAuthGlobalCredentialsAvailable === false;
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(
@@ -155,5 +163,6 @@ export const useAuthentication = (): AuthenticationHook => {
     hiddenAuthFieldErrors,
     shouldShowAuthButton,
     hasAuthFieldValues,
+    shouldShowRedirectUrlTooltip,
   };
 };

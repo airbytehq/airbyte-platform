@@ -34,7 +34,6 @@ interface WorkloadHandler {
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
-    geography: String,
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,

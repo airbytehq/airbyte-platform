@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
+import java.util.UUID
 
 data class EncryptionMapperConfig(
   @JsonProperty("name")
@@ -21,10 +22,15 @@ data class EncryptionMapperConfig(
   @JsonProperty("config")
   @field:NotNull
   val config: EncryptionConfig,
+  val id: UUID? = null,
 ) : MapperConfig {
   override fun name(): String = name
 
   override fun documentationUrl(): String? = documentationUrl
+
+  override fun id(): UUID? {
+    return id
+  }
 
   override fun config(): Any = config
 }

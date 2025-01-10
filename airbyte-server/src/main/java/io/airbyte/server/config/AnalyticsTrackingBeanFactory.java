@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.config;
@@ -67,7 +67,8 @@ public class AnalyticsTrackingBeanFactory {
             workspace.getFeedbackDone(),
             Enums.convertTo(workspace.getDefaultGeography(), Geography.class),
             null,
-            workspace.getTombstone());
+            workspace.getTombstone(),
+            null);
       } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
         // No longer throwing a runtime exception so that we can support the Airbyte API.
         return new WorkspaceRead(
@@ -77,6 +78,7 @@ public class AnalyticsTrackingBeanFactory {
             "",
             true,
             workspaceId,
+            null,
             null,
             null,
             null,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -43,6 +43,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
@@ -124,6 +125,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
     connectionService = spy(new ConnectionServiceJooqImpl(database));
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
@@ -131,7 +133,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
+        scopedConfigurationService,
+        connectionTimelineEventService);
     catalogService = spy(new CatalogServiceJooqImpl(database));
     OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());

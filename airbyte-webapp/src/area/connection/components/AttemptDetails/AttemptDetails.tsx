@@ -4,7 +4,8 @@ import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { AttemptRead, AttemptStats, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
+import { useAttemptCombinedStatsForJob } from "core/api";
+import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 import { useFormatLengthOfTime } from "core/utils/time";
 
@@ -19,11 +20,10 @@ interface AttemptDetailsProps {
   className?: string;
   attempt: AttemptRead;
   hasMultipleAttempts?: boolean;
-  jobId: string;
+  jobId: number;
   isPartialSuccess?: boolean;
   showEndedAt?: boolean;
   showFailureMessage?: boolean;
-  aggregatedAttemptStats?: AttemptStats;
 }
 
 export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
@@ -33,8 +33,8 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   isPartialSuccess,
   showEndedAt = false,
   showFailureMessage = true,
-  aggregatedAttemptStats,
 }) => {
+  const { data: aggregatedAttemptStats } = useAttemptCombinedStatsForJob(jobId, attempt);
   const { formatMessage } = useIntl();
   const attemptRunTime = useFormatLengthOfTime((attempt.updatedAt - attempt.createdAt) * 1000);
 

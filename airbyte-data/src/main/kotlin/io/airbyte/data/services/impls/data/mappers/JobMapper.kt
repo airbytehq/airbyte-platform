@@ -60,7 +60,7 @@ fun EntityJobWithAssociations.toConfigModel(): ModelJob {
 fun EntityJob.toConfigModel(): ModelJob {
   return ModelJob(
     this.id!!,
-    Enums.convertTo(this.configType, JobConfig.ConfigType::class.java),
+    this.configType?.toConfig(),
     this.scope,
     Jsons.`object`(this.config, JobConfig::class.java),
     emptyList(),

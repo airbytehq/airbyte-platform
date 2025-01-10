@@ -22,7 +22,8 @@ internal const val STORAGE_DOC_CONTENTS = "environment permissions check"
  * To ensure that all of the proper storage checks are performed, each [DocumentType]'s [StorageClient] needs to be checked.
  */
 @InternalForTesting
-internal val storageDocTypes = listOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS)
+internal val storageDocTypes =
+  listOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS, DocumentType.AUDIT_LOGS)
 
 /**
  * Holds the results of the various environmental checks executed.

@@ -34,6 +34,7 @@ object OrchestratorConstants {
           EnvVar.STORAGE_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT,
+          EnvVar.STORAGE_BUCKET_AUDIT_LOGGING,
           EnvVar.STORAGE_TYPE,
           EnvVar.WORKSPACE_ROOT,
         ).map { it.name },

@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
 
-import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -43,6 +42,9 @@ import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
+import io.airbyte.commons.server.limits.ConsumptionService;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
+import io.airbyte.commons.server.slug.Slug;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
@@ -55,6 +57,9 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HydrateLimits;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
@@ -87,9 +92,11 @@ public class WorkspacesHandler {
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
-  private final Slugify slugify;
   private final TrackingClient trackingClient;
   private final ApiPojoConverters apiPojoConverters;
+  private final ProductLimitsProvider limitsProvider;
+  private final ConsumptionService consumptionService;
+  private final FeatureFlagClient ffClient;
 
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
@@ -102,7 +109,10 @@ public class WorkspacesHandler {
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
                            final TrackingClient trackingClient,
-                           final ApiPojoConverters apiPojoConverters) {
+                           final ApiPojoConverters apiPojoConverters,
+                           final ProductLimitsProvider limitsProvider,
+                           final ConsumptionService consumptionService,
+                           final FeatureFlagClient ffClient) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -112,9 +122,11 @@ public class WorkspacesHandler {
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
-    this.slugify = new Slugify();
     this.trackingClient = trackingClient;
     this.apiPojoConverters = apiPojoConverters;
+    this.limitsProvider = limitsProvider;
+    this.consumptionService = consumptionService;
+    this.ffClient = ffClient;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -312,7 +324,13 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
     final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    return WorkspaceConverter.domainToApiModel(workspace);
+    final WorkspaceRead result = WorkspaceConverter.domainToApiModel(workspace);
+    if (ffClient.boolVariation(HydrateLimits.INSTANCE, new Workspace(workspaceId))) {
+      final ProductLimitsProvider.WorkspaceLimits limits = limitsProvider.getLimitForWorkspace(workspaceId);
+      final var consumption = consumptionService.getForWorkspace(workspaceId);
+      result.workspaceLimits(WorkspaceConverter.domainToApiModel(limits, consumption));
+    }
+    return result;
   }
 
   public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -485,12 +503,11 @@ public class WorkspacesHandler {
     return new WorkspaceOrganizationInfoRead()
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
-        .pba(organization.getPba())
         .sso(organization.getSsoRealm() != null && !organization.getSsoRealm().isEmpty());
   }
 
   private String generateUniqueSlug(final String workspaceName) throws IOException {
-    final String proposedSlug = slugify.slugify(workspaceName);
+    final String proposedSlug = Slug.slugify(workspaceName);
 
     // todo (cgardens) - this is going to be too expensive once there are too many workspaces. needs to
     // be replaced with an actual sql query. e.g. SELECT COUNT(*) WHERE slug=%s;

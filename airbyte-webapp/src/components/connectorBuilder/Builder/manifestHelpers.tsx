@@ -1,11 +1,8 @@
 import get from "lodash/get";
 import { ReactNode } from "react";
-import { FormattedMessage } from "react-intl";
 import ReactMarkdown from "react-markdown";
 
 import { LabelInfo } from "components/Label";
-
-import { links } from "core/utils/links";
 
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 
@@ -37,48 +34,23 @@ export function getDescriptionByManifest(manifestPath: string) {
   return getDescriptor(manifestPath)?.description;
 }
 
+export function getInterpolationVariablesByManifest(manifestPath: string) {
+  return getDescriptor(manifestPath)?.interpolation_context ?? undefined;
+}
+
 export function getLabelAndTooltip(
   label: string | undefined,
   tooltip: React.ReactNode | undefined,
   manifestPath: string | undefined,
   path: string,
   omitExamples = false,
-  omitInterpolationContext = false,
   manifestOptionPaths?: string[]
 ): { label: string; tooltip: React.ReactNode | undefined } {
   const manifestDescriptor = manifestPath ? getDescriptor(manifestPath) : undefined;
   const finalLabel = label || manifestDescriptor?.title || path;
-  let finalDescription: ReactNode = manifestDescriptor?.description ? (
+  const finalDescription: ReactNode = manifestDescriptor?.description ? (
     <ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>
   ) : undefined;
-  if (!omitInterpolationContext && manifestDescriptor?.interpolation_context) {
-    finalDescription = (
-      <>
-        {finalDescription}
-        <br />
-        <FormattedMessage id="connectorBuilder.interpolationHeading" />:{" "}
-        <ul>
-          {manifestDescriptor.interpolation_context.map((context, i) => (
-            <li key={i}>
-              <a href={`${links.interpolationVariableDocs}#/variables/${context}`} target="_blank" rel="noreferrer">
-                {context}
-              </a>
-            </li>
-          ))}
-        </ul>
-        <FormattedMessage
-          id="connectorBuilder.interpolationMacros"
-          values={{
-            a: (node: React.ReactNode) => (
-              <a href={links.interpolationMacroDocs} target="_blank" rel="noreferrer">
-                {node}
-              </a>
-            ),
-          }}
-        />
-      </>
-    );
-  }
   const options = manifestOptionPaths?.flatMap((optionPath) => {
     const optionDescriptor: ManifestDescriptor | undefined = get(
       declarativeComponentSchema,
@@ -107,3 +79,36 @@ export function getLabelAndTooltip(
       ) : null,
   };
 }
+
+export interface InterpolationVariable {
+  title: string;
+  description: string;
+  examples: string[] | object[];
+}
+
+type InterpolationFunction = InterpolationVariable & {
+  arguments: Record<string, string>;
+  return_type: string;
+};
+
+export type InterpolationValue =
+  | (InterpolationVariable & {
+      type: "variable";
+    })
+  | (InterpolationFunction & {
+      type: "macro" | "filter";
+    });
+
+export interface InterpolationValues {
+  variables: InterpolationVariable[];
+  macros: InterpolationFunction[];
+  filters: InterpolationFunction[];
+}
+export const getInterpolationValues = (): InterpolationValue[] => {
+  const { variables, macros, filters } = get(declarativeComponentSchema, `interpolation`) as InterpolationValues;
+  return [
+    ...variables.map((variable) => ({ ...variable, type: "variable" as const })),
+    ...macros.map((macro) => ({ ...macro, type: "macro" as const })),
+    ...filters.map((filter) => ({ ...filter, type: "filter" as const })),
+  ];
+};

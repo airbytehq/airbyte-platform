@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ResourceRequirements
@@ -13,11 +14,13 @@ import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.TolerationBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.concurrent.ExecutorService
 
 /**
  * Micronaut bean factory for container configuration-related singletons.
@@ -25,9 +28,21 @@ import jakarta.inject.Singleton
 @Factory
 class ContainerConfigBeanFactory {
   @Singleton
-  fun kubeClient(customOkHttpClientFactory: CustomOkHttpClientFactory): KubernetesClient {
+  fun kubeSerialization(objectMapper: ObjectMapper): KubernetesSerialization {
+    return KubernetesSerialization(objectMapper, true)
+  }
+
+  @Singleton
+  fun kubeClient(
+    customOkHttpClientFactory: CustomOkHttpClientFactory,
+    kubernetesSerialization: KubernetesSerialization,
+    // Configured in application.yml under micronaut.executors.kube-client
+    @Named("kube-client") executorService: ExecutorService,
+  ): KubernetesClient {
     return KubernetesClientBuilder()
       .withHttpClientFactory(customOkHttpClientFactory)
+      .withKubernetesSerialization(kubernetesSerialization)
+      .withTaskExecutor(executorService)
       .build()
   }
 
@@ -278,6 +293,16 @@ class ContainerConfigBeanFactory {
           .build()
       }
   }
+
+  @Singleton
+  @Named("spotToleration")
+  fun spotTolerations(): Toleration =
+    Toleration().apply {
+      key = "airbyte/spot"
+      value = "true"
+      operator = "Equal"
+      effect = "NoSchedule"
+    }
 
   @Singleton
   @Named("replicationImagePullSecrets")

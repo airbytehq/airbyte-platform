@@ -87,7 +87,9 @@ class ReplicationHydrationProcessor(
 
     val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
 
-    sendMapperErrorMetrics(transformedCatalog, parsed.connectionId)
+    parsed.connectionId?.let {
+      sendMapperErrorMetrics(transformedCatalog, it)
+    }
 
     val destinationCatalog = mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
 

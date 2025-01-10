@@ -13,6 +13,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   StreamAttributeTransformTransformType,
+  StreamMapperType,
   StreamTransformTransformType,
 } from "core/api/types/AirbyteClient";
 
@@ -29,17 +30,26 @@ import {
  */
 
 const connectionAutoDisabledReasons = [
-  "ONLY_FAILED_JOBS_RECENTLY",
-  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
+  "TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS",
   "SCHEMA_CHANGES_ARE_BREAKING",
   "DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES",
   "INVALID_CREDIT_BALANCE",
   "CONNECTOR_NOT_SUPPORTED",
   "WORKSPACE_IS_DELINQUENT",
+  "INVOICE_MARKED_UNCOLLECTIBLE",
+  "INVALID_PAYMENT_METHOD",
+  "UNSUBSCRIBED",
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",
+
+  // these two are no longer written for new events, but can exist in existing timelines.
+  // can be removed once all such events are expired/removed
+  "ONLY_FAILED_JOBS_RECENTLY",
+  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
 ];
+
+const connectorChangeReasons = ["SYSTEM", "USER"];
 
 // property-specific schemas
 /**
@@ -128,6 +138,22 @@ const streamTransformsSchema = yup.object({
  */
 const catalogDiffSchema = yup.object({
   transforms: yup.array().of(streamTransformsSchema).required(),
+});
+
+const sourceDefinitionUpdateSchema = yup.object({
+  name: yup.string().required(),
+  sourceDefinitionId: yup.string().required(),
+  newDockerImageTag: yup.string().required(),
+  oldDockerImageTag: yup.string().required(),
+  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
+});
+
+const destinationDefinitionUpdateSchema = yup.object({
+  name: yup.string().required(),
+  destinationDefinitionId: yup.string().required(),
+  newDockerImageTag: yup.string().required(),
+  oldDockerImageTag: yup.string().required(),
+  changeReason: yup.string().oneOf(connectorChangeReasons).required(),
 });
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
@@ -272,6 +298,15 @@ export const schemaUpdateSummarySchema = yup.object({
   updateReason: yup.mixed().oneOf(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
 });
 
+export const mappingEventSummarySchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  mapperType: yup
+    .mixed<StreamMapperType>()
+    .oneOf([...Object.values(StreamMapperType)])
+    .required(),
+});
+
 /**
  * @typedef {import("core/api/types/AirbyteClient").ConnectionEvent}
  */
@@ -359,6 +394,23 @@ export const connectionSettingsUpdateEventSchema = generalEventSchema.shape({
 export const schemaUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
   summary: schemaUpdateSummarySchema.required(),
+});
+
+export const sourceConnectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: sourceDefinitionUpdateSchema.required(),
+});
+
+export const destinationConnectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: destinationDefinitionUpdateSchema.required(),
+});
+
+export const mappingEventSchema = generalEventSchema.shape({
+  // TODO: add mapping event types from AirbyteClient once they are defined
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
+  eventType: yup.mixed().oneOf(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]).required(),
+  summary: mappingEventSummarySchema.required(),
 });
 
 export interface ConnectionTimelineRunningEvent {

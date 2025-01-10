@@ -12,8 +12,10 @@ micronaut:
       expire-after-access: 10m
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
+    organization-customer-attributes:
+      expire-after-access: 1h
+    user-info-endpoint-response:
+      expire-after-access: 1m
   executors:
     # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:
@@ -40,7 +42,10 @@ micronaut:
         channels:
           enabled: false
         queues:
-          enabled: true
+          # Turning this on causes compatibility issues with Micronaut ClientCredentialsClient,
+          # which is used to add auth tokens when using keycloak for internal service auth.
+          # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
+          enabled: false
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
@@ -71,7 +76,7 @@ micronaut:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
-        max-content-length: 52428800 # 50MB
+        max-content-length: ${NETTY_AGGREGATOR_MAX_CONTENT_LENGTH:52428800} # 50MB
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
@@ -101,6 +106,17 @@ airbyte:
       first-name: ${INITIAL_USER_FIRST_NAME:}
       last-name: ${INITIAL_USER_LAST_NAME:}
       password: ${INITIAL_USER_PASSWORD:}
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}
+      oidc:
+        endpoints:
+          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
+          user-info-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
+          client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
+          fields:
+            sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:sub}
+            email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:email}
+            name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:name}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -109,6 +125,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
@@ -130,6 +147,17 @@ airbyte:
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
     enterprise:
       enterprise-source-stubs-url: ${ENTERPRISE_SOURCE_STUBS_URL}
+  connector-rollout:
+    gcs:
+      application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      project-id: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID:}
+      bucket-name: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME:}
+      object-prefix: ${GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX:}
+    timeouts:
+      wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
+      wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}
+      rollout_expiration_seconds: ${CONNECTOR_ROLLOUT_EXPIRATION_SECONDS:360}
+
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   support-email-domains:
     oss: ""
@@ -296,14 +324,20 @@ airbyte:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
+    limits:
+      connections: ${MAX_CONNECTION_PER_WORKSPACE:10000}
+      sources: ${MAX_SOURCES_PER_WORKSPACE:10000}
+      destinations: ${MAX_DESTINATIONS_PER_WORKSPACE:10000}
+      workspaces: ${MAX_WORKSPACES_PER_ORGANIZATION:10000}
+      users: ${MAX_USERS_PER_ORGANIZATION:10000}
     connection:
       limits:
-        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
-        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:20}
+        max-days-warning: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_WARNING:4}
+        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:7}
+        max-jobs-warning: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_WARNING:20}
+        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:30}
         max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   temporal:
-    queues:
-      ui-commands: ui_commands
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -320,7 +354,7 @@ airbyte:
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
     client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
-    client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     realm: ${KEYCLOAK_REALM:master}
     internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
@@ -341,6 +375,11 @@ airbyte:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
       value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+
+  # Enterprise feature
+  audit:
+    logging:
+      enabled: ${AUDIT_LOGGING_ENABLED:false}
 
 temporal:
   cloud:

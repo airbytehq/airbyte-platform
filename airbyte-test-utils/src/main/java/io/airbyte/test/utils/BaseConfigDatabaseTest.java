@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.utils;
@@ -133,6 +133,7 @@ public class BaseConfigDatabaseTest {
               connection,
               connection_operation,
               connection_timeline_event,
+              connection_tag,
               connector_builder_project,
               connector_rollout,
               declarative_manifest,
@@ -148,6 +149,7 @@ public class BaseConfigDatabaseTest {
               stream_generation,
               stream_refreshes,
               stream_reset,
+              tag,
               \"user\",
               user_invitation,
               workspace,

@@ -1,14 +1,12 @@
 package io.airbyte.workload.api
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.DataplaneApi
+import io.airbyte.api.client.model.generated.DataplaneRead
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Geography
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Priority
-import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -24,25 +22,24 @@ import java.util.stream.Stream
 class WorkloadServiceTest {
   private val messageProducer: TemporalMessageProducer<LauncherInputMessage> = mockk()
   private val metricPublisher: CustomMetricPublisher = mockk()
-  private val featureFlagClient: FeatureFlagClient = mockk()
+  private val airbyteApiClient: AirbyteApiClient = mockk()
+  private val dataplaneApi: DataplaneApi = mockk()
 
   private val workloadId = "workloadIdea"
   private val workloadInput = "{}"
   private val labels = mapOf("la" to "bel")
   private val logPath = "log/path"
-  private val geography = "geo"
   private val mutexKey = "mutex"
   private val autoId = UUID.randomUUID()
+  private val dataplaneId = "dataplaneId"
 
   @BeforeEach
   fun init() {
     clearAllMocks()
     every { messageProducer.publish(any(), any(), any()) } returns Unit
     every { metricPublisher.count(any(), any(), any(), any()) } returns Unit
-    every { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography)))) } returns REGULAR_QUEUE
-    every {
-      featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography), Priority(Priority.HIGH_PRIORITY))))
-    } returns HIGH_PRIORITY_QUEUE
+    every { airbyteApiClient.dataplaneApi } returns dataplaneApi
+    every { dataplaneApi.getDataplaneId(any()) } returns DataplaneRead(dataplaneId)
   }
 
   @ParameterizedTest
@@ -52,25 +49,26 @@ class WorkloadServiceTest {
     priority: WorkloadPriority,
     expectedQueue: String,
   ) {
-    val workloadService = WorkloadService(messageProducer, metricPublisher, featureFlagClient)
+    val workloadService = WorkloadService(messageProducer, metricPublisher, airbyteApiClient)
 
-    workloadService.create(workloadId, workloadInput, labels, logPath, geography, mutexKey, workloadType, autoId, priority)
+    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
 
     verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
   }
 
   companion object {
-    const val REGULAR_QUEUE = "regularQueue"
-    const val HIGH_PRIORITY_QUEUE = "highPriorityQueue"
+    private const val REGULAR_QUEUE = "regularQueue"
+    private const val HIGH_PRIORITY_QUEUE = "highPriorityQueue"
+    private const val DATAPLANE_ID = "dataplaneId"
 
     @JvmStatic
     fun expectedQueueArgsMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(WorkloadType.SYNC, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
-        Arguments.of(WorkloadType.CHECK, WorkloadPriority.HIGH, HIGH_PRIORITY_QUEUE),
-        Arguments.of(WorkloadType.CHECK, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
-        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.HIGH, HIGH_PRIORITY_QUEUE),
-        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
+        Arguments.of(WorkloadType.SYNC, WorkloadPriority.DEFAULT, DATAPLANE_ID),
+        Arguments.of(WorkloadType.CHECK, WorkloadPriority.HIGH, DATAPLANE_ID),
+        Arguments.of(WorkloadType.CHECK, WorkloadPriority.DEFAULT, DATAPLANE_ID),
+        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.HIGH, DATAPLANE_ID),
+        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.DEFAULT, DATAPLANE_ID),
       )
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -22,6 +22,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -64,6 +65,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
     sourceService = new SourceServiceJooqImpl(
@@ -77,7 +79,8 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
             featureFlagClient,
             connectionService,
             actorDefinitionService,
-            scopedConfigurationService));
+            scopedConfigurationService,
+            connectionTimelineEventService));
     configInjector = new ConfigInjector(new ConnectorBuilderServiceJooqImpl(database));
     exampleConfig = Jsons.jsonNode(Map.of(SAMPLE_CONFIG_KEY, 123));
   }

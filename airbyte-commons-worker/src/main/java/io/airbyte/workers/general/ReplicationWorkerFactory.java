@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -17,6 +17,7 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -69,13 +70,15 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for the BufferedReplicationWorker.
@@ -85,8 +88,9 @@ import lombok.extern.slf4j.Slf4j;
  * dependencies of the DefaultReplicationWorker were stateless.
  */
 @Singleton
-@Slf4j
 public class ReplicationWorkerFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
@@ -158,7 +162,7 @@ public class ReplicationWorkerFactory {
     final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
-    log.info("Setting up source...");
+    log.info("Setting up source with image {}.", replicationInput.getSourceLauncherConfig().getDockerImage());
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
@@ -167,14 +171,14 @@ public class ReplicationWorkerFactory {
 
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource()
+        ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
         : new LocalContainerAirbyteSource(
             heartbeatMonitor,
             getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
             new MessageMetricsTracker(metricClient),
             ContainerIOHandle.source());
 
-    log.info("Setting up destination...");
+    log.info("Setting up destination with image {}.", replicationInput.getDestinationLauncherConfig().getDockerImage());
     final AirbyteMessageBufferedWriterFactory messageWriterFactory =
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(replicationInput.getCatalog()));

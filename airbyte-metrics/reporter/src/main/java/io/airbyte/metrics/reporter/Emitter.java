@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
@@ -11,6 +11,8 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,12 +133,23 @@ final class NumAbnormalScheduledSyncs extends Emitter {
 
 @SuppressWarnings("OneTopLevelClass")
 @Singleton
-final class NumUnusuallyLongSyncs extends Emitter {
+final class UnusuallyLongSyncs extends Emitter {
 
-  NumUnusuallyLongSyncs(final MetricClient client, final MetricRepository db) {
+  UnusuallyLongSyncs(final MetricClient client, final MetricRepository db) {
     super(client, () -> {
-      final var count = db.numberOfJobsRunningUnusuallyLong();
-      client.gauge(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, count);
+      final var longRunningJobs = db.unusuallyLongRunningJobs();
+      longRunningJobs.forEach(job -> {
+        final List<MetricAttribute> attributes = new ArrayList<>();
+        // job might be null if we fail to map the row to the model under rare circumstances
+        if (job != null) {
+          attributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, job.sourceDockerImage()));
+          attributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, job.destinationDockerImage()));
+          attributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.connectionId()));
+        }
+
+        client.count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1, attributes.toArray(new MetricAttribute[0]));
+      });
+
       return null;
     });
   }

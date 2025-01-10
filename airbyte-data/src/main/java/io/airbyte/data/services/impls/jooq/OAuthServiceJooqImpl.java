@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -11,7 +11,6 @@ import static org.jooq.impl.DSL.select;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
@@ -107,28 +106,21 @@ public class OAuthServiceJooqImpl implements OAuthService {
    *
    * @return Optional<SourceOAuthParameter>
    * @throws IOException
-   * @throws ConfigNotFoundException
+   * @throws ConfigNotFoundException if secret persistence coordinate is not present
    */
   @Override
-  public SourceOAuthParameter getSourceOAuthParameterWithSecrets(final UUID workspaceId, final UUID sourceDefinitionId)
+  public Optional<SourceOAuthParameter> getSourceOAuthParameterWithSecretsOptional(final UUID workspaceId, final UUID sourceDefinitionId)
       throws IOException, ConfigNotFoundException {
-    SourceOAuthParameter sourceOAuthParameter =
-        getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId).orElseThrow(() -> new ConfigNotFoundException(
-            ConfigSchema.SOURCE_OAUTH_PARAM,
-            String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, sourceDefinitionId)));
-    final UUID organizationId = getOrganizationIdFor(sourceOAuthParameter.getOauthParameterId());
-    final JsonNode hydratedConfig;
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
-      hydratedConfig =
-          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(sourceOAuthParameter.getConfiguration(),
-              new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(sourceOAuthParameter.getConfiguration());
+    final Optional<SourceOAuthParameter> sourceOAuthParameterOptional = getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
+    if (sourceOAuthParameterOptional.isEmpty()) {
+      return sourceOAuthParameterOptional;
     }
-    sourceOAuthParameter.setConfiguration(hydratedConfig);
-    return sourceOAuthParameter;
+
+    final SourceOAuthParameter sourceOAuthParameter = sourceOAuthParameterOptional.get();
+    final UUID organizationId = getOrganizationIdFor(sourceOAuthParameter.getOauthParameterId());
+
+    final JsonNode hydratedConfig = hydrateConfig(sourceOAuthParameter.getConfiguration(), organizationId);
+    return Optional.of(sourceOAuthParameter.withConfiguration(hydratedConfig));
   }
 
   /**
@@ -155,32 +147,27 @@ public class OAuthServiceJooqImpl implements OAuthService {
   }
 
   /**
-   * Gets Destination OAuth Parameter based on the workspaceId and sourceDefinitionId.
+   * Gets Destination OAuth Parameter based on the workspaceId and destinationDefinitionId.
    *
    * @return Optional<DestinationOAuthParameter>
    * @throws IOException
-   * @throws ConfigNotFoundException
+   * @throws ConfigNotFoundException if secret persistence coordinate is not present
    */
   @Override
-  public DestinationOAuthParameter getDestinationOAuthParameterWithSecrets(final UUID workspaceId, final UUID destinationDefinitionId)
+  public Optional<DestinationOAuthParameter> getDestinationOAuthParameterWithSecretsOptional(final UUID workspaceId,
+                                                                                             final UUID destinationDefinitionId)
       throws IOException, ConfigNotFoundException {
-    DestinationOAuthParameter destinationOAuthParameter =
-        getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId).orElseThrow(() -> new ConfigNotFoundException(
-            ConfigSchema.SOURCE_OAUTH_PARAM,
-            String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, destinationDefinitionId)));
-    final UUID organizationId = getOrganizationIdFor(destinationOAuthParameter.getOauthParameterId());
-    final JsonNode hydratedConfig;
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
-      hydratedConfig =
-          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destinationOAuthParameter.getConfiguration(),
-              new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destinationOAuthParameter.getConfiguration());
+    final Optional<DestinationOAuthParameter> destinationOAuthParameterOptional =
+        getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId);
+    if (destinationOAuthParameterOptional.isEmpty()) {
+      return destinationOAuthParameterOptional;
     }
-    destinationOAuthParameter.setConfiguration(hydratedConfig);
-    return destinationOAuthParameter;
+
+    final DestinationOAuthParameter destinationOAuthParameter = destinationOAuthParameterOptional.get();
+    final UUID organizationId = getOrganizationIdFor(destinationOAuthParameter.getOauthParameterId());
+
+    final JsonNode hydratedConfig = hydrateConfig(destinationOAuthParameter.getConfiguration(), organizationId);
+    return Optional.of(destinationOAuthParameter.withConfiguration(hydratedConfig));
   }
 
   /**
@@ -240,6 +227,17 @@ public class OAuthServiceJooqImpl implements OAuthService {
       writeDestinationOauthParameter(Collections.singletonList(destinationOAuthParameter), ctx);
       return null;
     });
+  }
+
+  private JsonNode hydrateConfig(final JsonNode config, final UUID organizationId) throws IOException, ConfigNotFoundException {
+    // TODO: this can probably be later replaced with a ConnectorSecretsHydrator
+    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig =
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
+      return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config, new RuntimeSecretPersistence(secretPersistenceConfig));
+    } else {
+      return secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(config);
+    }
   }
 
   private void writeSourceOauthParameter(final List<SourceOAuthParameter> configs, final DSLContext ctx) {

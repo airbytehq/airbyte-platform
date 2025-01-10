@@ -34,6 +34,12 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   // todo
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
   [ConnectionEventType.UNKNOWN]: "",
+
+  // TODO: waiting for the backend to add these
+  // issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/10947
+  // [ConnectionEventType.MAPPING_CREATE]: "connection.timeline.mapping_create",
+  // [ConnectionEventType.MAPPING_UPDATE]: "connection.timeline.mapping_update",
+  // [ConnectionEventType.MAPPING_DELETE]: "connection.timeline.mapping_delete",
 };
 
 /**
@@ -218,4 +224,25 @@ export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
         ]
       : []),
   ];
+};
+
+export const isSemanticVersionTags = (newTag: string, oldTag: string): boolean =>
+  [newTag, oldTag].every((tag) => /^\d+\.\d+\.\d+$/.test(tag));
+
+export const isVersionUpgraded = (newVersion: string, oldVersion: string): boolean => {
+  const parseVersion = (version: string) => version.split(".").map(Number);
+  const newParsedVersion = parseVersion(newVersion);
+  const oldParsedVersion = parseVersion(oldVersion);
+
+  for (let i = 0; i < Math.max(newParsedVersion.length, oldParsedVersion.length); i++) {
+    const num1 = newParsedVersion[i] || 0;
+    const num2 = oldParsedVersion[i] || 0;
+    if (num1 > num2) {
+      return true;
+    }
+    if (num1 < num2) {
+      return false;
+    }
+  }
+  return false;
 };

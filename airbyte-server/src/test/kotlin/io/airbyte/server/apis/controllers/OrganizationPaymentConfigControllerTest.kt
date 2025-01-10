@@ -1,15 +1,14 @@
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.OrganizationPaymentConfigRead
+import io.airbyte.api.model.generated.OrganizationPaymentConfigUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.data.services.OrganizationPaymentConfigService
-import io.airbyte.data.services.OrganizationService
 import io.kotest.assertions.throwables.shouldThrow
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.Optional
 import java.util.UUID
 
 class OrganizationPaymentConfigControllerTest {
@@ -19,16 +18,7 @@ class OrganizationPaymentConfigControllerTest {
 
   @BeforeEach
   fun setup() {
-    controller = OrganizationPaymentConfigController(organizationPaymentConfigService, organizationService)
-  }
-
-  @Test
-  fun `should throw for config not found on delete`() {
-    val orgId = UUID.randomUUID()
-    every { organizationPaymentConfigService.findByOrganizationId(orgId) } returns null
-    shouldThrow<ResourceNotFoundProblem> {
-      controller.deleteOrganizationPaymentConfig(orgId)
-    }
+    controller = OrganizationPaymentConfigController(organizationService, organizationPaymentConfigService)
   }
 
   @Test
@@ -41,12 +31,15 @@ class OrganizationPaymentConfigControllerTest {
   }
 
   @Test
-  fun `invalid organization id should fail saving payment config`() {
+  fun `should throw for config not found on update`() {
     val orgId = UUID.randomUUID()
-    every { organizationService.getOrganization(orgId) } returns Optional.empty()
+    every { organizationPaymentConfigService.findByOrganizationId(orgId) } returns null
     shouldThrow<ResourceNotFoundProblem> {
       controller.updateOrganizationPaymentConfig(
-        OrganizationPaymentConfigRead().organizationId(orgId).paymentStatus(OrganizationPaymentConfigRead.PaymentStatusEnum.MANUAL),
+        OrganizationPaymentConfigUpdateRequestBody()
+          .organizationId(
+            orgId,
+          ).paymentStatus(OrganizationPaymentConfigUpdateRequestBody.PaymentStatusEnum.MANUAL),
       )
     }
   }

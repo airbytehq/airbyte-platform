@@ -12,6 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import {
+  GzipJsonDecoderType,
   IterableDecoderType,
   JsonDecoderType,
   JsonlDecoderType,
@@ -29,7 +30,6 @@ import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
@@ -84,8 +84,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       {selectedTab === "configuration" ? (
         <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
           <BuilderCard>
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
@@ -109,6 +109,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
                 XmlDecoderType.XmlDecoder,
                 JsonlDecoderType.JsonlDecoder,
                 IterableDecoderType.IterableDecoder,
+                GzipJsonDecoderType.GzipJsonDecoder,
               ]}
             />
             <BuilderField
@@ -330,7 +331,6 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
-            automaticLayout
             onChange={(val: string | undefined) => {
               setValue(path, val, {
                 shouldValidate: true,

@@ -137,9 +137,9 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
       // replace class declaration
       domainClientFileText =
         domainClientFileText.replace(
-          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
+          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
             .toRegex(),
-          "class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
+          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
         )
 
       // add imports if not exist

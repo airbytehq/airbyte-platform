@@ -1,8 +1,6 @@
 micronaut:
   application:
     name: airbyte-workers
-  env:
-    cloud-deduction: true
   server:
     netty:
       aggregator:
@@ -54,6 +52,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
@@ -147,6 +146,7 @@ airbyte:
           jitter-amount-minutes: ${SCHEDULE_VERY_LOW_JITTER_AMOUNT_MINUTES:25} # anything greater than every 6.5 hours has up to 25 minutes of added jitter
     discover:
       enabled: ${SHOULD_RUN_DISCOVER_WORKFLOWS:true}
+      auto-refresh-window: ${DISCOVER_REFRESH_WINDOW_MINUTES:1440}
       max-workers: ${MAX_CHECK_WORKERS:5}
     job:
       error-reporting:
@@ -189,8 +189,6 @@ airbyte:
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
   temporal:
-    queues:
-      ui-commands: ui_commands
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
   tracking:

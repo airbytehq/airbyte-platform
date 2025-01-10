@@ -30,9 +30,8 @@ tasks.named<Test>("test") {
   maxHeapSize = "2g"
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
-// been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

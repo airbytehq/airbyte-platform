@@ -3,17 +3,17 @@ openapi: "3.1.0"
 info:
   title: "Workspaces"
   version: "1.0.0"
-  description: "Programatically control Airbyte Cloud, OSS & Enterprise."
+  description: "Programmatically control Airbyte Cloud, OSS & Enterprise."
 servers:
-  - url: "https://api.airbyte.com/v1"
-    description: "Airbyte API v1"
+- url: "https://api.airbyte.com/v1"
+  description: "Airbyte API v1"
 paths:
   /workspaces:
     get:
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       responses:
         "200":
           content:
@@ -31,50 +31,47 @@ paths:
       summary: "List workspaces"
       x-speakeasy-entity-operation: "Workspace#list"
       parameters:
-        - name: "workspaceIds"
-          description:
-            "The UUIDs of the workspaces you wish to fetch. Empty list will\
-            \ retrieve all allowed workspaces."
-          schema:
-            type: "array"
-            items:
-              format: "uuid"
-              type: "string"
-          in: "query"
-          required: false
-        - name: "includeDeleted"
-          description: "Include deleted workspaces in the returned results."
-          schema:
-            default: false
-            type: "boolean"
-          in: "query"
-          required: false
-        - name: "limit"
-          description:
-            "Set the limit on the number of workspaces returned. The default\
-            \ is 20."
-          schema:
-            format: "int32"
-            type: "integer"
-            minimum: 1
-            maximum: 100
-            default: 20
-          in: "query"
-        - name: "offset"
-          description:
-            "Set the offset to start at when returning workspaces. The default\
-            \ is 0"
-          schema:
-            type: "integer"
-            format: "int32"
-            minimum: 0
-            default: 0
-          in: "query"
+      - name: "workspaceIds"
+        description: "The UUIDs of the workspaces you wish to fetch. Empty list will\
+          \ retrieve all allowed workspaces."
+        schema:
+          type: "array"
+          items:
+            format: "uuid"
+            type: "string"
+        in: "query"
+        required: false
+      - name: "includeDeleted"
+        description: "Include deleted workspaces in the returned results."
+        schema:
+          default: false
+          type: "boolean"
+        in: "query"
+        required: false
+      - name: "limit"
+        description: "Set the limit on the number of workspaces returned. The default\
+          \ is 20."
+        schema:
+          format: "int32"
+          type: "integer"
+          minimum: 1
+          maximum: 100
+          default: 20
+        in: "query"
+      - name: "offset"
+        description: "Set the offset to start at when returning workspaces. The default\
+          \ is 0"
+        schema:
+          type: "integer"
+          format: "int32"
+          minimum: 0
+          default: 0
+        in: "query"
     post:
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       requestBody:
         content:
           application/json:
@@ -107,17 +104,17 @@ paths:
       x-speakeasy-entity-operation: "Workspace#create"
   /workspaces/{workspaceId}:
     parameters:
-      - name: "workspaceId"
-        schema:
-          format: "UUID"
-          type: "string"
-        in: "path"
-        required: true
+    - name: "workspaceId"
+      schema:
+        format: "UUID"
+        type: "string"
+      in: "path"
+      required: true
     get:
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       responses:
         "200":
           content:
@@ -142,9 +139,9 @@ paths:
       x-speakeasy-entity-operation: "Workspace#read"
     patch:
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       requestBody:
         content:
           application/json:
@@ -177,9 +174,9 @@ paths:
       x-speakeasy-entity-operation: "Workspace#update"
     delete:
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       responses:
         "204":
           description: "The resource was deleted successfully"
@@ -201,9 +198,9 @@ paths:
               $ref: "#/components/schemas/WorkspaceOAuthCredentialsRequest"
         required: true
       tags:
-        - "public_workspaces"
-        - "public"
-        - "Workspaces"
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
       responses:
         "200":
           description: "OAuth credential override was successful."
@@ -215,25 +212,23 @@ paths:
       x-speakeasy-alias: "createOrUpdateWorkspaceOAuthCredentials"
       x-speakeasy-group: "Workspaces"
       summary: "Create OAuth override credentials for a workspace and source type."
-      description:
-        "Create/update a set of OAuth credentials to override the Airbyte-provided\
+      description: "Create/update a set of OAuth credentials to override the Airbyte-provided\
         \ OAuth credentials used for source/destination OAuth.\nIn order to determine\
         \ what the credential configuration needs to be, please see the connector\
         \ specification of the relevant source/destination."
     parameters:
-      - name: "workspaceId"
-        schema:
-          format: "UUID"
-          type: "string"
-        in: "path"
-        required: true
+    - name: "workspaceId"
+      schema:
+        format: "UUID"
+        type: "string"
+      in: "path"
+      required: true
 components:
   responses:
     InitiateOauthResponse:
       content:
         application/json: {}
-      description:
-        "Response from the initiate OAuth call should be an object with\
+      description: "Response from the initiate OAuth call should be an object with\
         \ a single property which will be the `redirect_url`. If a user is redirected\
         \ to this URL, they'll be prompted by the identity provider to authenticate."
       x-speakeasy-component: true
@@ -250,33 +245,32 @@ components:
       type: "string"
       description: "Describes what actions/endpoints the permission entitles to"
       enum:
-        - "instance_admin"
-        - "organization_admin"
-        - "organization_editor"
-        - "organization_runner"
-        - "organization_reader"
-        - "organization_member"
-        - "workspace_owner"
-        - "workspace_admin"
-        - "workspace_runner"
-        - "workspace_editor"
-        - "workspace_reader"
+      - "instance_admin"
+      - "organization_admin"
+      - "organization_editor"
+      - "organization_runner"
+      - "organization_reader"
+      - "organization_member"
+      - "workspace_owner"
+      - "workspace_admin"
+      - "workspace_runner"
+      - "workspace_editor"
+      - "workspace_reader"
       x-speakeasy-component: true
     PublicPermissionType:
       type: "string"
-      description:
-        "Subset of `PermissionType` (removing `instance_admin`), could\
+      description: "Subset of `PermissionType` (removing `instance_admin`), could\
         \ be used in public-api."
       enum:
-        - "organization_admin"
-        - "organization_editor"
-        - "organization_runner"
-        - "organization_reader"
-        - "organization_member"
-        - "workspace_admin"
-        - "workspace_editor"
-        - "workspace_runner"
-        - "workspace_reader"
+      - "organization_admin"
+      - "organization_editor"
+      - "organization_runner"
+      - "organization_reader"
+      - "organization_member"
+      - "workspace_admin"
+      - "workspace_editor"
+      - "workspace_runner"
+      - "workspace_reader"
       x-speakeasy-component: true
     UserId:
       type: "string"
@@ -288,23 +282,22 @@ components:
       description: "Auth Provider"
       default: "airbyte"
       enum:
-        - "airbyte"
-        - "google_identity_platform"
-        - "keycloak"
+      - "airbyte"
+      - "google_identity_platform"
+      - "keycloak"
       x-speakeasy-component: true
     UserStatus:
       type: "string"
       description: "user status"
       enum:
-        - "invited"
-        - "registered"
-        - "disabled"
+      - "invited"
+      - "registered"
+      - "disabled"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     SelectedFieldInfo:
       type: "object"
-      description:
-        "Path to a field/column/property in a stream to be selected. For\
+      description: "Path to a field/column/property in a stream to be selected. For\
         \ example, if the field to be selected is a database column called \"foo\"\
         , this will be [\"foo\"]. Use multiple path elements for nested schemas."
       properties:
@@ -316,13 +309,211 @@ components:
     StreamMapperType:
       type: "string"
       enum:
-        - "hashing"
-        - "field-renaming"
-        - "row-filtering"
+      - "hashing"
+      - "field-renaming"
+      - "row-filtering"
+      - "encryption"
+      x-speakeasy-component: true
+    ConfiguredStreamMapper:
+      type: "object"
+      required:
+      - "type"
+      - "mapperConfiguration"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        type:
+          $ref: "#/components/schemas/StreamMapperType"
+        mapperConfiguration:
+          $ref: "#/components/schemas/MapperConfiguration"
       x-speakeasy-component: true
     MapperConfiguration:
       type: "object"
       description: "The values required to configure the mapper."
+      oneOf:
+      - $ref: "#/components/schemas/HashingMapperConfiguration"
+      - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
+      - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
+      - $ref: "#/components/schemas/EncryptionMapperConfiguration"
+      x-speakeasy-component: true
+    HashingMapperConfiguration:
+      title: "Hashing"
+      type: "object"
+      properties:
+        fieldNameSuffix:
+          type: "string"
+          title: "Field name suffix"
+          description: "The suffix to append to the field name after hashing."
+        method:
+          type: "string"
+          enum:
+          - "MD2"
+          - "MD5"
+          - "SHA-1"
+          - "SHA-224"
+          - "SHA-256"
+          - "SHA-384"
+          - "SHA-512"
+          title: "Hashing method"
+          description: "The hashing algorithm to use."
+        targetField:
+          type: "string"
+          title: "Original Field Name"
+          description: "The name of the field to be hashed."
+      required:
+      - "fieldNameSuffix"
+      - "method"
+      - "targetField"
+      x-speakeasy-component: true
+    FieldRenamingMapperConfiguration:
+      title: "Field Renaming"
+      type: "object"
+      properties:
+        newFieldName:
+          type: "string"
+          title: "New Field Name"
+          description: "The new name for the field after renaming."
+        originalFieldName:
+          type: "string"
+          title: "Original Field Name"
+          description: "The current name of the field to rename."
+      required:
+      - "newFieldName"
+      - "originalFieldName"
+      x-speakeasy-component: true
+    RowFilteringOperationType:
+      type: "string"
+      enum:
+      - "EQUAL"
+      - "NOT"
+      x-speakeasy-component: true
+    RowFilteringOperationEqual:
+      type: "object"
+      title: "EQUAL"
+      required:
+      - "comparisonValue"
+      - "fieldName"
+      - "type"
+      properties:
+        comparisonValue:
+          type: "string"
+          title: "Comparison Value"
+          description: "The value to compare the field against."
+        fieldName:
+          type: "string"
+          title: "Field Name"
+          description: "The name of the field to apply the operation on."
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-speakeasy-component: true
+    RowFilteringOperationNot:
+      type: "object"
+      title: "NOT"
+      required:
+      - "conditions"
+      - "type"
+      properties:
+        conditions:
+          title: "Sub-Conditions (NOT)"
+          description: "Conditions to evaluate with the NOT operator."
+          minItems: 1
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RowFilteringOperation"
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-speakeasy-component: true
+    RowFilteringOperation:
+      type: "object"
+      oneOf:
+      - $ref: "#/components/schemas/RowFilteringOperationEqual"
+      - $ref: "#/components/schemas/RowFilteringOperationNot"
+      discriminator:
+        propertyName: "type"
+        mapping:
+          EQUAL: "#/components/schemas/RowFilteringOperationEqual"
+          NOT: "#/components/schemas/RowFilteringOperationNot"
+      x-speakeasy-component: true
+    RowFilteringMapperConfiguration:
+      title: "Row Filtering"
+      type: "object"
+      properties:
+        conditions:
+          $ref: "#/components/schemas/RowFilteringOperation"
+      required:
+      - "conditions"
+      x-speakeasy-component: true
+    EncryptionMapperAlgorithm:
+      type: "string"
+      enum:
+      - "RSA"
+      - "AES"
+      x-speakeasy-component: true
+    EncryptionMapperConfiguration:
+      title: "Encryption"
+      type: "object"
+      oneOf:
+      - $ref: "#/components/schemas/EncryptionMapperRSAConfiguration"
+      - $ref: "#/components/schemas/EncryptionMapperAESConfiguration"
+      discriminator:
+        propertyName: "algorithm"
+        mapping:
+          RSA: "#/components/schemas/EncryptionMapperRSAConfiguration"
+          AES: "#/components/schemas/EncryptionMapperAESConfiguration"
+      x-speakeasy-component: true
+    EncryptionMapperRSAConfiguration:
+      title: "Encryption - RSA"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        publicKey:
+          type: "string"
+        targetField:
+          type: "string"
+      required:
+      - "algorithm"
+      - "publicKey"
+      - "targetField"
+      - "fieldNameSuffix"
+      x-speakeasy-component: true
+    EncryptionMapperAESConfiguration:
+      title: "Encryption - AES"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        key:
+          type: "string"
+          x-speakeasy-param-sensitive: true
+        mode:
+          type: "string"
+          enum:
+          - "CBC"
+          - "CFB"
+          - "OFB"
+          - "CTR"
+          - "GCM"
+          - "ECB"
+        padding:
+          type: "string"
+          enum:
+          - "NoPadding"
+          - "PKCS5Padding"
+        targetField:
+          type: "string"
+      required:
+      - "algorithm"
+      - "key"
+      - "mode"
+      - "padding"
+      - "targetField"
+      - "fieldNameSuffix"
       x-speakeasy-component: true
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
@@ -331,8 +522,7 @@ components:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
     OAuthConfiguration:
-      description:
-        "The values required to configure OAuth flows. The schema for this\
+      description: "The values required to configure OAuth flows. The schema for this\
         \ must match the `OAuthConfigSpecification.oauthUserInputFromConnectorConfigSpecification`\
         \ schema."
       x-speakeasy-component: true
@@ -341,7 +531,7 @@ components:
       x-speakeasy-component: true
     ApplicationCreate:
       required:
-        - "name"
+      - "name"
       type: "object"
       properties:
         name:
@@ -349,7 +539,7 @@ components:
       x-speakeasy-component: true
     ApplicationReadList:
       required:
-        - "applications"
+      - "applications"
       type: "object"
       properties:
         applications:
@@ -359,11 +549,11 @@ components:
       x-speakeasy-component: true
     ApplicationRead:
       required:
-        - "id"
-        - "name"
-        - "clientId"
-        - "clientSecret"
-        - "createdAt"
+      - "id"
+      - "name"
+      - "clientId"
+      - "clientSecret"
+      - "createdAt"
       type: "object"
       properties:
         id:
@@ -380,9 +570,9 @@ components:
       x-speakeasy-component: true
     ApplicationTokenRequestWithGrant:
       required:
-        - "client_id"
-        - "client_secret"
-        - "grant_type"
+      - "client_id"
+      - "client_secret"
+      - "grant_type"
       type: "object"
       properties:
         client_id:
@@ -391,20 +581,20 @@ components:
           type: "string"
         grant-type:
           enum:
-            - "client_credentials"
+          - "client_credentials"
       x-speakeasy-component: true
     PublicAccessTokenResponse:
       required:
-        - "access_token"
-        - "token_type"
-        - "expires_in"
+      - "access_token"
+      - "token_type"
+      - "expires_in"
       type: "object"
       properties:
         access_token:
           type: "string"
         token_type:
           enum:
-            - "Bearer"
+          - "Bearer"
         expires_in:
           type: "integer"
           format: "int64"
@@ -424,11 +614,11 @@ components:
       title: "Root Type for JobResponse"
       description: "Provides details of a single job."
       required:
-        - "jobId"
-        - "status"
-        - "jobType"
-        - "startTime"
-        - "connectionId"
+      - "jobId"
+      - "status"
+      - "jobType"
+      - "startTime"
+      - "connectionId"
       type: "object"
       properties:
         jobId:
@@ -465,7 +655,7 @@ components:
       title: "Root Type for JobsResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         previous:
@@ -480,15 +670,15 @@ components:
         next: "https://api.airbyte.com/v1/jobs?limit=5&offset=10"
         previous: "https://api.airbyte.com/v1/jobs?limit=5&offset=0"
         data:
-          - id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
-            status: "running"
-            jobType: "sync"
-            startTime: "2023-03-25T01:30:50Z"
+        - id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+          status: "running"
+          jobType: "sync"
+          startTime: "2023-03-25T01:30:50Z"
       x-speakeasy-component: true
     ConnectionCreateRequest:
       required:
-        - "sourceId"
-        - "destinationId"
+      - "sourceId"
+      - "destinationId"
       type: "object"
       properties:
         name:
@@ -510,16 +700,14 @@ components:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
           type: "string"
-          description:
-            "Used when namespaceDefinition is 'custom_format'. If blank\
+          description: "Used when namespaceDefinition is 'custom_format'. If blank\
             \ then behaves like namespaceDefinition = 'destination'. If \"${SOURCE_NAMESPACE}\"\
             \ then behaves like namespaceDefinition = 'source'."
           default: null
           example: "${SOURCE_NAMESPACE}"
         prefix:
           type: "string"
-          description:
-            "Prefix that will be prepended to the name of each stream when\
+          description: "Prefix that will be prepended to the name of each stream when\
             \ it is written to the destination (ex. “airbyte_” causes “projects” =>\
             \ “airbyte_projects”)."
         nonBreakingSchemaUpdatesBehavior:
@@ -545,16 +733,14 @@ components:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
           type: "string"
-          description:
-            "Used when namespaceDefinition is 'custom_format'. If blank\
+          description: "Used when namespaceDefinition is 'custom_format'. If blank\
             \ then behaves like namespaceDefinition = 'destination'. If \"${SOURCE_NAMESPACE}\"\
             \ then behaves like namespaceDefinition = 'source'."
           default: null
           example: "${SOURCE_NAMESPACE}"
         prefix:
           type: "string"
-          description:
-            "Prefix that will be prepended to the name of each stream when\
+          description: "Prefix that will be prepended to the name of each stream when\
             \ it is written to the destination (ex. “airbyte_” causes “projects” =>\
             \ “airbyte_projects”)."
         nonBreakingSchemaUpdatesBehavior:
@@ -566,12 +752,11 @@ components:
       x-speakeasy-component: true
     JobCreateRequest:
       title: "Root Type for JobCreate"
-      description:
-        "Creates a new Job from the configuration provided in the request\
+      description: "Creates a new Job from the configuration provided in the request\
         \ body."
       required:
-        - "jobType"
-        - "connectionId"
+      - "jobType"
+      - "connectionId"
       type: "object"
       properties:
         connectionId:
@@ -585,38 +770,36 @@ components:
       x-speakeasy-component: true
     JobStatusEnum:
       enum:
-        - "pending"
-        - "running"
-        - "incomplete"
-        - "failed"
-        - "succeeded"
-        - "cancelled"
+      - "pending"
+      - "running"
+      - "incomplete"
+      - "failed"
+      - "succeeded"
+      - "cancelled"
       type: "string"
       x-speakeasy-component: true
     JobTypeEnum:
-      description:
-        "Enum that describes the different types of jobs that the platform\
+      description: "Enum that describes the different types of jobs that the platform\
         \ runs."
       enum:
-        - "sync"
-        - "reset"
-        - "refresh"
-        - "clear"
+      - "sync"
+      - "reset"
+      - "refresh"
+      - "clear"
       type: "string"
       x-speakeasy-component: true
     SourceCreateRequest:
       required:
-        - "name"
-        - "workspaceId"
-        - "configuration"
+      - "name"
+      - "workspaceId"
+      - "configuration"
       type: "object"
       properties:
         name:
           description: "Name of the source e.g. dev-mysql-instance."
           type: "string"
         definitionId:
-          description:
-            "The UUID of the connector definition. One of configuration.sourceType\
+          description: "The UUID of the connector definition. One of configuration.sourceType\
             \ or definitionId must be provided."
           format: "uuid"
           type: "string"
@@ -634,8 +817,8 @@ components:
       x-speakeasy-component: true
     SourcePutRequest:
       required:
-        - "name"
-        - "configuration"
+      - "name"
+      - "configuration"
       type: "object"
       properties:
         name:
@@ -669,15 +852,16 @@ components:
       description: "Provides details of a single connection."
       type: "object"
       required:
-        - "connectionId"
-        - "name"
-        - "sourceId"
-        - "destinationId"
-        - "workspaceId"
-        - "status"
-        - "schedule"
-        - "dataResidency"
-        - "configurations"
+      - "connectionId"
+      - "name"
+      - "sourceId"
+      - "destinationId"
+      - "workspaceId"
+      - "status"
+      - "schedule"
+      - "dataResidency"
+      - "configurations"
+      - "createdAt"
       properties:
         connectionId:
           format: "UUID"
@@ -709,16 +893,18 @@ components:
           type: "string"
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+        createdAt:
+          format: "int64"
+          type: "integer"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     AirbyteApiConnectionSchedule:
-      description:
-        "schedule for when the the connection should run, per the schedule\
+      description: "schedule for when the the connection should run, per the schedule\
         \ type"
       type: "object"
       required:
-        - "scheduleType"
+      - "scheduleType"
       properties:
         scheduleType:
           $ref: "#/components/schemas/ScheduleTypeEnum"
@@ -728,16 +914,15 @@ components:
     ScheduleTypeEnum:
       type: "string"
       enum:
-        - "manual"
-        - "cron"
+      - "manual"
+      - "cron"
       x-speakeasy-component: true
     ConnectionScheduleResponse:
-      description:
-        "schedule for when the the connection should run, per the schedule\
+      description: "schedule for when the the connection should run, per the schedule\
         \ type"
       type: "object"
       required:
-        - "scheduleType"
+      - "scheduleType"
       properties:
         scheduleType:
           $ref: "#/components/schemas/ScheduleTypeWithBasicEnum"
@@ -749,83 +934,82 @@ components:
     ScheduleTypeWithBasicEnum:
       type: "string"
       enum:
-        - "manual"
-        - "cron"
-        - "basic"
+      - "manual"
+      - "cron"
+      - "basic"
       x-speakeasy-component: true
     GeographyEnum:
       type: "string"
       enum:
-        - "auto"
-        - "us"
-        - "eu"
+      - "auto"
+      - "us"
+      - "eu"
       default: "auto"
       x-speakeasy-component: true
     GeographyEnumNoDefault:
       type: "string"
       enum:
-        - "auto"
-        - "us"
-        - "eu"
+      - "auto"
+      - "us"
+      - "eu"
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: "string"
       enum:
-        - "active"
-        - "inactive"
-        - "deprecated"
+      - "active"
+      - "inactive"
+      - "deprecated"
       x-speakeasy-component: true
     NamespaceDefinitionEnum:
       type: "string"
       description: "Define the location where the data will be stored in the destination"
       enum:
-        - "source"
-        - "destination"
-        - "custom_format"
+      - "source"
+      - "destination"
+      - "custom_format"
       default: "destination"
       x-speakeasy-component: true
     NonBreakingSchemaUpdatesBehaviorEnum:
       type: "string"
-      description:
-        "Set how Airbyte handles syncs when it detects a non-breaking schema\
+      description: "Set how Airbyte handles syncs when it detects a non-breaking schema\
         \ change in the source"
       enum:
-        - "ignore"
-        - "disable_connection"
-        - "propagate_columns"
-        - "propagate_fully"
+      - "ignore"
+      - "disable_connection"
+      - "propagate_columns"
+      - "propagate_fully"
       default: "ignore"
       x-speakeasy-component: true
     NamespaceDefinitionEnumNoDefault:
       type: "string"
       description: "Define the location where the data will be stored in the destination"
       enum:
-        - "source"
-        - "destination"
-        - "custom_format"
+      - "source"
+      - "destination"
+      - "custom_format"
       x-speakeasy-component: true
     NonBreakingSchemaUpdatesBehaviorEnumNoDefault:
       type: "string"
-      description:
-        "Set how Airbyte handles syncs when it detects a non-breaking schema\
+      description: "Set how Airbyte handles syncs when it detects a non-breaking schema\
         \ change in the source"
       enum:
-        - "ignore"
-        - "disable_connection"
-        - "propagate_columns"
-        - "propagate_fully"
+      - "ignore"
+      - "disable_connection"
+      - "propagate_columns"
+      - "propagate_fully"
       x-speakeasy-component: true
     DestinationResponse:
       title: "Root Type for DestinationResponse"
       description: "Provides details of a single destination."
       type: "object"
       required:
-        - "destinationId"
-        - "name"
-        - "destinationType"
-        - "definitionId"
-        - "workspaceId"
-        - "configuration"
+      - "destinationId"
+      - "name"
+      - "destinationType"
+      - "definitionId"
+      - "workspaceId"
+      - "configuration"
+      - "createdAt"
       properties:
         destinationId:
           format: "UUID"
@@ -842,6 +1026,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -854,12 +1041,13 @@ components:
       description: "Provides details of a single source."
       type: "object"
       required:
-        - "sourceId"
-        - "name"
-        - "sourceType"
-        - "workspaceId"
-        - "configuration"
-        - "definitionId"
+      - "sourceId"
+      - "name"
+      - "sourceType"
+      - "workspaceId"
+      - "configuration"
+      - "definitionId"
+      - "createdAt"
       properties:
         sourceId:
           format: "UUID"
@@ -876,6 +1064,9 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        createdAt:
+          format: "int64"
+          type: "integer"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -888,10 +1079,10 @@ components:
       description: "Provides details of a single connector definition."
       type: "object"
       required:
-        - "id"
-        - "connectorDefinitionType"
-        - "name"
-        - "version"
+      - "id"
+      - "connectorDefinitionType"
+      - "name"
+      - "version"
       properties:
         id:
           format: "UUID"
@@ -911,22 +1102,21 @@ components:
     ConnectorType:
       type: "string"
       enum:
-        - "source"
-        - "destination"
+      - "source"
+      - "destination"
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
-        - "name"
-        - "workspaceId"
-        - "configuration"
+      - "name"
+      - "workspaceId"
+      - "configuration"
       type: "object"
       properties:
         name:
           description: "Name of the destination e.g. dev-mysql-instance."
           type: "string"
         definitionId:
-          description:
-            "The UUID of the connector definition. One of configuration.destinationType\
+          description: "The UUID of the connector definition. One of configuration.destinationType\
             \ or definitionId must be provided."
           format: "uuid"
           type: "string"
@@ -952,8 +1142,8 @@ components:
       x-speakeasy-component: true
     DestinationPutRequest:
       required:
-        - "name"
-        - "configuration"
+      - "name"
+      - "configuration"
       type: "object"
       properties:
         name:
@@ -966,7 +1156,7 @@ components:
       x-speakeasy-component: true
     WorkspaceCreateRequest:
       required:
-        - "name"
+      - "name"
       type: "object"
       properties:
         name:
@@ -981,7 +1171,7 @@ components:
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
       required:
-        - "name"
+      - "name"
       type: "object"
       properties:
         name:
@@ -995,9 +1185,9 @@ components:
       description: "Provides details of a single workspace."
       type: "object"
       required:
-        - "workspaceId"
-        - "name"
-        - "dataResidency"
+      - "workspaceId"
+      - "name"
+      - "dataResidency"
       properties:
         workspaceId:
           format: "UUID"
@@ -1014,9 +1204,9 @@ components:
       description: "Provides details of a single user in an organization."
       type: "object"
       required:
-        - "id"
-        - "name"
-        - "email"
+      - "id"
+      - "name"
+      - "email"
       properties:
         name:
           description: "Name of the user"
@@ -1033,7 +1223,7 @@ components:
       title: "Root Type for UsersResponse"
       description: "List/Array of multiple users in an organization"
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         data:
@@ -1045,8 +1235,8 @@ components:
       x-speakeasy-param-suppress-computed-diff: true
     PermissionCreateRequest:
       required:
-        - "permissionType"
-        - "userId"
+      - "permissionType"
+      - "userId"
       type: "object"
       properties:
         permissionType:
@@ -1062,7 +1252,7 @@ components:
       x-speakeasy-component: true
     PermissionUpdateRequest:
       required:
-        - "permissionType"
+      - "permissionType"
       type: "object"
       properties:
         permissionType:
@@ -1075,9 +1265,9 @@ components:
       description: "Provides details of a single permission."
       type: "object"
       required:
-        - "permissionId"
-        - "permissionType"
-        - "userId"
+      - "permissionId"
+      - "permissionType"
+      - "userId"
       properties:
         permissionId:
           type: "string"
@@ -1097,20 +1287,20 @@ components:
       description: "Scope of a single permission, e.g. workspace, organization"
       type: "string"
       enum:
-        - "workspace"
-        - "organization"
-        - "none"
+      - "workspace"
+      - "organization"
+      - "none"
       x-speakeasy-component: true
     PermissionResponseRead:
       title: "Root type for PermissionResponseRead"
       description: "Reformat PermissionResponse with permission scope"
       type: "object"
       required:
-        - "permissionId"
-        - "permissionType"
-        - "userId"
-        - "scope"
-        - "scopeId"
+      - "permissionId"
+      - "permissionType"
+      - "userId"
+      - "scope"
+      - "scopeId"
       properties:
         permissionId:
           type: "string"
@@ -1131,7 +1321,7 @@ components:
       title: "Root Type for PermissionsResponse"
       description: "List/Array of multiple permissions"
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         data:
@@ -1144,9 +1334,9 @@ components:
       description: "Provides details of a single organization for a user."
       type: "object"
       required:
-        - "organizationId"
-        - "organizationName"
-        - "email"
+      - "organizationId"
+      - "organizationName"
+      - "email"
       properties:
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
@@ -1161,7 +1351,7 @@ components:
       title: "Root Type for OrganizationsResponse"
       description: "List/Array of multiple organizations."
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         data:
@@ -1173,7 +1363,7 @@ components:
       title: "Root Type for ConnectionsResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         previous:
@@ -1189,20 +1379,20 @@ components:
         next: "https://api.airbyte.com/v1/connections?limit=5&offset=10"
         previous: "https://api.airbyte.com/v1/connections?limit=5&offset=0"
         data:
-          - name: "test-connection"
-          - connection_id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
-          - sourceId: "49237019-645d-47d4-b45b-5eddf97775ce"
-          - destinationId: "al312fs-0ab1-4f72-9ed7-0b8fc27c5826"
-          - schedule:
-              scheduleType: "manual"
-          - status: "active"
-          - dataResidency: "auto"
+        - name: "test-connection"
+        - connection_id: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+        - sourceId: "49237019-645d-47d4-b45b-5eddf97775ce"
+        - destinationId: "al312fs-0ab1-4f72-9ed7-0b8fc27c5826"
+        - schedule:
+            scheduleType: "manual"
+        - status: "active"
+        - dataResidency: "auto"
       x-speakeasy-component: true
     SourcesResponse:
       title: "Root Type for SourcesResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         previous:
@@ -1226,7 +1416,7 @@ components:
       title: "Root Type for DestinationsResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         previous:
@@ -1250,7 +1440,7 @@ components:
       title: "Root Type for DefinitionsResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         data:
@@ -1262,7 +1452,7 @@ components:
       title: "Root Type for WorkspacesResponse"
       description: ""
       required:
-        - "data"
+      - "data"
       type: "object"
       properties:
         previous:
@@ -1285,23 +1475,21 @@ components:
       description: "Configurations for a single stream."
       type: "object"
       required:
-        - "name"
+      - "name"
       properties:
         name:
           type: "string"
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
-          description:
-            "Path to the field that will be used to determine if a record\
+          description: "Path to the field that will be used to determine if a record\
             \ is new or modified since the last sync. This field is REQUIRED if `sync_mode`\
             \ is `incremental` unless there is a default."
           type: "array"
           items:
             type: "string"
         primaryKey:
-          description:
-            "Paths to the fields that will be used as primary key. This\
+          description: "Paths to the fields that will be used as primary key. This\
             \ field is REQUIRED if `destination_sync_mode` is `*_dedup` unless it\
             \ is already supplied by the source schema."
           type: "array"
@@ -1310,13 +1498,11 @@ components:
             items:
               type: "string"
         selectedFields:
-          description:
-            "By default (if not provided in the request) all fields will\
+          description: "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
           $ref: "#/components/schemas/SelectedFields"
         mappers:
-          description:
-            "Mappers that should be applied to the stream before writing\
+          description: "Mappers that should be applied to the stream before writing\
             \ to the destination."
           type: "array"
           items:
@@ -1368,16 +1554,16 @@ components:
       x-speakeasy-component: true
     ConnectionSyncModeEnum:
       enum:
-        - "full_refresh_overwrite"
-        - "full_refresh_append"
-        - "incremental_append"
-        - "incremental_deduped_history"
+      - "full_refresh_overwrite"
+      - "full_refresh_append"
+      - "incremental_append"
+      - "incremental_deduped_history"
       x-speakeasy-component: true
     ActorTypeEnum:
       description: "Whether you're setting this override for a source or destination"
       enum:
-        - "source"
-        - "destination"
+      - "source"
+      - "destination"
       x-speakeasy-component: true
     shopify:
       properties:
@@ -1426,6 +1612,21 @@ components:
               description: "The Client Secret of your Drift developer application."
               airbyte_secret: true
       title: null
+    snapchat-marketing:
+      properties:
+        client_id:
+          type: "string"
+          description: "The Client ID of your Snapchat developer application."
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+        client_secret:
+          type: "string"
+          description: "The Client Secret of your Snapchat developer application."
+          order: 1
+          title: "Client Secret"
+          airbyte_secret: true
+      title: null
     gitlab:
       properties:
         credentials:
@@ -1461,15 +1662,13 @@ components:
             client_id:
               title: "Client ID"
               type: "string"
-              description:
-                "The Client ID of your Notion integration. See our <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
+              description: "The Client ID of your Notion integration. See our <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
                 \ for more information."
               airbyte_secret: true
             client_secret:
               title: "Client Secret"
               type: "string"
-              description:
-                "The Client Secret of your Notion integration. See our\
+              description: "The Client Secret of your Notion integration. See our\
                 \ <a href='https://docs.airbyte.com/integrations/sources/notion#step-2-set-permissions-and-acquire-authorization-credentials'>docs</a>\
                 \ for more information."
               airbyte_secret: true
@@ -1511,16 +1710,14 @@ components:
             client_id:
               type: "string"
               title: "Client ID"
-              description:
-                "The client ID of your developer application. Refer to\
+              description: "The client ID of your developer application. Refer to\
                 \ our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
                 \ for more information."
               airbyte_secret: true
             client_secret:
               type: "string"
               title: "Client Secret"
-              description:
-                "The client secret of your developer application. Refer\
+              description: "The client secret of your developer application. Refer\
                 \ to our <a href='https://docs.airbyte.com/integrations/sources/linkedin-ads#setup-guide'>documentation</a>\
                 \ for more information."
               airbyte_secret: true
@@ -1561,22 +1758,20 @@ components:
           properties:
             client_id:
               title: "Client ID"
-              description:
-                "The Client ID of your HubSpot developer application. See\
+              description: "The Client ID of your HubSpot developer application. See\
                 \ the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
                 >Hubspot docs</a> if you need help finding this ID."
               type: "string"
               examples:
-                - "123456789000"
+              - "123456789000"
             client_secret:
               title: "Client Secret"
-              description:
-                "The client secret for your HubSpot developer application.\
+              description: "The client secret for your HubSpot developer application.\
                 \ See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\"\
                 >Hubspot docs</a> if you need help finding this secret."
               type: "string"
               examples:
-                - "secret"
+              - "secret"
               airbyte_secret: true
       title: "HubSpot Source Spec"
     typeform:
@@ -1613,23 +1808,21 @@ components:
       properties:
         client_id:
           title: "Client ID"
-          description:
-            "The client ID of your Amazon Ads developer application. See\
+          description: "The client ID of your Amazon Ads developer application. See\
             \ the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
             >docs</a> for more information."
+          airbyte_secret: true
           order: 1
           type: "string"
-          airbyte_secret: true
         client_secret:
           title: "Client Secret"
-          description:
-            "The client secret of your Amazon Ads developer application.\
+          description: "The client secret of your Amazon Ads developer application.\
             \ See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\"\
             >docs</a> for more information."
           airbyte_secret: true
           order: 2
           type: "string"
-      title: "Amazon Ads Spec"
+      title: "Source Amazon Ads"
     github:
       properties:
         credentials:
@@ -1649,15 +1842,13 @@ components:
       properties:
         client_id:
           title: "Client ID"
-          description:
-            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
             >Client ID</a>"
           type: "string"
           order: 2
         client_secret:
           title: "Client Secret"
-          description:
-            "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
             >Client secret</a>"
           type: "string"
           airbyte_secret: true
@@ -1732,8 +1923,7 @@ components:
               type: "string"
               title: "Client ID"
               order: 1
-              description:
-                "The Client ID of your Google Ads developer application.\
+              description: "The Client ID of your Google Ads developer application.\
                 \ For detailed instructions on finding this value, refer to our <a\
                 \ href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\"\
                 >documentation</a>."
@@ -1741,8 +1931,7 @@ components:
               type: "string"
               title: "Client Secret"
               order: 2
-              description:
-                "The Client Secret of your Google Ads developer application.\
+              description: "The Client Secret of your Google Ads developer application.\
                 \ For detailed instructions on finding this value, refer to our <a\
                 \ href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\"\
                 >documentation</a>."
@@ -1751,8 +1940,7 @@ components:
               type: "string"
               title: "Developer Token"
               order: 0
-              description:
-                "The Developer Token granted by Google to use their APIs.\
+              description: "The Developer Token granted by Google to use their APIs.\
                 \ For detailed instructions on finding this value, refer to our <a\
                 \ href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\"\
                 >documentation</a>."
@@ -1765,34 +1953,18 @@ components:
             client_id:
               title: "Client ID"
               type: "string"
-              description:
-                "The client ID of your Google Search Console developer\
+              description: "The client ID of your Google Search Console developer\
                 \ application. Read more <a href=\"https://developers.google.com/webmaster-tools/v1/how-tos/authorizing\"\
                 >here</a>."
               airbyte_secret: true
             client_secret:
               title: "Client Secret"
               type: "string"
-              description:
-                "The client secret of your Google Search Console developer\
+              description: "The client secret of your Google Search Console developer\
                 \ application. Read more <a href=\"https://developers.google.com/webmaster-tools/v1/how-tos/authorizing\"\
                 >here</a>."
               airbyte_secret: true
       title: "Google Search Console Spec"
-    retently:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your Retently developer application."
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The Client Secret of your Retently developer application."
-              airbyte_secret: true
-      title: "Retently Api Spec"
     instagram:
       properties:
         client_id:
@@ -1808,21 +1980,6 @@ components:
           airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
-    zendesk-sunshine:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of your OAuth application."
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of your OAuth application."
-              airbyte_secret: true
-      title: null
     snowflake:
       properties:
         credentials:
@@ -1860,14 +2017,12 @@ components:
             client_id:
               type: "string"
               title: "Client ID"
-              description:
-                "Slack client_id. See our <a href=\"https://docs.airbyte.com/integrations/sources/slack\"\
+              description: "Slack client_id. See our <a href=\"https://docs.airbyte.com/integrations/sources/slack\"\
                 >docs</a> if you need help finding this id."
             client_secret:
               type: "string"
               title: "Client Secret"
-              description:
-                "Slack client_secret. See our <a href=\"https://docs.airbyte.com/integrations/sources/slack\"\
+              description: "Slack client_secret. See our <a href=\"https://docs.airbyte.com/integrations/sources/slack\"\
                 >docs</a> if you need help finding this secret."
               airbyte_secret: true
       title: "Slack Spec"
@@ -1878,15 +2033,13 @@ components:
             client_id:
               title: "Client ID"
               type: "string"
-              description:
-                "Enter your Google application's Client ID. See <a href='https://developers.google.com/identity/protocols/oauth2'>Google's\
+              description: "Enter your Google application's Client ID. See <a href='https://developers.google.com/identity/protocols/oauth2'>Google's\
                 \ documentation</a> for more information."
               airbyte_secret: true
             client_secret:
               title: "Client Secret"
               type: "string"
-              description:
-                "Enter your Google application's Client Secret. See <a\
+              description: "Enter your Google application's Client Secret. See <a\
                 \ href='https://developers.google.com/identity/protocols/oauth2'>Google's\
                 \ documentation</a> for more information."
               airbyte_secret: true
@@ -1972,15 +2125,13 @@ components:
             client_id:
               type: "string"
               title: "Client ID"
-              description:
-                "The OAuth client's ID. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\"\
+              description: "The OAuth client's ID. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\"\
                 >this guide</a> for more information."
               airbyte_secret: true
             client_secret:
               type: "string"
               title: "Client Secret"
-              description:
-                "The OAuth client secret. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\"\
+              description: "The OAuth client secret. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\"\
                 >this guide</a> for more information."
               airbyte_secret: true
       title: "Source Zendesk Support Spec"
@@ -2043,8 +2194,7 @@ components:
         client_secret:
           type: "string"
           title: "Client Secret"
-          description:
-            "The Client Secret of your Microsoft Advertising developer\
+          description: "The Client Secret of your Microsoft Advertising developer\
             \ application."
           default: ""
           airbyte_secret: true
@@ -2157,8 +2307,6 @@ components:
           $ref: "#/components/schemas/pinterest"
         - title: rd-station-marketing
           $ref: "#/components/schemas/rd-station-marketing"
-        - title: retently
-          $ref: "#/components/schemas/retently"
         - title: salesforce
           $ref: "#/components/schemas/salesforce"
         - title: shopify
@@ -2167,6 +2315,8 @@ components:
           $ref: "#/components/schemas/slack"
         - title: smartsheets
           $ref: "#/components/schemas/smartsheets"
+        - title: snapchat-marketing
+          $ref: "#/components/schemas/snapchat-marketing"
         - title: snowflake
           $ref: "#/components/schemas/snowflake"
         - title: surveymonkey
@@ -2181,8 +2331,6 @@ components:
           $ref: "#/components/schemas/youtube-analytics"
         - title: zendesk-chat
           $ref: "#/components/schemas/zendesk-chat"
-        - title: zendesk-sunshine
-          $ref: "#/components/schemas/zendesk-sunshine"
         - title: zendesk-support
           $ref: "#/components/schemas/zendesk-support"
         - title: zendesk-talk
@@ -2266,10 +2414,10 @@ components:
         - notion
         - pinterest
         - rd-station-marketing
-        - retently
         - salesforce
         - slack
         - smartsheets
+        - snapchat-marketing
         - snowflake
         - surveymonkey
         - tiktok-marketing
@@ -2277,7 +2425,6 @@ components:
         - typeform
         - youtube-analytics
         - zendesk-chat
-        - zendesk-sunshine
         - zendesk-support
         - zendesk-talk
   securitySchemes:

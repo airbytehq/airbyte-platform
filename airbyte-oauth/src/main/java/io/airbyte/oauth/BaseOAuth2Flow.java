@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth;
@@ -99,6 +99,30 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     this.tokenReqContentType = tokenReqContentType;
   }
 
+  /**
+   * Retrieves the content type to be used for the token request.
+   *
+   * @param inputOAuthConfiguration the OAuth configuration as a JsonNode
+   * @return the content type for the token request, which is URL_ENCODED by default
+   */
+  protected TokenRequestContentType getRequestContentType(final JsonNode inputOAuthConfiguration) {
+    return TokenRequestContentType.URL_ENCODED;
+  }
+
+  /**
+   * Generates the consent URL for OAuth2 authentication for a given source.
+   *
+   * @param workspaceId the UUID of the workspace
+   * @param sourceDefinitionId the UUID of the source definition
+   * @param redirectUrl the URL to redirect to after authentication
+   * @param inputOAuthConfiguration the input OAuth configuration as a JsonNode
+   * @param oauthConfigSpecification the OAuth configuration specification
+   * @param sourceOAuthParamConfig the source OAuth parameter configuration as a JsonNode
+   * @return the formatted consent URL as a String
+   * @throws IOException if an I/O error occurs
+   * @throws JsonValidationException if the input OAuth configuration is invalid
+   * @throws ResourceNotFoundProblem if the source OAuth parameter configuration is null
+   */
   @Override
   public String getSourceConsentUrl(final UUID workspaceId,
                                     final UUID sourceDefinitionId,
@@ -122,6 +146,20 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
         Jsons.mergeNodes(inputOAuthConfiguration, getOAuthDeclarativeInputSpec(oauthConfigSpecification)));
   }
 
+  /**
+   * Generates the consent URL for OAuth2 authorization for a destination.
+   *
+   * @param workspaceId the ID of the workspace requesting the consent URL
+   * @param destinationDefinitionId the ID of the destination definition
+   * @param redirectUrl the URL to redirect to after authorization
+   * @param inputOAuthConfiguration the OAuth configuration input provided by the user
+   * @param oauthConfigSpecification the specification for the OAuth configuration
+   * @param destinationOAuthParamConfig the OAuth parameters configuration for the destination
+   * @return the formatted consent URL for OAuth2 authorization
+   * @throws IOException if an I/O error occurs
+   * @throws JsonValidationException if the input OAuth configuration is invalid
+   * @throws ResourceNotFoundProblem if the destination OAuth parameter configuration is not found
+   */
   @Override
   public String getDestinationConsentUrl(final UUID workspaceId,
                                          final UUID destinationDefinitionId,
@@ -203,6 +241,22 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
 
   }
 
+  /**
+   * Completes the OAuth2 flow for a source by validating the input OAuth configuration, handling any
+   * ignored OAuth errors, merging the input configuration with the declarative input specification,
+   * and formatting the OAuth output.
+   *
+   * @param workspaceId the ID of the workspace
+   * @param sourceDefinitionId the ID of the source definition
+   * @param queryParams the query parameters from the OAuth callback
+   * @param redirectUrl the redirect URL used in the OAuth flow
+   * @param inputOAuthConfiguration the input OAuth configuration
+   * @param oauthConfigSpecification the OAuth configuration specification
+   * @param oauthParamConfig the OAuth parameter configuration
+   * @return a map containing the formatted OAuth output
+   * @throws IOException if an I/O error occurs during the OAuth flow
+   * @throws JsonValidationException if the input OAuth configuration is invalid
+   */
   @Override
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
@@ -257,6 +311,22 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
 
   }
 
+  /**
+   * Completes the OAuth flow for a destination by validating the input configuration, handling any
+   * OAuth errors, merging the input configuration with the declarative input specification, and
+   * formatting the OAuth output.
+   *
+   * @param workspaceId the ID of the workspace
+   * @param destinationDefinitionId the ID of the destination definition
+   * @param queryParams the query parameters from the OAuth callback
+   * @param redirectUrl the redirect URL used in the OAuth flow
+   * @param inputOAuthConfiguration the input OAuth configuration
+   * @param oauthConfigSpecification the OAuth configuration specification
+   * @param oauthParamConfig the OAuth parameter configuration
+   * @return a map containing the formatted OAuth output
+   * @throws IOException if an I/O error occurs during the OAuth flow
+   * @throws JsonValidationException if the input OAuth configuration is invalid
+   */
   @Override
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
@@ -363,9 +433,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     return getCompleteOAuthFlowOutput(
         formatAccessTokenUrl(
             getAccessTokenUrl(inputOAuthConfiguration), clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, state),
-        getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
+        getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl, state, inputOAuthConfiguration),
         getCompleteOAuthFlowRequestHeaders(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration),
-        tokenReqContentType,
+        getRequestContentType(inputOAuthConfiguration),
         inputOAuthConfiguration);
 
   }
@@ -398,6 +468,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                               final String clientSecret,
                                                               final String authCode,
                                                               final String redirectUrl,
+                                                              final String state,
                                                               final JsonNode inputOAuthConfiguration) {
     return getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl);
   }

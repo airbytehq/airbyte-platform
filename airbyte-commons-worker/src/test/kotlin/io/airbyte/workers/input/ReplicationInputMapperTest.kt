@@ -87,6 +87,7 @@ class ReplicationInputMapperTest {
         null,
         ConnectionContext().withOrganizationId(UUID.randomUUID()),
         null,
+        emptyList(),
       )
     }
 

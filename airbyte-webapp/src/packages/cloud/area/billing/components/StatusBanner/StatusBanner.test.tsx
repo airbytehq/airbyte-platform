@@ -18,11 +18,6 @@ jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceLink: jest.fn().mockReturnValue((link: string) => link),
 }));
 
-// We just mock out the legacy workspace banner, since that file has its own tests
-jest.mock("./LegacyStatusBanner/WorkspaceStatusBanner", () => ({
-  WorkspaceStatusBanner: () => <div data-testid="mockLegacyWorkspaceBanner" />,
-}));
-
 jest.mock("core/api/cloud", () => ({
   useGetCloudWorkspaceAsync: jest.fn().mockReturnValue({
     workspaceId: "workspace-1",
@@ -39,7 +34,6 @@ const mockOrgInfo = (billing: WorkspaceOrganizationInfoReadBilling | undefined) 
     organizationId: "org-1",
     organizationName: "org name",
     sso: false,
-    pba: false,
     billing,
   });
 };
@@ -62,14 +56,8 @@ const mockGeneratedIntent = (options: { canViewTrialStatus: boolean; canManageOr
 };
 
 describe("StatusBanner", () => {
-  it("should render legacy banner if no billing information is available", async () => {
-    mockOrgInfo(undefined);
-    const wrapper = await render(<StatusBanner />);
-    expect(wrapper.getByTestId("mockLegacyWorkspaceBanner")).toBeInTheDocument();
-  });
-
   it("should render nothing with paymentStatus=OKAY and not in trial", async () => {
-    mockOrgInfo({ paymentStatus: "okay" });
+    mockOrgInfo({ paymentStatus: "okay", subscriptionStatus: "subscribed" });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
@@ -200,7 +188,16 @@ describe("StatusBanner", () => {
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
     const wrapper = await render(<StatusBanner />);
-    expect(wrapper.container.textContent).toContain("Enter payment details");
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
+    expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("should render post-trial banner w/o link if unsubscribed", async () => {
+    mockOrgInfo({ paymentStatus: "okay", subscriptionStatus: "unsubscribed" });
+    mockTrialStatus({ trialStatus: "post_trial" });
+    mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
+    const wrapper = await render(<StatusBanner />);
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
     expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
   });
 
@@ -209,7 +206,7 @@ describe("StatusBanner", () => {
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
-    expect(wrapper.container.textContent).toContain("Enter payment details");
+    expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
   });
 

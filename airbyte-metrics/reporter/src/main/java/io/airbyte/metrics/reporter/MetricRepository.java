@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
@@ -15,12 +15,15 @@ import static org.jooq.impl.SQLDataType.VARCHAR;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
+import io.airbyte.metrics.reporter.model.LongRunningJobMetadata;
 import jakarta.inject.Singleton;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.RecordMapper;
 import org.jooq.impl.DSL;
 
 @Singleton
@@ -221,17 +224,18 @@ class MetricRepository {
         + ctx.fetchOne(queryForAbnormalSyncInMinutesInLastDay).get("cnt", long.class);
   }
 
-  long numberOfJobsRunningUnusuallyLong() {
+  List<LongRunningJobMetadata> unusuallyLongRunningJobs() {
     // Definition of unusually long means runtime is more than 2x historic avg run time or 15
     // minutes more than avg run time, whichever is greater.
     // It will skip jobs with fewer than 4 runs in last week to make sure the historic avg run is
     // meaningful and consistent.
     final var query =
         """
-        -- pick average running time and last sync running time in attempts table.
-          select
+        select
             current_running_attempts.connection_id,
-            current_running_attempts.running_time,
+            current_running_attempts.source_image,
+            current_running_attempts.dest_image,
+            current_running_attempts.running_time_sec,
             historic_avg_running_attempts.avg_run_sec
             from
               (
@@ -239,7 +243,9 @@ class MetricRepository {
                 (
                   select
                     jobs.scope as connection_id,
-                    extract(epoch from age(NOW(), attempts.created_at)) as running_time
+                    extract(epoch from age(NOW(), attempts.created_at)) as running_time_sec,
+                    jobs.config->'sync'->>'sourceDockerImage' as source_image,
+                    jobs.config->'sync'->>'destinationDockerImage' as dest_image
                   from
                     jobs
                   join attempts on
@@ -247,8 +253,8 @@ class MetricRepository {
                   where
                     jobs.status = 'running'
                     and attempts.status = 'running'
-                    and jobs.config_type = 'sync' )
-                        as current_running_attempts
+                    and jobs.config_type = 'sync'
+                  ) as current_running_attempts
               join
             -- Sub-query-2: query historic attempts' average running time within last week.
                 (
@@ -275,13 +281,27 @@ class MetricRepository {
           where
           -- Find if currently running time takes 2x more time than average running time,
           -- and it's 15 minutes (900 seconds) more than average running time so it won't alert on noises for quick sync jobs.
-            current_running_attempts.running_time > greatest(
+            current_running_attempts.running_time_sec > greatest(
               historic_avg_running_attempts.avg_run_sec * 2,
               historic_avg_running_attempts.avg_run_sec + 900
             )
         """;
     final var queryResults = ctx.fetch(query);
-    return queryResults.getValues("connection_id").size();
+    return queryResults.map(new RecordMapper<Record, LongRunningJobMetadata>() {
+
+      @Override
+      public LongRunningJobMetadata map(final Record rec) {
+        try {
+          return new LongRunningJobMetadata(
+              rec.getValue("source_image").toString(),
+              rec.getValue("dest_image").toString(),
+              rec.getValue("connection_id").toString());
+        } catch (final Exception e) {
+          return null;
+        }
+      }
+
+    });
   }
 
   Map<JobStatus, Double> overallJobRuntimeForTerminalJobsInLastHour() {

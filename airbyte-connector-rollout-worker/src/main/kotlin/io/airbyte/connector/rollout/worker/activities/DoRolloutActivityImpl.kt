@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker.activities
@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutResponse
-import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -33,7 +32,7 @@ class DoRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : Do
     val body =
       ConnectorRolloutRequestBody(
         input.rolloutId,
-        ConnectorRolloutStrategy.MANUAL,
+        getRolloutStrategyFromInput(input.rolloutStrategy),
         input.actorIds,
         input.targetPercentage,
         input.updatedBy,

@@ -75,7 +75,6 @@ class WorkloadClientTest {
         labels = ArrayList(),
         workloadInput = "",
         logPath = "",
-        geography = "",
         type = WorkloadType.CHECK,
         priority = WorkloadPriority.DEFAULT,
       )

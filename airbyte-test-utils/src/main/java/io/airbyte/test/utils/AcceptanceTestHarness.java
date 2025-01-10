@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.utils;
@@ -100,6 +100,8 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -1412,6 +1414,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null);
   }
 
@@ -1421,6 +1424,10 @@ public class AcceptanceTestHarness {
 
   private static String generateRandomCloudSqlDatabaseName() {
     return CLOUD_SQL_DATABASE_PREFIX + UUID.randomUUID();
+  }
+
+  public <T> TestFlagsSetter.FlagOverride<T> withFlag(final Flag<T> flag, final Context context, final T value) {
+    return testFlagsSetter.withFlag(flag, value, context);
   }
 
 }

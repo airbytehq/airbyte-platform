@@ -7,7 +7,18 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
   "development.yaml": |
-    # when modifying, remember to update the docker-compose version of this file in temporal/dynamicconfig/development.yaml
+    frontend.namespaceCount:
+      - value: 4096
+        constraints: {}
+    frontend.namespaceRPS.visibility:
+      - value: 100
+        constraints: {}
+    frontend.namespaceBurst.visibility:
+      - value: 150
+        constraints: {}
+    frontend.namespaceRPS:
+      - value: 76800
+        constraints: {}
     frontend.enableClientVersionCheck:
       - value: true
         constraints: {}
@@ -15,13 +26,13 @@ data:
       - value: 3000
         constraints: {}
     frontend.persistenceMaxQPS:
-      - value: 3000
+      - value: 5000
         constraints: {}
     frontend.historyMgrNumConns:
       - value: 30
         constraints: {}
     frontend.throttledLogRPS:
-      - value: 20
+      - value: 200
         constraints: {}
     frontend.enableUpdateWorkflowExecution:
       - value: true

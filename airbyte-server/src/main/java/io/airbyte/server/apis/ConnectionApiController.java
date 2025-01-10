@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -56,6 +56,7 @@ import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.services.ConnectionService;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
@@ -68,14 +69,13 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@Slf4j
 public class ConnectionApiController implements ConnectionApi {
 
   private final ConnectionsHandler connectionsHandler;
@@ -85,6 +85,7 @@ public class ConnectionApiController implements ConnectionApi {
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final JobHistoryHandler jobHistoryHandler;
+  private final ConnectionService connectionService;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
@@ -92,7 +93,8 @@ public class ConnectionApiController implements ConnectionApi {
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
                                  final StreamRefreshesHandler streamRefreshesHandler,
-                                 final JobHistoryHandler jobHistoryHandler) {
+                                 final JobHistoryHandler jobHistoryHandler,
+                                 final ConnectionService connectionService) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
@@ -100,6 +102,7 @@ public class ConnectionApiController implements ConnectionApi {
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.jobHistoryHandler = jobHistoryHandler;
+    this.connectionService = connectionService;
   }
 
   @Override
@@ -107,7 +110,10 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
+    return ApiHelper.execute(() -> {
+      final boolean wasDisabled = connectionService.warnOrDisableForConsecutiveFailures(connectionIdRequestBody.getConnectionId(), Instant.now());
+      return new InternalOperationResult().succeeded(wasDisabled);
+    });
   }
 
   @Override

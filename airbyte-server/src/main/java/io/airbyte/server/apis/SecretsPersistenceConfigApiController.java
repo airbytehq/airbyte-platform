@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -28,12 +28,10 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.Objects;
-import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("PMD.PreserveStackTrace")
 @Controller("/api/v1/secrets_persistence_config")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@Slf4j
 public class SecretsPersistenceConfigApiController implements SecretsPersistenceConfigApi {
 
   private final WorkspaceService workspaceService;

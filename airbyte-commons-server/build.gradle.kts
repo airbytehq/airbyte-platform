@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -28,7 +26,6 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
   implementation(libs.bundles.apache)
-  implementation(libs.slugify)
   implementation(libs.quartz.scheduler)
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
@@ -39,6 +36,7 @@ dependencies {
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)
   implementation(libs.guava)
+  implementation(libs.cron.utils)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))

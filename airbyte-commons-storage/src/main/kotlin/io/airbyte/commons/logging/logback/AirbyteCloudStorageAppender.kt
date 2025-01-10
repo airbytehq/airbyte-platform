@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging.logback
@@ -195,12 +195,14 @@ internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucke
     state = "",
     workloadOutput = "",
     activityPayload = "",
+    auditLogging = storageConfig[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING] ?: "",
   )
 
 private fun buildStorageConfig(): Map<EnvVar, String> =
   mapOf(
     EnvVar.STORAGE_TYPE to EnvVar.STORAGE_TYPE.fetchNotNull(),
     EnvVar.STORAGE_BUCKET_LOG to EnvVar.STORAGE_BUCKET_LOG.fetchNotNull(),
+    EnvVar.STORAGE_BUCKET_AUDIT_LOGGING to EnvVar.STORAGE_BUCKET_AUDIT_LOGGING.fetchNotNull(),
     EnvVar.AZURE_STORAGE_CONNECTION_STRING to EnvVar.AZURE_STORAGE_CONNECTION_STRING.fetchNotNull(),
     EnvVar.GOOGLE_APPLICATION_CREDENTIALS to EnvVar.GOOGLE_APPLICATION_CREDENTIALS.fetchNotNull(),
     EnvVar.AWS_ACCESS_KEY_ID to EnvVar.AWS_ACCESS_KEY_ID.fetchNotNull(),

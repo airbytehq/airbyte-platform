@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -354,6 +354,7 @@ public class AttemptHandler {
 
     final Job job = jobPersistence.getJob(jobId);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.emitAttemptCompletedEventIfAttemptPresent(job);
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
   }
 
