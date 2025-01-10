@@ -27,6 +27,29 @@ pluginManagement {
   }
 }
 
+buildscript {
+  dependencies {
+    classpath("com.bmuschko:gradle-docker-plugin:8.0.0")
+    // Plugin `com.bmuschko:gradle-docker-plugin:8.0.0` transitively depends on jackson 2.10.3,
+    // which is not binary compatible with jackson 2.14 that is used elsewhere.
+    // This causes `NoSuchMethodError` exceptions while building.
+    //
+    // Dependency chain:
+    // `com.bmuschko:gradle-docker-plugin:8.0.0` ->
+    // `com.github.docker-java:docker-java-core:3.2.14` ->
+    // `com.fasterxml.jackson.core:jackson-databind:2.10.3`
+    //
+    // As this is a third-party dependency, we cannot (without forking) update it to use a newer jackson version.
+    // There is however a PR that was created to update this version to the latest jackson version:
+    // https://github.com/docker-java/docker-java/pull/2056
+    //
+    // TODO: once oss has been inlined, revisit where the version of jackson is defined.
+    classpath("com.fasterxml.jackson.core:jackson-core:2.14.2")
+
+    classpath("org.codehaus.groovy:groovy-yaml:3.0.3")
+  }
+}
+
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
