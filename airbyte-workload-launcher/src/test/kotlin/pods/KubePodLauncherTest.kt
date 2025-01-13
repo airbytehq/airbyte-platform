@@ -303,7 +303,7 @@ class KubePodLauncherTest {
     every { pods.inNamespace(any()) } returns namespaceable
     every { namespaceable.withLabels(any()) } returns labels
     every { labels.waitUntilCondition(any(), any(), any()) } throws
-      KubernetesClientTimeoutException(hasMetadata, 2L, TimeUnit.SECONDS)
+      RuntimeException()
     every { kubernetesClient.pods() } returns pods
 
     val kubePodLauncher =
@@ -316,7 +316,7 @@ class KubePodLauncherTest {
         null,
       )
 
-    assertThrows<KubernetesClientException> {
+    assertThrows<RuntimeException> {
       kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
     }
     assertEquals(0, counter.get())
