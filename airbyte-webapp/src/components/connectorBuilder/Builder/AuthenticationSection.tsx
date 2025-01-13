@@ -1,10 +1,11 @@
 import { ComponentProps, useCallback } from "react";
 import { useFormContext, useController } from "react-hook-form";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
+import { Message } from "components/ui/Message";
 
 import {
   HttpRequesterAuthenticator,
@@ -13,6 +14,7 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
+import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
 import {
   useInitializedBuilderProject,
   useConnectorBuilderFormState,
@@ -333,6 +335,7 @@ const DeclarativeOAuthForm = () => {
           setValue("testingValues", response);
         }}
       />
+      <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
       <BuilderField
