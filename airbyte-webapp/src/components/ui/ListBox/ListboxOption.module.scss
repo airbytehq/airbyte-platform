@@ -1,0 +1,24 @@
+@use "scss/colors";
+
+.listboxOption {
+  list-style-type: none;
+  background: colors.$foreground;
+  user-select: none;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible,
+  &[data-focus] {
+    background-color: colors.$grey-50;
+  }
+
+  &[aria-selected="true"] {
+    background-color: colors.$blue-50;
+
+    &:hover,
+    &:focus-visible,
+    &[data-focus] {
+      background-color: colors.$grey-50;
+    }
+  }
+}

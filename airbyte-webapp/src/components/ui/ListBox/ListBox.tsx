@@ -15,6 +15,7 @@ import { IndexLocationWithAlign, Virtuoso, VirtuosoHandle } from "react-virtuoso
 import { Text } from "components/ui/Text";
 
 import styles from "./ListBox.module.scss";
+import { Option } from "./Option";
 import { FlexContainer, FlexItem } from "../Flex";
 import { Icon } from "../Icon";
 
@@ -50,14 +51,6 @@ const DefaultControlButton = <T,>({ placeholder, selectedOption, isDisabled }: L
     </>
   );
 };
-
-export interface Option<T> {
-  label: React.ReactNode;
-  value: T;
-  icon?: React.ReactNode;
-  disabled?: boolean;
-  "data-testid"?: string;
-}
 
 export interface ListBoxProps<T> {
   className?: string;

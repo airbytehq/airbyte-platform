@@ -205,9 +205,6 @@ dependencies:
   react-virtuoso:
     specifier: ^4.7.11
     version: 4.7.11(react-dom@18.2.0)(react@18.2.0)
-  react-widgets:
-    specifier: ^4.6.1
-    version: 4.6.1(react-dom@18.2.0)(react@18.2.0)
   recharts:
     specifier: ^2.1.13
     version: 2.3.2(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
@@ -366,9 +363,6 @@ devDependencies:
   '@types/react-table':
     specifier: ^7.7.17
     version: 7.7.17
-  '@types/react-widgets':
-    specifier: ^4.4.10
-    version: 4.4.10
   '@types/sanitize-html':
     specifier: ^2.9.3
     version: 2.9.3
@@ -6675,12 +6669,6 @@ packages:
       '@types/react': 18.2.34
     dev: false
 
-  /@types/react-widgets@4.4.10:
-    resolution: {integrity: sha512-KkwqTPYh8ZgF/tQqkBTRCteTMMmuFuHhweomIk3sululnAy6cXAqXoNMSK1uupRbcwhpghKBR0EdQeORvcjQ6Q==}
-    dependencies:
-      '@types/react': 18.2.34
-    dev: true
-
   /@types/react@18.2.34:
     resolution: {integrity: sha512-U6eW/alrRk37FU/MS2RYMjx0Va2JGIVXELTODaTIYgvWGCV4Y4TfTUzG8DdmpDNIT0Xpj/R7GfyHOJJrDttcvg==}
     dependencies:
@@ -8653,10 +8641,6 @@ packages:
       whatwg-mimetype: 3.0.0
       whatwg-url: 11.0.0
     dev: true
-
-  /date-arithmetic@3.1.0:
-    resolution: {integrity: sha512-ynlmvduDVuzwDDYW3OF4RHCikdzegg0vWQtzwjiVKPs/RjZ93b/7AxIwhfZKxSQQFA8l9lwhkyeDVQyrzbPUwA==}
-    dev: false
 
   /date-fns@2.29.3:
     resolution: {integrity: sha512-dDCnyH2WnnKusqvZZ6+jA1O51Ibt8ZMRNkDZdyAyK4YfbDwa/cEmuztzG5pk6hqlp9aSBPYcjOlktquahGwGeA==}
@@ -14906,16 +14890,6 @@ packages:
       sisteransi: 1.0.5
     dev: true
 
-  /prop-types-extra@1.1.1(react@18.2.0):
-    resolution: {integrity: sha512-59+AHNnHYCdiC+vMwY52WmvP5dM3QLeoumYuEyceQDi9aEhtwN9zIQ2ZNo25sMyXnbh32h+P1ezDsUpUH3JAew==}
-    peerDependencies:
-      react: '>=0.14.0'
-    dependencies:
-      react: 18.2.0
-      react-is: 16.13.1
-      warning: 4.0.3
-    dev: false
-
   /prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
     dependencies:
@@ -15106,18 +15080,6 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: true
-
-  /react-component-managers@3.2.2(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-SqtB09hS1ir0koBNybvNbNAB3k/r7IbIGbXSxvkkTV0m50s+4oJ59KYsbPAQ/2DhE169Rc5V26d674EcGcDbGA==}
-    peerDependencies:
-      react: '>=15.3.0'
-      react-dom: '>=15.3.0'
-    dependencies:
-      prop-types: 15.8.1
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-      spy-on-component: 1.1.3
-    dev: false
 
   /react-datepicker@4.8.0(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-u69zXGHMpxAa4LeYR83vucQoUCJQ6m/WBsSxmUMu/M8ahTSVMMyiyQzauHgZA2NUr9y0FUgOAix71hGYUb6tvg==}
@@ -15632,26 +15594,6 @@ packages:
     dependencies:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-    dev: false
-
-  /react-widgets@4.6.1(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-x2n4EFQnk1ZG2rWsdekGK3js091k+b06e0CRI4pDEZ0uh/cft3NyGFKS5/x7CV/fN51kHMaM4r5IRGIbPfsLLw==}
-    peerDependencies:
-      react: '>=0.14.0'
-      react-dom: '>=0.14.0'
-    dependencies:
-      classnames: 2.3.2
-      date-arithmetic: 3.1.0
-      dom-helpers: 3.4.0
-      invariant: 2.2.4
-      prop-types-extra: 1.1.1(react@18.2.0)
-      react: 18.2.0
-      react-component-managers: 3.2.2(react-dom@18.2.0)(react@18.2.0)
-      react-dom: 18.2.0(react@18.2.0)
-      react-lifecycles-compat: 3.0.4
-      react-transition-group: 2.9.0(react-dom@18.2.0)(react@18.2.0)
-      uncontrollable: 7.2.1(react@18.2.0)
-      warning: 3.0.0
     dev: false
 
   /react@18.2.0:
@@ -16591,10 +16533,6 @@ packages:
   /sprintf-js@1.0.3:
     resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
     dev: true
-
-  /spy-on-component@1.1.3:
-    resolution: {integrity: sha512-a7jgnoBSdkcDWIQQwtEgUq4etajwG6+wGIjfC9ARUKwKOdHxJd+utgHTgLn81ETizpsw4xddUS3W8VePedtaIQ==}
-    dev: false
 
   /sshpk@1.17.0:
     resolution: {integrity: sha512-/9HIEs1ZXGhSPE8X6Ccm7Nam1z8KcoCqPdI7ecm1N33EzAetWahvQWVqLZtaZQ+IDKX4IyA2o0gBzqIMkAagHQ==}
@@ -17691,18 +17629,6 @@ packages:
       which-boxed-primitive: 1.0.2
     dev: true
 
-  /uncontrollable@7.2.1(react@18.2.0):
-    resolution: {integrity: sha512-svtcfoTADIB0nT9nltgjujTi7BzVmwjZClOmskKu/E8FW9BXzg9os8OLr4f8Dlnk0rYWJIWr4wv9eKUXiQvQwQ==}
-    peerDependencies:
-      react: '>=15.0.0'
-    dependencies:
-      '@babel/runtime': 7.24.6
-      '@types/react': 18.2.34
-      invariant: 2.2.4
-      react: 18.2.0
-      react-lifecycles-compat: 3.0.4
-    dev: false
-
   /undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
     dev: true
@@ -18280,12 +18206,6 @@ packages:
     dependencies:
       makeerror: 1.0.12
     dev: true
-
-  /warning@3.0.0:
-    resolution: {integrity: sha512-jMBt6pUrKn5I+OGgtQ4YZLdhIeJmObddh6CsibPxyQ5yPZm1XExSyzC1LCNX7BzhxWgiHmizBWJTHJIjMjTQYQ==}
-    dependencies:
-      loose-envify: 1.4.0
-    dev: false
 
   /warning@4.0.3:
     resolution: {integrity: sha512-rpJyN222KWIvHJ/F53XSZv0Zl/accqHR8et1kpaMTD/fLCRxtV8iX8czMzY7sVZupTI3zcUTg8eycS2kNF9l6w==}

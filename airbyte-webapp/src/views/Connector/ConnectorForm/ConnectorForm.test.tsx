@@ -396,7 +396,7 @@ describe("Connector form", () => {
     });
 
     it("should display array with items list field", () => {
-      const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
+      const workTime = screen.getByTestId("connectionConfiguration.workTime");
       expect(workTime).toBeInTheDocument();
     });
 
@@ -782,13 +782,10 @@ describe("Connector form", () => {
 
     it("should fill right values in array with items list field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, workTime: undefined } });
-      const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
-      await userEvent.type(workTime!.querySelector("input")!, "day");
-      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
-      await userEvent.type(workTime!.querySelector("input")!, "abc");
-      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
-      await userEvent.type(workTime!.querySelector("input")!, "ni");
-      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
+      const workTimeButton = screen.getByTestId("connectionConfiguration.workTime-button");
+      await userEvent.click(workTimeButton);
+      await waitFor(() => userEvent.click(screen.getByRole("option", { name: "day" })));
+      await waitFor(() => userEvent.click(screen.getByRole("option", { name: "night" })));
 
       await submitForm(container);
 
@@ -797,9 +794,9 @@ describe("Connector form", () => {
 
     it("should add values in array with items list field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm } });
-      const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
-      await userEvent.type(workTime!.querySelector("input")!, "ni");
-      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
+      const workTimeButton = screen.getByTestId("connectionConfiguration.workTime-button");
+      await userEvent.click(workTimeButton);
+      await waitFor(() => userEvent.click(screen.getByRole("option", { name: "night" })));
 
       await submitForm(container);
 
