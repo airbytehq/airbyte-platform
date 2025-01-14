@@ -5,7 +5,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
+import { Box } from "components/ui/Box";
 import { Message } from "components/ui/Message";
+import { Tooltip } from "components/ui/Tooltip";
 
 import {
   HttpRequesterAuthenticator,
@@ -314,37 +316,49 @@ const DeclarativeOAuthForm = () => {
   } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const testingValues = useBuilderWatch("testingValues");
-  const { updateTestingValues } = useConnectorBuilderFormState();
+  const { updateTestingValues, savingState } = useConnectorBuilderFormState();
+
+  const canPerformOauthFlow = savingState === "saved";
 
   const { field: authenticatorScopesField } = useController({ name: authPath("scopes") });
   const { field: authenticatorAccessTokenNameField } = useController({ name: authPath("access_token_name") });
 
   return (
     <>
-      <AuthButtonBuilder
-        builderProjectId={projectId}
-        onComplete={async (payload) => {
-          const response = await updateTestingValues({
-            spec: spec?.connection_specification ?? {},
-            testingValues: {
-              ...testingValues,
-              client_refresh_token: payload.refresh_token,
-            },
-          });
+      <Tooltip
+        disabled={canPerformOauthFlow}
+        control={
+          <AuthButtonBuilder
+            disabled={!canPerformOauthFlow}
+            builderProjectId={projectId}
+            onComplete={async (payload) => {
+              const response = await updateTestingValues({
+                spec: spec?.connection_specification ?? {},
+                testingValues: {
+                  ...testingValues,
+                  client_refresh_token: payload.refresh_token,
+                },
+              });
 
-          setValue("testingValues", response);
-        }}
-      />
-      <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
+              setValue("testingValues", response);
+            }}
+          />
+        }
+      >
+        <FormattedMessage id="connectorBuilder.authentication.oauthButton.disabledTooltip" />
+      </Tooltip>
+      <Box mt="xl">
+        <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
+      </Box>
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
       <BuilderField
-        type="string"
+        type="jinja"
         path={authPath("declarative.consent_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.consent_url"
       />
       <BuilderField
-        type="string"
+        type="jinja"
         path={authPath("declarative.access_token_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_url"
       />

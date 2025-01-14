@@ -102,7 +102,8 @@ export const AuthButton: React.FC<{
 export const AuthButtonBuilder: React.FC<{
   builderProjectId: string;
   onComplete: (authPayload: Record<string, unknown>) => void;
-}> = ({ builderProjectId, onComplete }) => {
+  disabled?: boolean;
+}> = ({ builderProjectId, onComplete, disabled }) => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { loading, done, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
 
@@ -125,9 +126,11 @@ export const AuthButtonBuilder: React.FC<{
   ) : (
     <FormattedMessage id="connectorForm.authenticate" values={{ connector: "" }} />
   );
+
   return (
     <FlexContainer alignItems="center">
       <Component
+        disabled={disabled}
         isLoading={loading}
         type="button"
         data-testid="oauth-button"

@@ -1838,6 +1838,7 @@
   "connectorBuilder.authentication.requestAuthentication.injectInto.tooltip": "Configure how the session token will be sent in requests to the source API",
   "connectorBuilder.authentication.injectInto.token": "token",
   "connectorBuilder.authentication.injectInto.sessionToken": "session token",
+  "connectorBuilder.authentication.oauthButton.disabledTooltip": "Project must be saved before authenticating",
   "connectorBuilder.errorHandler.label": "Error Handler",
   "connectorBuilder.errorHandler.addButton": "Add error handler",
   "connectorBuilder.errorHandler.backoffStrategy.label": "Backoff Strategy",
