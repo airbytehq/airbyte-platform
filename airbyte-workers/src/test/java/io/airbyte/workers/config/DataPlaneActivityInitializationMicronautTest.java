@@ -11,8 +11,6 @@ import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
-import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivityImpl;
 import io.micronaut.context.annotation.Bean;
@@ -58,19 +56,11 @@ class DataPlaneActivityInitializationMicronautTest {
   ConfigFetchActivity configFetchActivity;
 
   @Inject
-  RefreshSchemaActivity refreshSchemaActivity;
-
-  @Inject
   WebhookOperationActivity webhookOperationActivity;
 
   @Test
   void testConfigFetchActivity() {
     assertEquals(ConfigFetchActivityImpl.class, configFetchActivity.getClass());
-  }
-
-  @Test
-  void testRefreshSchemaActivity() {
-    assertEquals(RefreshSchemaActivityImpl.class, refreshSchemaActivity.getClass());
   }
 
   @Test

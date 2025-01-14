@@ -20,14 +20,12 @@ class ReportRunTimeActivityImpl(private val metricClient: MetricClient) : Report
     val connectionTag = MetricAttribute(MetricTags.CONNECTION_ID, input.connectionId.toString())
     val sourceDefinitionTag = MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, input.sourceDefinitionId.toString())
 
-    if (input.shouldRefreshSchema) {
-      metricClient.count(
-        OssMetricsRegistry.DISCOVER_CATALOG_RUN_TIME,
-        runTimeRefresh,
-        connectionTag,
-        sourceDefinitionTag,
-      )
-    }
+    metricClient.count(
+      OssMetricsRegistry.DISCOVER_CATALOG_RUN_TIME,
+      runTimeRefresh,
+      connectionTag,
+      sourceDefinitionTag,
+    )
     metricClient.count(OssMetricsRegistry.REPLICATION_RUN_TIME, runTimeReplication, connectionTag, sourceDefinitionTag)
     metricClient.count(OssMetricsRegistry.SYNC_TOTAL_TIME, totalWorkflowRunTime, connectionTag, sourceDefinitionTag)
   }

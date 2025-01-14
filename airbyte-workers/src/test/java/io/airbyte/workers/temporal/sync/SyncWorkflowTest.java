@@ -81,7 +81,6 @@ class SyncWorkflowTest {
   private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
   private WorkloadStatusCheckActivity workloadStatusCheckActivity;
   private InvokeOperationsActivity invokeOperationsActivity;
-  private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
   private ReportRunTimeActivity reportRunTimeActivity;
 
@@ -146,14 +145,12 @@ class SyncWorkflowTest {
     discoverCatalogHelperActivity = mock(DiscoverCatalogHelperActivityImpl.class);
     workloadStatusCheckActivity = mock(WorkloadStatusCheckActivityImpl.class);
     invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
-    refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
 
     when(discoverCatalogHelperActivity.postprocess(any())).thenReturn(PostprocessCatalogOutput.Companion.success(null));
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
-    when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
     when(configFetchActivity.getStatus(sync.getConnectionId())).thenReturn(Optional.of(ConnectionStatus.ACTIVE));
     when(configFetchActivity.getSourceConfig(SOURCE_ID)).thenReturn(Jsons.emptyObject());
 
@@ -236,7 +233,6 @@ class SyncWorkflowTest {
         discoverCatalogHelperActivity,
         workloadStatusCheckActivity,
         invokeOperationsActivity,
-        refreshSchemaActivity,
         configFetchActivity,
         reportRunTimeActivity);
     testEnv.start();
@@ -332,7 +328,6 @@ class SyncWorkflowTest {
 
   @Test
   void testGetProperFailureIfRefreshFails() throws Exception {
-    when(refreshSchemaActivity.shouldRefreshSchema(any())).thenReturn(true);
     doThrow(new RuntimeException())
         .when(discoverCatalogHelperActivity).postprocess(any());
     final StandardSyncOutput output = execute();

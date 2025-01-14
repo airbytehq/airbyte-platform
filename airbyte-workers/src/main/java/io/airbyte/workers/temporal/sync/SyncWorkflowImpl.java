@@ -72,8 +72,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
-  @TemporalActivityStub(activityOptionsBeanName = "refreshSchemaActivityOptions")
-  private RefreshSchemaActivity refreshSchemaActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -119,10 +117,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final Optional<UUID> sourceId = getSourceId(syncInput);
     final RefreshSchemaActivityOutput refreshSchemaOutput;
-    final int removeShouldRereshSchemaVersion = Workflow.getVersion("REMOVE_SHOULD_REFRESH_SCHEMA", DEFAULT_VERSION, 1);
-    final boolean shouldRefreshSchema = sourceId.isPresent() && removeShouldRereshSchemaVersion == DEFAULT_VERSION
-        ? refreshSchemaActivity.shouldRefreshSchema(sourceId.get())
-        : true;
+
     try {
       final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
       refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig);
@@ -182,12 +177,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               : syncInput.getConnectionContext().getSourceDefinitionId(),
           startTime,
           discoverSchemaEndTime,
-          replicationEndTime,
-          shouldRefreshSchema));
+          replicationEndTime));
     }
 
-    // TODO: remove shouldRefreshSchema on the activity is removed
-    if (shouldRefreshSchema && syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
+    if (syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
       syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaEndTime(discoverSchemaEndTime);
       syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaStartTime(startTime);
     }
