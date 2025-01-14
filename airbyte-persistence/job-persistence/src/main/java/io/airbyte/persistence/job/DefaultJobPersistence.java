@@ -1356,13 +1356,19 @@ public class DefaultJobPersistence implements JobPersistence {
    * @return the last job for the connection including the cancelled jobs
    */
   @Override
-  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException {
+  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException {
+    final String startOfTheQuery = BASE_JOB_SELECT_AND_JOIN + WHERE
+        + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        + SCOPE_WITHOUT_AND_CLAUSE;
+
+    final String endOfTheQuery = withScheduledOnly ? AND + "is_scheduled = true "
+        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1
+        : ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
+
+    final String query = startOfTheQuery + endOfTheQuery;
+
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
-            + SCOPE_WITHOUT_AND_CLAUSE
-            + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
-            connectionId.toString())
+        .fetch(query, connectionId.toString())
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));

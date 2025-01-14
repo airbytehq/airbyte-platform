@@ -382,7 +382,7 @@ public interface JobPersistence {
 
   Optional<Job> getLastReplicationJob(UUID connectionId) throws IOException;
 
-  Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException;
+  Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException;
 
   Optional<Job> getLastSyncJob(UUID connectionId) throws IOException;
 

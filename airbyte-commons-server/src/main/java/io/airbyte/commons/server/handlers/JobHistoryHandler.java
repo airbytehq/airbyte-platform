@@ -56,8 +56,10 @@ import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.JobService;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
+import io.airbyte.featureflag.OnlyUseScheduledForGetTime;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
@@ -323,8 +325,9 @@ public class JobHistoryHandler {
   }
 
   public JobOptionalRead getLastReplicationJobWithCancel(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
-    final Optional<Job> job = jobPersistence.getLastReplicationJobWithCancel(connectionIdRequestBody.getConnectionId());
-
+    final boolean useScheduled =
+        featureFlagClient.boolVariation(OnlyUseScheduledForGetTime.INSTANCE, new Connection(connectionIdRequestBody.getConnectionId()));
+    final Optional<Job> job = jobPersistence.getLastReplicationJobWithCancel(connectionIdRequestBody.getConnectionId(), useScheduled);
     return jobConverter.getJobOptionalRead(job);
 
   }

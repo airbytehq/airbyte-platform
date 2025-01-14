@@ -181,3 +181,5 @@ object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-dec
 object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
 
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
+
+object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = false)
