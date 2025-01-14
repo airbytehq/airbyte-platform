@@ -45,9 +45,15 @@ fun ILoggingEvent.toLogEvent(): LogEvent {
  */
 fun ILoggingEvent.getCaller(): LogCaller {
   return LogCaller(
-    className = this.mdcPropertyMap[CALLER_QUALIFIED_CLASS_NAME_PATTERN] ?: this.callerData.first().className,
-    methodName = this.mdcPropertyMap[CALLER_METHOD_NAME_PATTERN] ?: this.callerData.first().methodName,
-    lineNumber = this.mdcPropertyMap[CALLER_LINE_NUMBER_PATTERN]?.toInt() ?: this.callerData.first().lineNumber,
+    className =
+      this.mdcPropertyMap[CALLER_QUALIFIED_CLASS_NAME_PATTERN]
+        ?: if (this.callerData.isNotEmpty()) this.callerData.first().className else null,
+    methodName =
+      this.mdcPropertyMap[CALLER_METHOD_NAME_PATTERN]
+        ?: if (this.callerData.isNotEmpty()) this.callerData.first().methodName else null,
+    lineNumber =
+      this.mdcPropertyMap[CALLER_LINE_NUMBER_PATTERN]?.toInt()
+        ?: if (this.callerData.isNotEmpty()) this.callerData.first().lineNumber else null,
     threadName = this.mdcPropertyMap[CALLER_THREAD_NAME_PATTERN] ?: this.threadName,
   )
 }
