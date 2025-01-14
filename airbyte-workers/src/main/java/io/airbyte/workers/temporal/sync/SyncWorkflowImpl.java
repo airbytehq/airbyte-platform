@@ -10,6 +10,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_I
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
+import static io.temporal.workflow.Workflow.DEFAULT_VERSION;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -118,7 +119,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final Optional<UUID> sourceId = getSourceId(syncInput);
     final RefreshSchemaActivityOutput refreshSchemaOutput;
-    final boolean shouldRefreshSchema = sourceId.isPresent() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
+    final int removeShouldRereshSchemaVersion = Workflow.getVersion("REMOVE_SHOULD_REFRESH_SCHEMA", DEFAULT_VERSION, 1);
+    final boolean shouldRefreshSchema = sourceId.isPresent() && removeShouldRereshSchemaVersion == DEFAULT_VERSION
+        ? refreshSchemaActivity.shouldRefreshSchema(sourceId.get())
+        : true;
     try {
       final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
       refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig);
@@ -182,6 +186,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           shouldRefreshSchema));
     }
 
+    // TODO: remove shouldRefreshSchema on the activity is removed
     if (shouldRefreshSchema && syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
       syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaEndTime(discoverSchemaEndTime);
       syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaStartTime(startTime);
@@ -191,8 +196,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   }
 
   private Optional<UUID> getSourceId(final StandardSyncInput syncInput) {
-    final int shouldGetSourceFromSyncInput = Workflow.getVersion("SHOULD_GET_SOURCE_FROM_SYNC_INPUT", Workflow.DEFAULT_VERSION, 1);
-    if (shouldGetSourceFromSyncInput != Workflow.DEFAULT_VERSION) {
+    final int shouldGetSourceFromSyncInput = Workflow.getVersion("SHOULD_GET_SOURCE_FROM_SYNC_INPUT", DEFAULT_VERSION, 1);
+    if (shouldGetSourceFromSyncInput != DEFAULT_VERSION) {
       return Optional.ofNullable(syncInput.getSourceId());
     }
     return configFetchActivity.getSourceId(syncInput.getConnectionId());
@@ -235,9 +240,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   }
 
   private boolean shouldReportRuntime() {
-    final int shouldReportRuntimeVersion = Workflow.getVersion("SHOULD_REPORT_RUNTIME", Workflow.DEFAULT_VERSION, 1);
+    final int shouldReportRuntimeVersion = Workflow.getVersion("SHOULD_REPORT_RUNTIME", DEFAULT_VERSION, 1);
 
-    return shouldReportRuntimeVersion != Workflow.DEFAULT_VERSION;
+    return shouldReportRuntimeVersion != DEFAULT_VERSION;
   }
 
   private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,
