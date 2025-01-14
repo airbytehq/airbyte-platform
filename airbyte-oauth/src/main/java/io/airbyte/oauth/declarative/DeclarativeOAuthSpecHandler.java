@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -539,8 +540,10 @@ public class DeclarativeOAuthSpecHandler {
       throws IOException {
 
     final Map<String, Object> oauth_output = new HashMap<>();
+    final List<String> expectedOAuthOuputFields = getConfigExtractOutput(userConfig);
+    final List<String> availableOAuthOuputFields = getAvailableKeysForOAuthOutput(data);
 
-    for (final String path : getConfigExtractOutput(userConfig)) {
+    for (final String path : expectedOAuthOuputFields) {
       final String value = JsonPaths.getSingleValueTextOrNull(data, path);
       final String key = JsonPaths.getTargetKeyFromJsonPath(path);
 
@@ -552,11 +555,24 @@ public class DeclarativeOAuthSpecHandler {
 
         oauth_output.put(key, value);
       } else {
-        throw new IOException(String.format("Missing '%s' in query params from %s", key, accessTokenUrl));
+        final String message = "Missing '%s' field in the `OAuth Output`. Expected fields: %s. Fields available: %s";
+        throw new IOException(String.format(message, key, expectedOAuthOuputFields, availableOAuthOuputFields));
       }
     }
 
     return oauth_output;
+  }
+
+  /**
+   * Retrieves a list of all available keys from the given JSON node.
+   *
+   * @param data the JSON node containing the data
+   * @return a list of strings representing the keys available in the JSON node
+   */
+  private List<String> getAvailableKeysForOAuthOutput(final JsonNode data) {
+    final List<String> keys = new ArrayList<>();
+    data.fieldNames().forEachRemaining(keys::add);
+    return keys;
   }
 
   /**
