@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -76,6 +77,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.ArgumentCaptor;
 
@@ -282,7 +284,7 @@ class DefaultJobCreatorTest {
         WORKSPACE_ID,
         refreshes);
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false);
   }
 
   private static RefreshConfig getRefreshConfig(final SyncResourceRequirements expectedSyncResourceRequirements,
@@ -329,8 +331,9 @@ class DefaultJobCreatorTest {
         List.of()));
   }
 
-  @Test
-  void testCreateSyncJob() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testCreateSyncJob(final boolean isScheduled) throws IOException {
     final Optional<String> expectedSourceType = Optional.of("database");
 
     mockResourcesRequirement(expectedSourceType);
@@ -362,7 +365,7 @@ class DefaultJobCreatorTest {
         .withSync(jobSyncConfig);
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig, isScheduled)).thenReturn(Optional.of(JOB_ID));
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -380,9 +383,10 @@ class DefaultJobCreatorTest {
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        isScheduled);
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, isScheduled);
   }
 
   private void mockResourcesRequirement(final Optional<String> expectedSourceType) {
@@ -442,7 +446,8 @@ class DefaultJobCreatorTest {
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        UUID.randomUUID()).isEmpty());
+        UUID.randomUUID(),
+        true).isEmpty());
   }
 
   @Test
@@ -463,7 +468,8 @@ class DefaultJobCreatorTest {
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -496,7 +502,7 @@ class DefaultJobCreatorTest {
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig);
+    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true);
   }
 
   @Test
@@ -524,7 +530,8 @@ class DefaultJobCreatorTest {
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -557,7 +564,7 @@ class DefaultJobCreatorTest {
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig);
+    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true);
   }
 
   @Test
@@ -592,7 +599,8 @@ class DefaultJobCreatorTest {
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -625,7 +633,7 @@ class DefaultJobCreatorTest {
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig);
+    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true);
   }
 
   @ParameterizedTest
@@ -677,10 +685,11 @@ class DefaultJobCreatorTest {
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
-    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture(), eq(true));
     final var destConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getDestination();
 
     final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
@@ -757,10 +766,11 @@ class DefaultJobCreatorTest {
             .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
-    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture(), eq(true));
     final var orchestratorConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getOrchestrator();
 
     final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
@@ -825,10 +835,11 @@ class DefaultJobCreatorTest {
             .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
-    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture(), eq(true));
     final var sourceConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getSource();
 
     final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
@@ -885,10 +896,11 @@ class DefaultJobCreatorTest {
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID);
+        WORKSPACE_ID,
+        true);
 
     final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
-    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture(), eq(true));
     final var destConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getDestination();
 
     assertEquals(originalReqs.getCpuRequest(), destConfigValues.getCpuRequest());
@@ -956,7 +968,7 @@ class DefaultJobCreatorTest {
         .withResetConnection(jobResetConnectionConfig);
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig, false)).thenReturn(Optional.of(JOB_ID));
 
     final Optional<Long> jobId = jobCreator.createResetConnectionJob(
         DESTINATION_CONNECTION,
@@ -970,7 +982,7 @@ class DefaultJobCreatorTest {
         streamsToReset,
         WORKSPACE_ID);
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false);
     assertTrue(jobId.isPresent());
     assertEquals(JOB_ID, jobId.get());
   }
@@ -1028,7 +1040,7 @@ class DefaultJobCreatorTest {
         streamsToReset,
         WORKSPACE_ID);
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false);
     assertTrue(jobId.isEmpty());
   }
 

@@ -107,7 +107,8 @@ public class DefaultJobCreator implements JobCreator {
                                       final StandardDestinationDefinition destinationDefinition,
                                       final ActorDefinitionVersion sourceDefinitionVersion,
                                       final ActorDefinitionVersion destinationDefinitionVersion,
-                                      final UUID workspaceId)
+                                      final UUID workspaceId,
+                                      final boolean isScheduled)
       throws IOException {
     final SyncResourceRequirements syncResourceRequirements =
         getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
@@ -136,7 +137,7 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, isScheduled);
   }
 
   @Override
@@ -196,7 +197,7 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   @VisibleForTesting
@@ -252,7 +253,7 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.RESET_CONNECTION)
         .withResetConnection(resetConnectionConfig);
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   private SyncResourceRequirements getSyncResourceRequirements(final UUID workspaceId,

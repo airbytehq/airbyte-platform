@@ -53,7 +53,8 @@ public interface JobCreator {
                                StandardDestinationDefinition destinationDefinition,
                                ActorDefinitionVersion sourceDefinitionVersion,
                                ActorDefinitionVersion destinationDefinitionVersion,
-                               UUID workspaceId)
+                               UUID workspaceId,
+                               boolean isScheduled)
       throws IOException;
 
   /**

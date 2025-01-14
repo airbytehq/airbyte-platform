@@ -371,10 +371,11 @@ class SchedulerHandlerTest {
         applySchemaChangeHelper);
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   @DisplayName("Test job creation")
-  void createJob() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(jobFactory.createSync(CONNECTION_ID))
+  void createJob(final boolean isScheduled) throws JsonValidationException, ConfigNotFoundException, IOException {
+    Mockito.when(jobFactory.createSync(CONNECTION_ID, isScheduled))
         .thenReturn(JOB_ID);
     Mockito.when(connectionService.getStandardSync(CONNECTION_ID))
         .thenReturn(Mockito.mock(StandardSync.class));
@@ -383,8 +384,9 @@ class SchedulerHandlerTest {
     Mockito.when(jobConverter.getJobInfoRead(job))
         .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
 
-    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID).isScheduled(isScheduled));
 
+    verify(jobFactory).createSync(CONNECTION_ID, isScheduled);
     Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
   }
 
@@ -403,7 +405,7 @@ class SchedulerHandlerTest {
         .thenReturn(List.of(
             new StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null, RefreshType.TRUNCATE)));
 
-    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID).isScheduled(true));
 
     verify(jobFactory).createRefresh(eq(CONNECTION_ID), any());
     Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
@@ -446,7 +448,7 @@ class SchedulerHandlerTest {
     Mockito.when(jobConverter.getJobInfoRead(job))
         .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
 
-    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID).isScheduled(true));
 
     Mockito.verify(oAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any());
     Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID);

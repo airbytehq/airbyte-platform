@@ -542,7 +542,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
@@ -578,7 +579,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
@@ -614,7 +616,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
@@ -1907,7 +1910,7 @@ class ConnectionsHandlerTest {
     }
 
     private Job generateMockJob(final UUID connectionId, final Attempt attempt) {
-      return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L);
+      return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L, true);
     }
 
     @Nested
@@ -1921,8 +1924,8 @@ class ConnectionsHandlerTest {
         final long jobOneId = 1L;
         final long jobTwoId = 2L;
 
-        final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
-        final Job jobTwo = new Job(2, ConfigType.REFRESH, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L);
+        final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
+        final Job jobTwo = new Job(2, ConfigType.REFRESH, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L, true);
 
         when(jobPersistence.listJobs(
             Job.SYNC_REPLICATION_TYPES,
@@ -2534,9 +2537,9 @@ class ConnectionsHandlerTest {
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
       final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
-          new Job(2L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L, true),
+          new Job(2L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2557,8 +2560,8 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2577,7 +2580,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2598,7 +2601,7 @@ class ConnectionsHandlerTest {
           .withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2617,7 +2620,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2636,7 +2639,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2671,8 +2674,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
-              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2691,8 +2694,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
-              JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2711,8 +2714,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
-              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2731,8 +2734,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
-              JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2752,8 +2755,9 @@ class ConnectionsHandlerTest {
       final Attempt successAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(resetAttempt),
-              JobStatus.CANCELLED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(successAttempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(successAttempt), JobStatus.SUCCEEDED, 801L, 800L, 802L,
+              true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2771,8 +2775,8 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2791,7 +2795,7 @@ class ConnectionsHandlerTest {
       final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt),
-              JobStatus.CANCELLED, 1001L, 1000L, 1002L));
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2809,7 +2813,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 1001L, 1000L, 1002L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -3264,7 +3268,8 @@ class ConnectionsHandlerTest {
           jobStatus,
           startedAt.toEpochMilli(),
           createdAt.toEpochMilli(),
-          updatedAt.toEpochMilli());
+          updatedAt.toEpochMilli(),
+          true);
       final List<Job> jobList = List.of(job);
       final JobRead jobRead = new JobRead()
           .id(job.getId())

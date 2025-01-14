@@ -105,6 +105,7 @@ internal class StreamRefreshesHandlerTest {
         0L,
         0L,
         0L,
+        true,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
@@ -140,6 +141,7 @@ internal class StreamRefreshesHandlerTest {
         0L,
         0L,
         0L,
+        true,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 

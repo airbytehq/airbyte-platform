@@ -12347,9 +12347,12 @@ components:
       type: object
       required:
         - connectionId
+        - isScheduled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+        isScheduled:
+          type: boolean
     JobListRequestBody:
       type: object
       required:

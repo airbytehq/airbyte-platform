@@ -639,7 +639,7 @@ public class SchedulerHandler {
 
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
     } else {
-      final long jobId = jobFactory.createSync(jobCreate.getConnectionId());
+      final long jobId = jobFactory.createSync(jobCreate.getConnectionId(), jobCreate.getIsScheduled());
 
       log.info("New job created, with id: " + jobId);
       final Job job = jobPersistence.getJob(jobId);

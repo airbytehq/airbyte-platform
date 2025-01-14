@@ -258,7 +258,8 @@ class JobNotifierTest {
         JobStatus.FAILED,
         NOW.getEpochSecond(),
         NOW.getEpochSecond(),
-        NOW.getEpochSecond() + 123456L);
+        NOW.getEpochSecond() + 123456L,
+        true);
   }
 
   private static Notification getSlackNotification() {

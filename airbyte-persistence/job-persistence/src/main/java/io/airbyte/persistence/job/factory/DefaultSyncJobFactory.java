@@ -75,7 +75,7 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
   }
 
   @Override
-  public Long createSync(final UUID connectionId) {
+  public Long createSync(final UUID connectionId, final boolean isScheduled) {
     try {
       final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
 
@@ -95,7 +95,8 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           jobCreatorInput.getDestinationDefinition(),
           jobCreatorInput.getSourceDefinitionVersion(),
           jobCreatorInput.getDestinationDefinitionVersion(),
-          jobCreatorInput.getWorkspaceId())
+          jobCreatorInput.getWorkspaceId(),
+          isScheduled)
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
     } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {

@@ -91,6 +91,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
@@ -175,8 +176,17 @@ class DefaultJobPersistenceTest {
         null);
   }
 
+  private static Job createJob(final long id,
+                               final JobConfig jobConfig,
+                               final JobStatus status,
+                               final List<Attempt> attempts,
+                               final long time,
+                               final boolean isScheduled) {
+    return createJob(id, jobConfig, status, attempts, time, SCOPE, isScheduled);
+  }
+
   private static Job createJob(final long id, final JobConfig jobConfig, final JobStatus status, final List<Attempt> attempts, final long time) {
-    return createJob(id, jobConfig, status, attempts, time, SCOPE);
+    return createJob(id, jobConfig, status, attempts, time, true);
   }
 
   private static Job createJob(
@@ -185,7 +195,8 @@ class DefaultJobPersistenceTest {
                                final JobStatus status,
                                final List<Attempt> attempts,
                                final long time,
-                               final String scope) {
+                               final String scope,
+                               final boolean isScheduled) {
     return new Job(
         id,
         jobConfig.getConfigType(),
@@ -195,7 +206,8 @@ class DefaultJobPersistenceTest {
         status,
         null,
         time,
-        time);
+        time,
+        isScheduled);
   }
 
   private static Supplier<Instant> incrementingSecondSupplier(final Instant startTime) {
@@ -460,14 +472,26 @@ class DefaultJobPersistenceTest {
     assertEquals(Optional.of(expected), actual);
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  @DisplayName("Should extract a Job model from a JOOQ result set")
+  void testGetJobFromRecord(final boolean isScheduled) throws IOException, SQLException {
+    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, isScheduled).orElseThrow();
+
+    final Optional<Job> actual = DefaultJobPersistence.getJobFromResult(getJobRecord(jobId));
+
+    final Job expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), isScheduled);
+    assertEquals(Optional.of(expected), actual);
+  }
+
   @Test
   @DisplayName("Should extract a Job model from a JOOQ result set")
-  void testGetJobFromRecord() throws IOException, SQLException {
+  void testGetJobFromRecordDefaultIsScheduled() throws IOException, SQLException {
     final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
 
     final Optional<Job> actual = DefaultJobPersistence.getJobFromResult(getJobRecord(jobId));
 
-    final Job expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond());
+    final Job expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), true);
     assertEquals(Optional.of(expected), actual);
   }
 
@@ -1604,8 +1628,8 @@ class DefaultJobPersistenceTest {
       final Attempt scope2Job2attempt = jobPersistence.getJob(scope2Job2).getAttempts().stream().findFirst().orElseThrow();
 
       final List<Job> expected = new ArrayList<>();
-      expected.add(createJob(scope2Job2, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope2Job2attempt), afterNow.getEpochSecond(), SCOPE_2));
-      expected.add(createJob(scope3Job1, SYNC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), SCOPE_3));
+      expected.add(createJob(scope2Job2, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope2Job2attempt), afterNow.getEpochSecond(), SCOPE_2, true));
+      expected.add(createJob(scope3Job1, SYNC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), SCOPE_3, true));
 
       final List<Job> actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS);
       assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
@@ -1654,7 +1678,7 @@ class DefaultJobPersistenceTest {
       when(timeSupplier.get()).thenReturn(afterNow);
 
       final List<Job> expected = new ArrayList<>();
-      expected.add(createJob(scope1Job1, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1));
+      expected.add(createJob(scope1Job1, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1, true));
 
       final List<Job> actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1);
       assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
@@ -1671,7 +1695,7 @@ class DefaultJobPersistenceTest {
       when(timeSupplier.get()).thenReturn(afterNow);
 
       final List<Job> expected = new ArrayList<>();
-      expected.add(createJob(jobId, RESET_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1));
+      expected.add(createJob(jobId, RESET_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1, true));
 
       final List<Job> actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1);
 
@@ -2419,11 +2443,11 @@ class DefaultJobPersistenceTest {
       final List<Job> allPendingJobs = jobPersistence.listJobsWithStatus(JobStatus.PENDING);
 
       final Job expectedPendingSpecJob =
-          createJob(pendingSpecJobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), SPEC_SCOPE);
+          createJob(pendingSpecJobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), SPEC_SCOPE, true);
       final Job expectedPendingCheckJob =
-          createJob(pendingCheckJobId, CHECK_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), CHECK_SCOPE);
+          createJob(pendingCheckJobId, CHECK_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), CHECK_SCOPE, true);
       final Job expectedPendingSyncJob =
-          createJob(pendingSyncJobId, SYNC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), SYNC_SCOPE);
+          createJob(pendingSyncJobId, SYNC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), SYNC_SCOPE, true);
 
       final List<Job> allPendingSyncAndSpecJobs = jobPersistence.listJobsWithStatus(Set.of(ConfigType.GET_SPEC, ConfigType.SYNC), JobStatus.PENDING);
 
@@ -2436,7 +2460,8 @@ class DefaultJobPersistenceTest {
           Lists.newArrayList(
               createAttempt(0, failedSpecJobId, AttemptStatus.FAILED, LOG_PATH)),
           NOW.getEpochSecond(),
-          SPEC_SCOPE);
+          SPEC_SCOPE,
+          true);
 
       assertEquals(Sets.newHashSet(expectedPendingCheckJob, expectedPendingSpecJob, expectedPendingSyncJob), Sets.newHashSet(allPendingJobs));
       assertEquals(Sets.newHashSet(expectedPendingSpecJob, expectedPendingSyncJob), Sets.newHashSet(allPendingSyncAndSpecJobs));
@@ -2472,14 +2497,16 @@ class DefaultJobPersistenceTest {
 
       final Job expectedDesiredJob1 = createJob(desiredJobId1, SYNC_JOB_CONFIG, JobStatus.SUCCEEDED,
           Lists.newArrayList(createAttempt(0, desiredJobId1, AttemptStatus.SUCCEEDED, LOG_PATH)),
-          NOW.getEpochSecond(), desiredConnectionId.toString());
+          NOW.getEpochSecond(), desiredConnectionId.toString(), true);
       final Job expectedDesiredJob2 =
-          createJob(desiredJobId2, SYNC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), desiredConnectionId.toString());
+          createJob(desiredJobId2, SYNC_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), desiredConnectionId.toString(),
+              true);
       final Job expectedDesiredJob3 = createJob(desiredJobId3, CHECK_JOB_CONFIG, JobStatus.SUCCEEDED,
           Lists.newArrayList(createAttempt(0, desiredJobId3, AttemptStatus.SUCCEEDED, LOG_PATH)),
-          NOW.getEpochSecond(), desiredConnectionId.toString());
+          NOW.getEpochSecond(), desiredConnectionId.toString(), true);
       final Job expectedDesiredJob4 =
-          createJob(desiredJobId4, CHECK_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), desiredConnectionId.toString());
+          createJob(desiredJobId4, CHECK_JOB_CONFIG, JobStatus.PENDING, Lists.newArrayList(), NOW.getEpochSecond(), desiredConnectionId.toString(),
+              true);
 
       assertEquals(Sets.newHashSet(expectedDesiredJob1, expectedDesiredJob2, expectedDesiredJob3, expectedDesiredJob4), Sets.newHashSet(actualJobs));
     }
@@ -2528,15 +2555,16 @@ class DefaultJobPersistenceTest {
         throws IOException, SQLException {
       final Optional<Long> id = jobDatabase.query(
           ctx -> ctx.fetch(
-              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
-                  + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config, is_scheduled) "
+                  + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB), ? "
                   + "RETURNING id ",
               toSqlName(jobConfig.getConfigType()),
               scope,
               runDate,
               runDate,
               toSqlName(status),
-              Jsons.serialize(jobConfig)))
+              Jsons.serialize(jobConfig),
+              true))
           .stream()
           .findFirst()
           .map(r -> r.getValue("id", Long.class));

@@ -164,6 +164,7 @@ public class DefaultJobPersistence implements JobPersistence {
         + "jobs.started_at AS job_started_at,\n"
         + "jobs.created_at AS job_created_at,\n"
         + "jobs.updated_at AS job_updated_at,\n"
+        + "jobs.is_scheduled AS is_scheduled,\n"
         + ATTEMPT_FIELDS
         + "FROM " + jobsSubquery + " LEFT OUTER JOIN attempts ON jobs.id = attempts.job_id ";
   }
@@ -426,7 +427,8 @@ public class DefaultJobPersistence implements JobPersistence {
         JobStatus.valueOf(record.get("job_status", String.class).toUpperCase()),
         Optional.ofNullable(record.get("job_started_at")).map(value -> getEpoch(record, "started_at")).orElse(null),
         getEpoch(record, "job_created_at"),
-        getEpoch(record, "job_updated_at"));
+        getEpoch(record, "job_updated_at"),
+        record.get("is_scheduled", Boolean.class));
   }
 
   private static JobConfig parseJobConfigFromString(final String jobConfigString) {
@@ -580,6 +582,11 @@ public class DefaultJobPersistence implements JobPersistence {
    */
   @Override
   public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig) throws IOException {
+    return enqueueJob(scope, jobConfig, true);
+  }
+
+  @Override
+  public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig, final boolean isScheduled) throws IOException {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -594,8 +601,8 @@ public class DefaultJobPersistence implements JobPersistence {
 
     return jobDatabase.query(
         ctx -> ctx.fetch(
-            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
-                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config, is_scheduled) "
+                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB), ? "
                 + queueingRequest
                 + "RETURNING id ",
             toSqlName(jobConfig.getConfigType()),
@@ -603,12 +610,14 @@ public class DefaultJobPersistence implements JobPersistence {
             now,
             now,
             toSqlName(JobStatus.PENDING),
-            Jsons.serialize(jobConfig)))
+            Jsons.serialize(jobConfig),
+            isScheduled))
         .stream()
         .findFirst()
         .map(r -> r.getValue("id", Long.class));
   }
 
+  // TODO: This is unused outside of test. Need to remove it.
   @Override
   public void resetJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime

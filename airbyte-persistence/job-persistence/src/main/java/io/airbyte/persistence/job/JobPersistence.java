@@ -79,7 +79,11 @@ public interface JobPersistence {
    * @return job id
    * @throws IOException exception due to interaction with persistence
    */
+  @Deprecated // Use the enqueueJob method with an explicit isScheduled parameter instead.
+  // We shouldn't relay on the default value of isScheduled.
   Optional<Long> enqueueJob(String scope, JobConfig jobConfig) throws IOException;
+
+  Optional<Long> enqueueJob(String scope, JobConfig jobConfig, boolean isScheduled) throws IOException;
 
   /**
    * Set job status from current status to PENDING. Throws {@link IllegalStateException} if the job is

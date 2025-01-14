@@ -54,6 +54,7 @@ fun EntityJobWithAssociations.toConfigModel(): ModelJob {
     startedAt?.toEpochSecond(),
     createdAt?.toEpochSecond() ?: 0,
     updatedAt?.toEpochSecond() ?: 0,
+    this.isScheduled ?: true,
   )
 }
 
@@ -68,6 +69,7 @@ fun EntityJob.toConfigModel(): ModelJob {
     startedAt?.toEpochSecond(),
     createdAt?.toEpochSecond() ?: 0,
     updatedAt?.toEpochSecond() ?: 0,
+    this.isScheduled ?: true,
   )
 }
 

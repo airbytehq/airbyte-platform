@@ -218,6 +218,7 @@ class RolloutActorFinderTest {
           connection.createdAt ?: 0L,
           connection.createdAt ?: 0L,
           connection.createdAt ?: 0L,
+          true,
         )
       }
 
@@ -450,6 +451,7 @@ class RolloutActorFinderTest {
           connection.createdAt ?: 0L,
           connection.createdAt ?: 0L,
           connection.createdAt ?: 0L,
+          true,
         )
       }
 
@@ -522,6 +524,7 @@ class RolloutActorFinderTest {
         0L,
         0L,
         0L,
+        true,
       )
 
     val job2 =
@@ -541,6 +544,7 @@ class RolloutActorFinderTest {
         0L,
         0L,
         0L,
+        true,
       )
 
     assertEquals(true, rolloutActorFinder.jobDefinitionVersionIdEq(actorType, job1, actorDefinitionVersionId))
@@ -568,6 +572,7 @@ class RolloutActorFinderTest {
         0L,
         0L,
         0L,
+        true,
       )
 
     val job2 =
@@ -587,6 +592,7 @@ class RolloutActorFinderTest {
         0L,
         0L,
         0L,
+        true,
       )
 
     assertEquals(true, rolloutActorFinder.jobDockerImageIsDefault(actorType, job1))
@@ -1151,6 +1157,7 @@ class RolloutActorFinderTest {
             0L,
             0L,
             0L,
+            true,
           ),
           Job(
             1,
@@ -1170,6 +1177,7 @@ class RolloutActorFinderTest {
             0L,
             0L,
             0L,
+            true,
           ),
         )
       } else {
@@ -1193,6 +1201,7 @@ class RolloutActorFinderTest {
             0L,
             0L,
             0L,
+            true,
           ),
           Job(
             3,
@@ -1212,6 +1221,7 @@ class RolloutActorFinderTest {
             0L,
             0L,
             0L,
+            true,
           ),
         )
       }

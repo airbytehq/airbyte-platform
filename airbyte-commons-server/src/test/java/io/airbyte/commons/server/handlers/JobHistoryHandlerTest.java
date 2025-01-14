@@ -312,7 +312,7 @@ class JobHistoryHandlerTest {
       Attempt successfulJobAttempt2 = createAttempt(1, JOB_ID, CREATED_AT, AttemptStatus.SUCCEEDED);
       final var successfulJob = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG,
           List.of(testJobAttempt, successfulJobAttempt2), JOB_STATUS, null, CREATED_AT,
-          CREATED_AT);
+          CREATED_AT, true);
       final int pagesize = 25;
       final int rowOffset = 0;
 
@@ -320,7 +320,7 @@ class JobHistoryHandlerTest {
       final var createdAt2 = CREATED_AT + 1000;
       final var latestJobNoAttempt =
           new Job(jobId2, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING,
-              null, createdAt2, createdAt2);
+              null, createdAt2, createdAt2, true);
 
       when(jobService.listJobs(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))),
           eq(JOB_CONFIG_ID),
@@ -392,7 +392,7 @@ class JobHistoryHandlerTest {
       when(featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
       final var firstJob =
           new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-              CREATED_AT);
+              CREATED_AT, true);
       final int pagesize = 25;
       final int rowOffset = 0;
 
@@ -400,7 +400,7 @@ class JobHistoryHandlerTest {
       final var createdAt2 = CREATED_AT + 1000;
       final var secondJobAttempt = createAttempt(0, secondJobId, createdAt2, AttemptStatus.SUCCEEDED);
       final var secondJob = new Job(secondJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, List.of(secondJobAttempt),
-          JobStatus.SUCCEEDED, null, createdAt2, createdAt2);
+          JobStatus.SUCCEEDED, null, createdAt2, createdAt2, true);
 
       final Set<ConfigType> configTypes = Set.of(
           Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class),
@@ -410,7 +410,8 @@ class JobHistoryHandlerTest {
       final var latestJobId = secondJobId + 100;
       final var createdAt3 = createdAt2 + 1000;
       final var latestJob =
-          new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3);
+          new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3,
+              true);
 
       when(jobService.listJobs(eq(configTypes), eq(JOB_CONFIG_ID), eq(pagesize), eq(rowOffset), any(), any(), any(), any(), any(), any(), any()))
           .thenReturn(List.of(latestJob, secondJob, firstJob));
@@ -490,7 +491,7 @@ class JobHistoryHandlerTest {
       when(featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
       final var successfulJob =
           new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-              CREATED_AT);
+              CREATED_AT, true);
       final int pagesize = 25;
       final int rowOffset = 0;
 
@@ -498,7 +499,7 @@ class JobHistoryHandlerTest {
       final var createdAt2 = CREATED_AT + 1000;
       final var latestJobNoAttempt =
           new Job(jobId2, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING,
-              null, createdAt2, createdAt2);
+              null, createdAt2, createdAt2, true);
 
       when(jobPersistence.listJobsIncludingId(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, jobId2, pagesize))
           .thenReturn(List.of(latestJobNoAttempt, successfulJob));
@@ -558,7 +559,7 @@ class JobHistoryHandlerTest {
   @DisplayName("Should return the right job info")
   void testGetJobInfo() throws IOException {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-        CREATED_AT);
+        CREATED_AT, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
 
@@ -574,7 +575,7 @@ class JobHistoryHandlerTest {
   @DisplayName("Should return the right job info without attempt information")
   void testGetJobInfoLight() throws IOException {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-        CREATED_AT);
+        CREATED_AT, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
     final JobIdRequestBody requestBody = new JobIdRequestBody().id(JOB_ID);
@@ -590,7 +591,7 @@ class JobHistoryHandlerTest {
   void testGetDebugJobInfo()
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-        CREATED_AT);
+        CREATED_AT, true);
     final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo");
@@ -637,7 +638,7 @@ class JobHistoryHandlerTest {
     final var olderRunningJobAttempt = createAttempt(0, olderRunningJobId, olderRunningCreatedAt, AttemptStatus.RUNNING);
     final var olderRunningJob = new Job(olderRunningJobId, ConfigType.SYNC, JOB_CONFIG_ID,
         JOB_CONFIG, List.of(olderRunningJobAttempt),
-        JobStatus.RUNNING, null, olderRunningCreatedAt, olderRunningCreatedAt);
+        JobStatus.RUNNING, null, olderRunningCreatedAt, olderRunningCreatedAt, true);
 
     // expect that we return the newer of the two running jobs. this should not happen in the real
     // world but might as
@@ -647,7 +648,7 @@ class JobHistoryHandlerTest {
     final var newerRunningJobAttempt = createAttempt(0, newerRunningJobId, newerRunningCreatedAt, AttemptStatus.RUNNING);
     final var newerRunningJob = new Job(newerRunningJobId, ConfigType.SYNC, JOB_CONFIG_ID,
         JOB_CONFIG, List.of(newerRunningJobAttempt),
-        JobStatus.RUNNING, null, newerRunningCreatedAt, newerRunningCreatedAt);
+        JobStatus.RUNNING, null, newerRunningCreatedAt, newerRunningCreatedAt, true);
 
     when(jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
@@ -701,7 +702,7 @@ class JobHistoryHandlerTest {
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
 
       final Job firstJob = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JobStatus.RUNNING,
-          CREATED_AT, CREATED_AT, CREATED_AT);
+          CREATED_AT, CREATED_AT, CREATED_AT, true);
 
       final JobRead jobRead = toJobInfo(firstJob);
       jobRead.setEnabledStreams(List.of(new StreamDescriptor().name("stream1").namespace("ns1"), new StreamDescriptor().name("stream2"),
@@ -766,7 +767,7 @@ class JobHistoryHandlerTest {
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
 
       final Job firstJob = new Job(JOB_ID, ConfigType.REFRESH, JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JobStatus.RUNNING,
-          CREATED_AT, CREATED_AT, CREATED_AT);
+          CREATED_AT, CREATED_AT, CREATED_AT, true);
 
       final JobRead jobRead = toJobInfo(firstJob);
       jobRead.setEnabledStreams(List.of(new StreamDescriptor().name("stream2"),
@@ -826,7 +827,7 @@ class JobHistoryHandlerTest {
 
       final Job firstJob =
           new Job(JOB_ID, ConfigType.RESET_CONNECTION, JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JobStatus.RUNNING,
-              CREATED_AT, CREATED_AT, CREATED_AT);
+              CREATED_AT, CREATED_AT, CREATED_AT, true);
 
       final JobRead jobRead = toJobInfo(firstJob);
       jobRead.setResetConfig(new ResetConfig().streamsToReset(List.of(
@@ -872,7 +873,7 @@ class JobHistoryHandlerTest {
     final var newerFailedJobAttempt = createAttempt(0, newerFailedJobId, newerFailedCreatedAt, AttemptStatus.FAILED);
     final var newerFailedJob = new Job(newerFailedJobId, ConfigType.SYNC, JOB_CONFIG_ID,
         JOB_CONFIG, List.of(newerFailedJobAttempt),
-        JobStatus.RUNNING, null, newerFailedCreatedAt, newerFailedCreatedAt);
+        JobStatus.RUNNING, null, newerFailedCreatedAt, newerFailedCreatedAt, true);
 
     when(jobPersistence.getLastSyncJob(connectionId)).thenReturn(Optional.of(newerFailedJob));
 
@@ -894,7 +895,7 @@ class JobHistoryHandlerTest {
 
     when(jobPersistence.getJob(JOB_ID))
         .thenReturn(new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt),
-            JOB_STATUS, null, CREATED_AT, CREATED_AT));
+            JOB_STATUS, null, CREATED_AT, CREATED_AT, true));
     when(jobPersistence.getAttemptStats(List.of(JOB_ID)))
         .thenReturn(Map.of(new JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()), FIRST_ATTEMPT_STATS));
 

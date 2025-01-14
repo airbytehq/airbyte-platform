@@ -866,7 +866,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     final JobCreationOutput jobCreationOutput =
         runMandatoryActivityWithOutput(
             jobCreationAndStatusUpdateActivity::createNewJob,
-            new JobCreationInput(connectionUpdaterInput.getConnectionId()));
+            new JobCreationInput(connectionUpdaterInput.getConnectionId(), !workflowState.isSkipScheduling()));
     connectionUpdaterInput.setJobId(jobCreationOutput.getJobId());
 
     return jobCreationOutput.getJobId();

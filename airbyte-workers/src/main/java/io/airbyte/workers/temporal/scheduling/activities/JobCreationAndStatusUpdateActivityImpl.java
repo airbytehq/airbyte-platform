@@ -68,7 +68,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public JobCreationOutput createNewJob(final JobCreationInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
-      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId()));
+      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId(), input.isScheduled()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {

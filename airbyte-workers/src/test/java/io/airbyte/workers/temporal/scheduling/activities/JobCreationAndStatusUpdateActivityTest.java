@@ -120,10 +120,10 @@ class JobCreationAndStatusUpdateActivityTest {
     @DisplayName("Test job creation")
     void createJob() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
-      when(jobsApi.createJob(new JobCreate(CONNECTION_ID)))
+      when(jobsApi.createJob(new JobCreate(CONNECTION_ID, true)))
           .thenReturn(new JobInfoRead(new JobRead(JOB_ID, JobConfigType.SYNC, CONNECTION_ID.toString(), System.currentTimeMillis(),
               System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null, null), List.of()));
-      final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
+      final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID, true));
 
       assertEquals(JOB_ID, newJob.getJobId());
     }
@@ -133,7 +133,7 @@ class JobCreationAndStatusUpdateActivityTest {
     void createJobThrows() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.createJob(Mockito.any())).thenThrow(new IOException());
-      assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID)));
+      assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID, true)));
     }
 
     @ParameterizedTest
