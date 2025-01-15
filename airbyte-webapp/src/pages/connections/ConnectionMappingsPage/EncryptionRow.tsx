@@ -15,6 +15,7 @@ import {
   EncryptionMapperAESConfigurationMode,
   EncryptionMapperConfiguration,
 } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
@@ -65,6 +66,8 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
   const { formatMessage } = useIntl();
   const [algorithm, setAlgorithm] = useState<EncryptionMapperAlgorithm>(mapping.mapperConfiguration.algorithm || "RSA");
   const isSecretsPersistenceEnabled = useExperiment("platform.use-runtime-secret-persistence");
+  const isEnterprise = useFeature(FeatureItem.EnterpriseBranding);
+  const enableAES = isEnterprise || isSecretsPersistenceEnabled;
 
   const methods = useForm<EncryptionMapperConfiguration>({
     defaultValues: {
@@ -142,13 +145,15 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
             options={[
               { label: "RSA", value: "RSA" },
               {
-                label: (
+                label: enableAES ? (
+                  "AES"
+                ) : (
                   <Tooltip control="AES">
                     <FormattedMessage id="connections.mappings.aesRequiresSecrets" />
                   </Tooltip>
                 ),
                 value: "AES",
-                disabled: !isSecretsPersistenceEnabled,
+                disabled: !enableAES,
               },
             ]}
           />

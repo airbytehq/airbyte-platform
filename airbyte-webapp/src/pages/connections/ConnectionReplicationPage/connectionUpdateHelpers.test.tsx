@@ -1,227 +1,98 @@
-import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import {
+  DestinationSyncMode,
+  SyncMode,
+  StreamMapperType,
+  HashingMapperConfigurationMethod,
+  RowFilteringOperationType,
+  EncryptionMapperAlgorithm,
+  MapperConfiguration,
+} from "core/api/types/AirbyteClient";
 
 import { determineRecommendRefresh } from "./connectionUpdateHelpers";
 
-// guarantees we have the required properties for the functions called
-interface RequiredPartialStream {
-  stream: { name: string; namespace: string };
+const createStream = (overrides = {}) => ({
+  stream: { name: "exampleStream", namespace: "exampleNamespace" },
   config: {
-    syncMode: SyncMode;
-    aliasName: string;
-    destinationSyncMode: DestinationSyncMode;
-    selectedFields: Array<{ fieldPath: string[] }>;
-    primaryKey: string[][];
-    cursorField: string[];
-    selected: boolean;
-  };
-}
-
-const stream1: RequiredPartialStream = {
-  stream: { name: "exampleStream1", namespace: "exampleNamespace" },
-  config: {
-    aliasName: "exampleStream1",
+    aliasName: "exampleStream",
     syncMode: SyncMode.full_refresh,
     destinationSyncMode: DestinationSyncMode.overwrite,
     selectedFields: [{ fieldPath: ["field1"] }],
     primaryKey: [["key1"]],
     cursorField: ["field1"],
     selected: true,
+    mappers: [],
+    ...overrides,
   },
-};
-
-const stream2: RequiredPartialStream = {
-  stream: { name: "exampleStream2", namespace: "exampleNamespace" },
-  config: {
-    aliasName: "exampleStream2",
-    syncMode: SyncMode.full_refresh,
-    destinationSyncMode: DestinationSyncMode.append,
-    selectedFields: [{ fieldPath: ["field1"] }],
-    primaryKey: [["key1"]],
-    cursorField: ["field1"],
-    selected: true,
-  },
-};
-
-const stream3: RequiredPartialStream = {
-  stream: { name: "exampleStream3", namespace: "exampleNamespace" },
-  config: {
-    aliasName: "exampleStream3",
-    syncMode: SyncMode.incremental,
-    destinationSyncMode: DestinationSyncMode.append,
-    selectedFields: [{ fieldPath: ["field1"] }],
-    primaryKey: [["key1"]],
-    cursorField: ["field1"],
-    selected: true,
-  },
-};
-
-const stream4: RequiredPartialStream = {
-  stream: { name: "exampleStream4", namespace: "exampleNamespace" },
-  config: {
-    aliasName: "exampleStream4",
-    syncMode: SyncMode.incremental,
-    destinationSyncMode: DestinationSyncMode.append_dedup,
-    selectedFields: [{ fieldPath: ["field1"] }, { fieldPath: ["field2"] }],
-    primaryKey: [["key2"]],
-    cursorField: ["field2"],
-    selected: true,
-  },
-};
+});
 
 describe("#determineRecommendRefresh", () => {
-  const storedSyncCatalog = {
-    streams: [stream1, stream2, stream3, stream4],
-  };
-
-  describe("change sync mode to incremental", () => {
-    it("Only recommend if full refresh | overwrite changing to incremental | append", () => {
-      const updateStream = (stream: RequiredPartialStream) => {
-        return {
-          ...stream,
-          config: {
-            ...stream.config,
-            syncMode: SyncMode.incremental,
-            destinationSyncMode: DestinationSyncMode.append,
-          },
-        };
+  describe("sync mode changes", () => {
+    it.each`
+      description                                                                        | storedSyncMode           | storedDestSyncMode               | formSyncMode             | formDestSyncMode                    | expected
+      ${"recommend if full refresh | overwrite changing to incremental | append"}        | ${SyncMode.full_refresh} | ${DestinationSyncMode.overwrite} | ${SyncMode.incremental}  | ${DestinationSyncMode.append}       | ${true}
+      ${"recommend if full refresh | overwrite changing to incremental | append_dedupe"} | ${SyncMode.full_refresh} | ${DestinationSyncMode.overwrite} | ${SyncMode.incremental}  | ${DestinationSyncMode.append_dedup} | ${true}
+      ${"does not recommend if incremental to full_refresh"}                             | ${SyncMode.incremental}  | ${DestinationSyncMode.append}    | ${SyncMode.full_refresh} | ${DestinationSyncMode.append}       | ${false}
+      ${"does not recommend if changing between incremental types"}                      | ${SyncMode.incremental}  | ${DestinationSyncMode.append}    | ${SyncMode.incremental}  | ${DestinationSyncMode.append_dedup} | ${false}
+    `("$description", ({ storedSyncMode, storedDestSyncMode, formSyncMode, formDestSyncMode, expected }) => {
+      const storedSyncCatalog = {
+        streams: [createStream({ syncMode: storedSyncMode, destinationSyncMode: storedDestSyncMode })],
       };
-
       const formSyncCatalog = {
-        streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
+        streams: [createStream({ syncMode: formSyncMode, destinationSyncMode: formDestSyncMode })],
       };
-
       const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toBe(true);
-    });
-    it("Only recommend if full refresh | overwrite changing to incremental | append_dedupe", () => {
-      const updateStream = (stream: RequiredPartialStream) => {
-        return {
-          ...stream,
-          config: {
-            ...stream.config,
-            syncMode: SyncMode.incremental,
-            destinationSyncMode: DestinationSyncMode.append_dedup,
-          },
-        };
-      };
-
-      const formSyncCatalog = {
-        streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-      };
-
-      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toBe(true);
-    });
-  });
-  describe("change sync mode to full refresh", () => {
-    it("Does not recommend a refresh when changing to full refresh | overwrite", () => {
-      const updateStream = (stream: RequiredPartialStream) => {
-        return {
-          ...stream,
-          config: {
-            ...stream.config,
-            syncMode: SyncMode.full_refresh,
-            destinationSyncMode: DestinationSyncMode.overwrite,
-          },
-        };
-      };
-
-      const formSyncCatalog = {
-        streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-      };
-
-      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toBe(false);
-    });
-    it("Does not recommend a refresh when changing to full refresh | append", () => {
-      const updateStream = (stream: RequiredPartialStream) => {
-        return {
-          ...stream,
-          config: {
-            ...stream.config,
-            syncMode: SyncMode.full_refresh,
-            destinationSyncMode: DestinationSyncMode.append,
-          },
-        };
-      };
-
-      const formSyncCatalog = {
-        streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-      };
-
-      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toBe(false);
+      expect(result).toBe(expected);
     });
   });
 
-  it("change in primary key suggests refresh if incremental", () => {
-    const updateStream = (stream: RequiredPartialStream) => {
-      return {
-        ...stream,
-        config: {
-          ...stream.config,
-          primaryKey: [["newKey"]],
-        },
-      };
-    };
-
-    const formSyncCatalog = {
-      streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-    };
-    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toBe(true);
+  describe("field changes", () => {
+    it.each`
+      description                                                      | storedOverrides                                                                              | formOverrides                                                                                                                                                   | expected
+      ${"change in primary key suggests refresh if incremental dedup"} | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append_dedup }} | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append_dedup, primaryKey: [["key2"]] }}                                            | ${true}
+      ${"ignores pk changes if not incremental"}                       | ${{}}                                                                                        | ${{ primaryKey: [["key2"]] }}                                                                                                                                   | ${false}
+      ${"change in cursor field suggests refresh if incremental"}      | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append }}       | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append, cursorField: ["cursor2"] }}                                                | ${true}
+      ${"ignores cursor change if not incremental"}                    | ${{ syncMode: SyncMode.full_refresh, destinationSyncMode: DestinationSyncMode.append }}      | ${{ syncMode: SyncMode.full_refresh, destinationSyncMode: DestinationSyncMode.append, cursorField: ["cursor2"] }}                                               | ${false}
+      ${"changes in selected fields suggest refresh if incremental"}   | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append }}       | ${{ syncMode: SyncMode.incremental, destinationSyncMode: DestinationSyncMode.append, selectedFields: [{ fieldPath: ["field1"] }, { fieldPath: ["field2"] }] }}  | ${true}
+      ${"ignores changes in selected fields if not incremental"}       | ${{ syncMode: SyncMode.full_refresh, destinationSyncMode: DestinationSyncMode.append }}      | ${{ syncMode: SyncMode.full_refresh, destinationSyncMode: DestinationSyncMode.append, selectedFields: [{ fieldPath: ["field1"] }, { fieldPath: ["field2"] }] }} | ${false}
+    `("$description", ({ storedOverrides, formOverrides, expected }) => {
+      const storedSyncCatalog = { streams: [createStream(storedOverrides)] };
+      const formSyncCatalog = { streams: [createStream(formOverrides)] };
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(expected);
+    });
   });
 
-  it("change in cursor field suggests refresh if incremental", () => {
-    const updateStream = (stream: RequiredPartialStream) => {
-      return {
-        ...stream,
-        config: {
-          ...stream.config,
-          cursorField: ["newCursorField"],
-        },
-      };
-    };
+  describe("mappers changes", () => {
+    const createMapper = (id: string, type: StreamMapperType, config: MapperConfiguration) => ({
+      id,
+      type,
+      mapperConfiguration: config,
+    });
 
-    const formSyncCatalog = {
-      streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-    };
-    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toBe(true);
-  });
-
-  it("changes in selected fields suggest refresh if incremental", () => {
-    const updateStream = (stream: RequiredPartialStream) => {
-      return {
-        ...stream,
-        config: {
-          ...stream.config,
-          selectedFields: [{ fieldPath: ["newField1"] }, { fieldPath: ["newField2"] }],
-        },
-      };
-    };
-
-    const formSyncCatalog = {
-      streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-    };
-    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toBe(true);
-  });
-  it("changes in stream prefix do not suggest refresh", () => {
-    const updateStream = (stream: RequiredPartialStream) => {
-      return {
-        ...stream,
-        config: {
-          ...stream.config,
-          aliasName: `new${stream.stream.name}`,
-        },
-      };
-    };
-
-    const formSyncCatalog = {
-      streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
-    };
-    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toBe(false);
+    it.each`
+      description                                                                                         | storedMappers                                                                                                                                                                        | formMappers                                                                                                                                                                                                                                                                                                                         | expected
+      ${"should recommend refresh if a new hashing mapper is added"}                                      | ${[]}                                                                                                                                                                                | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                                                                                                                                                                          | ${true}
+      ${"should recommend refresh if a hashing mapper's target field is changed"}                         | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                           | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "newField", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                                                                                                                                                                       | ${true}
+      ${"should not recommend refresh if a hashing mapper's other property is changed"}                   | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                           | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field", method: HashingMapperConfigurationMethod["SHA-256"], fieldNameSuffix: "_hashed" })]}                                                                                                                                                                   | ${false}
+      ${"should recommend refresh if a hashing mapper is removed"}                                        | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                           | ${[]}                                                                                                                                                                                                                                                                                                                               | ${true}
+      ${"should recommend refresh if a new encryption mapper is added"}                                   | ${[]}                                                                                                                                                                                | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "myCoolKey" })]}                                                                                                                                                | ${true}
+      ${"should recommend refresh if an encryption mapper's target field is changed"}                     | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "myCoolKey" })]} | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "different_field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "myCoolKey" })]}                                                                                                                                      | ${true}
+      ${"should not recommend refresh if an encryption mapper's other property is changed"}               | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "myCoolKey" })]} | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "anotherCoolKey" })]}                                                                                                                                           | ${false}
+      ${"should recommend refresh if an encryption mapper is removed"}                                    | ${[createMapper("mapper1", StreamMapperType.encryption, { targetField: "field", algorithm: EncryptionMapperAlgorithm.RSA, fieldNameSuffix: "_encrypted", publicKey: "myCoolKey" })]} | ${[]}                                                                                                                                                                                                                                                                                                                               | ${true}
+      ${"should recommend refresh if a field renaming mapper is added"}                                   | ${[]}                                                                                                                                                                                | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "field", newFieldName: "new_field" })]}                                                                                                                                                                                                         | ${true}
+      ${"should recommend refresh if a field renaming mapper originalField is changed"}                   | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "field", newFieldName: "new_field" })]}                                                          | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "other-field", newFieldName: "new_field" })]}                                                                                                                                                                                                   | ${true}
+      ${"should recommend refresh if a field renaming mapper newFieldName is changed"}                    | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "field", newFieldName: "new_field" })]}                                                          | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "field", newFieldName: "new_field_also" })]}                                                                                                                                                                                                    | ${true}
+      ${"should recommend refresh if a field renaming mapper is removed"}                                 | ${[createMapper("mapper1", StreamMapperType["field-renaming"], { originalFieldName: "field", newFieldName: "new_field" })]}                                                          | ${[]}                                                                                                                                                                                                                                                                                                                               | ${true}
+      ${"should not recommend refresh if a new row filtering mapper is added"}                            | ${[]}                                                                                                                                                                                | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } })]}                                                                                                                                                          | ${false}
+      ${"should not recommend refresh if a row filtering mapper is changed"}                              | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } })]}           | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field3" } })]}                                                                                                                                                          | ${false}
+      ${"should not recommend refresh if a new row filtering mapper is removed"}                          | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } })]}           | ${[]}                                                                                                                                                                                                                                                                                                                               | ${false}
+      ${"should recommend refresh if a new mapper is added and a row filter one exists"}                  | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } })]}           | ${[createMapper("mapper1", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } }), createMapper("mapper2", StreamMapperType.hashing, { targetField: "field_2", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]} | ${true}
+      ${"should not recommend refresh if a new row filter mapper is added even if another mapper exists"} | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field_2", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" })]}                         | ${[createMapper("mapper1", StreamMapperType.hashing, { targetField: "field_2", method: HashingMapperConfigurationMethod.MD5, fieldNameSuffix: "_hashed" }), createMapper("mapper2", StreamMapperType["row-filtering"], { conditions: { type: RowFilteringOperationType.EQUAL, comparisonValue: "banana", fieldName: "field1" } })]} | ${false}
+    `("$description", ({ storedMappers, formMappers, expected }) => {
+      const storedSyncCatalog = { streams: [createStream({ mappers: storedMappers })] };
+      const formSyncCatalog = { streams: [createStream({ mappers: formMappers })] };
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(expected);
+    });
   });
 });
