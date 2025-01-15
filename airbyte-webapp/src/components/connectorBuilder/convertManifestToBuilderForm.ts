@@ -1149,6 +1149,7 @@ export function manifestAuthenticatorToBuilder(
         [
           "type",
           "access_token_name",
+          "access_token_value",
           "client_id",
           "client_secret",
           "expires_in_name",
@@ -1230,7 +1231,11 @@ export function manifestAuthenticatorToBuilder(
         };
       }
 
-      if (!oauth.grant_type || oauth.grant_type === "refresh_token") {
+      const authenticatorDefinesRefreshToken =
+        !isDeclarativeOAuth /* Legacy OAuth flow */ ||
+        !!authenticator.refresh_token_updater; /* declarative w/refresh_token */
+
+      if (authenticatorDefinesRefreshToken && (!oauth.grant_type || oauth.grant_type === "refresh_token")) {
         const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], oauth, spec);
         builderAuthenticator = {
           ...builderAuthenticator,
@@ -1249,29 +1254,33 @@ export function manifestAuthenticatorToBuilder(
             `${authenticator.type}.refresh_token_updater`
           );
 
-          if (!isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
+          if (!isDeclarativeOAuth && !isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
             throw new ManifestCompatibilityError(
               undefined,
               "OAuthAuthenticator.refresh_token_updater.refresh_token_config_path needs to match the config path used for refresh_token"
             );
           }
+
           const {
             access_token_config_path,
             token_expiry_date_config_path,
             refresh_token_config_path,
             ...refresh_token_updater
           } = refreshTokenUpdater;
+
           builderAuthenticator = {
             ...builderAuthenticator,
-            refresh_token_updater: {
-              ...refresh_token_updater,
-              access_token: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
-              ),
-              token_expiry_date: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
-              ),
-            },
+            refresh_token_updater: isDeclarativeOAuth
+              ? { ...refresh_token_updater, access_token: "", token_expiry_date: "" }
+              : {
+                  ...refresh_token_updater,
+                  access_token: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
+                  ),
+                  token_expiry_date: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
+                  ),
+                },
           };
         }
       }

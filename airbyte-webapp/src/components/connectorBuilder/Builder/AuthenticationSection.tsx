@@ -16,6 +16,7 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
+import { useNotificationService } from "hooks/services/Notification";
 import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
 import {
   useInitializedBuilderProject,
@@ -56,6 +57,7 @@ import {
   builderAuthenticatorToManifest,
   builderInputsToSpec,
   BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES,
+  extractInterpolatedConfigKey,
 } from "../types";
 import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
@@ -309,12 +311,19 @@ const OAuthForm = () => {
   );
 };
 
+const payloadHasField = <FieldKey extends string>(
+  payload: Record<string, unknown>,
+  fieldKey: FieldKey
+): payload is Record<FieldKey, string> => {
+  return fieldKey in payload;
+};
+
 const DeclarativeOAuthForm = () => {
   const { projectId } = useInitializedBuilderProject();
   const {
     jsonManifest: { spec },
   } = useConnectorBuilderFormState();
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const testingValues = useBuilderWatch("testingValues");
   const { updateTestingValues, savingState } = useConnectorBuilderFormState();
 
@@ -322,6 +331,13 @@ const DeclarativeOAuthForm = () => {
 
   const { field: authenticatorScopesField } = useController({ name: authPath("scopes") });
   const { field: authenticatorAccessTokenNameField } = useController({ name: authPath("access_token_name") });
+  const authenticatorAccessTokenValueField = useBuilderWatch(authPath("access_token_value"));
+  const authenticatorRefreshTokenValueField = useBuilderWatch(authPath("refresh_token"));
+
+  const { formatMessage } = useIntl();
+  const getUniqueKey = useGetUniqueKey();
+
+  const { registerNotification } = useNotificationService();
 
   return (
     <>
@@ -332,15 +348,56 @@ const DeclarativeOAuthForm = () => {
             disabled={!canPerformOauthFlow}
             builderProjectId={projectId}
             onComplete={async (payload) => {
-              const response = await updateTestingValues({
-                spec: spec?.connection_specification ?? {},
-                testingValues: {
-                  ...testingValues,
-                  client_refresh_token: payload.refresh_token,
-                },
-              });
+              const accessTokenKey = getValues(authPath("declarative.access_token_key"));
+              const areRefreshTokensEnabled = !!getValues(authPath("refresh_token_updater"));
 
-              setValue("testingValues", response);
+              if (!areRefreshTokensEnabled) {
+                if (payloadHasField(payload, accessTokenKey)) {
+                  // update testing values with the returned access token
+                  const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField)!;
+                  const response = await updateTestingValues({
+                    spec: spec?.connection_specification ?? {},
+                    testingValues: {
+                      ...testingValues,
+                      [accessTokenConfigKey]: payload[accessTokenKey],
+                    },
+                  });
+                  setValue("testingValues", response);
+                } else {
+                  registerNotification({
+                    id: "connectorBuilder.authentication.oauthButton.noAccessToken",
+                    text: (
+                      <FormattedMessage
+                        id="connectorBuilder.authentication.oauthButton.noAccessToken"
+                        values={{ accessTokenKey }}
+                      />
+                    ),
+                    type: "error",
+                  });
+                }
+              } else if (payloadHasField(payload, "refresh_token")) {
+                // update testing values with the returned refresh token
+                const refreshTokenConfigKey = extractInterpolatedConfigKey(authenticatorRefreshTokenValueField)!;
+                const response = await updateTestingValues({
+                  spec: spec?.connection_specification ?? {},
+                  testingValues: {
+                    ...testingValues,
+                    [refreshTokenConfigKey]: payload.refresh_token,
+                  },
+                });
+                setValue("testingValues", response);
+              } else {
+                registerNotification({
+                  id: "connectorBuilder.authentication.oauthButton.noRefreshToken",
+                  text: (
+                    <FormattedMessage
+                      id="connectorBuilder.authentication.oauthButton.noRefreshToken"
+                      values={{ refreshTokenKey: "refresh_token" }}
+                    />
+                  ),
+                  type: "error",
+                });
+              }
             }}
           />
         }
@@ -353,19 +410,14 @@ const DeclarativeOAuthForm = () => {
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
       <BuilderField
-        type="jinja"
+        type="string"
         path={authPath("declarative.consent_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.consent_url"
       />
       <BuilderField
-        type="jinja"
+        type="string"
         path={authPath("declarative.access_token_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_url"
-      />
-      <BuilderField
-        type="jinja"
-        path={authPath("token_refresh_endpoint")}
-        manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
       />
       <BuilderField
         type="string"
@@ -386,6 +438,39 @@ const DeclarativeOAuthForm = () => {
           authenticatorAccessTokenNameField.onChange
         }
       />
+      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
+      <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
+        label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
+        tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
+        fieldPath={authPath("refresh_token_updater")}
+        initialValues={{
+          refresh_token_name: "refresh_token",
+          access_token: interpolateConfigKey(
+            getUniqueKey(
+              LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token_updater
+                .access_token_config_path.key
+            )
+          ),
+          token_expiry_date: interpolateConfigKey(
+            getUniqueKey(
+              LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token_updater
+                .token_expiry_date_config_path.key
+            )
+          ),
+        }}
+      >
+        <BuilderField
+          type="jinja"
+          path={authPath("token_refresh_endpoint")}
+          manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
+        />
+        <BuilderField
+          type="jinja"
+          path={authPath("refresh_token_updater.refresh_token_name")}
+          optional
+          manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
+        />
+      </ToggleGroupField>
       <BuilderOptional>
         <KeyValueListField
           path={authPath("declarative.access_token_headers")}
@@ -641,6 +726,18 @@ const useOauthOptions = () => {
           default: {
             type: DeclarativeOAuthAuthenticatorType,
             ...baseOauthOption,
+            client_id: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_id.key)
+            ),
+            client_secret: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_secret.key)
+            ),
+            access_token_value: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].access_token.key)
+            ),
+            refresh_token: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token.key)
+            ),
             declarative: {
               consent_url: "",
               access_token_url: "",

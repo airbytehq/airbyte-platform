@@ -1839,6 +1839,8 @@
   "connectorBuilder.authentication.injectInto.token": "token",
   "connectorBuilder.authentication.injectInto.sessionToken": "session token",
   "connectorBuilder.authentication.oauthButton.disabledTooltip": "Project must be saved before authenticating",
+  "connectorBuilder.authentication.oauthButton.noAccessToken": "OAuth completed successfully but did not return an access token in field \"{accessTokenKey}\"",
+  "connectorBuilder.authentication.oauthButton.noRefreshToken": "OAuth completed successfully but did not return a refresh token in field \"{refreshTokenKey}\"",
   "connectorBuilder.errorHandler.label": "Error Handler",
   "connectorBuilder.errorHandler.addButton": "Add error handler",
   "connectorBuilder.errorHandler.backoffStrategy.label": "Backoff Strategy",

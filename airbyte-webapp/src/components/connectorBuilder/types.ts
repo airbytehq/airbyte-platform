@@ -516,6 +516,7 @@ export function builderAuthenticatorToManifest(
     return undefined;
   }
   if (authenticator.type === OAUTH_AUTHENTICATOR || authenticator.type === DeclarativeOAuthAuthenticatorType) {
+    const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
     const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
     return {
       ...omit(authenticator, "declarative", "type"),
@@ -524,6 +525,11 @@ export function builderAuthenticatorToManifest(
       refresh_token_updater:
         authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
           ? undefined
+          : authenticator.type === DeclarativeOAuthAuthenticatorType && isRefreshTokenFlowEnabled
+          ? {
+              ...refresh_token_updater,
+              refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
+            }
           : {
               ...refresh_token_updater,
               access_token_config_path: [
@@ -1018,6 +1024,7 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
 ): Spec => {
   const updatedSpec = structuredClone(spec);
 
+  const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
   const accessTokenKey = authenticator.declarative.access_token_key;
 
   updatedSpec.advanced_auth = {
@@ -1030,7 +1037,9 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
           "access_token_params",
           "state",
         ]),
-        extract_output: [authenticator.declarative.access_token_key, "refresh_token"],
+        extract_output: isRefreshTokenFlowEnabled
+          ? [authenticator.declarative.access_token_key, "refresh_token"]
+          : [authenticator.declarative.access_token_key],
         state: authenticator.declarative.state ? JSON.parse(authenticator.declarative.state) : undefined,
 
         access_token_headers: authenticator.declarative.access_token_headers
@@ -1042,16 +1051,20 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
           : undefined,
       } as OAuthConfigSpecificationOauthConnectorInputSpecification,
       complete_oauth_output_specification: {
-        required: [accessTokenKey, "refresh_token"],
+        required: isRefreshTokenFlowEnabled ? [accessTokenKey, "refresh_token"] : [accessTokenKey],
         properties: {
           [accessTokenKey]: {
             type: "string",
             path_in_connector_config: [accessTokenKey],
           },
-          refresh_token: {
-            type: "string",
-            path_in_connector_config: ["refresh_token"],
-          },
+          ...(isRefreshTokenFlowEnabled
+            ? {
+                refresh_token: {
+                  type: "string",
+                  path_in_connector_config: ["refresh_token"],
+                },
+              }
+            : {}),
         },
       },
       complete_oauth_server_input_specification: {

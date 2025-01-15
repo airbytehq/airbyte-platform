@@ -419,8 +419,15 @@ const useAuthenticatorSchema = () => {
       yup.object({
         type: yup.string().required(REQUIRED_ERROR),
         inject_into: apiKeyInjectIntoSchema,
-        token_refresh_endpoint: yup.mixed().when("type", {
-          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+        token_refresh_endpoint: yup.mixed().when(["type", "refresh_token_updater"], {
+          is: (type: string, refreshTokenUpdater: unknown) => {
+            if (type === OAUTH_AUTHENTICATOR) {
+              return true;
+            } else if (type === DeclarativeOAuthAuthenticatorType && !!refreshTokenUpdater) {
+              return true;
+            }
+            return false;
+          },
           then: yup.string().required(REQUIRED_ERROR),
           otherwise: strip,
         }),
@@ -447,6 +454,7 @@ const useAuthenticatorSchema = () => {
             access_token_key: yup.string().required(REQUIRED_ERROR),
             access_token_headers: keyValueListSchema,
             access_token_params: keyValueListSchema,
+            access_token_value: yup.string(),
             auth_code_key: yup.string(),
             client_id_key: yup.string(),
             client_secret_key: yup.string(),
