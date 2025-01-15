@@ -136,6 +136,14 @@ create table "public"."airbyte_configs_migrations" (
   "success" boolean not null,
   constraint "airbyte_configs_migrations_pk" primary key ("installed_rank")
 );
+create table "public"."application" (
+  "id" uuid not null,
+  "user_id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "client_id" varchar(2147483647) not null,
+  "client_secret" varchar(2147483647) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp
+);
 create table "public"."auth_refresh_token" (
   "value" varchar(2147483647) not null,
   "session_id" varchar(2147483647) not null,
