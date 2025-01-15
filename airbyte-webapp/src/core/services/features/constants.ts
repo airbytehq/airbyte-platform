@@ -2,7 +2,6 @@ import { FeatureItem } from "./types";
 
 export const defaultOssFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.EnterpriseUpsell,
@@ -11,7 +10,6 @@ export const defaultOssFeatures = [
 export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
-  FeatureItem.AllowOAuthConnector,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.DiagnosticsExport,
   FeatureItem.DisplayOrganizationUsers,
@@ -26,7 +24,6 @@ export const defaultEnterpriseFeatures = [
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.CloudForTeamsUpsell,

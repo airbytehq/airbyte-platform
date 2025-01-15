@@ -14,7 +14,6 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { FeatureItem, useFeature } from "core/services/features";
 
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
@@ -79,7 +78,6 @@ export function useBuildForm(
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
-  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
 
   const isDraft =
     selectedConnectorDefinitionSpecification &&
@@ -159,14 +157,14 @@ export function useBuildForm(
       () =>
         formBlock.properties.flatMap((block) =>
           block._type === "formGroup" && block.fieldKey === "connectionConfiguration"
-            ? allowOAuthConnector && authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
+            ? authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
               ? // OAuth button needs to be rendered at root level, so keep around an empty FormGroup for it to be rendered in.
                 // Order it after name and before the rest of the fields.
                 [{ ...block, properties: [], order: Number.MIN_SAFE_INTEGER + 1 }, ...block.properties]
               : block.properties
             : block
         ),
-      [allowOAuthConnector, formBlock.properties, selectedConnectorDefinitionSpecification]
+      [formBlock.properties, selectedConnectorDefinitionSpecification]
     );
 
     const groups: GroupDetails[] = useMemo(() => {

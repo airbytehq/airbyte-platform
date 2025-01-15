@@ -4,7 +4,6 @@ import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
-import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 
 import { useConnectorForm } from "./connectorFormContext";
@@ -67,8 +66,6 @@ export const useAuthentication = (): AuthenticationHook => {
   const values = watch();
   const { getValues, selectedConnectorDefinitionSpecification: connectorSpec } = useConnectorForm();
 
-  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
-
   const advancedAuth = connectorSpec?.advancedAuth;
 
   const getValuesSafe = useCallback(
@@ -99,11 +96,10 @@ export const useAuthentication = (): AuthenticationHook => {
   const isAuthButtonVisible = useMemo(
     () =>
       Boolean(
-        allowOAuthConnector &&
-          advancedAuth &&
+        advancedAuth &&
           shouldShowButtonForAdvancedAuth(advancedAuth.predicateKey, advancedAuth.predicateValue, valuesWithDefaults)
       ),
-    [advancedAuth, valuesWithDefaults, allowOAuthConnector]
+    [advancedAuth, valuesWithDefaults]
   );
 
   const shouldShowRedirectUrlTooltip = connectorSpec?.advancedAuthGlobalCredentialsAvailable === false;

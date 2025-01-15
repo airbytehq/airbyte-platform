@@ -3,7 +3,6 @@ import { FormattedMessage } from "react-intl";
 
 import { getSupportRevokingTokensConnectorIds } from "core/domain/connector/constants";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
-import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
 import { AuthButton } from "./AuthButton";
@@ -28,7 +27,7 @@ export const AuthSection: React.FC = () => {
   const supportsRevokingTokens = getSupportRevokingTokensConnectorIds().includes(definitionId);
 
   return (
-    <IfFeatureEnabled feature={FeatureItem.AllowOAuthConnector}>
+    <>
       <SectionContainer>
         <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
           <AuthButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
@@ -43,6 +42,6 @@ export const AuthSection: React.FC = () => {
       {shouldShowRedirectUrlTooltip && (
         <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
       )}
-    </IfFeatureEnabled>
+    </>
   );
 };

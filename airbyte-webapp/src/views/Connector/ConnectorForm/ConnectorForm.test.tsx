@@ -11,7 +11,6 @@ import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -278,12 +277,10 @@ describe("Connector form", () => {
   let result: ConnectorFormValues | undefined;
 
   async function renderForm({
-    disableOAuth,
     formValuesOverride,
     propertiesOverride,
     specificationOverride,
   }: {
-    disableOAuth?: boolean;
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
@@ -314,8 +311,7 @@ describe("Connector form", () => {
           } as unknown as DestinationDefinitionSpecificationRead
         }
       />,
-      undefined,
-      disableOAuth ? undefined : [FeatureItem.AllowOAuthConnector]
+      undefined
     );
     return renderResult.container;
   }
