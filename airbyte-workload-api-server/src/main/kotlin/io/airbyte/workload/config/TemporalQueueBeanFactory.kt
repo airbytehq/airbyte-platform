@@ -17,7 +17,6 @@ import io.micronaut.context.annotation.Property
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowClientOptions
 import io.temporal.opentracing.OpenTracingClientInterceptor
-import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
 import java.time.Duration
 
@@ -35,22 +34,19 @@ class TemporalQueueBeanFactory {
     @Property(name = "temporal.cloud.client.key") clientKey: String,
     @Property(name = "temporal.cloud.host") host: String,
     @Property(name = "temporal.cloud.namespace") namespace: String,
-  ): TemporalCloudConfig {
-    return TemporalCloudConfig(
+  ): TemporalCloudConfig =
+    TemporalCloudConfig(
       clientCert = clientCert,
       clientKey = clientKey,
       host = host,
       namespace = namespace,
     )
-  }
 
   @Singleton
   fun createTemporalSelfHostedConfig(
     @Property(name = "temporal.self-hosted.host") host: String,
     @Property(name = "temporal.self-hosted.namespace") namespace: String,
-  ): TemporalSelfHostedConfig {
-    return TemporalSelfHostedConfig(host = host, namespace = namespace)
-  }
+  ): TemporalSelfHostedConfig = TemporalSelfHostedConfig(host = host, namespace = namespace)
 
   @Singleton
   fun createTemporalTimeouts(
@@ -58,54 +54,43 @@ class TemporalQueueBeanFactory {
     @Property(name = "temporal.sdk.timeouts.rpc-timeout") rpcTimeout: Duration,
     @Property(name = "temporal.sdk.timeouts.rpc-long-poll-timeout") rpcLongPollTimeout: Duration,
     @Property(name = "temporal.sdk.timeouts.rpc-query-timeout") rpcQueryTimeout: Duration,
-  ): WorkflowServiceStubsTimeouts {
-    return WorkflowServiceStubsTimeouts(
+  ): WorkflowServiceStubsTimeouts =
+    WorkflowServiceStubsTimeouts(
       rpcTimeout = rpcTimeout,
       rpcLongPollTimeout = rpcLongPollTimeout,
       rpcQueryTimeout = rpcQueryTimeout,
       maxTimeToConnect = maxTimeToConnect,
     )
-  }
-
-  @Singleton
-  fun createWorkflowServiceStub(
-    temporalCloudConfig: TemporalCloudConfig,
-    temporalSelfHostedConfig: TemporalSelfHostedConfig,
-    temporalTimeouts: WorkflowServiceStubsTimeouts,
-    @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
-  ): WorkflowServiceStubs {
-    return WorkflowServiceStubsFactory(temporalCloudConfig, temporalSelfHostedConfig, temporalCloudEnabled)
-      .createWorkflowService(temporalTimeouts)
-  }
 
   @Singleton
   fun createWorkflowClient(
-    workflowServiceStub: WorkflowServiceStubs,
     temporalCloudConfig: TemporalCloudConfig,
     temporalSelfHostedConfig: TemporalSelfHostedConfig,
     airbyteTemporalDataConveter: AirbyteTemporalDataConverter,
+    temporalTimeouts: WorkflowServiceStubsTimeouts,
     @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
   ): WorkflowClient {
+    val workflowServiceStub =
+      WorkflowServiceStubsFactory(temporalCloudConfig, temporalSelfHostedConfig, temporalCloudEnabled)
+        .createWorkflowService(temporalTimeouts)
     val namespace = if (temporalCloudEnabled) temporalCloudConfig.namespace else temporalSelfHostedConfig.namespace
     val workflowClientOptions =
-      WorkflowClientOptions.newBuilder()
+      WorkflowClientOptions
+        .newBuilder()
         .setNamespace(namespace.orEmpty())
         .setInterceptors(OpenTracingClientInterceptor())
         .setDataConverter(airbyteTemporalDataConveter)
         .build()
+
     return WorkflowClientFactory().createWorkflowClient(workflowServiceStub, workflowClientOptions)
   }
 
   @Singleton
-  fun createWorkflowClientWrapped(
+  fun createTemporalQueueProducer(
     workflowClient: WorkflowClient,
     metricClient: MetricClient,
-  ): WorkflowClientWrapped {
-    return WorkflowClientWrapped(workflowClient, metricClient)
-  }
-
-  @Singleton
-  fun createTemporalQueueProducer(worklowClientWrapped: WorkflowClientWrapped): TemporalMessageProducer<LauncherInputMessage> {
-    return TemporalMessageProducer(worklowClientWrapped)
+  ): TemporalMessageProducer<LauncherInputMessage> {
+    val workflowClientWrapped = WorkflowClientWrapped(workflowClient, metricClient)
+    return TemporalMessageProducer(workflowClientWrapped)
   }
 }
