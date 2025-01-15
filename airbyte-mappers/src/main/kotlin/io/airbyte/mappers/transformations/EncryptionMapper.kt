@@ -25,6 +25,8 @@ class EncryptionConfigException(msg: String, cause: Throwable) : MapperException
   cause = cause,
 )
 
+class MissingSecretValueException(msg: String) : IllegalArgumentException(msg)
+
 @Singleton
 class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
   class EncryptionMapperSpec : ConfigValidatingSpec<EncryptionMapperConfig>() {
@@ -47,6 +49,9 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
   ): SlimStream {
     // Making sure we can instantiate cipher for the given config.
     getCipher(config.config)
+
+    // Try to encrypt to ensure params are valid
+    encryptSample(config.config)
 
     return slimStream
       .deepCopy()
@@ -88,6 +93,17 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     }
   }
 
+  private fun encryptSample(config: EncryptionConfig) {
+    val sampleData = "sample data"
+    try {
+      encrypt(sampleData.toByteArray(Charsets.UTF_8), config)
+    } catch (e: MissingSecretValueException) {
+      // ignore if key is not hydrated
+    } catch (e: Exception) {
+      throw EncryptionConfigException("Encryption key or parameters are invalid", e)
+    }
+  }
+
   private fun getCipher(config: EncryptionConfig): Cipher {
     return when (config) {
       is AesEncryptionConfig ->
@@ -105,7 +121,7 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     data: ByteArray,
     config: AesEncryptionConfig,
   ): String {
-    val key = config.key as? AirbyteSecret.Hydrated ?: throw IllegalArgumentException("key hasn't been hydrated")
+    val key = config.key as? AirbyteSecret.Hydrated ?: throw MissingSecretValueException("key hasn't been hydrated")
     val cipher = getCipher(config)
     val iv = ByteArray(16)
     SecureRandom().nextBytes(iv)
