@@ -24,11 +24,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.temporal.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.temporal.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.temporal.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.temporal.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.temporal.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -39,13 +39,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.temporal.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.temporal.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.temporal.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.temporal.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.affinity "context" $) | nindent 8 }}
       {{- end }}
 {{- if .Values.temporal.extraInitContainers }}
       initContainers:

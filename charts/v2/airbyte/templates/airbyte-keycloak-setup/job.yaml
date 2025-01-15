@@ -11,7 +11,7 @@ metadata:
     {{ toYaml (mergeOverwrite .Values.keycloakSetup.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
     {{- if .Values.keycloakSetup.podLabels}}
-    {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.podLabels "context" $) | nindent 4 }}
+    {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.podLabels "context" $) | nindent 4 }}
     {{- end }}
   annotations:
     "helm.sh/hook": "post-install, post-upgrade"
@@ -29,13 +29,13 @@ spec:
       {{- end }}
       restartPolicy: Never
       {{- if .Values.keycloakSetup.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.nodeSelector "context" $) | nindent 6 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.nodeSelector "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.keycloakSetup.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.tolerations "context" $) | nindent 6 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.tolerations "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.keycloakSetup.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.keycloakSetup.affinity "context" $) | nindent 6 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.affinity "context" $) | nindent 6 }}
       {{- end }}
       initContainers:
         {{- if .Values.keycloakSetup.extraInitContainers }}

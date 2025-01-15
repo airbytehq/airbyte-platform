@@ -22,11 +22,11 @@ spec:
       labels:
         airbyte: metrics
         {{- if .Values.metrics.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.metrics.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -37,13 +37,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.metrics.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.metrics.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.metrics.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
       {{- end }}
       containers:
       - name: airbyte-metrics-container

@@ -26,11 +26,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.workloadApiServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.workloadApiServer.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.workloadApiServer.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.workloadApiServer.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.workloadApiServer.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -41,13 +41,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.workloadApiServer.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.workloadApiServer.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadApiServer.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.workloadApiServer.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadApiServer.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.workloadApiServer.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadApiServer.extraInitContainers }}
       initContainers:

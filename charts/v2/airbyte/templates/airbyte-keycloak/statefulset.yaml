@@ -29,22 +29,22 @@ spec:
           {{ toYaml (mergeOverwrite .Values.keycloak.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
           {{- end }}
           {{- if .Values.keycloak.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.podLabels "context" $) | nindent 8 }}
           {{- end }}
       {{- if .Values.keycloak.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- if .Values.keycloak.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.keycloak.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.keycloak.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:

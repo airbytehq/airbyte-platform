@@ -25,11 +25,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.workloadLauncher.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.workloadLauncher.podLabels}}
-          {{- include "common.tplvalues.render" (dict "value" .Values.workloadLauncher.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.workloadLauncher.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.workloadLauncher.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -41,13 +41,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.workloadLauncher.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.workloadLauncher.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadLauncher.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.workloadLauncher.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadLauncher.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.workloadLauncher.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadLauncher.extraInitContainers }}
       initContainers:

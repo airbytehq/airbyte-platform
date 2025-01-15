@@ -26,11 +26,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.connectorRolloutWorker.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.connectorRolloutWorker.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -42,13 +42,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.extraInitContainers }}
       initContainers:

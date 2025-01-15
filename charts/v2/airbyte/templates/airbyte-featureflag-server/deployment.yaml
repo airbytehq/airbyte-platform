@@ -27,11 +27,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.featureflagServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.featureflagServer.podLabels}}
-          {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.featureflagServer.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -42,13 +42,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.featureflagServer.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.featureflagServer.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.featureflagServer.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.featureflagServer.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.featureflagServer.extraInitContainers }}
       initContainers:

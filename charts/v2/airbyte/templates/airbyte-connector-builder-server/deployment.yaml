@@ -23,11 +23,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.connectorBuilderServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.connectorBuilderServer.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.connectorBuilderServer.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -38,13 +38,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.extraInitContainers }}
       initContainers:
