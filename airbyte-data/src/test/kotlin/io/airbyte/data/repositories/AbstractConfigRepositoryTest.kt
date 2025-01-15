@@ -93,4 +93,5 @@ abstract class AbstractConfigRepositoryTest {
   val organizationRepository = context.getBean(OrganizationRepository::class.java)!!
   val workspaceRepository = context.getBean(WorkspaceRepository::class.java)!!
   val organizationPaymentConfigRepository = context.getBean(OrganizationPaymentConfigRepository::class.java)!!
+  val tagRepository = context.getBean(TagRepository::class.java)!!
 }

@@ -879,6 +879,88 @@ components:
               default: Not enough actors are eligible for the progressive rollout.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    TagAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:tag-already-exists
+            title:
+              type: string
+              default: Tag already exists
+            detail:
+              type: string
+              default: A tag with this name already exists in this workspace.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagInvalidHexColorProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-invalid-hex-color
+            title:
+              type: string
+              default: Invalid hex color
+            detail:
+              type: string
+              default: The hex color provided is invalid.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagNameTooLongProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-name-too-long
+            title:
+              type: string
+              default: Tag name too long
+            detail:
+              type: string
+              default: The tag name can be maximuim 30 characters.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagLimitForWorkspaceReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-limit-for-workspace-reached
+            title:
+              type: string
+              default: Tag limit for workspace reached
+            detail:
+              type: string
+              default: The workspace has reached the maximum number of tags.
     ProblemCronData:
       type: object
       properties:
