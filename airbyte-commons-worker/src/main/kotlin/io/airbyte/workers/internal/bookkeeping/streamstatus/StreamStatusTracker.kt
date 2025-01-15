@@ -111,14 +111,8 @@ class StreamStatusTracker(
           store.setRunState(key, ApiEnum.RUNNING)
         }
       }
-      ProtocolEnum.INCOMPLETE -> {
-        logger.info { "Stream status INCOMPLETE from the source for stream name: ${key.streamName}, namespace: ${key.streamNamespace}" }
-        store.setRunState(key, ApiEnum.INCOMPLETE)
-      }
-      ProtocolEnum.COMPLETE -> {
-        logger.info { "Stream status COMPLETE from the source for stream name: ${key.streamName}, namespace: ${key.streamNamespace}" }
-        store.markSourceComplete(key)
-      }
+      ProtocolEnum.INCOMPLETE -> store.setRunState(key, ApiEnum.INCOMPLETE)
+      ProtocolEnum.COMPLETE -> store.markSourceComplete(key)
     }
   }
 
