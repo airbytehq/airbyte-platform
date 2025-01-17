@@ -102,10 +102,11 @@ export const AuthButton: React.FC<{
 export const AuthButtonBuilder: React.FC<{
   builderProjectId: string;
   onComplete: (authPayload: Record<string, unknown>) => void;
+  onClick?: () => void;
   disabled?: boolean;
-}> = ({ builderProjectId, onComplete, disabled }) => {
+}> = ({ builderProjectId, onComplete, onClick, disabled }) => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
+  const { loading, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
 
   // if (!selectedConnectorDefinition) {
   //   console.error("Entered non-auth flow while no supported connector is selected");
@@ -121,11 +122,6 @@ export const AuthButtonBuilder: React.FC<{
   //   [styles.success]: !authRequiredError,
   //   [styles.success]: true,
   // });
-  const buttonLabel = done ? (
-    <FormattedMessage id="connectorForm.reauthenticate" />
-  ) : (
-    <FormattedMessage id="connectorForm.authenticate" values={{ connector: "" }} />
-  );
 
   return (
     <FlexContainer alignItems="center">
@@ -134,11 +130,9 @@ export const AuthButtonBuilder: React.FC<{
         isLoading={loading}
         type="button"
         data-testid="oauth-button"
-        onClick={() => {
-          run();
-        }}
+        onClick={onClick ?? run}
       >
-        {buttonLabel}
+        <FormattedMessage id="connectorBuilder.authentication.oauthButton.label" />
       </Component>
       {/* {authRequiredError && (
         <Text as="div" size="lg" className={messageStyle}>

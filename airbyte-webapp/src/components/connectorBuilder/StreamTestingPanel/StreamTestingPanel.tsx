@@ -27,7 +27,10 @@ import { useBuilderWatch } from "../types";
 
 const EMPTY_SCHEMA = {};
 
-function useTestingValuesErrors(testingValues: ConnectorBuilderProjectTestingValues | undefined, spec?: Spec): number {
+export function useTestingValuesErrors(
+  testingValues: ConnectorBuilderProjectTestingValues | undefined,
+  spec?: Spec
+): number {
   const { formatMessage } = useIntl();
 
   return useMemo(() => {

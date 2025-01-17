@@ -21,6 +21,7 @@ import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
 import {
   useInitializedBuilderProject,
   useConnectorBuilderFormState,
+  useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { AuthButtonBuilder } from "views/Connector/ConnectorForm/components/Sections/auth/AuthButton";
 
@@ -38,6 +39,7 @@ import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
 import { useBuilderWatchWithPreview } from "../preview";
+import { useTestingValuesErrors } from "../StreamTestingPanel";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -325,6 +327,7 @@ const DeclarativeOAuthForm = () => {
   } = useConnectorBuilderFormState();
   const { setValue, getValues } = useFormContext();
   const testingValues = useBuilderWatch("testingValues");
+  const testingValuesErrors = useTestingValuesErrors(testingValues, spec);
   const { updateTestingValues, savingState } = useConnectorBuilderFormState();
 
   const canPerformOauthFlow = savingState === "saved";
@@ -338,6 +341,9 @@ const DeclarativeOAuthForm = () => {
   const getUniqueKey = useGetUniqueKey();
 
   const { registerNotification } = useNotificationService();
+  const hasNecessaryTestingValues = testingValuesErrors === 0;
+
+  const { setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
 
   return (
     <>
@@ -347,11 +353,23 @@ const DeclarativeOAuthForm = () => {
           <AuthButtonBuilder
             disabled={!canPerformOauthFlow}
             builderProjectId={projectId}
+            onClick={
+              hasNecessaryTestingValues
+                ? undefined
+                : () => {
+                    registerNotification({
+                      id: "connectorBuilder.authentication.oauthButton.inputsRequired",
+                      text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
+                      type: "info",
+                    });
+                    setTestingValuesInputOpen(true);
+                  }
+            }
             onComplete={async (payload) => {
-              const accessTokenKey = getValues(authPath("declarative.access_token_key"));
               const areRefreshTokensEnabled = !!getValues(authPath("refresh_token_updater"));
 
               if (!areRefreshTokensEnabled) {
+                const accessTokenKey = getValues(authPath("declarative.access_token_key"));
                 if (payloadHasField(payload, accessTokenKey)) {
                   // update testing values with the returned access token
                   const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField)!;

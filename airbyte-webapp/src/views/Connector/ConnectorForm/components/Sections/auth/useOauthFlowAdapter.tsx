@@ -163,11 +163,9 @@ export function useFormOauthAdapterBuilder(
 
   const { run, loading, done } = useRunOauthFlowBuilder({ builderProjectId, onDone });
 
-  const { hasAuthFieldValues } = { hasAuthFieldValues: false }; // useAuthentication();
-
   return {
     loading,
-    done: done || hasAuthFieldValues,
+    done,
     hasRun,
     run: async () => {
       // const oauthInputProperties =

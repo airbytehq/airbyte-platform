@@ -1,5 +1,5 @@
 import { BroadcastChannel } from "broadcast-channel";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEvent, useUnmount } from "react-use";
 import { v4 as uuid } from "uuid";
@@ -21,6 +21,7 @@ import {
   ConnectorSpecification,
 } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
+import { useFormatError } from "core/errors";
 import { trackError } from "core/utils/datadog";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
@@ -376,6 +377,7 @@ export function useRunOauthFlowBuilder({
 } {
   const { getConsentUrl, completeOauthRequest } = useConnectorAuthBuilder();
   const { registerNotification } = useNotificationService();
+  const formatError = useFormatError();
   const param = useRef<BuilderProjectOauthConsentRequest>();
   // const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
 
@@ -394,7 +396,7 @@ export function useRunOauthFlowBuilder({
       } catch (e) {
         registerNotification({
           id: OAUTH_ERROR_ID,
-          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
+          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: formatError(e) }} />,
           type: "error",
         });
         return false;
@@ -413,7 +415,7 @@ export function useRunOauthFlowBuilder({
     [builderProjectId, onDone]
   );
 
-  const [{ loading }, onStartOauth] = useAsyncFn(
+  const [{ loading, error }, onStartOauth] = useAsyncFn(
     async (oauthInputParams: Record<string, unknown>) => {
       // trackOAuthAttemp(connectorDefinition);
       const consentRequestInProgress = await getConsentUrl(builderProjectId, oauthInputParams);
@@ -455,6 +457,16 @@ export function useRunOauthFlowBuilder({
     },
     [builderProjectId]
   );
+
+  useEffect(() => {
+    if (error) {
+      registerNotification({
+        id: OAUTH_ERROR_ID,
+        text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: formatError(error) }} />,
+        type: "error",
+      });
+    }
+  }, [registerNotification, formatError, error]);
 
   // close the popup window and broadcast channel when unmounting
   useUnmount(() => {
