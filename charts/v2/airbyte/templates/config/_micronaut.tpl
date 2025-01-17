@@ -10,7 +10,7 @@ Renders the micronaut secret name
 */}}
 {{- define "airbyte.micronaut.secretName" }}
 {{- if .Values.global.micronaut.secretName }}
-    {{- .Values.global.micronaut.secretName | quote }}
+    {{- .Values.global.micronaut.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -20,7 +20,7 @@ Renders the micronaut secret name
 Renders the global.micronaut.environments value
 */}}
 {{- define "airbyte.micronaut.environments" }}
-    {{- join "," (append .Values.global.micronaut.environments (include "airbyte.common.cluster.type" .)) }}
+    {{- join "," (append .Values.global.micronaut.environments (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))) }}
 {{- end }}
 
 {{/*
@@ -45,5 +45,5 @@ Renders the set of all micronaut environment variables
 Renders the set of all micronaut config map variables
 */}}
 {{- define "airbyte.micronaut.configVars" }}
-MICRONAUT_ENVIRONMENTS: {{ join "," (append .Values.global.micronaut.environments (include "airbyte.common.cluster.type" .)) | quote }}
+MICRONAUT_ENVIRONMENTS: {{ include "airbyte.micronaut.environments" . | quote }}
 {{- end }}

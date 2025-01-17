@@ -10,7 +10,7 @@ Renders the tracking secret name
 */}}
 {{- define "airbyte.tracking.secretName" }}
 {{- if .Values.global.tracking.secretName }}
-    {{- .Values.global.tracking.secretName | quote }}
+    {{- .Values.global.tracking.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

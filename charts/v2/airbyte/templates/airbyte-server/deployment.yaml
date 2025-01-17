@@ -64,11 +64,14 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
+        {{- if (eq .Values.global.deploymentMode "oss") }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
+        {{- end}}
 
-        {{- include "airbyte.common.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.security.envs" . | nindent 8 }} 
+        {{- include "airbyte.common.envs" . | nindent 8 }} 
+        {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
@@ -89,9 +92,13 @@ spec:
         {{- include "airbyte.keycloak.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
-        {{- else }}
+        {{- else if (eq .Values.global.deploymentMode "oss") }}
         {{- include "airbyte.auth.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
+        {{- else }}
+        {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- end}}
 
         # Values from secret
@@ -156,19 +163,11 @@ spec:
         securityContext: {{- toYaml .Values.server.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-      {{- if eq .Values.global.deploymentMode "oss" }}
-        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: /secrets/gcs-log-creds
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
           readOnly: true
         {{- end }}
-        {{- if .Values.global.airbyteYml }}
-        - name: airbyte-yml-volume
-          mountPath: /app/configs/airbyte.yml
-          subPath: fileContents
-          readOnly: true
-        {{- end }}
-      {{- end }}
 
         {{- if .Values.server.extraVolumeMounts }}
           {{ toYaml .Values.server.extraVolumeMounts | nindent 8 }}
@@ -184,11 +183,13 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
       volumes:
-    {{- if eq .Values.global.deploymentMode "oss" }}
-      {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+          secretName: {{ include "airbyte.storage.secretName" }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
       {{- end }}
 
       {{- if .Values.global.airbyteYml }}
@@ -196,7 +197,6 @@ spec:
         secret:
           secretName: {{ .Release.Name }}-airbyte-yml
       {{- end }}
-    {{- end }}
       {{- if .Values.server.extraVolumes }}
-{{ toYaml .Values.server.extraVolumes | nindent 6 }}
+      {{ toYaml .Values.server.extraVolumes | nindent 6 }}
       {{- end }}

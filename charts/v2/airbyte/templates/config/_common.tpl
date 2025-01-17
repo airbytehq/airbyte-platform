@@ -10,7 +10,7 @@ Renders the common secret name
 */}}
 {{- define "airbyte.common.secretName" }}
 {{- if .Values.global.secretName }}
-    {{- .Values.global.secretName | quote }}
+    {{- .Values.global.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -20,7 +20,7 @@ Renders the common secret name
 Renders the global.edition value
 */}}
 {{- define "airbyte.common.edition" }}
-    {{- ternary "pro" "community" (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
+    {{- ternary "pro" .Values.global.edition (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
 {{- end }}
 
 {{/*
@@ -99,11 +99,11 @@ Renders the global.deploymentMode value
 Renders the common.deploymentMode environment variable
 */}}
 {{- define "airbyte.common.deploymentMode.env" }}
-- name: AIRBYTE_DEPLOYMENT_MODE
+- name: DEPLOYMENT_MODE
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: AIRBYTE_DEPLOYMENT_MODE
+      key: DEPLOYMENT_MODE
 {{- end }}
 
 {{/*
@@ -164,7 +164,7 @@ Renders the common.api.authHeaderName environment variable
 Renders the global.server.host value
 */}}
 {{- define "airbyte.common.server.host" }}
-    {{- (printf "%s-airbyte-server-svc:%d" .Release.Name (int .Values.server.service.port)) }}
+    {{- (printf "%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) }}
 {{- end }}
 
 {{/*
@@ -200,7 +200,7 @@ Renders the common.api.authEnabled environment variable
 Renders the global.connectorBuilderServer.apiHost value
 */}}
 {{- define "airbyte.common.connectorBuilderServer.apiHost" }}
-    {{- (printf "http://%s-airbyte-connector-builder-server-svc:%d" .Release.Name (int .Values.connectorBuilderServer.service.port)) }}
+    {{- (printf "http://%s-airbyte-connector-builder-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.connectorBuilderServer.service.port)) }}
 {{- end }}
 
 {{/*
@@ -218,7 +218,7 @@ Renders the common.connectorBuilderServer.apiHost environment variable
 Renders the global.api.internalHost value
 */}}
 {{- define "airbyte.common.api.internalHost" }}
-    {{- (printf "http://%s-airbyte-server-svc:%d" .Release.Name (int .Values.server.service.port)) }}
+    {{- (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) }}
 {{- end }}
 
 {{/*
@@ -254,7 +254,7 @@ Renders the common.local environment variable
 Renders the global.webapp.url value
 */}}
 {{- define "airbyte.common.webapp.url" }}
-    {{- (printf "http://%s-airbyte-webapp-svc:%d" .Release.Name (int .Values.webapp.service.port)) }}
+    {{- (printf "http://%s-airbyte-webapp-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.webapp.service.port)) }}
 {{- end }}
 
 {{/*
@@ -292,18 +292,18 @@ Renders the set of all common environment variables
 Renders the set of all common config map variables
 */}}
 {{- define "airbyte.common.configVars" }}
-AIRBYTE_EDITION: {{ ternary "pro" "community" (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) | quote }}
+AIRBYTE_EDITION: {{ include "airbyte.common.edition" . | quote }}
 AIRBYTE_VERSION: {{ include "airbyte.common.version" . | quote }}
 AIRBYTE_CLUSTER_TYPE: {{ include "airbyte.common.cluster.type" . | quote }}
 AIRBYTE_CLUSTER_NAME: {{ include "airbyte.common.cluster.name" . | quote }}
-AIRBYTE_DEPLOYMENT_MODE: {{ upper .Values.global.deploymentMode | quote }}
+DEPLOYMENT_MODE: {{ include "airbyte.common.deploymentMode" . | quote }}
 AIRBYTE_URL: {{ include "airbyte.common.airbyteUrl" . | quote }}
-AIRBYTE_API_HOST: {{ ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community") | quote }}
+AIRBYTE_API_HOST: {{ include "airbyte.common.api.host" . | quote }}
 AIRBYTE_API_AUTH_HEADER_NAME: {{ include "airbyte.common.api.authHeaderName" . | quote }}
-AIRBYTE_SERVER_HOST: {{ (printf "%s-airbyte-server-svc:%d" .Release.Name (int .Values.server.service.port)) | quote }}
+AIRBYTE_SERVER_HOST: {{ include "airbyte.common.server.host" . | quote }}
 API_AUTHORIZATION_ENABLED: {{ include "airbyte.common.api.authEnabled" . | quote }}
-CONNECTOR_BUILDER_SERVER_API_HOST: {{ (printf "http://%s-airbyte-connector-builder-server-svc:%d" .Release.Name (int .Values.connectorBuilderServer.service.port)) | quote }}
-INTERNAL_API_HOST: {{ (printf "http://%s-airbyte-server-svc:%d" .Release.Name (int .Values.server.service.port)) | quote }}
+CONNECTOR_BUILDER_SERVER_API_HOST: {{ include "airbyte.common.connectorBuilderServer.apiHost" . | quote }}
+INTERNAL_API_HOST: {{ include "airbyte.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte.common.local" . | quote }}
-WEBAPP_URL: {{ (printf "http://%s-airbyte-webapp-svc:%d" .Release.Name (int .Values.webapp.service.port)) | quote }}
+WEBAPP_URL: {{ include "airbyte.common.webapp.url" . | quote }}
 {{- end }}

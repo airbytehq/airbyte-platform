@@ -10,7 +10,7 @@ Renders the customerio secret name
 */}}
 {{- define "airbyte.customerio.secretName" }}
 {{- if .Values.global.customerio.secretName }}
-    {{- .Values.global.customerio.secretName | quote }}
+    {{- .Values.global.customerio.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

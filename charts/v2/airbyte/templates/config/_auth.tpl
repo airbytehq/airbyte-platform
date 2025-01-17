@@ -10,7 +10,7 @@ Renders the auth secret name
 */}}
 {{- define "airbyte.auth.secretName" }}
 {{- if .Values.global.auth.secretName }}
-    {{- .Values.global.auth.secretName | quote }}
+    {{- .Values.global.auth.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -46,7 +46,7 @@ Renders the auth.bootstrap secret name
 */}}
 {{- define "airbyte.auth.bootstrap.secretName" }}
 {{- if .Values.global.auth.secretName }}
-    {{- .Values.global.auth.secretName | quote }}
+    {{- .Values.global.auth.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -303,7 +303,7 @@ Renders the auth.identityProvider secret name
 */}}
 {{- define "airbyte.auth.identityProvider.secretName" }}
 {{- if .Values.global.auth.identityProvider.secretName }}
-    {{- .Values.global.auth.identityProvider.secretName | quote }}
+    {{- .Values.global.auth.identityProvider.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -446,7 +446,7 @@ Renders the auth.instanceAdmin.enterprise secret name
 */}}
 {{- define "airbyte.auth.instanceAdmin.enterprise.secretName" }}
 {{- if .Values.global.auth.instanceAdmin.secretName }}
-    {{- .Values.global.auth.instanceAdmin.secretName | quote }}
+    {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -569,7 +569,7 @@ Renders the auth.jwt secret name
 */}}
 {{- define "airbyte.auth.jwt.secretName" }}
 {{- if .Values.global.auth.instanceAdmin.secretName }}
-    {{- .Values.global.auth.instanceAdmin.secretName | quote }}
+    {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -605,7 +605,7 @@ Renders the auth.security secret name
 */}}
 {{- define "airbyte.auth.security.secretName" }}
 {{- if .Values.global.auth.security.secretName }}
-    {{- .Values.global.auth.security.secretName | quote }}
+    {{- .Values.global.auth.security.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

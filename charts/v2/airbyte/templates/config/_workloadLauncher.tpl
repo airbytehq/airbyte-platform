@@ -62,7 +62,7 @@ Renders the workloadLauncher.images secret name
 */}}
 {{- define "airbyte.workloadLauncher.images.secretName" }}
 {{- if .Values.workloadLauncher.secretName }}
-    {{- .Values.workloadLauncher.secretName | quote }}
+    {{- .Values.workloadLauncher.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -154,8 +154,8 @@ Renders the set of all workloadLauncher.images environment variables
 Renders the set of all workloadLauncher.images config map variables
 */}}
 {{- define "airbyte.workloadLauncher.images.configVars" }}
-CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.connectorSidecar.image $) | quote }}
+CONNECTOR_SIDECAR_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorSidecar.image" . | quote }}
 CONTAINER_ORCHESTRATOR_ENABLED: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.enabled" . | quote }}
-CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.containerOrchestrator.image $) | quote }}
-WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.workloadInit.image $) | quote }}
+CONTAINER_ORCHESTRATOR_IMAGE: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.image" . | quote }}
+WORKLOAD_INIT_IMAGE: {{ include "airbyte.workloadLauncher.images.workloadInit.image" . | quote }}
 {{- end }}

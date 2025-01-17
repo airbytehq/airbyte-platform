@@ -10,7 +10,7 @@ Renders the enterprise secret name
 */}}
 {{- define "airbyte.enterprise.secretName" }}
 {{- if .Values.global.enterprise.secretName }}
-    {{- .Values.global.enterprise.secretName | quote }}
+    {{- .Values.global.enterprise.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

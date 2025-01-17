@@ -10,7 +10,7 @@ Renders the database secret name
 */}}
 {{- define "airbyte.database.secretName" }}
 {{- if .Values.global.database.secretName }}
-    {{- .Values.global.database.secretName | quote }}
+    {{- .Values.global.database.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -156,7 +156,7 @@ Renders the set of all database config map variables
 {{- define "airbyte.database.configVars" }}
 DATABASE_HOST: {{ include "airbyte.database.host" . | quote }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
-DATABASE_URL: {{ (printf "jdbc:postgresql://%s:%d/%s" (include "airbyte.database.host" .) (int (include "airbyte.database.port" .)) (include "airbyte.database.name" .)) | quote }}
+DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
 DATABASE_DB: {{ include "airbyte.database.name" . | quote }}
 {{- end }}
 
@@ -173,7 +173,7 @@ Renders the database.migrations secret name
 */}}
 {{- define "airbyte.database.migrations.secretName" }}
 {{- if .Values.global.migrations.secretName }}
-    {{- .Values.global.migrations.secretName | quote }}
+    {{- .Values.global.migrations.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

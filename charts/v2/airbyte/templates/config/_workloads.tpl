@@ -10,14 +10,14 @@ Renders the workloads secret name
 */}}
 {{- define "airbyte.workloads.secretName" }}
 {{- if .Values.global.workloads.secretName }}
-    {{- .Values.global.workloads.secretName | quote }}
+    {{- .Values.global.workloads.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.containerOrchestrator.secretName value
+Renders the global.workloads.containerOrchestrator.secretName value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretName" }}
     {{- include "airbyte.workloads.secretName" . }}
@@ -35,9 +35,16 @@ Renders the workloads.containerOrchestrator.secretName environment variable
 {{- end }}
 
 {{/*
-Renders the workloads.containerOrchestrator.dataplane.secretMountPath environment variable
+Renders the global.workloads.containerOrchestrator.dataPlane.secretMountPath value
 */}}
-{{- define "airbyte.workloads.containerOrchestrator.dataplane.secretMountPath.env" }}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" }}
+    {{- .Values.global.workloads.containerOrchestrator.dataPlane.secretMountPath | default "/secrets/dataplane-creds" }}
+{{- end }}
+
+{{/*
+Renders the workloads.containerOrchestrator.dataPlane.secretMountPath environment variable
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath.env" }}
 - name: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH
   valueFrom:
     configMapKeyRef:
@@ -46,21 +53,28 @@ Renders the workloads.containerOrchestrator.dataplane.secretMountPath environmen
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.containerOrchestrator.dataplane.secretName value
+Renders the global.workloads.containerOrchestrator.dataPlane.secretName value
 */}}
-{{- define "airbyte.workloads.containerOrchestrator.dataplane.secretName" }}
-    {{- include "airbyte.workloads.secretName" . }}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretName" }}
+    {{- .Values.global.workloads.containerOrchestrator.dataPlane.secretName }}
 {{- end }}
 
 {{/*
-Renders the workloads.containerOrchestrator.dataplane.secretName environment variable
+Renders the workloads.containerOrchestrator.dataPlane.secretName environment variable
 */}}
-{{- define "airbyte.workloads.containerOrchestrator.dataplane.secretName.env" }}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretName.env" }}
 - name: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
+{{- end }}
+
+{{/*
+Renders the global.workloads.containerOrchestrator.javaOpts value
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.javaOpts" }}
+    {{- .Values.global.workloads.containerOrchestrator.javaOpts | default "-XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent" }}
 {{- end }}
 
 {{/*
@@ -75,6 +89,13 @@ Renders the workloads.containerOrchestrator.javaOpts environment variable
 {{- end }}
 
 {{/*
+Renders the global.workloads.containerOrchestrator.secretMountPath value
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.secretMountPath" }}
+    {{- .Values.global.workloads.containerOrchestrator.secretMountPath }}
+{{- end }}
+
+{{/*
 Renders the workloads.containerOrchestrator.secretMountPath environment variable
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretMountPath.env" }}
@@ -86,10 +107,10 @@ Renders the workloads.containerOrchestrator.secretMountPath environment variable
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.kubernetesClientMaxIdleConnections value
+Renders the global.workloads.kubernetesClientMaxIdleConnections value
 */}}
 {{- define "airbyte.workloads.kubernetesClientMaxIdleConnections" }}
-    {{- .Values.workloadLauncher.kubernetesClientMaxIdleConnections | default 100 }}
+    {{- .Values.global.workloads.kubernetesClientMaxIdleConnections | default 100 }}
 {{- end }}
 
 {{/*
@@ -104,10 +125,10 @@ Renders the workloads.kubernetesClientMaxIdleConnections environment variable
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.kuberentesClientMaxRetries value
+Renders the global.workloads.kuberentesClientMaxRetries value
 */}}
 {{- define "airbyte.workloads.kuberentesClientMaxRetries" }}
-    {{- .Values.workloadLauncher.kuberentesClientMaxRetries | default "" }}
+    {{- .Values.global.workloads.kuberentesClientMaxRetries | default "" }}
 {{- end }}
 
 {{/*
@@ -162,8 +183,8 @@ Renders the set of all workloads environment variables
 */}}
 {{- define "airbyte.workloads.envs" }}
 {{- include "airbyte.workloads.containerOrchestrator.secretName.env" . }}
-{{- include "airbyte.workloads.containerOrchestrator.dataplane.secretMountPath.env" . }}
-{{- include "airbyte.workloads.containerOrchestrator.dataplane.secretName.env" . }}
+{{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath.env" . }}
+{{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretName.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.javaOpts.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.secretMountPath.env" . }}
 {{- include "airbyte.workloads.kubernetesClientMaxIdleConnections.env" . }}
@@ -176,11 +197,11 @@ Renders the set of all workloads environment variables
 Renders the set of all workloads config map variables
 */}}
 {{- define "airbyte.workloads.configVars" }}
-CONTAINER_ORCHESTRATOR_SECRET_NAME: {{ include "airbyte.workloads.secretName" . | quote }}
-CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH: {{ "/secrets/dataplane-creds" | quote }}
-CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME: {{ include "airbyte.workloads.secretName" . | quote }}
-CONTAINER_ORCHESTRATOR_JAVA_OPTS: {{ "-XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent" | quote }}
-CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ "/secrets/gcp-creds" | quote }}
+CONTAINER_ORCHESTRATOR_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.secretName" . | quote }}
+CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" . | quote }}
+CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretName" . | quote }}
+CONTAINER_ORCHESTRATOR_JAVA_OPTS: {{ include "airbyte.workloads.containerOrchestrator.javaOpts" . | quote }}
+CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.secretMountPath" . | quote }}
 KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: {{ include "airbyte.workloads.kubernetesClientMaxIdleConnections" . | quote }}
 KUBERNETES_CLIENT_MAX_RETRIES: {{ include "airbyte.workloads.kuberentesClientMaxRetries" . | quote }}
 PUB_SUB_ENABLED: {{ include "airbyte.workloads.pubSub.enabled" . | quote }}
@@ -192,7 +213,7 @@ Renders the workloads.queues secret name
 */}}
 {{- define "airbyte.workloads.queues.secretName" }}
 {{- if .Values.global.workloads.queues.secretName }}
-    {{- .Values.global.workloads.queues.secretName | quote }}
+    {{- .Values.global.workloads.queues.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -265,9 +286,9 @@ Renders the set of all workloads.queues environment variables
 Renders the set of all workloads.queues config map variables
 */}}
 {{- define "airbyte.workloads.queues.configVars" }}
-DATA_CHECK_TASK_QUEUES: {{ join " " .Values.global.workloads.queues.check | quote }}
-DATA_DISCOVER_TASK_QUEUES: {{ join " " .Values.global.workloads.queues.discover | quote }}
-DATA_SYNC_TASK_QUEUES: {{ join " " .Values.global.workloads.queues.sync | quote }}
+DATA_CHECK_TASK_QUEUES: {{ include "airbyte.workloads.queues.check" . | quote }}
+DATA_DISCOVER_TASK_QUEUES: {{ include "airbyte.workloads.queues.discover" . | quote }}
+DATA_SYNC_TASK_QUEUES: {{ include "airbyte.workloads.queues.sync" . | quote }}
 {{- end }}
 
 {{/*
@@ -275,7 +296,7 @@ Renders the workloads.resources secret name
 */}}
 {{- define "airbyte.workloads.resources.secretName" }}
 {{- if .Values.global.workloads.resources.secretName }}
-    {{- .Values.global.workloads.resources.secretName | quote }}
+    {{- .Values.global.workloads.resources.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

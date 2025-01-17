@@ -10,7 +10,7 @@ Renders the connector secret name
 */}}
 {{- define "airbyte.connector.secretName" }}
 {{- if .Values.global.connectorRegistry.secretName }}
-    {{- .Values.global.connectorRegistry.secretName | quote }}
+    {{- .Values.global.connectorRegistry.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -27,11 +27,11 @@ Renders the global.connectorRegistry.seedProvider value
 Renders the connector.seedProvider environment variable
 */}}
 {{- define "airbyte.connector.seedProvider.env" }}
-- name: CONNECTORY_REGISTRY_SEED_PROVIDER
+- name: CONNECTOR_REGISTRY_SEED_PROVIDER
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: CONNECTORY_REGISTRY_SEED_PROVIDER
+      key: CONNECTOR_REGISTRY_SEED_PROVIDER
 {{- end }}
 
 {{/*
@@ -64,6 +64,6 @@ Renders the set of all connector environment variables
 Renders the set of all connector config map variables
 */}}
 {{- define "airbyte.connector.configVars" }}
-CONNECTORY_REGISTRY_SEED_PROVIDER: {{ include "airbyte.connector.seedProvider" . | quote }}
+CONNECTOR_REGISTRY_SEED_PROVIDER: {{ include "airbyte.connector.seedProvider" . | quote }}
 ENTERPRISE_SOURCE_STUBS_URL: {{ include "airbyte.connector.enterpriseSourceStubsUrl" . | quote }}
 {{- end }}

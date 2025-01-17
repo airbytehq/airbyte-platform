@@ -10,7 +10,7 @@ Renders the topology secret name
 */}}
 {{- define "airbyte.topology.secretName" }}
 {{- if .Values.global.topology.secretName }}
-    {{- .Values.global.topology.secretName | quote }}
+    {{- .Values.global.topology.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

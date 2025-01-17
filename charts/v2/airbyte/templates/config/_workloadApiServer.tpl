@@ -10,7 +10,7 @@ Renders the workloadApiServer secret name
 */}}
 {{- define "airbyte.workloadApiServer.secretName" }}
 {{- if .Values.workloadApiServer.secretName }}
-    {{- .Values.workloadApiServer.secretName | quote }}
+    {{- .Values.workloadApiServer.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -38,7 +38,7 @@ Renders the workloadApiServer.enabled environment variable
 Renders the workloadApiServer.host value
 */}}
 {{- define "airbyte.workloadApiServer.host" }}
-    {{- (printf "http://%s-workload-api-server-svc:%d" .Release.Name (int .Values.workloadApiServer.service.port)) }}
+    {{- (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) }}
 {{- end }}
 
 {{/*
@@ -129,7 +129,7 @@ Renders the set of all workloadApiServer config map variables
 */}}
 {{- define "airbyte.workloadApiServer.configVars" }}
 WORKLOAD_API_SERVER_ENABLED: {{ include "airbyte.workloadApiServer.enabled" . | quote }}
-WORKLOAD_API_HOST: {{ (printf "http://%s-workload-api-server-svc:%d" .Release.Name (int .Values.workloadApiServer.service.port)) | quote }}
+WORKLOAD_API_HOST: {{ include "airbyte.workloadApiServer.host" . | quote }}
 WORKLOAD_API_BEARER_TOKEN_SECRET_NAME: {{ include "airbyte.workloadApiServer.bearerTokenSecretName" . | quote }}
 WORKLOAD_API_BEARER_TOKEN_SECRET_KEY: {{ include "airbyte.workloadApiServer.bearerTokenSecretKey" . | quote }}
 {{- end }}
