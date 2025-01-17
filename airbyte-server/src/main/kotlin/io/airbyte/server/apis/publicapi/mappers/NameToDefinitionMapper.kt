@@ -432,6 +432,7 @@ val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("onesignal", UUID.fromString("bb6afd81-87d5-47e3-97c4-e2c2901b1cf8")),
     Pair("flexport", UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630")),
     Pair("google-drive", UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8")),
+    Pair("brevo", UUID.fromString("e2276f19-1c19-4d4e-ae6c-7df3c9c4ad49")),
   )
 
 val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
@@ -726,4 +727,5 @@ val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
     Pair(UUID.fromString("bb6afd81-87d5-47e3-97c4-e2c2901b1cf8"), "onesignal"),
     Pair(UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630"), "flexport"),
     Pair(UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8"), "google-drive"),
+    Pair(UUID.fromString("e2276f19-1c19-4d4e-ae6c-7df3c9c4ad49"), "brevo"),
   )
