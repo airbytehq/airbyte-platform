@@ -11,6 +11,7 @@ import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -280,10 +281,12 @@ describe("Connector form", () => {
     formValuesOverride,
     propertiesOverride,
     specificationOverride,
+    features,
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
+    features?: FeatureItem[];
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
@@ -311,7 +314,8 @@ describe("Connector form", () => {
           } as unknown as DestinationDefinitionSpecificationRead
         }
       />,
-      undefined
+      undefined,
+      features ? [...features] : undefined
     );
     return renderResult.container;
   }
@@ -424,19 +428,25 @@ describe("Connector form", () => {
           additional_same_group: { type: "string" },
         },
       });
-      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
-      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
 
-      await userEvent.click(screen.getAllByTestId("optional-fields").at(0)!);
+      const additionalSeparateGroupInput = getInputByName(
+        container,
+        "connectionConfiguration.additional_separate_group"
+      );
+      const additionalSameGroupInput = getInputByName(container, "connectionConfiguration.additional_same_group");
 
-      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).toBeVisible();
+      const optionalFields = screen.getAllByTestId("optional-fields");
+      expect(additionalSameGroupInput).not.toBeVisible();
 
-      await userEvent.click(screen.getAllByTestId("optional-fields").at(1)!);
+      await userEvent.click(optionalFields.at(0)!);
+      expect(additionalSameGroupInput).toBeVisible();
 
-      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).toBeVisible();
+      expect(additionalSeparateGroupInput).not.toBeVisible();
+      await userEvent.click(optionalFields.at(1)!);
+      expect(additionalSeparateGroupInput).toBeVisible();
 
-      const input1 = getInputByName(container, "connectionConfiguration.additional_same_group");
-      const input2 = getInputByName(container, "connectionConfiguration.additional_separate_group");
+      const input1 = additionalSameGroupInput;
+      const input2 = additionalSeparateGroupInput;
       await userEvent.type(input1!, "input1");
       await userEvent.type(input2!, "input2");
 
@@ -1108,6 +1118,49 @@ describe("Connector form", () => {
         },
       });
       expect(getOAuthButton(container)).toBeInTheDocument();
+    });
+  });
+
+  describe("Advanced section", () => {
+    it("does not render the advanced section if Resource Allocation is off + spec does not define it", async () => {
+      await renderForm({});
+
+      expect(screen.queryAllByTestId("optional-fields")).toHaveLength(0);
+    });
+
+    it("renders the Advanced section if the flag is on and value is present in spec without groups", async () => {
+      await renderForm({ features: [FeatureItem.ConnectorResourceAllocation] });
+
+      const optionalFields = screen.getAllByTestId("optional-fields");
+      expect(optionalFields[0]).toHaveTextContent("Advanced");
+      expect(optionalFields).toHaveLength(1);
+    });
+
+    it("renders the Advanced section  if the flag is on and value is present in spec with groups", async () => {
+      await renderForm({
+        propertiesOverride: {
+          additional_separate_group: { type: "string", group: "abc" },
+        },
+        features: [FeatureItem.ConnectorResourceAllocation],
+      });
+
+      const optionalFields = screen.getAllByTestId("optional-fields");
+      expect(optionalFields[0]).toHaveTextContent("Optional fields");
+      expect(optionalFields[1]).toHaveTextContent("Advanced");
+      expect(optionalFields).toHaveLength(2);
+    });
+
+    it("combines resource allocation Advanced section with one described in the spec", async () => {
+      await renderForm({
+        propertiesOverride: {
+          additional_separate_group: { type: "string", group: "advanced" },
+        },
+        features: [FeatureItem.ConnectorResourceAllocation],
+      });
+
+      const optionalFields = screen.getAllByTestId("optional-fields");
+      expect(optionalFields[0]).toHaveTextContent("Advanced");
+      expect(optionalFields).toHaveLength(1);
     });
   });
 });

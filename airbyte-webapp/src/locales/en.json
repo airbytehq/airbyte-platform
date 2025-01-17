@@ -101,6 +101,10 @@
   "form.connectionName.subtitle": "Name for your connection",
   "form.sourceName": "Source name",
   "form.destinationName": "Destination name",
+  "form.resourceAllocation": "Connector Resource Allocation",
+  "form.resourceAllocation.label": "{size, select, default {Default} large {Large} memoryIntensive {Memory intensive} maximum {Maximum} other {Default}} <details>({cpu}CPU, {memory}GB memory)</details>",
+  "form.resourceAllocation.tooltip": "Resources allocated to this connector for a sync. ",
+  "form.resourceAllocation.tooltip.note": "If no nodes with these resources are available during a sync, the sync will enter a pending state and resume when one is free.",
   "form.sourceName.message": "Pick a name to help you identify this source in Airbyte",
   "form.destinationName.message": "Pick a name to help you identify this destination in Airbyte",
   "form.connectionName.message": "Pick a name to help you identify this connection",
@@ -198,6 +202,7 @@
   "form.wait": "Please wait a little bit more…",
   "form.optional": "Optional",
   "form.optionalFields": "Optional fields",
+  "form.advanced": "Advanced",
   "form.min.error": "Must be greater than or equal to {min}",
   "form.max.error": "Must be less than or equal to {max}",
 

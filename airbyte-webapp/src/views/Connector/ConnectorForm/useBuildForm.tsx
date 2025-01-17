@@ -19,6 +19,8 @@ import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
 
 const NAME_GROUP_ID = "__name_group";
+export const DEFAULT_GROUP_ID = "default";
+export const ADVANCED_GROUP_ID = "advanced";
 
 export interface BuildFormHook {
   initialValues: ConnectorFormValues;
@@ -75,6 +77,7 @@ export function useBuildForm(
     | ConnectorDefinitionSpecificationRead
     | SourceDefinitionSpecificationDraft
     | undefined,
+  supportsResourceAllocation: boolean,
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
@@ -110,11 +113,31 @@ export function useBuildForm(
           order: Number.MIN_SAFE_INTEGER,
           group: NAME_GROUP_ID,
         },
+        ...(supportsResourceAllocation
+          ? {
+              resourceAllocation: {
+                type: "object",
+                title: formatMessage({ id: "form.resourceAllocation" }),
+                group: ADVANCED_GROUP_ID,
+                order: Number.MAX_SAFE_INTEGER - 1,
+                properties: {
+                  cpu: {
+                    type: "string",
+                    title: formatMessage({ id: "form.resourceAllocation.cpu" }),
+                  },
+                  memory: {
+                    type: "string",
+                    title: formatMessage({ id: "form.resourceAllocation.memory" }),
+                  },
+                },
+              },
+            }
+          : {}),
         ...schema.properties,
       };
       schema.required = ["name", "connectionConfiguration"];
       return schema;
-    }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification]);
+    }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification, supportsResourceAllocation]);
 
     const formBlock = useMemo<FormBlock>(() => jsonSchemaToFormBlock(jsonSchema), [jsonSchema]);
 
@@ -172,8 +195,15 @@ export function useBuildForm(
       const baseGroups = [{ id: NAME_GROUP_ID }];
       const spec = selectedConnectorDefinitionSpecification?.connectionSpecification;
       if (!spec || typeof spec !== "object" || !("groups" in spec) || !Array.isArray(spec.groups)) {
-        return baseGroups;
+        return [
+          ...baseGroups,
+          { id: DEFAULT_GROUP_ID },
+          ...(supportsResourceAllocation
+            ? [{ id: ADVANCED_GROUP_ID, title: formatMessage({ id: "form.advanced" }) }]
+            : []),
+        ];
       }
+
       return [
         ...baseGroups,
         ...spec.groups.map(({ id, title }) => {
@@ -182,8 +212,11 @@ export function useBuildForm(
             title,
           };
         }),
+        ...(supportsResourceAllocation
+          ? [{ id: ADVANCED_GROUP_ID, title: formatMessage({ id: "form.advanced" }) }]
+          : []),
       ];
-    }, [selectedConnectorDefinitionSpecification]);
+    }, [formatMessage, selectedConnectorDefinitionSpecification?.connectionSpecification, supportsResourceAllocation]);
 
     return {
       initialValues: startValues,

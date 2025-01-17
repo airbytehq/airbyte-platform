@@ -8,6 +8,7 @@ import {
   ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
+import { FeatureItem, useFeature } from "core/services/features";
 import { removeEmptyProperties } from "core/utils/form";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
@@ -35,6 +36,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
   const { clearFormChange } = useFormChangeTrackerService();
+  const isResourceAllocationEnabled = useFeature(FeatureItem.ConnectorResourceAllocation);
 
   const {
     formType,
@@ -51,6 +53,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     Boolean(isEditMode),
     formType,
     selectedConnectorDefinitionSpecification,
+    isResourceAllocationEnabled,
     formValues
   );
 
