@@ -231,11 +231,11 @@ Renders the set of all temporal config map variables
 {{- define "airbyte.temporal.configVars" }}
 AUTO_SETUP: {{ include "airbyte.temporal.autoSetup" . | quote }}
 DB: {{ include "airbyte.temporal.database.engine" . | quote }}
-POSTGRES_TLS_ENABLED: {{ ternary "true" "false" (eq .Values.global.database.type "external") | quote }}
-POSTGRES_TLS_DISABLE_HOST_VERIFICATION: {{ ternary "true" "false" (eq .Values.global.database.type "external") | quote }}
-SQL_TLS_ENABLED: {{ ternary "true" "false" (eq .Values.global.database.type "external") | quote }}
-SQL_TLS_DISABLE_HOST_VERIFICATION: {{ ternary "true" "false" (eq .Values.global.database.type "external") | quote }}
-TEMPORAL_HOST: {{ (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) | quote }}
+POSTGRES_TLS_ENABLED: {{ include "airbyte.temporal.database.tlsEnabled" . | quote }}
+POSTGRES_TLS_DISABLE_HOST_VERIFICATION: {{ include "airbyte.temporal.database.tlsDisableHostVerification" . | quote }}
+SQL_TLS_ENABLED: {{ include "airbyte.temporal.database.sqlTlsEnabled" . | quote }}
+SQL_TLS_DISABLE_HOST_VERIFICATION: {{ include "airbyte.temporal.database.sqlTlsDisableHostVerification" . | quote }}
+TEMPORAL_HOST: {{ include "airbyte.temporal.host" . | quote }}
 DYNAMIC_CONFIG_FILE_PATH: {{ include "airbyte.temporal.configFilePath" . | quote }}
 {{- end }}
 
@@ -244,7 +244,7 @@ Renders the temporal.cli secret name
 */}}
 {{- define "airbyte.temporal.cli.secretName" }}
 {{- if .Values.global.temporal.cli.secretName }}
-    {{- .Values.global.temporal.cli.secretName | quote }}
+    {{- .Values.global.temporal.cli.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -367,7 +367,7 @@ Renders the temporal.cloud secret name
 */}}
 {{- define "airbyte.temporal.cloud.secretName" }}
 {{- if .Values.global.temporal.cloud.secretName }}
-    {{- .Values.global.temporal.cloud.secretName | quote }}
+    {{- .Values.global.temporal.cloud.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -578,6 +578,13 @@ TEMPORAL_SDK_RPC_QUERY_TIMEOUT: {{ include "airbyte.temporal.sdk.rpc.queryTimeou
 {{- end }}
 
 {{/*
+Renders the temporal.worker.ports value
+*/}}
+{{- define "airbyte.temporal.worker.ports" }}
+    {{- .Values.temporal.worker.ports }}
+{{- end }}
+
+{{/*
 Renders the temporal.worker.ports environment variable
 */}}
 {{- define "airbyte.temporal.worker.ports.env" }}
@@ -599,5 +606,5 @@ Renders the set of all temporal.worker environment variables
 Renders the set of all temporal.worker config map variables
 */}}
 {{- define "airbyte.temporal.worker.configVars" }}
-TEMPORAL_WORKER_PORTS: {{ "9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040" | quote }}
+TEMPORAL_WORKER_PORTS: {{ include "airbyte.temporal.worker.ports" . | quote }}
 {{- end }}

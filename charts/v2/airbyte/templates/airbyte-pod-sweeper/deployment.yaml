@@ -61,7 +61,6 @@ spec:
         volumeMounts:
         - mountPath: /.kube
           name: kube-config
-        command: ["/bin/bash", "-c", /script/sweep-pod.sh]
         {{- if .Values.podSweeper.resources }}
         resources: {{- toYaml .Values.podSweeper.resources | nindent 10 }}
         {{- end }}

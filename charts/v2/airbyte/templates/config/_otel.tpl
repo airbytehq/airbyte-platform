@@ -10,16 +10,23 @@ Renders the otel secret name
 */}}
 {{- define "airbyte.otel.secretName" }}
 {{- if .Values.global.metrics.otel.secretName }}
-    {{- .Values.global.metrics.otel.secretName | quote }}
+    {{- .Values.global.metrics.otel.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
 {{- end }}
 
 {{/*
-Renders the otel.otel.exporter environment variable
+Renders the global.metrics.otel.exporter.endpoint value
 */}}
-{{- define "airbyte.otel.otel.exporter.env" }}
+{{- define "airbyte.otel.exporter.endpoint" }}
+    {{- .Values.global.metrics.otel.exporter.endpoint }}
+{{- end }}
+
+{{/*
+Renders the otel.exporter.endpoint environment variable
+*/}}
+{{- define "airbyte.otel.exporter.endpoint.env" }}
 - name: OTEL_EXPORTER_OTLP_ENDPOINT
   valueFrom:
     configMapKeyRef:
@@ -28,9 +35,16 @@ Renders the otel.otel.exporter environment variable
 {{- end }}
 
 {{/*
-Renders the otel.otel.exporter.protocol environment variable
+Renders the global.metrics.otel.exporter.protocol value
 */}}
-{{- define "airbyte.otel.otel.exporter.protocol.env" }}
+{{- define "airbyte.otel.exporter.protocol" }}
+    {{- .Values.global.metrics.otel.exporter.protocol }}
+{{- end }}
+
+{{/*
+Renders the otel.exporter.protocol environment variable
+*/}}
+{{- define "airbyte.otel.exporter.protocol.env" }}
 - name: OTEL_EXPORTER_OTLP_PROTOCOL
   valueFrom:
     configMapKeyRef:
@@ -39,9 +53,16 @@ Renders the otel.otel.exporter.protocol environment variable
 {{- end }}
 
 {{/*
-Renders the otel.otel.exporter.timeout environment variable
+Renders the global.metrics.otel.exporter.timeout value
 */}}
-{{- define "airbyte.otel.otel.exporter.timeout.env" }}
+{{- define "airbyte.otel.exporter.timeout" }}
+    {{- .Values.global.metrics.otel.exporter.timeout }}
+{{- end }}
+
+{{/*
+Renders the otel.exporter.timeout environment variable
+*/}}
+{{- define "airbyte.otel.exporter.timeout.env" }}
 - name: OTEL_EXPORTER_OTLP_TIMEOUT
   valueFrom:
     configMapKeyRef:
@@ -50,9 +71,16 @@ Renders the otel.otel.exporter.timeout environment variable
 {{- end }}
 
 {{/*
-Renders the otel.otel.exporter.metricExportInterval environment variable
+Renders the global.metrics.otel.exporter.metricExportInterval value
 */}}
-{{- define "airbyte.otel.otel.exporter.metricExportInterval.env" }}
+{{- define "airbyte.otel.exporter.metricExportInterval" }}
+    {{- .Values.global.metrics.otel.exporter.metricExportInterval }}
+{{- end }}
+
+{{/*
+Renders the otel.exporter.metricExportInterval environment variable
+*/}}
+{{- define "airbyte.otel.exporter.metricExportInterval.env" }}
 - name: OTEL_METRIC_EXPORT_INTERVAL
   valueFrom:
     configMapKeyRef:
@@ -61,9 +89,16 @@ Renders the otel.otel.exporter.metricExportInterval environment variable
 {{- end }}
 
 {{/*
-Renders the otel.otel.exporter.name environment variable
+Renders the global.metrics.otel.exporter.name value
 */}}
-{{- define "airbyte.otel.otel.exporter.name.env" }}
+{{- define "airbyte.otel.exporter.name" }}
+    {{- .Values.global.metrics.otel.exporter.name }}
+{{- end }}
+
+{{/*
+Renders the otel.exporter.name environment variable
+*/}}
+{{- define "airbyte.otel.exporter.name.env" }}
 - name: OTEL_METRICS_EXPORTER
   valueFrom:
     configMapKeyRef:
@@ -72,16 +107,16 @@ Renders the otel.otel.exporter.name environment variable
 {{- end }}
 
 {{/*
-Renders the global.metrics.otel.otel.resourceAttributes value
+Renders the global.metrics.otel.resourceAttributes value
 */}}
-{{- define "airbyte.otel.otel.resourceAttributes" }}
+{{- define "airbyte.otel.resourceAttributes" }}
     {{- (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .)) }}
 {{- end }}
 
 {{/*
-Renders the otel.otel.resourceAttributes environment variable
+Renders the otel.resourceAttributes environment variable
 */}}
-{{- define "airbyte.otel.otel.resourceAttributes.env" }}
+{{- define "airbyte.otel.resourceAttributes.env" }}
 - name: OTEL_RESOURCE_ATTRIBUTES
   valueFrom:
     configMapKeyRef:
@@ -93,22 +128,22 @@ Renders the otel.otel.resourceAttributes environment variable
 Renders the set of all otel environment variables
 */}}
 {{- define "airbyte.otel.envs" }}
-{{- include "airbyte.otel.otel.exporter.env" . }}
-{{- include "airbyte.otel.otel.exporter.protocol.env" . }}
-{{- include "airbyte.otel.otel.exporter.timeout.env" . }}
-{{- include "airbyte.otel.otel.exporter.metricExportInterval.env" . }}
-{{- include "airbyte.otel.otel.exporter.name.env" . }}
-{{- include "airbyte.otel.otel.resourceAttributes.env" . }}
+{{- include "airbyte.otel.exporter.endpoint.env" . }}
+{{- include "airbyte.otel.exporter.protocol.env" . }}
+{{- include "airbyte.otel.exporter.timeout.env" . }}
+{{- include "airbyte.otel.exporter.metricExportInterval.env" . }}
+{{- include "airbyte.otel.exporter.name.env" . }}
+{{- include "airbyte.otel.resourceAttributes.env" . }}
 {{- end }}
 
 {{/*
 Renders the set of all otel config map variables
 */}}
 {{- define "airbyte.otel.configVars" }}
-OTEL_EXPORTER_OTLP_ENDPOINT: {{ "http://$(DD_AGENT_HOST):4317" | quote }}
-OTEL_EXPORTER_OTLP_PROTOCOL: {{ "grpc" | quote }}
-OTEL_EXPORTER_OTLP_TIMEOUT: {{ 30000 | quote }}
-OTEL_METRIC_EXPORT_INTERVAL: {{ 10000 | quote }}
-OTEL_METRICS_EXPORTER: {{ "otlp" | quote }}
-OTEL_RESOURCE_ATTRIBUTES: {{ (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .)) | quote }}
+OTEL_EXPORTER_OTLP_ENDPOINT: {{ include "airbyte.otel.exporter.endpoint" . | quote }}
+OTEL_EXPORTER_OTLP_PROTOCOL: {{ include "airbyte.otel.exporter.protocol" . | quote }}
+OTEL_EXPORTER_OTLP_TIMEOUT: {{ include "airbyte.otel.exporter.timeout" . | quote }}
+OTEL_METRIC_EXPORT_INTERVAL: {{ include "airbyte.otel.exporter.metricExportInterval" . | quote }}
+OTEL_METRICS_EXPORTER: {{ include "airbyte.otel.exporter.name" . | quote }}
+OTEL_RESOURCE_ATTRIBUTES: {{ include "airbyte.otel.resourceAttributes" . | quote }}
 {{- end }}

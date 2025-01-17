@@ -53,7 +53,7 @@ spec:
         {{- end }}
       {{- end }}
       initContainers:
-        {{- if and (eq .Values.global.deploymentMode "oss") (ne .Values.keycloak.bypassInit true)}}
+        {{- if (ne .Values.keycloak.bypassInit true) }}
         # This init container will only executed if the deployment mode is "oss" and the bypassInit is not true.
         - name: init-db
           image: {{ include "imageUrl" (list .Values.keycloak.initContainers.initDb.image $) }}

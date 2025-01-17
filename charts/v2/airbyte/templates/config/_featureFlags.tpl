@@ -10,7 +10,7 @@ Renders the featureFlags secret name
 */}}
 {{- define "airbyte.featureFlags.secretName" }}
 {{- if .Values.global.featureFlags.secretName }}
-    {{- .Values.global.featureFlags.secretName | quote }}
+    {{- .Values.global.featureFlags.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}

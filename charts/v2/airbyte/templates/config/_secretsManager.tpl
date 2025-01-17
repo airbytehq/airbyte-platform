@@ -10,7 +10,7 @@ Renders the secretsManager secret name
 */}}
 {{- define "airbyte.secretsManager.secretName" }}
 {{- if .Values.global.secretsManager.secretName }}
-    {{- .Values.global.secretsManager.secretName | quote }}
+    {{- .Values.global.secretsManager.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -343,7 +343,7 @@ Renders the secretsManager.googleSecretManager.credentials environment variable
 Renders the global.secretsManager.vault.address value
 */}}
 {{- define "airbyte.secretsManager.vault.address" }}
-    {{- .Values.global.secretsManager.vault.address | default "http://airbyte-vault-svc.ab:8200" }}
+    {{- .Values.global.secretsManager.vault.address | default (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace) }}
 {{- end }}
 
 {{/*

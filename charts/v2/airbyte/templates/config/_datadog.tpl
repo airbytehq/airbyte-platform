@@ -10,7 +10,7 @@ Renders the datadog secret name
 */}}
 {{- define "airbyte.datadog.secretName" }}
 {{- if .Values.global.datadog.secretName }}
-    {{- .Values.global.datadog.secretName | quote }}
+    {{- .Values.global.datadog.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -74,7 +74,7 @@ Renders the datadog.env environment variable
 Renders the global.datadog.service value
 */}}
 {{- define "airbyte.datadog.service" }}
-    {{- (printf "airbyte-%s" .Chart.Name) }}
+    {{- (printf "airbyte-%s" (include "airbyte.componentName" .)) }}
 {{- end }}
 
 {{/*
@@ -110,7 +110,7 @@ Renders the datadog.version environment variable
 Renders the global.datadog.statsd.port value
 */}}
 {{- define "airbyte.datadog.statsd.port" }}
-    {{- .Values.global.datadog.statsd.port }}
+    {{- .Values.global.datadog.statsd.port | default 8125 }}
 {{- end }}
 
 {{/*
@@ -352,8 +352,8 @@ Renders the set of all datadog config map variables
 DD_AGENT_HOST: {{ include "airbyte.datadog.agentHost" . | quote }}
 DD_ENABLED: {{ include "airbyte.datadog.enabled" . | quote }}
 DD_ENV: {{ include "airbyte.datadog.env" . | quote }}
-DD_SERVICE: {{ (printf "airbyte-%s" .Chart.Name) | quote }}
-DD_VERSION: {{ .Values.global.image.tag | quote }}
+DD_SERVICE: {{ include "airbyte.datadog.service" . | quote }}
+DD_VERSION: {{ include "airbyte.datadog.version" . | quote }}
 DD_DOGSTATSD_PORT: {{ include "airbyte.datadog.statsd.port" . | quote }}
 DD_TRACE_AGENT_PORT: {{ include "airbyte.datadog.traceAgentPort" . | quote }}
 DD_INTEGRATION_DBM_ENABLED: {{ include "airbyte.datadog.integrations.dbm.enabled" . | quote }}

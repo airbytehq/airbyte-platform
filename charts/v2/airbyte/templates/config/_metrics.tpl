@@ -10,7 +10,7 @@ Renders the metrics secret name
 */}}
 {{- define "airbyte.metrics.secretName" }}
 {{- if .Values.global.metrics.secretName }}
-    {{- .Values.global.metrics.secretName | quote }}
+    {{- .Values.global.metrics.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -92,7 +92,7 @@ Renders the metrics.otel.collector.endpoint environment variable
 Renders the global.metrics.statsd.host value
 */}}
 {{- define "airbyte.metrics.statsd.host" }}
-    {{- .Values.global.metrics.statsd.host | default "localhost" }}
+    {{- .Values.global.metrics.statsd.host }}
 {{- end }}
 
 {{/*
@@ -101,9 +101,9 @@ Renders the metrics.statsd.host environment variable
 {{- define "airbyte.metrics.statsd.host.env" }}
 - name: STATSD_HOST
   valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: STATSD_HOST
+    fieldRef:
+      fieldPath: status.hostIP
+    
 {{- end }}
 
 {{/*

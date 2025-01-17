@@ -10,7 +10,7 @@ Renders the jobs secret name
 */}}
 {{- define "airbyte.jobs.secretName" }}
 {{- if .Values.global.jobs.secretName }}
-    {{- .Values.global.jobs.secretName | quote }}
+    {{- .Values.global.jobs.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -74,12 +74,7 @@ Renders the jobs.kube.localVolume.enabled environment variable
 Renders the global.jobs.kube.main_container_image_pull_secret value
 */}}
 {{- define "airbyte.jobs.kube.main_container_image_pull_secret" }}
-  {{- $imagePullSecrets := (list) }}
-  {{- range $.Values.global.imagePullSecrets -}}{{- $imagePullSecrets = append $imagePullSecrets .name -}}{{- end }}
-  {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
-  {{- $imagePullSecrets = append $imagePullSecrets $.Values.global.jobs.kube.main_container_image_pull_secret }}
-  {{- end }}
-  {{ join "," $imagePullSecrets }}
+    {{- join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.main_container_image_pull_secret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.main_container_image_pull_secret)) }}
 {{- end }}
 
 {{/*
@@ -166,6 +161,52 @@ Renders the jobs.kube.tolerations environment variable
 {{- end }}
 
 {{/*
+Renders the set of all jobs environment variables
+*/}}
+{{- define "airbyte.jobs.envs" }}
+{{- include "airbyte.jobs.kube.serviceAccount.env" . }}
+{{- include "airbyte.jobs.kube.namespace.env" . }}
+{{- include "airbyte.jobs.kube.localVolume.enabled.env" . }}
+{{- include "airbyte.jobs.kube.main_container_image_pull_secret.env" . }}
+{{- include "airbyte.jobs.kube.annotations.env" . }}
+{{- include "airbyte.jobs.kube.labels.env" . }}
+{{- include "airbyte.jobs.kube.nodeSelector.env" . }}
+{{- include "airbyte.jobs.kube.tolerations.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all jobs config map variables
+*/}}
+{{- define "airbyte.jobs.configVars" }}
+JOB_KUBE_SERVICEACCOUNT: {{ include "airbyte.jobs.kube.serviceAccount" . | quote }}
+JOB_KUBE_NAMESPACE: {{ include "airbyte.jobs.kube.namespace" . | quote }}
+JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ include "airbyte.jobs.kube.localVolume.enabled" . | quote }}
+JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ include "airbyte.jobs.kube.main_container_image_pull_secret" . | quote }}
+JOB_KUBE_ANNOTATIONS: {{ include "airbyte.jobs.kube.annotations" . | quote }}
+JOB_KUBE_LABELS: {{ include "airbyte.jobs.kube.labels" . | quote }}
+JOB_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.kube.nodeSelector" . | quote }}
+JOB_KUBE_TOLERATIONS: {{ include "airbyte.jobs.kube.tolerations" . | quote }}
+{{- end }}
+
+{{/*
+Renders the jobs.errors secret name
+*/}}
+{{- define "airbyte.jobs.errors.secretName" }}
+{{- if .Values.global.jobs.errors.secretName }}
+    {{- .Values.global.jobs.errors.secretName }}
+{{- else }}
+    {{- .Release.Name }}-airbyte-secrets
+{{- end }}
+{{- end }}
+
+{{/*
+Renders the global.jobs.errors.reportingStrategy value
+*/}}
+{{- define "airbyte.jobs.errors.reportingStrategy" }}
+    {{- .Values.global.jobs.errors.reportingStrategy | default "logging" }}
+{{- end }}
+
+{{/*
 Renders the jobs.errors.reportingStrategy environment variable
 */}}
 {{- define "airbyte.jobs.errors.reportingStrategy.env" }}
@@ -177,34 +218,51 @@ Renders the jobs.errors.reportingStrategy environment variable
 {{- end }}
 
 {{/*
-Renders the set of all jobs environment variables
+Renders the global.jobs.errors.sentry.dsn value
 */}}
-{{- define "airbyte.jobs.envs" }}
-{{- include "airbyte.jobs.kube.serviceAccount.env" . }}
-{{- include "airbyte.jobs.kube.namespace.env" . }}
-{{- include "airbyte.jobs.kube.localVolume.enabled.env" . }}
-{{- include "airbyte.jobs.kube.images.busybox.env" . }}
-{{- include "airbyte.jobs.kube.images.socat.env" . }}
-{{- include "airbyte.jobs.kube.images.curl.env" . }}
-{{- include "airbyte.jobs.kube.main_container_image_pull_secret.env" . }}
-{{- include "airbyte.jobs.kube.annotations.env" . }}
-{{- include "airbyte.jobs.kube.labels.env" . }}
-{{- include "airbyte.jobs.kube.nodeSelector.env" . }}
-{{- include "airbyte.jobs.kube.tolerations.env" . }}
-{{- include "airbyte.jobs.errors.reportingStrategy.env" . }}
+{{- define "airbyte.jobs.errors.sentry.dsn" }}
+    {{- .Values.global.jobs.errors.sentry.dsn }}
 {{- end }}
 
 {{/*
-Renders the set of all jobs config map variables
+Renders the jobs.errors.sentry.dsn environment variable
 */}}
-{{- define "airbyte.jobs.configVars" }}
-JOB_KUBE_SERVICEACCOUNT: {{ .Values.global.serviceAccountName | quote }}
-JOB_KUBE_NAMESPACE: {{ include "airbyte.jobs.kube.namespace" . | quote }}
-JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ include "airbyte.jobs.kube.localVolume.enabled" . | quote }}
-JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ include "airbyte.jobs.kube.main_container_image_pull_secret" . | quote }}
-JOB_KUBE_ANNOTATIONS: {{ .Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
-JOB_KUBE_LABELS: {{ .Values.global.jobs.kube.labels | include "airbyte.flattenMap" | quote }}
-JOB_KUBE_NODE_SELECTORS: {{ .Values.global.jobs.kube.nodeSelector | include "airbyte.flattenMap" | quote }}
-JOB_KUBE_TOLERATIONS: {{ .Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
-JOB_ERROR_REPORTING_STRATEGY: {{ "logging" | quote }}
+{{- define "airbyte.jobs.errors.sentry.dsn.env" }}
+- name: JOB_ERROR_REPORTING_SENTRY_DSN
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_ERROR_REPORTING_SENTRY_DSN
+{{- end }}
+
+{{/*
+Renders the set of all jobs.errors environment variables
+*/}}
+{{- define "airbyte.jobs.errors.envs" }}
+{{- include "airbyte.jobs.errors.reportingStrategy.env" . }}
+{{- $opt := (include "airbyte.jobs.errors.reportingStrategy" .) }}
+
+{{- if eq $opt "logging" }}
+{{- end }}
+
+{{- if eq $opt "sentry" }}
+{{- include "airbyte.jobs.errors.sentry.dsn.env" . }}
+{{- end }}
+
+{{- end }}
+
+{{/*
+Renders the set of all jobs.errors config map variables
+*/}}
+{{- define "airbyte.jobs.errors.configVars" }}
+JOB_ERROR_REPORTING_STRATEGY: {{ include "airbyte.jobs.errors.reportingStrategy" . | quote }}
+{{- $opt := (include "airbyte.jobs.errors.reportingStrategy" .) }}
+
+{{- if eq $opt "logging" }}
+{{- end }}
+
+{{- if eq $opt "sentry" }}
+JOB_ERROR_REPORTING_SENTRY_DSN: {{ include "airbyte.jobs.errors.sentry.dsn" . | quote }}
+{{- end }}
+
 {{- end }}

@@ -61,13 +61,17 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.worker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
+        {{- if (eq .Values.global.deploymentMode "oss") }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
+        {{- end }}
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
@@ -77,6 +81,7 @@ spec:
         {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.worker.envs" . | nindent 8 }}
+        {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
@@ -174,9 +179,9 @@ spec:
         securityContext: {{- toYaml .Values.worker.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: /secrets/gcs-log-creds
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
           readOnly: true
         {{- end }}
         {{- if .Values.worker.extraVolumeMounts }}
@@ -193,10 +198,13 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.worker.podSecurityContext | nindent 8 }}
       volumes:
-      {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+          secretName: {{ include "airbyte.storage.secretName" }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
       {{- end }}
       {{- if .Values.worker.extraVolumes }}
 {{- toYaml .Values.worker.extraVolumes | nindent 6 }}

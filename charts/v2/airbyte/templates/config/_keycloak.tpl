@@ -6,10 +6,28 @@
 */}}
 
 {{/*
+Renders the keycloak.url value
+*/}}
+{{- define "airbyte.keycloak.url" }}
+    {{- ternary (printf "%s/auth" .Values.global.airbyteUrl) "" (ne .Values.global.edition "enterprise") }}
+{{- end }}
+
+{{/*
+Renders the keycloak.url environment variable
+*/}}
+{{- define "airbyte.keycloak.url.env" }}
+- name: KEYCLOAK_HOSTNAME_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_HOSTNAME_URL
+{{- end }}
+
+{{/*
 Renders the keycloak.service.port value
 */}}
 {{- define "airbyte.keycloak.service.port" }}
-    {{- .Values.keycloak.service.port | default 8081 }}
+    {{- .Values.keycloak.service.port | default 8180 }}
 {{- end }}
 
 {{/*
@@ -45,6 +63,7 @@ Renders the keycloak.javaOpts environment variable
 Renders the set of all keycloak environment variables
 */}}
 {{- define "airbyte.keycloak.envs" }}
+{{- include "airbyte.keycloak.url.env" . }}
 {{- include "airbyte.keycloak.service.port.env" . }}
 {{- include "airbyte.keycloak.javaOpts.env" . }}
 {{- end }}
@@ -53,8 +72,9 @@ Renders the set of all keycloak environment variables
 Renders the set of all keycloak config map variables
 */}}
 {{- define "airbyte.keycloak.configVars" }}
+KEYCLOAK_HOSTNAME_URL: {{ include "airbyte.keycloak.url" . | quote }}
 KEYCLOAK_PORT: {{ include "airbyte.keycloak.service.port" . | quote }}
-JAVA_OPTS_APPEND: {{ (printf "-Djgroups.dns.query=%s-airbyte-keycloak-headless-svc" .Release.Name) | quote }}
+JAVA_OPTS_APPEND: {{ include "airbyte.keycloak.javaOpts" . | quote }}
 {{- end }}
 
 {{/*
@@ -62,7 +82,7 @@ Renders the keycloak.admin.client secret name
 */}}
 {{- define "airbyte.keycloak.admin.client.secretName" }}
 {{- if .Values.keycloak.secretName }}
-    {{- .Values.keycloak.secretName | quote }}
+    {{- .Values.keycloak.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -144,7 +164,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- ternary (printf "%s-airbyte-keycloak-svc:%d" .Release.Name (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro")) }}
+    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.deploymentMode "oss")) }}
 {{- end }}
 
 {{/*
@@ -159,6 +179,13 @@ Renders the keycloak.admin.client.internalHost environment variable
 {{- end }}
 
 {{/*
+Renders the keycloak.internalProtocol value
+*/}}
+{{- define "airbyte.keycloak.admin.client.internalProtocol" }}
+    {{- .Values.keycloak.internalProtocol }}
+{{- end }}
+
+{{/*
 Renders the keycloak.admin.client.internalProtocol environment variable
 */}}
 {{- define "airbyte.keycloak.admin.client.internalProtocol.env" }}
@@ -170,10 +197,28 @@ Renders the keycloak.admin.client.internalProtocol environment variable
 {{- end }}
 
 {{/*
+Renders the keycloak.internalRealm value
+*/}}
+{{- define "airbyte.keycloak.admin.client.internalRealm" }}
+    {{- .Values.keycloak.internalRealm | default "_airbyte-internal" }}
+{{- end }}
+
+{{/*
+Renders the keycloak.admin.client.internalRealm environment variable
+*/}}
+{{- define "airbyte.keycloak.admin.client.internalRealm.env" }}
+- name: KEYCLOAK_INTERNAL_REALM
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_INTERNAL_REALM
+{{- end }}
+
+{{/*
 Renders the keycloak.realmIssuer value
 */}}
 {{- define "airbyte.keycloak.admin.client.realmIssuer" }}
-    {{- ternary (printf "%s/auth/realms/_airbyte-internal" .Values.global.airbyteUrl) (printf "%s-airbyte-keycloak-svc:8001/auth/realms/_airbyte-internal" .Release.Name) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
+    {{- ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
 {{- end }}
 
 {{/*
@@ -197,6 +242,7 @@ Renders the set of all keycloak.admin.client environment variables
 {{- include "airbyte.keycloak.admin.client.internalBasePath.env" . }}
 {{- include "airbyte.keycloak.admin.client.internalHost.env" . }}
 {{- include "airbyte.keycloak.admin.client.internalProtocol.env" . }}
+{{- include "airbyte.keycloak.admin.client.internalRealm.env" . }}
 {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . }}
 {{- end }}
 
@@ -208,9 +254,10 @@ KEYCLOAK_ADMIN_REALM: {{ include "airbyte.keycloak.admin.client.auth.adminRealm"
 KEYCLOAK_ADMIN_CLI_CLIENT_ID: {{ include "airbyte.keycloak.admin.client.auth.adminCliClientId" . | quote }}
 KEYCLOAK_CLIENT_REALM: {{ include "airbyte.keycloak.admin.client.clientRealm" . | quote }}
 KEYCLOAK_INTERNAL_BASE_PATH: {{ include "airbyte.keycloak.admin.client.internalBasePath" . | quote }}
-KEYCLOAK_INTERNAL_HOST: {{ ternary (printf "%s-airbyte-keycloak-svc:%d" .Release.Name (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro")) | quote }}
-KEYCLOAK_INTERNAL_PROTOCOL: {{ "http" | quote }}
-KEYCLOAK_INTERNAL_REALM_ISSUER: {{ ternary (printf "%s/auth/realms/_airbyte-internal" .Values.global.airbyteUrl) (printf "%s-airbyte-keycloak-svc:8001/auth/realms/_airbyte-internal" .Release.Name) (eq (include "airbyte.common.cluster.type" .) "data-plane") | quote }}
+KEYCLOAK_INTERNAL_HOST: {{ include "airbyte.keycloak.admin.client.internalHost" . | quote }}
+KEYCLOAK_INTERNAL_PROTOCOL: {{ include "airbyte.keycloak.admin.client.internalProtocol" . | quote }}
+KEYCLOAK_INTERNAL_REALM: {{ include "airbyte.keycloak.admin.client.internalRealm" . | quote }}
+KEYCLOAK_INTERNAL_REALM_ISSUER: {{ include "airbyte.keycloak.admin.client.realmIssuer" . | quote }}
 {{- end }}
 
 {{/*
@@ -218,7 +265,7 @@ Renders the keycloak.admin.user secret name
 */}}
 {{- define "airbyte.keycloak.admin.user.secretName" }}
 {{- if .Values.keycloak.secretName }}
-    {{- .Values.keycloak.secretName | quote }}
+    {{- .Values.keycloak.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -295,7 +342,7 @@ Renders the keycloak.database secret name
 */}}
 {{- define "airbyte.keycloak.database.secretName" }}
 {{- if .Values.keycloak.database.secretName }}
-    {{- .Values.keycloak.database.secretName | quote }}
+    {{- .Values.keycloak.database.secretName }}
 {{- else }}
     {{- .Release.Name }}-airbyte-secrets
 {{- end }}
@@ -442,7 +489,7 @@ Renders the set of all keycloak.database config map variables
 KEYCLOAK_DATABASE_NAME: {{ include "airbyte.keycloak.database.name" . | quote }}
 KEYCLOAK_DATABASE_HOST: {{ include "airbyte.keycloak.database.host" . | quote }}
 KEYCLOAK_DATABASE_PORT: {{ include "airbyte.keycloak.database.port" . | quote }}
-KEYCLOAK_DATABASE_URL: {{ (printf "jdbc:postgresql://%s:%d/%s?currentSchema=keycloak" (include "airbyte.keycloak.database.host" .) (int (include "airbyte.keycloak.database.port" .)) (include "airbyte.keycloak.database.name" .)) | quote }}
+KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
 {{- end }}
 
 {{/*

@@ -9,7 +9,17 @@ global:
   local: false
 
   cluster:
-    type: "control-plane" # or "data-plane"
+    type: "hybrid" # "control-plane" | "data-plane" | "hybrid"
+    secretName: ""
+
+    controlPlane: 
+      serviceAccounts: ""
+
+    dataPlane:
+      id: "local"
+      controlPlaneAuthEndpoint: ""
+      serviceAccountEmail: ""
+      serviceAccountCredentialsPath: ""
 
   enterprise:
     # -- Secret name where an Airbyte license key is stored
@@ -54,7 +64,7 @@ global:
       # -- Secret name where the OIDC configuration is stored
       secretName: ""
       # -- The identity provider type (e.g. oidc)
-      type: "oidc"
+      type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
       oidc:
@@ -79,6 +89,9 @@ global:
   api:
     authHeaderName: "X-Airbyte-Auth"
     
+  cloudApi:
+    url: ""
+
   # -- Environment variables
   env_vars: {}
 
@@ -121,16 +134,14 @@ global:
       minimumFlywayMigrationVersion: ""
 
   storage:
+    secretName: ""
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
-    # -- Secret name where storage provider credentials are stored
-    #storageSecretName: "airbyte-config-secrets"
 
     # Minio
     minio:
       accessKeyId: minio 
       secretAccessKey: "minio123"
-      endpoint: "http://airbyte-minio-svc:9000"
 
     bucket: 
       log: airbyte-bucket
@@ -148,7 +159,8 @@ global:
     # GCS
     #gcs:
     #  projectId: <project-id>
-    #  credentialsJson: /secrets/gcs-log-creds/gcp.json
+    #  credentialsJson:  <base64-encoded>
+    #  credentialsJsonPath: /secrets/gcs-log-creds/gcp.json
 
     # Azure
     #azure:
@@ -211,19 +223,15 @@ global:
       connectorSideCar: ""
       containerOrchestrator: ""
 
-    api:
-      bearerToken: "token"
-      bearerTokenSecretName: ""
-      bearerTokenSecretKey: ""
-
     containerOrchestrator:
-      javaOpts: []
-      secretMountPath: ""
+      dataPlane:
+        secretName: ""
+        secretMountPath: ""
 
     queues:
-      check: []
-      discover: []
-      sync: []
+      check: [CHECK_CONNECTION]
+      discover: [DISCOVER_SCHEMA]
+      sync: [SYNC]
 
     pubSub:
       enabled: false
@@ -335,6 +343,12 @@ global:
 
       localVolume:
         enabled: false
+
+    errors:
+      reportingStrategy: "logging" 
+
+      #sentry:
+      #  dsn: ""
 
   topology:
     nodeSelectorLabel: "airbyte/node-pool"
@@ -1133,6 +1147,8 @@ workloadLauncher:
     repository: airbyte/workload-launcher
     # -- The pull policy to use for the airbyte workload launcher image
     pullPolicy: IfNotPresent
+
+  env_vars: {}
 
   # -- Add extra annotations to the workload launcher pods
   podAnnotations: {}
@@ -1973,6 +1989,7 @@ postgresql:
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
+
   # -- Airbyte Postgresql username
   postgresqlUsername: airbyte
   # -- Airbyte Postgresql password
@@ -2016,6 +2033,7 @@ postgresql:
   affinity: {}
 
 minio:
+  enabled: true
   secretName: ""
 
   image:
@@ -2523,6 +2541,7 @@ workloadApiServer:
   enabled: true
 
   bearerToken: token
+  bearerTokenSecretName: ""
 
   # -- workload-api-server replicas
   replicaCount: 1
