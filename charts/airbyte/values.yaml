@@ -1678,6 +1678,17 @@ postgresql:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
+  resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 200m
+  ##    memory: 1Gi
+    limits: {}
+  ## Examples:
+  ## requests:
+  ##    memory: 256Mi
+  ##    cpu: 250m
+    requests: {}
 
   commonAnnotations:
     # -- It will determine when the hook should be rendered
