@@ -144,7 +144,7 @@ spec:
         {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
       securityContext: {{- toYaml .Values.connectorBuilderServer.podSecurityContext | nindent 8 }}
-      volumes:
       {{- if .Values.connectorBuilderServer.extraVolumes }}
+      volumes:
 {{ toYaml .Values.connectorBuilderServer.extraVolumes | nindent 6 }}
       {{- end }}
