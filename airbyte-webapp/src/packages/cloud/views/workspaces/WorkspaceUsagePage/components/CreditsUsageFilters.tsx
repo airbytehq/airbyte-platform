@@ -18,7 +18,7 @@ const CustomControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T
   return (
     <>
       {selectedOption ? (
-        <Text color="grey" bold className={styles.controlButtonLabel}>
+        <Text color="grey" bold>
           {selectedOption.label}
         </Text>
       ) : (
@@ -59,7 +59,7 @@ export const CreditsUsageFilters: React.FC = () => {
       <ListBox
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        optionsMenuClassName={styles.periodOptionsMenu}
+        placement="bottom-start"
         options={[
           {
             label: formatMessage({ id: "settings.organization.billing.filter.lastThirtyDays" }),
@@ -78,10 +78,9 @@ export const CreditsUsageFilters: React.FC = () => {
         onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
       />
       <ListBox
-        className={styles.listboxContainer}
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        optionsMenuClassName={styles.connectorOptionsMenu}
+        placement="bottom-start"
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allSources" }), value: null },
           ...sourceOptions,
@@ -90,10 +89,9 @@ export const CreditsUsageFilters: React.FC = () => {
         onSelect={(selectedValue) => onSourceSelect(selectedValue)}
       />
       <ListBox
-        className={styles.listboxContainer}
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        optionsMenuClassName={styles.connectorOptionsMenu}
+        placement="bottom-start"
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allDestinations" }), value: null },
           ...destinationOptions,

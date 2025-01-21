@@ -54,7 +54,6 @@ const DefaultControlButton = <T,>({ placeholder, selectedOption, isDisabled }: L
 
 export interface ListBoxProps<T> {
   className?: string;
-  optionsMenuClassName?: string;
   optionClassName?: string;
   optionTextAs?: ComponentPropsWithoutRef<typeof Text>["as"];
   selectedOptionClassName?: string;
@@ -114,7 +113,6 @@ export const ListBox = <T,>({
    */
   controlButton: ControlButton = DefaultControlButton,
   controlButtonAs,
-  optionsMenuClassName,
   optionClassName,
   optionTextAs,
   selectedOptionClassName,
@@ -248,7 +246,7 @@ export const ListBox = <T,>({
             as="ul"
             modal={false}
             onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
-            className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth }, optionsMenuClassName)}
+            className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth })}
             {...(testId && {
               "data-testid": `${testId}-listbox-options`,
             })}
