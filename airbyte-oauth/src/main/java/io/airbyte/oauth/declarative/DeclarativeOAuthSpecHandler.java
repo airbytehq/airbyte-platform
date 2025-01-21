@@ -90,7 +90,8 @@ public class DeclarativeOAuthSpecHandler {
   protected static final String STATE_PARAM_KEY = STATE_VALUE;
   protected static final String STATE_PARAM_MIN_KEY = "min";
   protected static final String STATE_PARAM_MAX_KEY = "max";
-  protected static final String TOKEN_EXPIRY_KEY = "expires_in";
+  protected static final String TOKEN_EXPIRY_KEY = "token_expiry_key";
+  protected static final String TOKEN_EXPIRY_VALUE = "expires_in";
   protected static final String TOKEN_EXPIRY_DATE_KEY = "token_expiry_date";
 
   /**
@@ -193,6 +194,10 @@ public class DeclarativeOAuthSpecHandler {
    */
   protected final String getClientSecretKey(final JsonNode userConfig) {
     return userConfig.path(CLIENT_SECRET_KEY).asText(CLIENT_SECRET_VALUE);
+  }
+
+  protected final String getTokenExpiryKey(final JsonNode userConfig) {
+    return userConfig.path(TOKEN_EXPIRY_KEY).asText(TOKEN_EXPIRY_VALUE);
   }
 
   /**
@@ -548,8 +553,8 @@ public class DeclarativeOAuthSpecHandler {
       final String key = JsonPaths.getTargetKeyFromJsonPath(path);
 
       if (value != null) {
-        // handle `expires_in` presence
-        if (TOKEN_EXPIRY_KEY.equals(key)) {
+        // handle `token_expiry_key`
+        if (getTokenExpiryKey(userConfig).equals(key)) {
           oauth_output.put(TOKEN_EXPIRY_DATE_KEY, processExpiresIn(value));
         }
 
