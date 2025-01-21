@@ -26,6 +26,7 @@ type CloudWorkspaceCount = { count: "zero" } | { count: "one"; workspace: CloudW
 export const useCloudWorkspaceCount = () => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
+
   return useSuspenseQuery(
     workspaceKeys.list({ pageSize: "2", nameContains: "", rowOffset: "0" }),
     async (): Promise<CloudWorkspaceCount> =>

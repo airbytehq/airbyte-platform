@@ -87,6 +87,7 @@ class WorkspacesHandlerTest {
   public static final String UPDATED = "updated";
   private static final String FAILURE_NOTIFICATION_WEBHOOK = "http://airbyte.notifications/failure";
   private static final String NEW_WORKSPACE = "new workspace";
+  private static final String NEW_WORKSPACE_SLUG = "new-workspace";
   private static final String TEST_NAME = "test-name";
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final String TEST_AUTH_TOKEN = "test-auth-token";
@@ -289,7 +290,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -339,7 +340,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -630,6 +631,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .securityUpdates(false)
         .news(false)
+        .name(NEW_WORKSPACE)
         .initialSetupComplete(true)
         .displaySetupWizard(false)
         .notifications(List.of(apiNotification))
@@ -639,12 +641,13 @@ class WorkspacesHandlerTest {
 
     final Notification expectedNotification = generateNotification();
     expectedNotification.getSlackConfiguration().withWebhook(UPDATED);
+
     final StandardWorkspace expectedWorkspace = new StandardWorkspace()
         .withWorkspaceId(workspace.getWorkspaceId())
         .withCustomerId(workspace.getCustomerId())
         .withEmail(TEST_EMAIL)
-        .withName(TEST_WORKSPACE_NAME)
-        .withSlug(TEST_WORKSPACE_SLUG)
+        .withName(NEW_WORKSPACE)
+        .withSlug(NEW_WORKSPACE_SLUG)
         .withAnonymousDataCollection(true)
         .withSecurityUpdates(false)
         .withNews(false)
@@ -669,12 +672,13 @@ class WorkspacesHandlerTest {
 
     final io.airbyte.api.model.generated.Notification expectedNotificationRead = generateApiNotification();
     expectedNotificationRead.getSlackConfiguration().webhook(UPDATED);
+
     final WorkspaceRead expectedWorkspaceRead = new WorkspaceRead()
         .workspaceId(workspace.getWorkspaceId())
         .customerId(workspace.getCustomerId())
         .email(TEST_EMAIL)
-        .name(TEST_WORKSPACE_NAME)
-        .slug(TEST_WORKSPACE_SLUG)
+        .name(NEW_WORKSPACE)
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(true)
         .displaySetupWizard(false)
         .news(false)
@@ -691,8 +695,8 @@ class WorkspacesHandlerTest {
         .withWorkspaceId(workspace.getWorkspaceId())
         .withCustomerId(workspace.getCustomerId())
         .withEmail(TEST_EMAIL)
-        .withName(TEST_WORKSPACE_NAME)
-        .withSlug(TEST_WORKSPACE_SLUG)
+        .withName(NEW_WORKSPACE)
+        .withSlug(NEW_WORKSPACE_SLUG)
         .withAnonymousDataCollection(true)
         .withSecurityUpdates(false)
         .withNews(false)
@@ -914,7 +918,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)

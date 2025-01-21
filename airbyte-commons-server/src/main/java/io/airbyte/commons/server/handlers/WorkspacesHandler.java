@@ -533,7 +533,7 @@ public class WorkspacesHandler {
     Preconditions.checkArgument(persistedWorkspace.getWorkspaceId().equals(workspacePatch.getWorkspaceId()));
   }
 
-  private void applyPatchToStandardWorkspace(final StandardWorkspace workspace, final WorkspaceUpdate workspacePatch) {
+  private void applyPatchToStandardWorkspace(final StandardWorkspace workspace, final WorkspaceUpdate workspacePatch) throws IOException {
     if (workspacePatch.getAnonymousDataCollection() != null) {
       workspace.setAnonymousDataCollection(workspacePatch.getAnonymousDataCollection());
     }
@@ -560,6 +560,10 @@ public class WorkspacesHandler {
     }
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+    }
+    if (workspacePatch.getName() != null) {
+      workspace.setName(workspacePatch.getName());
+      workspace.setSlug(generateUniqueSlug(workspacePatch.getName()));
     }
     // Empty List is a valid value for webhookConfigs
     if (workspacePatch.getWebhookConfigs() != null) {

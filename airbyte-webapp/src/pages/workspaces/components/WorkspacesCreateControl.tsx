@@ -21,11 +21,16 @@ import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
 import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
+import { CloudWorkspaceRead, PermissionedCloudWorkspaceCreate } from "core/api/types/CloudApi";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 import styles from "./WorkspacesCreateControl.module.scss";
+
+export type UnionWorkspaceCreateFn =
+  | UseMutateAsyncFunction<CloudWorkspaceRead, unknown, Omit<PermissionedCloudWorkspaceCreate, "userId">, unknown>
+  | UseMutateAsyncFunction<WorkspaceRead, unknown, WorkspaceCreate, unknown>;
 
 interface CreateWorkspaceFormValues {
   name: string;
@@ -37,11 +42,7 @@ const OrganizationCreateWorkspaceFormValidationSchema = yup.object().shape({
   organizationId: yup.string().trim().required("form.empty.error"),
 });
 
-interface OrganizationWorkspacesCreateControlProps {
-  createWorkspace: UseMutateAsyncFunction<WorkspaceRead, unknown, WorkspaceCreate, unknown>;
-}
-
-export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateControlProps> = ({ createWorkspace }) => {
+export const WorkspacesCreateControl: React.FC<{ createWorkspace: UnionWorkspaceCreateFn }> = ({ createWorkspace }) => {
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const navigate = useNavigate();

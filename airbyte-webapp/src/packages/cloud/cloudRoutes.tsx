@@ -27,6 +27,7 @@ import {
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
+import { WorkspaceMembersPage } from "pages/SettingsPage/Workspace/WorkspaceMembersPage";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -37,7 +38,6 @@ import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSett
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
 import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
-import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
@@ -86,7 +86,6 @@ const MainRoutes: React.FC = () => {
   useAnalyticsRegisterValues(analyticsContext);
 
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   return (
     <DefaultErrorBoundary>
@@ -115,9 +114,7 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
-          {supportsDataResidency && (
-            <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />
-          )}
+          <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />

@@ -20,13 +20,13 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
 import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
-import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
+import { UnionWorkspaceCreateFn, WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
 
 export const WORKSPACE_LIST_LENGTH = 50;
 
-export const WorkspacesPage: React.FC = () => {
+export const WorkspacesPageContent: React.FC<{ createWorkspace: UnionWorkspaceCreateFn }> = ({ createWorkspace }) => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
@@ -44,7 +44,6 @@ export const WorkspacesPage: React.FC = () => {
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
-  const { mutateAsync: createWorkspace } = useCreateWorkspace();
   const { logout } = useAuthService();
 
   /**
@@ -119,4 +118,10 @@ export const WorkspacesPage: React.FC = () => {
       </Box>
     </>
   );
+};
+
+export const WorkspacesPage: React.FC = () => {
+  const { mutateAsync: createWorkspace } = useCreateWorkspace();
+
+  return <WorkspacesPageContent createWorkspace={createWorkspace} />;
 };

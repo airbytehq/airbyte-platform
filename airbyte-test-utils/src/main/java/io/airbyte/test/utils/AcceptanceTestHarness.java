@@ -1260,7 +1260,7 @@ public class AcceptanceTestHarness {
 
   public WorkspaceRead updateWorkspaceWebhookConfigs(final UUID workspaceId, final List<WebhookConfigWrite> webhookConfigs) throws Exception {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getWorkspaceApi()
-        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, webhookConfigs)));
+        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, null, webhookConfigs)));
   }
 
   public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId) throws IOException {

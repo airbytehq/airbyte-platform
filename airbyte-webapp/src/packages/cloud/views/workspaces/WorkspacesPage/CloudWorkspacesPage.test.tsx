@@ -1,11 +1,18 @@
+import { HelmetProvider } from "react-helmet-async";
+
 import { mocked, render } from "test-utils";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
-import { useListPermissions } from "core/api";
-import { useListCloudWorkspacesInfinite } from "core/api/cloud";
+import { useListPermissions, useListWorkspacesInfinite } from "core/api";
 import { OrganizationRead } from "core/api/types/AirbyteClient";
 
-import { CloudWorkspacesPageInner } from "./CloudWorkspacesPage";
+import { CloudWorkspacesPage } from "./CloudWorkspacesPage";
+jest.mock("core/services/analytics/useAnalyticsService", () => ({
+  useTrackPage: jest.fn(),
+}));
+jest.mock("core/utils/datadog", () => ({
+  trackTiming: jest.fn(),
+}));
 
 jest.mock("core/services/auth", () => ({
   useAuthService: () => ({}),
@@ -15,16 +22,16 @@ jest.mock("core/services/auth", () => ({
 }));
 
 jest.mock("core/api/cloud", () => ({
-  useListCloudWorkspacesInfinite: jest.fn().mockReturnValue({
-    data: undefined,
-    isFetching: false,
-  }),
   useCreateCloudWorkspace: () => ({
     mutateAsync: jest.fn(),
   }),
 }));
 
 jest.mock("core/api", () => ({
+  useListWorkspacesInfinite: jest.fn().mockReturnValue({
+    data: undefined,
+    isFetching: false,
+  }),
   useListPermissions: jest.fn().mockResolvedValue({
     permissions: [],
   }),
@@ -44,7 +51,11 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "321" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPageInner />);
+      const wrapper = await render(
+        <HelmetProvider>
+          <CloudWorkspacesPage />
+        </HelmetProvider>
+      );
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).toBeInTheDocument();
       expect(wrapper.getByTestId("noWorkspacePermissionsBanner")).toHaveTextContent("321@example.com");
     });
@@ -55,12 +66,16 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "456" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPageInner />);
+      const wrapper = await render(
+        <HelmetProvider>
+          <CloudWorkspacesPage />
+        </HelmetProvider>
+      );
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).toBeInTheDocument();
       expect(wrapper.getByTestId("noWorkspacePermissionsBanner")).toHaveTextContent("321@example.com");
     });
     it("organization member permissions do not supersede instance admin permissions in the check", async () => {
-      mocked(useListCloudWorkspacesInfinite).mockReturnValue({
+      mocked(useListWorkspacesInfinite).mockReturnValue({
         isFetching: false,
         data: {
           pageParams: [],
@@ -73,11 +88,15 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "instance_admin", userId: "123", permissionId: "2" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPageInner />);
+      const wrapper = await render(
+        <HelmetProvider>
+          <CloudWorkspacesPage />
+        </HelmetProvider>
+      );
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
     it("should not show if you see any workspaces (e.g. as an instance admin)", async () => {
-      mocked(useListCloudWorkspacesInfinite).mockReturnValue({
+      mocked(useListWorkspacesInfinite).mockReturnValue({
         isFetching: false,
         data: {
           pageParams: [],
@@ -89,7 +108,11 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "321" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPageInner />);
+      const wrapper = await render(
+        <HelmetProvider>
+          <CloudWorkspacesPage />
+        </HelmetProvider>
+      );
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
 
@@ -100,7 +123,11 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_editor", userId: "123", permissionId: "2", organizationId: "456" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPageInner />);
+      const wrapper = await render(
+        <HelmetProvider>
+          <CloudWorkspacesPage />
+        </HelmetProvider>
+      );
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
   });
