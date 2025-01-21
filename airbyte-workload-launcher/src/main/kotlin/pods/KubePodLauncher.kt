@@ -333,6 +333,7 @@ class KubePodLauncher(
     // Wait why is this named like this?
     // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
     const val KUBECTL_COMPLETED_VALUE = "Succeeded"
+    const val KUBECTL_RUNNING_VALUE = "Running"
 
     // Explanation: Unlike Kubectl, Fabric8 shows and uses "Completed" for termination reasons
     const val FABRIC8_COMPLETED_REASON_VALUE = "Completed"

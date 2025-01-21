@@ -282,3 +282,9 @@ workloadApi: {}
 debug:
   enabled: false
   remoteDebugPort: 5005
+
+timeToDeletePods:
+  running: ""
+  succeeded: 10
+  ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
+  unsuccessful: 120

@@ -58,6 +58,12 @@ spec:
         image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
+        - name: RUNNING_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.running }}"
+        - name: SUCCEEDED_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.succeeded }}"
+        - name: UNSUCCESSFUL_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.unsuccessful }}"
         {{- if .Values.debug.enabled }}
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"

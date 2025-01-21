@@ -28,6 +28,13 @@ micronaut:
       n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
       core-pool-size: 0
 airbyte:
+  pod-sweeper:
+    # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
+    # meaning running pods are preserved indefinitely.
+    runningTtl: ${RUNNING_TTL_MINUTES:""}
+    succeededTtl: ${SUCCEEDED_TTL_MINUTES:10}
+    unsuccessfulTtl: ${UNSUCCESSFUL_TTL_MINUTES:120}
+    rate: PT2M
   connector:
     source:
       credentials:

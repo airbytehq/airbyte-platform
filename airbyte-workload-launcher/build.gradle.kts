@@ -69,6 +69,8 @@ dependencies {
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(libs.jakarta.ws.rs.api)
+  testImplementation(libs.kubernetes.mock.server)
+
 }
 
 airbyte {

@@ -170,6 +170,8 @@ object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-ov
 
 object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
+object PodSweeperWithinWorkloadLauncher : Temporary<Boolean>(key = "platform.pod-sweeper-within-workload-launcher", default = false)
+
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
 object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = true)

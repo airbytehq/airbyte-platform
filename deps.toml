@@ -148,6 +148,7 @@ kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5",
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
 kubernetes-httpclient-okhttp = { module = "io.fabric8:kubernetes-httpclient-okhttp", version.ref = "kubernetes-client" }
+kubernetes-mock-server = { module = "io.fabric8:kubernetes-server-mock", version.ref = "kubernetes-client" }
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "7.2.6" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
