@@ -366,6 +366,7 @@ const DeclarativeOAuthForm = () => {
                   }
             }
             onComplete={async (payload) => {
+              const testingValues = getValues("testingValues"); // ensure we have the latest testing values
               const areRefreshTokensEnabled = !!getValues(authPath("refresh_token_updater"));
 
               if (!areRefreshTokensEnabled) {
