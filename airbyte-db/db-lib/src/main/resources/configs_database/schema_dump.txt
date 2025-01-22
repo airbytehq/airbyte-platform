@@ -226,6 +226,7 @@ create table "public"."connector_builder_project" (
   "base_actor_definition_version_id" uuid,
   "contribution_pull_request_url" varchar(256),
   "contribution_actor_definition_id" uuid,
+  "components_file_content" text,
   constraint "connector_builder_project_pkey" primary key ("id")
 );
 create table "public"."connector_rollout" (
