@@ -19,6 +19,8 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.api.model.generated.OrganizationUsageRead;
 import io.airbyte.api.model.generated.OrganizationUsageRequestBody;
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.auth.generated.Intent;
 import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.OrganizationsHandler;
@@ -52,6 +54,7 @@ public class OrganizationApiController implements OrganizationApi {
   @Post("/update")
   @Secured({ORGANIZATION_EDITOR})
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public OrganizationRead updateOrganization(@Body final OrganizationUpdateRequestBody organizationUpdateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.updateOrganization(organizationUpdateRequestBody));
   }
@@ -59,6 +62,7 @@ public class OrganizationApiController implements OrganizationApi {
   @Post("/create")
   @Secured({ADMIN}) // instance admin only
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public OrganizationRead createOrganization(@Body final OrganizationCreateRequestBody organizationCreateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.createOrganization(organizationCreateRequestBody));
   }
@@ -66,6 +70,7 @@ public class OrganizationApiController implements OrganizationApi {
   @Post("/delete")
   @Secured({ADMIN}) // instance admin only
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteOrganization(@Body final OrganizationIdRequestBody organizationIdRequestBody) {
     // To be implemented; we need a tombstone column for organizations table.
   }

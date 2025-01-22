@@ -2,11 +2,12 @@ package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.commons.annotation.AuditLoggingProvider
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
-@Named("createPermission")
+@Named(AuditLoggingProvider.CREATE_PERMISSION)
 class CreatePermissionAuditProvider(
   private val helper: AuditLoggingHelper,
 ) : AuditProvider {

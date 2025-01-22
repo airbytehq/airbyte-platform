@@ -21,6 +21,8 @@ import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -72,6 +74,7 @@ public class DestinationApiController implements DestinationApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public DestinationRead createDestination(@Body final DestinationCreate destinationCreate) {
     return ApiHelper.execute(() -> destinationHandler.createDestination(destinationCreate));
   }
@@ -81,6 +84,7 @@ public class DestinationApiController implements DestinationApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteDestination(@Body final DestinationIdRequestBody destinationIdRequestBody) {
     ApiHelper.execute(() -> {
       destinationHandler.deleteDestination(destinationIdRequestBody);
@@ -124,6 +128,7 @@ public class DestinationApiController implements DestinationApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public DestinationRead updateDestination(@Body final DestinationUpdate destinationUpdate) {
     return ApiHelper.execute(() -> destinationHandler.updateDestination(destinationUpdate));
   }
@@ -133,6 +138,7 @@ public class DestinationApiController implements DestinationApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void upgradeDestinationVersion(@Body final DestinationIdRequestBody destinationIdRequestBody) {
     ApiHelper.execute(() -> {
       destinationHandler.upgradeDestinationVersion(destinationIdRequestBody);
@@ -144,6 +150,7 @@ public class DestinationApiController implements DestinationApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public DestinationRead partialUpdateDestination(@Body final PartialDestinationUpdate partialDestinationUpdate) {
     return ApiHelper.execute(() -> destinationHandler.partialDestinationUpdate(partialDestinationUpdate));
   }

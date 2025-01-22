@@ -28,6 +28,8 @@ import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody;
 import io.airbyte.api.model.generated.WebBackendValidateMappersResponse;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
 import io.airbyte.commons.server.authorization.Scope;
@@ -98,6 +100,7 @@ public class WebBackendApiController implements WebBackendApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WebBackendConnectionRead webBackendCreateConnection(@Body final WebBackendConnectionCreate webBackendConnectionCreate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addSourceDestination(webBackendConnectionCreate.getSourceId(), webBackendConnectionCreate.getDestinationId());
@@ -160,6 +163,7 @@ public class WebBackendApiController implements WebBackendApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WebBackendConnectionRead webBackendUpdateConnection(@Body final WebBackendConnectionUpdate webBackendConnectionUpdate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());

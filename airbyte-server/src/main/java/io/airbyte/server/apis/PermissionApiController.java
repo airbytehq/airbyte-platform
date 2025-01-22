@@ -24,6 +24,7 @@ import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.validation.json.JsonValidationException;
@@ -55,7 +56,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/create")
   @Override
-  @AuditLogging(provider = "createPermission")
+  @AuditLogging(provider = AuditLoggingProvider.CREATE_PERMISSION)
   public PermissionRead createPermission(@Body final PermissionCreate permissionCreate) {
     return ApiHelper.execute(() -> {
       validatePermissionCreation(permissionCreate);
@@ -82,7 +83,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/update")
   @Override
-  @AuditLogging(provider = "updatePermission")
+  @AuditLogging(provider = AuditLoggingProvider.UPDATE_PERMISSION)
   public void updatePermission(@Body final PermissionUpdate permissionUpdate) {
     ApiHelper.execute(() -> {
       validatePermissionUpdate(permissionUpdate);
@@ -100,7 +101,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/delete")
   @Override
-  @AuditLogging(provider = "deletePermission")
+  @AuditLogging(provider = AuditLoggingProvider.DELETE_PERMISSION)
   public void deletePermission(@Body final PermissionIdRequestBody permissionIdRequestBody) {
 
     ApiHelper.execute(() -> {
