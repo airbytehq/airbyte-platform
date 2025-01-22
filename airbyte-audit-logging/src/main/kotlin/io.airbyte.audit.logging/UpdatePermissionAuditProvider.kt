@@ -2,6 +2,7 @@ package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PermissionUpdate
+import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -9,7 +10,7 @@ import jakarta.inject.Singleton
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-@Named("updatePermission")
+@Named(AuditLoggingProvider.UPDATE_PERMISSION)
 class UpdatePermissionAuditProvider(
   private val helper: AuditLoggingHelper,
 ) : AuditProvider {

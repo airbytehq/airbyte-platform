@@ -47,6 +47,8 @@ import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.auth.generated.Intent;
 import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
@@ -131,6 +133,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/create")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead createConnection(@Body final ConnectionCreate connectionCreate) {
     return ApiHelper.execute(() -> connectionsHandler.createConnection(connectionCreate));
   }
@@ -139,6 +142,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/update")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
   }
@@ -147,6 +151,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/update_with_reason")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead updateConnectionWithReason(@Body final ConnectionUpdateWithReason connectionUpdateWithReason) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdateWithReason.getConnectionUpdate(),
         connectionUpdateWithReason.getUpdateReason(), connectionUpdateWithReason.getAutoUpdate()));
@@ -293,6 +298,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Status(HttpStatus.NO_CONTENT)
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     ApiHelper.execute(() -> {
       operationsHandler.deleteOperationsForConnection(connectionIdRequestBody);
