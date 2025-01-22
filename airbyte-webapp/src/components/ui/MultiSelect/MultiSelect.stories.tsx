@@ -33,6 +33,7 @@ const exampleOptions: Array<Option<number>> = [
   {
     label: "three",
     value: 3,
+    disabled: true,
   },
   {
     label: "four",

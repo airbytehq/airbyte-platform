@@ -34,8 +34,8 @@ export const MultiSelect = <T,>({ options, selectedValues, onSelectValues, label
           </FlexContainer>
         </ListboxButton>
         <ListboxOptions>
-          {options.map(({ label, value }, index) => (
-            <MultiSelectOption label={label} value={value} key={index} />
+          {options.map(({ label, value, disabled }, index) => (
+            <MultiSelectOption label={label} value={value} key={index} disabled={disabled} />
           ))}
         </ListboxOptions>
       </FloatLayout>
@@ -46,10 +46,11 @@ export const MultiSelect = <T,>({ options, selectedValues, onSelectValues, label
 interface MultiSelectOptionProps<T> {
   label: React.ReactNode;
   value: T;
+  disabled?: boolean;
 }
 
-const MultiSelectOption = <T,>({ label, value }: MultiSelectOptionProps<T>) => (
-  <ListboxOption value={value}>
+const MultiSelectOption = <T,>({ label, value, disabled }: MultiSelectOptionProps<T>) => (
+  <ListboxOption value={value} disabled={disabled}>
     {({ selected }) => (
       <Box p="md">
         <FlexContainer alignItems="center" as="span">
