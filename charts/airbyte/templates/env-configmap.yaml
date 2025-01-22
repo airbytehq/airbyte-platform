@@ -106,7 +106,7 @@ data:
   {{- $imagePullSecrets = append $imagePullSecrets $.Values.global.jobs.kube.main_container_image_pull_secret }}
   {{- end }}
 
-  JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ join "," $imagePullSecrets }}
+  JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ join "," ($imagePullSecrets | uniq) | quote }}
 
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
 
