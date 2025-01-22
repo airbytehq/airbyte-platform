@@ -20,7 +20,7 @@ import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

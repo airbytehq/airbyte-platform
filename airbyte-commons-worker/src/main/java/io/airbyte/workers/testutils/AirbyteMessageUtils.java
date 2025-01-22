@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.test_utils;
+package io.airbyte.workers.testutils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;

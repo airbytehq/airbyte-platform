@@ -33,6 +33,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.random.RandomKt;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
@@ -70,7 +71,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.jooq.tools.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -518,7 +518,7 @@ public class WorkspacesHandler {
       // todo (cgardens) - this is still susceptible to a race condition where we randomly generate the
       // same slug in two different threads. this should be very unlikely. we can fix this by exposing
       // database transaction, but that is not something we can do quickly.
-      resolvedSlug = proposedSlug + "-" + RandomStringUtils.randomAlphabetic(8);
+      resolvedSlug = proposedSlug + "-" + RandomKt.randomAlpha(8);
       isSlugUsed = workspaceService.getWorkspaceBySlugOptional(resolvedSlug, true).isPresent();
       count++;
       if (count > MAX_SLUG_GENERATION_ATTEMPTS) {

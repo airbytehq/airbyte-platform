@@ -4,7 +4,7 @@
 
 package io.airbyte.bootloader;
 
-import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.annotation.InternalForTesting;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -234,7 +234,10 @@ public class Bootloader {
     log.info("Databases initialized.");
   }
 
-  @VisibleForTesting
+  // Using the @InternalForTesting annotation here even though this hasn't been converted to kotlin
+  // yet.
+  // No reason to bring in guava for a single @VisibleForTesting annotation.
+  @InternalForTesting
   Optional<AirbyteVersion> getRequiredVersionUpgrade(@Nullable final AirbyteVersion airbyteDatabaseVersion, final AirbyteVersion airbyteVersion) {
     // means there was no previous version so upgrade even needs to happen. always legal.
     if (airbyteDatabaseVersion == null) {

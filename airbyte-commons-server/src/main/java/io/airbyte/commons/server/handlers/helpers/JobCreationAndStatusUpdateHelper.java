@@ -52,7 +52,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,7 +254,7 @@ public class JobCreationAndStatusUpdateHelper {
         .map(FailureReason::getExternalMessage)
         .filter(Objects::nonNull)
         // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
-        .map(s -> StringUtils.abbreviate(s, 50))
+        .map(this::abbreviate)
         .findFirst());
 
     final Optional<String> internalMsg = attempt.getFailureSummary().flatMap(summary -> summary.getFailures()
@@ -263,7 +262,7 @@ public class JobCreationAndStatusUpdateHelper {
         .map(FailureReason::getInternalMessage)
         .filter(Objects::nonNull)
         // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
-        .map(s -> StringUtils.abbreviate(s, 50))
+        .map(this::abbreviate)
         .findFirst());
 
     final List<MetricAttribute> additionalAttributes = new ArrayList<>();
@@ -279,6 +278,16 @@ public class JobCreationAndStatusUpdateHelper {
     } catch (final IOException e) {
       log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.getId());
     }
+  }
+
+  private String abbreviate(final String s) {
+    final var length = 50;
+
+    if (s == null || s.length() <= length) {
+      return s;
+    }
+
+    return s.substring(0, length - 3) + "...";
   }
 
   /**

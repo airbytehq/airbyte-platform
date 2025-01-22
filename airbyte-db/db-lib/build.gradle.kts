@@ -50,7 +50,6 @@ dependencies {
   implementation(libs.jna.platform)
 
   testImplementation(project(":oss:airbyte-test-utils"))
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

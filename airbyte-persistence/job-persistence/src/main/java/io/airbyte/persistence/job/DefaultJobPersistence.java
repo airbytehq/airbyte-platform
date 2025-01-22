@@ -71,7 +71,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.JSONB;
@@ -872,7 +871,10 @@ public class DefaultJobPersistence implements JobPersistence {
       return Map.of();
     }
 
-    final var jobIdsStr = StringUtils.join(jobIds, ',');
+    final var jobIdsStr = jobIds.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining(","));
+
     return jobDatabase.query(ctx -> {
       // Instead of one massive join query, separate this query into two queries for better readability
       // for now.

@@ -27,7 +27,6 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +93,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   @Test
@@ -103,7 +102,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   private JsonNode getTokenClaims(final String token) {

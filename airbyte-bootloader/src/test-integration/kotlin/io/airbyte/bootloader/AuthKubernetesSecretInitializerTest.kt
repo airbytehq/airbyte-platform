@@ -10,11 +10,9 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
-import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
-import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -121,11 +119,6 @@ class AuthKubernetesSecretInitializerTest {
 
   @Test
   fun `test initializeSecrets when some values are not provided`() {
-    // password is not provided or set, so it should be randomly generated.
-    mockkStatic(RandomStringUtils::class)
-    val randomPassword = "randomPassword123"
-    every { RandomStringUtils.randomAlphanumeric(SECRET_LENGTH) } returns randomPassword
-
     val existingSecret =
       SecretBuilder()
         .withNewMetadata()
@@ -150,13 +143,11 @@ class AuthKubernetesSecretInitializerTest {
     val capturedSecret = secretSlot.captured
     assertEquals(SECRET_NAME, capturedSecret.metadata.name)
     assertEquals(4, capturedSecret.data.size)
-    assertEquals(Base64.getEncoder().encodeToString(randomPassword.toByteArray()), capturedSecret.data[PASSWORD_KEY])
+    // since the password is randomly generated, verify the length of the password matches the expected length
+    assertEquals(SECRET_LENGTH, Base64.getDecoder().decode(capturedSecret.data[PASSWORD_KEY]).size)
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_ID_VALUE.toByteArray()), capturedSecret.data[CLIENT_ID_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_SECRET_VALUE.toByteArray()), capturedSecret.data[CLIENT_SECRET_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_JWT_SIGNATURE_VALUE.toByteArray()), capturedSecret.data[JWT_SIGNATURE_KEY])
-
-    // Verify that RandomStringUtils.randomAlphanumeric was called to generate the password
-    verify { RandomStringUtils.randomAlphanumeric(SECRET_LENGTH) }
   }
 
   private fun setupProvidedSecretValuesConfigWithoutPassword() {

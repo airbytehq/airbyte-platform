@@ -7,6 +7,7 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
@@ -25,7 +26,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,10 +187,10 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
     public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
       super(String.format("Last record seen %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
-          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
-      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true);
+          DurationKt.formatMilli(timeBetweenLastRecordMs),
+          DurationKt.formatMilli(thresholdMs)));
+      this.humanReadableThreshold = DurationKt.formatMilli(thresholdMs);
+      this.humanReadableTimeSinceLastRec = DurationKt.formatMilli(timeBetweenLastRecordMs);
     }
 
   }

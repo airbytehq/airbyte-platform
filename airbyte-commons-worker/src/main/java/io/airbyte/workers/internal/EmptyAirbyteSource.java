@@ -22,7 +22,7 @@ import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.ArrayList;

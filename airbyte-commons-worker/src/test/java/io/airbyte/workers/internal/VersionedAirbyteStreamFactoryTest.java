@@ -28,7 +28,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

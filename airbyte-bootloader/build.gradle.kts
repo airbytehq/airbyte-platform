@@ -16,8 +16,6 @@ dependencies {
   implementation(libs.bundles.flyway)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
-  implementation(libs.guava)
-  implementation(libs.apache.commons.lang)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))

@@ -10,8 +10,8 @@ import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
-import io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE
-import io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE
+import io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE
+import io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

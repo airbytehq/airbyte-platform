@@ -30,7 +30,6 @@ dependencies {
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
   implementation(libs.commons.io)
-  implementation(libs.apache.commons.lang)
   implementation(libs.kotlin.logging)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)

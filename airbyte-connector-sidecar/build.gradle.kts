@@ -73,7 +73,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.apache.commons.lang)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

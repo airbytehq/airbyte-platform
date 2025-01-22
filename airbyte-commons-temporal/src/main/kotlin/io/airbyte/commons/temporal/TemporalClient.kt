@@ -50,7 +50,6 @@ import io.temporal.common.RetryOptions
 import io.temporal.workflow.Functions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.apache.commons.lang3.time.StopWatch
 import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
@@ -58,9 +57,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Consumer
 import java.util.function.Supplier
 import kotlin.jvm.optionals.getOrNull
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 private const val SAFE_TERMINATE_MESSAGE = "Terminating workflow in unreachable state before starting a new workflow for this connection"
 
@@ -520,40 +520,44 @@ class TemporalClient(
    * @param connectionIds connection ids
    * // todo (cgardens) - i dunno what this is
    */
-  fun migrateSyncIfNeeded(connectionIds: MutableSet<UUID?>) {
-    val globalMigrationWatch = StopWatch()
-    globalMigrationWatch.start()
-    refreshRunningWorkflow()
+  fun migrateSyncIfNeeded(connectionIds: Set<UUID>) {
+    val globalMigrationTime =
+      measureTime {
+        refreshRunningWorkflow()
+        connectionIds.forEach { connectionId ->
+          val singleMigrationTime =
+            measureTime {
+              if (!isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(connectionId))) {
+                logger.info { "Migrating: $connectionId" }
+                try {
+                  submitConnectionUpdaterAsync(connectionId)
+                } catch (e: Exception) {
+                  logger.error(e) { "New workflow submission failed, retrying" }
+                  refreshRunningWorkflow()
+                  submitConnectionUpdaterAsync(connectionId)
+                }
+              }
+            }
 
-    connectionIds.forEach(
-      Consumer { connectionId: UUID? ->
-        val singleSyncMigrationWatch = StopWatch()
-        singleSyncMigrationWatch.start()
-        if (!isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(connectionId))) {
-          logger.info { "Migrating: $connectionId" }
-          try {
-            submitConnectionUpdaterAsync(connectionId)
-          } catch (e: Exception) {
-            logger.error(e) { "New workflow submission failed, retrying" }
-            refreshRunningWorkflow()
-            submitConnectionUpdaterAsync(connectionId)
-          }
+          logger.info { "Sync migration took: " + singleMigrationTime.formatTime() }
         }
-        singleSyncMigrationWatch.stop()
-        logger.info { "Sync migration took: " + singleSyncMigrationWatch.formatTime() }
-      },
-    )
-    globalMigrationWatch.stop()
+      }
 
-    logger.info { "The migration to the new scheduler took: " + globalMigrationWatch.formatTime() }
+    logger.info { "The migration to the new scheduler took: " + globalMigrationTime.formatTime() }
   }
+
+  // formatTime exists to mimic the previous apache StopWatch.formatTime method
+  private fun Duration.formatTime(): String =
+    this.toComponents { hours, minutes, seconds, nano ->
+      "%02d:%02d:%02d.%03d".format(hours, minutes, seconds, nano / 1_000_000)
+    }
 
   @VisibleForTesting
   fun <T> execute(
     jobRunConfig: JobRunConfig,
     executor: Supplier<T>,
   ): TemporalResponse<T> {
-    val jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId())
+    val jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId)
     val logPath = TemporalUtils.getLogPath(jobRoot)
 
     var operationOutput: T? = null
@@ -583,7 +587,7 @@ class TemporalClient(
         .newBuilder()
         .setTaskQueue(queueConfiguration.uiCommandsQueue)
         .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
-        .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.getJobId()))
+        .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.jobId))
         .build()
 
     return execute<ConnectorJobOutput>(jobRunConfig) {

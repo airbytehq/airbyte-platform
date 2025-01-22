@@ -60,7 +60,6 @@ dependencies {
     exclude(module = "guava")
   }
   implementation(libs.apache.ant)
-  implementation(libs.apache.commons.lang)
   implementation(libs.apache.commons.text)
   implementation(libs.quartz.scheduler)
   implementation(libs.micrometer.statsd)

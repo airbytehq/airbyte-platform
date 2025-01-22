@@ -64,7 +64,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -526,7 +525,7 @@ public class SourceServiceJooqImpl implements SourceService {
         scopeId,
         scopeType,
         joinType,
-        ArrayUtils.addAll(conditions,
+        ConditionsHelper.addAll(conditions,
             ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
             ACTOR_DEFINITION.PUBLIC.eq(false)));
 

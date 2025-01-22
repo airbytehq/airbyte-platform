@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;

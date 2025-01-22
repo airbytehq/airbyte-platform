@@ -19,7 +19,6 @@ import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -119,7 +118,7 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
 
   @Override
   protected String getAccessTokenUrl(final JsonNode inputOAuthConfiguration) {
-    return StringUtils.EMPTY;
+    return "";
   }
 
   private String formatAccessTokenUrl(final String shopName) {

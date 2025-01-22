@@ -8,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

@@ -7,8 +7,8 @@ package io.airbyte.workers.general;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_JOB_LOG_PATH_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -49,7 +49,6 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
@@ -102,8 +101,8 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Files;
@@ -122,7 +121,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -213,8 +211,8 @@ abstract class ReplicationWorkerTest {
 
     jobRoot = Files.createDirectories(Files.createTempDirectory("test").resolve(WORKSPACE_ROOT));
 
-    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
-    replicationInput = syncPair.getValue();
+    final var syncPair = TestConfigHelpers.createReplicationConfig();
+    replicationInput = syncPair.getSecond();
 
     sourceConfig = WorkerUtils.syncToWorkerSourceConfig(replicationInput);
     destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(replicationInput);

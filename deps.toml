@@ -59,7 +59,6 @@ apache-ant = { module = "org.apache.ant:ant", version = "1.10.14" }
 apache-commons = { module = "org.apache.commons:commons-compress", version = "1.26.1" }
 apache-commons-cli = { module = "commons-cli:commons-cli", version = "1.4" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
-apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 apache-mime4j-core = { module = "org.apache.james:apache-mime4j-core", version = "0.8.10" } # Transitive dependency of keycloak. Forced upgrade to 0.8.10 from 0.8.9
@@ -255,7 +254,7 @@ micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", ve
 micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.8.0" }
 
 [bundles]
-apache = ["apache-commons", "apache-commons-lang"]
+apache = ["apache-commons"]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
 flyway = ["flyway-core", "flyway-postgresql"]

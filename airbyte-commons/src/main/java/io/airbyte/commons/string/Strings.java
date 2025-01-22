@@ -5,8 +5,8 @@
 package io.airbyte.commons.string;
 
 import com.google.common.collect.Streams;
+import io.airbyte.commons.random.RandomKt;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * Shared code for interacting with {@link String}.
@@ -35,7 +35,7 @@ public class Strings {
    * @return generated string
    */
   public static String addRandomSuffix(final String base, final String separator, final int suffixLength) {
-    return base + separator + RandomStringUtils.randomAlphabetic(suffixLength).toLowerCase();
+    return base + separator + RandomKt.randomAlpha(suffixLength).toLowerCase();
   }
 
 }

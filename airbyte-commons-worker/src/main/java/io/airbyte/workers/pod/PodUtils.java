@@ -5,9 +5,9 @@
 package io.airbyte.workers.pod;
 
 import io.airbyte.commons.helper.DockerImageNameHelper;
+import io.airbyte.commons.random.RandomKt;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * Left-over utility methods from the various old process-related singletons and factories.
@@ -27,7 +27,7 @@ public class PodUtils {
   static String createProcessName(final String fullImagePath, final String jobType, final String jobId, final int attempt, final int lenLimit) {
 
     var imageName = DockerImageNameHelper.extractShortImageName(fullImagePath);
-    final var randSuffix = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+    final var randSuffix = RandomKt.randomAlpha(5).toLowerCase();
     final String suffix = jobType + "-" + jobId + "-" + attempt + "-" + randSuffix;
 
     var processName = imageName + "-" + suffix;

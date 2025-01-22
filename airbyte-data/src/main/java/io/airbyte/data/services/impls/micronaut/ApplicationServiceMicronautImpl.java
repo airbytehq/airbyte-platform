@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.commons.lang3.NotImplementedException;
 
 @Singleton
 @RequiresAuthMode(AuthMode.SIMPLE)
@@ -73,12 +72,12 @@ public class ApplicationServiceMicronautImpl implements ApplicationService {
 
   @Override
   public Application createApplication(final AuthenticatedUser user, final String name) {
-    throw new NotImplementedException();
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public Optional<Application> deleteApplication(final AuthenticatedUser user, final String applicationId) {
-    throw new NotImplementedException();
+    throw new UnsupportedOperationException();
   }
 
 }

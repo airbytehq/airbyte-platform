@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken;
 import io.airbyte.api.problems.model.generated.ProblemResourceData;
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.random.RandomKt;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * Abstract Class factoring common behavior for oAuth 2.0 flow implementations.
@@ -201,7 +201,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
       throws IOException;
 
   private static String generateRandomState() {
-    return RandomStringUtils.randomAlphanumeric(7);
+    return RandomKt.randomAlpha(7);
   }
 
   /**

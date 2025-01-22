@@ -35,7 +35,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -459,7 +458,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   @VisibleForTesting
   boolean sendNotifyRequest(final String urlEndpoint, final String payload) throws IOException {
-    if (StringUtils.isEmpty(apiToken)) {
+    if (apiToken == null || apiToken.isEmpty()) {
       LOGGER.info("Customer.io API token is empty. Skipping email notification.");
       return false;
     }
