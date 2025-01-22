@@ -38,6 +38,7 @@ public interface ConnectorBuilderService {
                                 UUID workspaceId,
                                 String name,
                                 JsonNode manifestDraft,
+                                String componentsFileContent,
                                 UUID baseActorDefinitionVersionId,
                                 String contributionUrl,
                                 UUID contributionActorDefinitionId)
@@ -51,6 +52,7 @@ public interface ConnectorBuilderService {
                                               UUID workspaceId,
                                               String name,
                                               JsonNode manifestDraft,
+                                              String componentsFileContent,
                                               UUID baseActorDefinitionVersionId,
                                               String contributionUrl,
                                               UUID contributionActorDefinitionId,

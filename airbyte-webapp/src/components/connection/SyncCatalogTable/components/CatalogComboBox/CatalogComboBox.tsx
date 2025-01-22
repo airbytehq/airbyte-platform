@@ -1,6 +1,4 @@
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
-import { FloatProps } from "@headlessui-float/react/dist/float";
 import classnames from "classnames";
 import difference from "lodash/difference";
 import isArray from "lodash/isArray";
@@ -13,6 +11,7 @@ import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
 import { IconProps } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -59,21 +58,6 @@ export interface MultiCatalogComboBoxProps extends BaseProps {
 
 const transformStringToArray = (value: string, limit?: number): string[] =>
   value.split(",", limit).map((word) => word.trim());
-
-// layout for options menu
-const FloatLayout: React.FC<FloatProps> = ({ children, ...restProps }) => (
-  <Float
-    placement="bottom-start"
-    flip={15}
-    offset={5} // $spacing-sm
-    autoUpdate={{
-      elementResize: false, // this will prevent render in wrong place after multiple open/close actions
-    }}
-    {...restProps}
-  >
-    {children}
-  </Float>
-);
 
 type ControlButtonProps = Omit<BaseProps, "options"> & {
   open: boolean;

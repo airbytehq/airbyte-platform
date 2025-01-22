@@ -1,5 +1,4 @@
 import { Listbox } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 
 import { Box } from "components/ui/Box";
 import { CheckBox } from "components/ui/CheckBox";
@@ -12,6 +11,7 @@ import { Text } from "components/ui/Text";
 
 import styles from "./MultiSelectTags.module.scss";
 import { Icon } from "../Icon";
+import { FloatLayout } from "../ListBox/FloatLayout";
 
 export interface MultiSelectTagsProps<T> {
   options: Array<Option<T>>;
@@ -35,7 +35,7 @@ export const MultiSelectTags = <T,>({
   return (
     <div data-testid={testId}>
       <Listbox multiple value={selectedValues} onChange={onSelectValues} disabled={disabled}>
-        <Float placement="bottom" flip={15} offset={5} adaptiveWidth>
+        <FloatLayout adaptiveWidth>
           <ListboxButton className={styles.multiSelect__button} {...{ "data-testid": `${testId}-button` }}>
             <FlexContainer as="span" wrap="wrap" gap="sm">
               <SelectedValueTags
@@ -61,7 +61,7 @@ export const MultiSelectTags = <T,>({
               );
             })}
           </ListboxOptions>
-        </Float>
+        </FloatLayout>
       </Listbox>
     </div>
   );

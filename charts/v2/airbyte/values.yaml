@@ -2636,7 +2636,7 @@ workloadApiServer:
 
   service:
     type: ClusterIP
-    port: 8007
+    port: 8001
     annotations: {}
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/

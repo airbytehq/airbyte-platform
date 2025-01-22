@@ -2,6 +2,7 @@ package io.airbyte.workload.launcher
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
+import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.PodSweeperWithinWorkloadLauncher
 import io.airbyte.metrics.lib.MetricAttribute
@@ -34,6 +35,7 @@ import kotlin.time.toJavaDuration
  * @param unsuccessfulTtl If non-null, failed/unknown pods older than now - unsuccessfulTtl will be deleted
  */
 private val logger = KotlinLogging.logger {}
+private const val DUMMY_CONNECTION_ID = "a213d2df-d98e-44f8-a1a9-79b5e1a3d3b6"
 
 @Singleton
 class PodSweeper(
@@ -51,7 +53,7 @@ class PodSweeper(
   fun sweepPods() {
     logger.info { "Starting pod sweeper cycle in namespace [$namespace]..." }
 
-    if (!featureFlagClient.boolVariation(PodSweeperWithinWorkloadLauncher, io.airbyte.featureflag.Empty)) {
+    if (!featureFlagClient.boolVariation(PodSweeperWithinWorkloadLauncher, Connection(DUMMY_CONNECTION_ID))) {
       logger.info { "Feature flag is disabled, sweeper cycle ended." }
       return
     }

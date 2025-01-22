@@ -51,6 +51,7 @@ spec:
         {{- include "airbyte.database.migrations.runAtStartup.env" . | nindent 8 }}
         {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}

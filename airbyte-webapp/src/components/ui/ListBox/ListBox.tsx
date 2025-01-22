@@ -4,7 +4,7 @@ import {
   ListboxButton as OriginalListboxButton,
   ListboxOptions as OriginalListboxOptions,
 } from "@headlessui/react";
-import { Float, FloatProps } from "@headlessui-float/react";
+import { FloatProps } from "@headlessui-float/react";
 import classNames from "classnames";
 import debounce from "lodash/debounce";
 import isEqual from "lodash/isEqual";
@@ -14,6 +14,7 @@ import { IndexLocationWithAlign, Virtuoso, VirtuosoHandle } from "react-virtuoso
 
 import { Text } from "components/ui/Text";
 
+import { FloatLayout } from "./FloatLayout";
 import styles from "./ListBox.module.scss";
 import { Option } from "./Option";
 import { FlexContainer, FlexItem } from "../Flex";
@@ -120,8 +121,8 @@ export const ListBox = <T,>({
   hasError,
   id,
   isDisabled,
-  placement = "bottom",
-  flip = 15,
+  placement,
+  flip,
   adaptiveWidth = true,
   footerOption,
   onFocus,
@@ -210,19 +211,7 @@ export const ListBox = <T,>({
       })}
     >
       <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
-        {/**
-         * TODO: extract(or reuse?) Float component as we did in @MultiCatalogComboBox
-         * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
-         */}
-        <Float
-          adaptiveWidth={adaptiveWidth}
-          placement={placement}
-          flip={flip}
-          offset={5} // $spacing-sm
-          autoUpdate={{
-            elementResize: false, // this will prevent render in wrong place after multiple open/close actions
-          }}
-        >
+        <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
           <OriginalListboxButton
             /**
              * TODO:
@@ -269,7 +258,7 @@ export const ListBox = <T,>({
               </OriginalListboxOption>
             )}
           </OriginalListboxOptions>
-        </Float>
+        </FloatLayout>
       </Listbox>
     </div>
   );
