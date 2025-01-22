@@ -87,7 +87,10 @@ object JobsResponseMapper {
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
         .queryParam(JOB_TYPE, jobType)
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
 
     return JobsResponse(
       next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder),

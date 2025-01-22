@@ -40,7 +40,9 @@ object SourcesResponseMapper {
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(SOURCES_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
 
     return SourcesResponse(
       next = PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder),

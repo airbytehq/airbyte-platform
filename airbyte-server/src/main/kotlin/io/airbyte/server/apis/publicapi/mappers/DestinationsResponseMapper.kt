@@ -40,7 +40,11 @@ object DestinationsResponseMapper {
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(DESTINATIONS_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
+
     return DestinationsResponse(
       next = PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),

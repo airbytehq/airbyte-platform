@@ -38,10 +38,11 @@ object ConnectionsResponseMapper {
   ): ConnectionsResponse {
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
-        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
     return ConnectionsResponse(
       next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
