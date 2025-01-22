@@ -619,8 +619,13 @@ public class ConnectorBuilderProjectsHandler {
           log.error(errorMessage);
           throw new NotFoundException(errorMessage);
         });
+
+    final String customComponentsContent =
+        remoteDefinitionsProvider.getConnectorCustomComponents(defaultVersion.getDockerRepository(), defaultVersion.getDockerImageTag())
+            .orElse(null);
+
     final ConnectorBuilderProjectDetails projectDetails = new ConnectorBuilderProjectDetails().name(sourceDefinition.getName())
-        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest);
+        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest).componentsFileContent(customComponentsContent);
     return createConnectorBuilderProject(
         new ConnectorBuilderProjectWithWorkspaceId().workspaceId(requestBody.getWorkspaceId()).builderProject(projectDetails));
   }

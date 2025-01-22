@@ -110,7 +110,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
 class ConnectorBuilderProjectsHandlerTest {
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
@@ -133,6 +133,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
   private static final String A_PULL_REQUEST_URL = "https://github.com/airbytehq/airbyte/pull/44579";
   private static final UUID A_CONTRIBUTION_ACTOR_DEFINITION_ID = UUID.randomUUID();
+  private static final String A_CUSTOM_COMPONENTS_FILE_CONTENT = "custom components file content";
 
   private static final UUID forkedSourceDefinitionId = UUID.randomUUID();
   private static final ActorDefinitionVersion FORKED_ADV = new ActorDefinitionVersion()
@@ -1010,6 +1011,38 @@ class ConnectorBuilderProjectsHandlerTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest), eq(null),
+            eq(baseActorDefinitionVersionId), eq(null), eq(null));
+  }
+
+  @Test
+  void testCreateForkedConnectorBuilderProjectWithComponents() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID baseActorDefinitionId = UUID.randomUUID();
+    final ConnectorBuilderProjectForkRequestBody requestBody =
+        new ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId);
+
+    final String connectorName = "Test Connector";
+    final UUID baseActorDefinitionVersionId = UUID.randomUUID();
+    final String dockerRepository = "airbyte/source-test";
+    final String dockerImageTag = "1.2.3";
+    final ActorDefinitionVersion defaultADV = new ActorDefinitionVersion().withVersionId(baseActorDefinitionVersionId)
+        .withActorDefinitionId(baseActorDefinitionId).withDockerRepository(dockerRepository).withDockerImageTag(dockerImageTag);
+    final UUID connectorBuilderProjectId = UUID.randomUUID();
+
+    when(sourceService.getStandardSourceDefinition(baseActorDefinitionId)).thenReturn(
+        new StandardSourceDefinition().withSourceDefinitionId(baseActorDefinitionId).withDefaultVersionId(baseActorDefinitionVersionId)
+            .withName(connectorName));
+    when(actorDefinitionService.getActorDefinitionVersion(baseActorDefinitionVersionId)).thenReturn(defaultADV);
+    when(remoteDefinitionsProvider.getConnectorManifest(dockerRepository, dockerImageTag)).thenReturn(Optional.of(draftManifest));
+    when(remoteDefinitionsProvider.getConnectorCustomComponents(dockerRepository, dockerImageTag))
+        .thenReturn(Optional.of(A_CUSTOM_COMPONENTS_FILE_CONTENT));
+    when(uuidSupplier.get()).thenReturn(connectorBuilderProjectId);
+
+    connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody);
+
+    verify(connectorBuilderService, times(1))
+        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest),
+            eq(A_CUSTOM_COMPONENTS_FILE_CONTENT),
             eq(baseActorDefinitionVersionId), eq(null), eq(null));
   }
 
