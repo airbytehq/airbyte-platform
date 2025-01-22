@@ -1,5 +1,4 @@
 import { Listbox } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 import React from "react";
 
 import { Box } from "components/ui/Box";
@@ -13,6 +12,7 @@ import { Text } from "components/ui/Text";
 
 import styles from "./MultiSelect.module.scss";
 import { Badge } from "../Badge";
+import { FloatLayout } from "../ListBox/FloatLayout";
 
 export interface MultiSelectProps<T> {
   label: string;
@@ -24,11 +24,8 @@ export interface MultiSelectProps<T> {
 export const MultiSelect = <T,>({ options, selectedValues, onSelectValues, label }: MultiSelectProps<T>) => {
   return (
     <Listbox multiple value={selectedValues} onChange={onSelectValues}>
-      <Float
-        placement="bottom"
-        flip
+      <FloatLayout
         shift={5} // $spacing-sm
-        offset={5} // $spacing-sm
       >
         <ListboxButton className={styles.multiSelect__button}>
           <FlexContainer as="span" wrap="wrap" gap="sm">
@@ -41,7 +38,7 @@ export const MultiSelect = <T,>({ options, selectedValues, onSelectValues, label
             <MultiSelectOption label={label} value={value} key={index} />
           ))}
         </ListboxOptions>
-      </Float>
+      </FloatLayout>
     </Listbox>
   );
 };

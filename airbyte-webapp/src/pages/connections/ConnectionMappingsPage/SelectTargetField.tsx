@@ -1,5 +1,4 @@
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import { Fragment, useState } from "react";
 import { Controller, FieldValues, Path, get, useFormContext, useFormState } from "react-hook-form";
@@ -9,6 +8,7 @@ import { FormControlErrorMessage } from "components/forms/FormControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
@@ -140,15 +140,7 @@ const FieldComboBox: React.FC<FieldComboBoxProps> = ({
       onClose={() => setQuery("")}
       immediate
     >
-      <Float
-        adaptiveWidth
-        placement="bottom-start"
-        flip={5}
-        offset={-10} // this gives the same gap as our ListBox
-        autoUpdate={{
-          elementResize: false, // this will prevent render in wrong place after multiple open/close actions
-        }}
-      >
+      <FloatLayout adaptiveWidth flip={5} offset={-10}>
         <ComboboxInput as={Fragment}>
           <Input
             disabled={disabled || mode === "readonly"}
@@ -197,7 +189,7 @@ const FieldComboBox: React.FC<FieldComboBoxProps> = ({
             </ComboboxOption>
           ))}
         </ComboboxOptions>
-      </Float>
+      </FloatLayout>
     </Combobox>
   );
 };

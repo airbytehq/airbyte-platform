@@ -59,7 +59,6 @@ export const CreditsUsageFilters: React.FC = () => {
       <ListBox
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        placement="bottom-start"
         options={[
           {
             label: formatMessage({ id: "settings.organization.billing.filter.lastThirtyDays" }),
@@ -80,7 +79,6 @@ export const CreditsUsageFilters: React.FC = () => {
       <ListBox
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        placement="bottom-start"
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allSources" }), value: null },
           ...sourceOptions,
@@ -91,7 +89,6 @@ export const CreditsUsageFilters: React.FC = () => {
       <ListBox
         controlButton={CustomControlButton}
         buttonClassName={styles.controlButton}
-        placement="bottom-start"
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allDestinations" }), value: null },
           ...destinationOptions,
