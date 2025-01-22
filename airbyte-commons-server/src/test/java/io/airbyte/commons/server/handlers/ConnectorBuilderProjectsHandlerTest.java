@@ -270,7 +270,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(),
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(), null,
             project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
@@ -333,6 +333,7 @@ class ConnectorBuilderProjectsHandlerTest {
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.updateConnectorBuilderProject(update));
 
     verify(connectorBuilderService, never()).writeBuilderProjectDraft(any(UUID.class), any(UUID.class), any(String.class), any(JsonNode.class),
+        any(String.class),
         any(UUID.class), any(String.class), any(UUID.class));
   }
 
@@ -1008,7 +1009,7 @@ class ConnectorBuilderProjectsHandlerTest {
     connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody);
 
     verify(connectorBuilderService, times(1))
-        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest),
+        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest), eq(null),
             eq(baseActorDefinitionVersionId), eq(null), eq(null));
   }
 

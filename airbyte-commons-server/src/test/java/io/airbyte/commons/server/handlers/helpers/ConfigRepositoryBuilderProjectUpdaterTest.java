@@ -88,7 +88,8 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null, project.getBaseActorDefinitionVersionId(),
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null,
+            project.getComponentsFileContent(), project.getBaseActorDefinitionVersionId(),
             project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
@@ -111,6 +112,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(),
+            project.getComponentsFileContent(),
             project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
@@ -136,7 +138,8 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     verify(connectorBuilderService, times(1))
         .updateBuilderProjectAndActorDefinition(
-            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_BASE_ACTOR_DEFINITION_VERSION_ID, A_CONTRIBUTION_PULL_REQUEST_URL,
+            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, null, A_BASE_ACTOR_DEFINITION_VERSION_ID,
+            A_CONTRIBUTION_PULL_REQUEST_URL,
             A_CONTRIBUTION_ACTOR_DEFINITION_ID, A_SOURCE_DEFINITION_ID);
   }
 

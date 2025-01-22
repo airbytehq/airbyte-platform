@@ -266,6 +266,7 @@ public class ConnectorBuilderProjectsHandler {
 
     connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
+        projectCreate.getBuilderProject().getComponentsFileContent(),
         projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
         projectCreate.getBuilderProject().getContributionActorDefinitionId());
 

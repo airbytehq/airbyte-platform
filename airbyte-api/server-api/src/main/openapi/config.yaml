@@ -8744,6 +8744,8 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         yamlManifest:
           type: string
+        componentsFileContent:
+          type: string
         baseActorDefinitionVersionId:
           $ref: "#/components/schemas/NullableActorDefinitionVersionId"
         contributionPullRequestUrl:
