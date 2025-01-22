@@ -255,7 +255,7 @@ class FailureHelperTest {
   void testOrderedFailures() {
     final List<FailureReason> failureReasonList =
         FailureHelper.orderedFailures(Set.of(TRACE_FAILURE_REASON_2, TRACE_FAILURE_REASON, EXCEPTION_FAILURE_REASON));
-    assertEquals(failureReasonList.get(0), TRACE_FAILURE_REASON);
+    assertEquals(failureReasonList.get(0), EXCEPTION_FAILURE_REASON);
   }
 
   @Test

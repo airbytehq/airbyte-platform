@@ -475,24 +475,11 @@ object FailureHelper {
       .withExternalMessage(externalMessage)
 
   /**
-   * Orders failures by putting errors from trace messages first, and then orders by timestamp, so
-   * that earlier failures come first.
+   * Orders by timestamp, so earlier failures come first.
    */
   @JvmStatic
   fun orderedFailures(failures: Set<FailureReason>): List<FailureReason> {
-    val compare =
-      compareBy<FailureReason> {
-        // first compare them by their trace
-        if (it.metadata == null) {
-          return@compareBy 1
-        }
-
-        if (it.metadata.additionalProperties.containsKey(TRACE_MESSAGE_METADATA_KEY)) {
-          0
-        } else {
-          1
-        }
-      }.thenBy { it.timestamp }
+    val compare = compareBy<FailureReason> { it.timestamp }
 
     return failures.sortedWith(compare)
   }
