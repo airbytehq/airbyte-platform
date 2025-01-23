@@ -80,6 +80,9 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
       ...(mapping.mapperConfiguration.algorithm === "AES" && {
         targetField: mapping.mapperConfiguration.targetField ?? "",
         fieldNameSuffix: mapping.mapperConfiguration.fieldNameSuffix ?? "_encrypted",
+        key: mapping.mapperConfiguration.key ?? "",
+        mode: mapping.mapperConfiguration.mode ?? "CBC",
+        padding: mapping.mapperConfiguration.padding ?? "PKCS5Padding",
       }),
     },
     resolver: autoSubmitResolver<EncryptionMapperConfiguration>(encryptionMapperSchema, (formValues) => {

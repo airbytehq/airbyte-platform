@@ -35,7 +35,7 @@ export const defaultExperimentValues: Experiments = {
   "billing.early-sync-enabled": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
-  "connection.mappingsUI": false,
+  "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,

@@ -17,7 +17,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
-  FeatureItem.MappingsUI, // Also governed by connection.mappingsUI experiment.  This flag indicates whether the user has the right level of product.  The experiment indicates whether the UI is "on" overall.
+  FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
 ];
