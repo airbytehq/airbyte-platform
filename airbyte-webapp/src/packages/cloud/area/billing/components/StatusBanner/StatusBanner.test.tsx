@@ -18,12 +18,6 @@ jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceLink: jest.fn().mockReturnValue((link: string) => link),
 }));
 
-jest.mock("core/api/cloud", () => ({
-  useGetCloudWorkspaceAsync: jest.fn().mockReturnValue({
-    workspaceId: "workspace-1",
-  }),
-}));
-
 jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: jest.fn(),
   Intent: jest.requireActual("core/utils/rbac").Intent,

@@ -1,12 +1,3 @@
-/**
- * This should not be used in cloud until:
- * - all cloud users have an org
- * - all cloud users have permissions in configdb
- * - we are able to use the oss create workspace endpoint in cloud
-
- */
-
-import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -20,17 +11,13 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
-import { CloudWorkspaceRead, PermissionedCloudWorkspaceCreate } from "core/api/types/CloudApi";
+import { useCreateWorkspace } from "core/api";
+import { OrganizationRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 import styles from "./WorkspacesCreateControl.module.scss";
-
-export type UnionWorkspaceCreateFn =
-  | UseMutateAsyncFunction<CloudWorkspaceRead, unknown, Omit<PermissionedCloudWorkspaceCreate, "userId">, unknown>
-  | UseMutateAsyncFunction<WorkspaceRead, unknown, WorkspaceCreate, unknown>;
 
 interface CreateWorkspaceFormValues {
   name: string;
@@ -42,8 +29,9 @@ const OrganizationCreateWorkspaceFormValidationSchema = yup.object().shape({
   organizationId: yup.string().trim().required("form.empty.error"),
 });
 
-export const WorkspacesCreateControl: React.FC<{ createWorkspace: UnionWorkspaceCreateFn }> = ({ createWorkspace }) => {
+export const WorkspacesCreateControl: React.FC = () => {
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
+  const { mutateAsync: createWorkspace } = useCreateWorkspace();
 
   const navigate = useNavigate();
   const { formatMessage } = useIntl();

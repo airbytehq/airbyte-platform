@@ -8,9 +8,9 @@ import { Separator } from "components/ui/Separator";
 import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
+import { DeleteWorkspace } from "pages/SettingsPage/components/DeleteWorkspace";
 
 import { UpdateWorkspaceSettingsForm } from "./components/UpdateWorkspaceSettingsForm";
-import { DeleteCloudWorkspace } from "./DeleteCloudWorkspace";
 
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);
@@ -31,7 +31,7 @@ export const WorkspaceSettingsView: React.FC = () => {
               <FormattedMessage id="settings.general.danger" />
             </Heading>
             <FlexContainer>
-              <DeleteCloudWorkspace />
+              <DeleteWorkspace />
             </FlexContainer>
           </FlexContainer>
         </>

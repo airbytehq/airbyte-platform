@@ -15,18 +15,18 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
-import { useCreateWorkspace, useListWorkspacesInfinite } from "core/api";
+import { useListWorkspacesInfinite } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
 import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
-import { UnionWorkspaceCreateFn, WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
+import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
 
 export const WORKSPACE_LIST_LENGTH = 50;
 
-export const WorkspacesPageContent: React.FC<{ createWorkspace: UnionWorkspaceCreateFn }> = ({ createWorkspace }) => {
+export const WorkspacesPage: React.FC = () => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
@@ -100,7 +100,7 @@ export const WorkspacesPageContent: React.FC<{ createWorkspace: UnionWorkspaceCr
               <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
             </Box>
             <Box pb="lg">
-              <WorkspacesCreateControl createWorkspace={createWorkspace} />
+              <WorkspacesCreateControl />
             </Box>
             <WorkspacesList
               workspaces={workspaces}
@@ -118,10 +118,4 @@ export const WorkspacesPageContent: React.FC<{ createWorkspace: UnionWorkspaceCr
       </Box>
     </>
   );
-};
-
-export const WorkspacesPage: React.FC = () => {
-  const { mutateAsync: createWorkspace } = useCreateWorkspace();
-
-  return <WorkspacesPageContent createWorkspace={createWorkspace} />;
 };

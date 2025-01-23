@@ -46,8 +46,8 @@ import {
   usePublishBuilderProject,
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
+  useIsForeignWorkspace,
 } from "core/api";
-import { useIsForeignWorkspace } from "core/api/cloud";
 import {
   ConnectorBuilderProjectTestingValues,
   ConnectorBuilderProjectTestingValuesUpdate,
