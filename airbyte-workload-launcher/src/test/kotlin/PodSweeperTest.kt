@@ -1,7 +1,4 @@
 import dev.failsafe.RetryPolicy
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PodSweeperWithinWorkloadLauncher
-import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.NotImplementedMetricClient
 import io.airbyte.workload.launcher.PodSweeper
@@ -27,7 +24,6 @@ class PodSweeperTest {
 
   private val mockRetryPolicy: RetryPolicy<Any> = RetryPolicy.ofDefaults()
   private val mockMetricClient: MetricClient = NotImplementedMetricClient()
-  private val mockFeatureFlagClient: FeatureFlagClient = TestClient(mapOf(PodSweeperWithinWorkloadLauncher.key to true))
 
   private lateinit var client: KubernetesClient
 
@@ -271,8 +267,14 @@ class PodSweeperTest {
     unSucceededTtl: Long?,
   ): PodSweeper {
     return PodSweeper(
-      client, mockMetricClient, mockFeatureFlagClient,
-      Clock.systemUTC(), "default", mockRetryPolicy, runningTtL, succeededTtl, unSucceededTtl,
+      client,
+      mockMetricClient,
+      Clock.systemUTC(),
+      "default",
+      mockRetryPolicy,
+      runningTtL,
+      succeededTtl,
+      unSucceededTtl,
     )
   }
 }

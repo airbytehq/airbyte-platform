@@ -2,9 +2,6 @@ package io.airbyte.workload.launcher
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PodSweeperWithinWorkloadLauncher
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
@@ -35,13 +32,11 @@ import kotlin.time.toJavaDuration
  * @param unsuccessfulTtl If non-null, failed/unknown pods older than now - unsuccessfulTtl will be deleted
  */
 private val logger = KotlinLogging.logger {}
-private const val DUMMY_CONNECTION_ID = "a213d2df-d98e-44f8-a1a9-79b5e1a3d3b6"
 
 @Singleton
 class PodSweeper(
   private val kubernetesClient: KubernetesClient,
   private val metricClient: MetricClient,
-  private val featureFlagClient: FeatureFlagClient,
   private val clock: Clock,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
@@ -52,11 +47,6 @@ class PodSweeper(
   @Scheduled(fixedRate = "\${airbyte.pod-sweeper.rate}")
   fun sweepPods() {
     logger.info { "Starting pod sweeper cycle in namespace [$namespace]..." }
-
-    if (!featureFlagClient.boolVariation(PodSweeperWithinWorkloadLauncher, Connection(DUMMY_CONNECTION_ID))) {
-      logger.info { "Feature flag is disabled, sweeper cycle ended." }
-      return
-    }
 
     val now = Instant.ofEpochMilli(clock.millis())
     val runningCutoff = runningTtl?.minutes?.let { now.minus(it.toJavaDuration()) }
