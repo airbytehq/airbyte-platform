@@ -436,7 +436,7 @@ webapp:
 ## @section Pod Sweeper parameters
 
 pod-sweeper:
-  enabled: true
+  enabled: false
   image:
     # -- The image repository to use for the pod sweeper
     repository: airbyte/pod-sweeper

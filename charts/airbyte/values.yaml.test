@@ -382,7 +382,7 @@ webapp:
 ## @section Pod Sweeper parameters
 
 pod-sweeper:
-  enabled: true
+  enabled: false
   ##  podSweeper.image.repository The image repository to use for the pod sweeper
   ##  podSweeper.image.pullPolicy The pull policy for the pod sweeper image
   ##  podSweeper.image.tag The pod sweeper image tag to use
