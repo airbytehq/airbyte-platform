@@ -5,8 +5,8 @@ export type ConnectorFormValues<T = unknown> = {
   name: string;
   connectionConfiguration: T;
   resourceAllocation?: {
-    cpu: number;
-    memory: number;
+    cpu: string;
+    memory: string;
   };
 };
 

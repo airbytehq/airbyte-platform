@@ -18,48 +18,59 @@ import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 import { PropertyError } from "views/Connector/ConnectorForm/components/Property/PropertyError";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
-export const API_RESOURCES = {
+export const API_RESOURCE_DEFAULTS = {
   default: {
-    memory: 2,
-    cpu: 1,
+    memory: "2",
+    cpu: "1",
   },
   large: {
-    memory: 3,
-    cpu: 2,
+    memory: "3",
+    cpu: "2",
   },
   memoryIntensive: {
-    memory: 6,
-    cpu: 2,
+    memory: "6",
+    cpu: "2",
   },
   maximum: {
-    memory: 8,
-    cpu: 4,
+    memory: "8",
+    cpu: "4",
   },
 };
 
-export const DB_RESOURCES = {
+export const DB_RESOURCE_DEFAULTS = {
   default: {
-    memory: 2,
-    cpu: 2,
+    memory: "2",
+    cpu: "2",
   },
   large: {
-    memory: 3,
-    cpu: 3,
+    memory: "3",
+    cpu: "3",
   },
   memoryIntensive: {
-    memory: 6,
-    cpu: 3,
+    memory: "6",
+    cpu: "3",
   },
   maximum: {
-    memory: 8,
-    cpu: 4,
+    memory: "8",
+    cpu: "4",
   },
 };
 
-const getOptions = (connectorType: "api" | "database") => {
-  const values = connectorType === "api" ? API_RESOURCES : DB_RESOURCES;
+export const getResourceOptions = (selectedConnectorDefinition?: ConnectorDefinition) => {
+  const connectorType = getConnectorType(selectedConnectorDefinition);
+  const hardcodedValues = connectorType === "api" ? API_RESOURCE_DEFAULTS : DB_RESOURCE_DEFAULTS;
 
-  return Object.entries(values).map(([size, value]) => {
+  const definitionResources = selectedConnectorDefinition?.resourceRequirements;
+
+  const valuesToUse = {
+    ...hardcodedValues,
+    default: {
+      memory: definitionResources?.default?.memory_request || hardcodedValues.default.memory,
+      cpu: definitionResources?.default?.cpu_request ?? hardcodedValues.default.cpu,
+    },
+  };
+
+  return Object.entries(valuesToUse).map(([size, value]) => {
     return {
       value,
       label: (
@@ -123,12 +134,7 @@ export const ResourceAllocationMenu: React.FC = () => {
   const { getValues, setValue, formState, getFieldState } = useFormContext<ConnectorFormValues>();
   const meta = getFieldState("resourceAllocation", formState);
 
-  const connectorType = getConnectorType(selectedConnectorDefinition);
-  if (!connectorType) {
-    return null;
-  }
-
-  const options = getOptions(connectorType);
+  const options = getResourceOptions(selectedConnectorDefinition);
 
   const errorMessage = Array.isArray(meta.error) ? (
     <FlexContainer direction="column" gap="none">
