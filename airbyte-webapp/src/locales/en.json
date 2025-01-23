@@ -767,6 +767,13 @@
   "connections.mappings.submissionValidationError": "There are errors in some of the mapping configurations. Please fix them before saving.",
   "connections.mappings.aesRequiresSecrets": "You must have an external secrets manager to use an AES encryption key.",
 
+  "connection.tags.title": "Tags",
+  "connection.tags.add": "Add tag",
+  "connection.tags.edit": "Edit tags",
+  "connection.tags.create": "Create",
+  "connection.tags.selectOrCreateTag": "{hasTags, select, true {Select an option or create one} other {Create a tag}}",
+  "connection.tags.limitReached": "Connection tag limit reached.  To add a tag to this connection, remove an existing one.",
+
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",
   "connection.timeline.error": "Error: ",

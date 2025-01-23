@@ -7,6 +7,8 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { useExperiment } from "hooks/services/Experiment";
+import { SelectConnectionTags } from "pages/connections/AllConnectionsPage/ConnectionTags/SelectConnectionTags";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionStatus } from "./components/ConnectionStatus";
@@ -27,6 +29,7 @@ interface ConnectionTableProps {
 
 const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant }) => {
   const createLink = useCurrentWorkspaceLink();
+  const isConnectionTagsEnabled = useExperiment("connection.tags");
   const streamCentricUIEnabled = false;
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
@@ -114,6 +117,33 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         },
         sortUndefined: 1,
       }),
+      ...(isConnectionTagsEnabled
+        ? /**
+           * base components for tags are still a WIP, but must be implemented somewhere
+           * to avoid the "unused code" error
+           */
+          [
+            columnHelper.display({
+              id: "tags",
+              header: () => <FormattedMessage id="connection.tags.title" />,
+              cell: () => (
+                <SelectConnectionTags
+                  selectedTags={[]}
+                  availableTags={[]}
+                  createTag={(name: string, color: string) => {
+                    console.log(name, color);
+                  }}
+                  selectTag={(id: string) => {
+                    console.log(id);
+                  }}
+                  deselectTag={(id: string) => {
+                    console.log(id);
+                  }}
+                />
+              ),
+            }),
+          ]
+        : []),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
         meta: {
@@ -131,7 +161,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         enableSorting: false,
       }),
     ],
-    [columnHelper, entity, EntityNameCell]
+    [columnHelper, EntityNameCell, isConnectionTagsEnabled, entity]
   );
 
   const customScrollParent = useContext(ScrollParentContext);
