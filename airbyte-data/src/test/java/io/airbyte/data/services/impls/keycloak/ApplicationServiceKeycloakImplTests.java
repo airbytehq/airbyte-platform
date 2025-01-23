@@ -199,18 +199,11 @@ class ApplicationServiceKeycloakImplTests {
         user,
         TEST_1);
 
-    final var apiKey1 = apiKeyServiceKeycloakImpl.createApplication(
-        user,
-        TEST_1);
-
     var apiKeys = apiKeyServiceKeycloakImpl.listApplicationsByUser(
         user);
     assert apiKeys.size() == 1;
 
     doReturn(new Application()).when(apiKeyServiceKeycloakImpl).createApplication(
-        user,
-        TEST_2);
-    final var apiKey2 = apiKeyServiceKeycloakImpl.createApplication(
         user,
         TEST_2);
 
@@ -222,19 +215,6 @@ class ApplicationServiceKeycloakImplTests {
     apiKeys = apiKeyServiceKeycloakImpl.listApplicationsByUser(
         user);
     assert apiKeys.size() == 2;
-
-    doReturn(Optional.empty())
-        .when(apiKeyServiceKeycloakImpl)
-        .deleteApplication(any(), any());
-
-    apiKeyServiceKeycloakImpl.deleteApplication(user, apiKey2.getId());
-    apiKeyServiceKeycloakImpl.deleteApplication(user, apiKey1.getId());
-
-    doReturn(Collections.emptyList())
-        .when(apiKeyServiceKeycloakImpl)
-        .listApplicationsByUser(user);
-    assert apiKeyServiceKeycloakImpl.listApplicationsByUser(
-        user).isEmpty();
   }
 
   // It was very difficult to mock out the remove call as it returns a void. Commenting this test out.

@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.micronaut;
 
-import static io.airbyte.data.services.impls.micronaut.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
+import static io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
+import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
 import jakarta.ws.rs.BadRequestException;
 import java.io.IOException;

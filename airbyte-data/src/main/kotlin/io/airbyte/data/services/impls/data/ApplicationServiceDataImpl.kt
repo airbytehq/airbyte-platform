@@ -18,7 +18,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.Optional
 import java.util.UUID
 import kotlin.time.Duration.Companion.days
 import io.airbyte.config.Application as ApplicationDomain
@@ -42,11 +41,10 @@ class ApplicationServiceDataImpl(
    * @return The newly created application as a domain object
    */
   override fun createApplication(
-    user: AuthenticatedUser?,
-    name: String?,
+    user: AuthenticatedUser,
+    name: String,
   ): ApplicationDomain {
     logger.debug { "Creating application $name" }
-    if (name == null || user == null) throw IllegalArgumentException("name must not be null")
 
     val application =
       applicationRepository.save(
@@ -66,13 +64,12 @@ class ApplicationServiceDataImpl(
    * @param user The user to filter applications by
    * @return The list of Applications that the User has
    */
-  override fun listApplicationsByUser(user: AuthenticatedUser?): MutableList<ApplicationDomain> {
+  override fun listApplicationsByUser(user: AuthenticatedUser): List<ApplicationDomain> {
     logger.debug { "Listing applications" }
-    if (user == null) throw IllegalArgumentException("user must not be null")
     return applicationRepository
       .findByUserId(userId = user.userId)
       .map { application -> toDomain(application) }
-      .toMutableList()
+      .toList()
   }
 
   /**
@@ -82,11 +79,10 @@ class ApplicationServiceDataImpl(
    * @return The Application that was deleted if the deletion was successful, otherwise empty
    */
   override fun deleteApplication(
-    user: AuthenticatedUser?,
-    applicationId: String?,
-  ): Optional<ApplicationDomain> {
+    user: AuthenticatedUser,
+    applicationId: String,
+  ): ApplicationDomain {
     logger.debug { "Deleting application $applicationId" }
-    if (user == null || applicationId == null) throw IllegalArgumentException("user must and applicationId not be null")
     val application: Application =
       applicationRepository.findByUserIdAndId(
         userId = user.userId,
@@ -95,7 +91,7 @@ class ApplicationServiceDataImpl(
         ?: throw IllegalArgumentException("application was not found with the userId and applicationId provided")
     if (application.userId != user.userId) throw IllegalArgumentException("applicationId must be owned by the user")
     applicationRepository.delete(application)
-    return Optional.of(toDomain(application))
+    return toDomain(application)
   }
 
   /**
@@ -105,8 +101,8 @@ class ApplicationServiceDataImpl(
    * @return An Access Token if the information provided was correct.
    */
   override fun getToken(
-    clientId: String?,
-    clientSecret: String?,
+    clientId: String,
+    clientSecret: String,
   ): String {
     logger.debug { "Generating token for client $clientId" }
     val application =
