@@ -32,6 +32,7 @@ public class NotificationHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHelper.class);
   public static final String NOTIFICATION_TRIGGER_SCHEMA = "schema_propagated";
   public static final String NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY = "schema_diff_to_apply";
+  public static final String NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED = "schema_diff_to_apply_propagation_disabled";
 
   private final WebUrlHelper webUrlHelper;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
@@ -83,7 +84,8 @@ public class NotificationHelper {
                                       final StandardWorkspace workspace,
                                       final ConnectionRead connection,
                                       final SourceConnection source,
-                                      final String email) {
+                                      final String email,
+                                      final Boolean isPropagationDisabled) {
     try {
       final SchemaUpdateNotification notification = getSchemaUpdateNotification(notificationSettings, diff, workspace, connection, source);
       if (notification == null) {
@@ -101,26 +103,30 @@ public class NotificationHelper {
         switch (type) {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            if (slackNotificationClient.notifySchemaDiffToApply(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+            if (isPropagationDisabled) {
+              sendNotificationMetrics(
+                  slackNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                  slackNotificationClient.getNotificationClientType(),
+                  NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
             } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+              sendNotificationMetrics(
+                  slackNotificationClient.notifySchemaDiffToApply(notification, email),
+                  slackNotificationClient.getNotificationClientType(),
+                  NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
             }
           }
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            if (emailNotificationClient.notifySchemaDiffToApply(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+            if (isPropagationDisabled) {
+              sendNotificationMetrics(
+                  emailNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                  emailNotificationClient.getNotificationClientType(),
+                  NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
             } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+              sendNotificationMetrics(
+                  emailNotificationClient.notifySchemaDiffToApply(notification, email),
+                  emailNotificationClient.getNotificationClientType(),
+                  NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
             }
           }
           default -> {
@@ -130,6 +136,18 @@ public class NotificationHelper {
       }
     } catch (final Exception e) {
       LOGGER.error("Failed to send notification {}: {}", workspace, e);
+    }
+  }
+
+  void sendNotificationMetrics(final boolean success, final String notificationClientType, final String metricAttributeValue) {
+    if (success) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
+          new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, notificationClientType),
+          new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, metricAttributeValue));
+    } else {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
+          new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, notificationClientType),
+          new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, metricAttributeValue));
     }
   }
 

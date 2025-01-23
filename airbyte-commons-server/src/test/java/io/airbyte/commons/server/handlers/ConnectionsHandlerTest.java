@@ -3062,7 +3062,46 @@ class ConnectionsHandlerTest {
 
       verify(notificationHelper).notifySchemaDiffToApply(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
           apiPojoConverters.internalToConnectionRead(originalSync),
-          source, EMAIL);
+          source, EMAIL, false);
+    }
+
+    @Test
+    void testSendingNotificationToManuallyApplySchemaChangeWithPropagationDisabled()
+        throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException,
+        io.airbyte.config.persistence.ConfigNotFoundException {
+      // Override the non-breaking changes preference to DISABLE so that the changes are not
+      // auto-propagated, but needs to be manually applied.
+      standardSync.setNonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+      when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      final StandardSync originalSync = Jsons.clone(standardSync);
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+              Field.of(SKU, JsonSchemaType.STRING),
+              newField),
+          SOURCE_VERSION);
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
+
+      verify(notificationHelper).notifySchemaDiffToApply(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source, EMAIL, true);
     }
 
     @Test

@@ -1382,7 +1382,8 @@ public class ConnectionsHandler {
             workspace,
             connection,
             source,
-            workspace.getEmail());
+            workspace.getEmail(),
+            connection.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.DISABLE));
       }
     }
     return new ConnectionAutoPropagateResult().propagatedDiff(appliedDiff);

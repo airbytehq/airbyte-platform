@@ -73,6 +73,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
   private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
   private static final String SCHEMA_CHANGE_DETECTED_TRANSACTION_ID = "31";
+  private static final String SCHEMA_CHANGE_DETECTED_AND_PROPAGATION_DISABLED_TRANSACTION_ID = "34";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "27";
   private static final String SYNC_FAILURE_MESSAGE_ID = "26";
@@ -300,6 +301,18 @@ public class CustomerioNotificationClient extends NotificationClient {
     }
   }
 
+  @Override
+  public boolean notifySchemaDiffToApplyWhenPropagationDisabled(final SchemaUpdateNotification notification, final String recipient) {
+    final ObjectNode node =
+        buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_AND_PROPAGATION_DISABLED_TRANSACTION_ID);
+    final String payload = Jsons.serialize(node);
+    try {
+      return notifyByEmail(payload);
+    } catch (final IOException e) {
+      return false;
+    }
+  }
+
   static ObjectNode buildSyncCompletedJson(final SyncSummary syncSummary,
                                            final String recipient,
                                            final String transactionMessageId) {
@@ -480,6 +493,7 @@ public class CustomerioNotificationClient extends NotificationClient {
       } else {
         final String body = response.body() != null ? response.body().string() : "";
         final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.code(), body);
+        LOGGER.info("Error sending notification ({}): {}", response.code(), errorMessage);
         throw new IOException(errorMessage);
       }
     }

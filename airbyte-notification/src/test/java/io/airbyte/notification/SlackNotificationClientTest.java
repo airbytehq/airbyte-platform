@@ -278,6 +278,36 @@ class SlackNotificationClientTest {
   }
 
   @Test
+  void testNotifySchemaDiffToApplyWhenPropagationDisabled() {
+    final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final CatalogDiff diff = new CatalogDiff();
+    final String workspaceName = "";
+    final String workspaceUrl = "http://airbyte.io/workspaces/123";
+    final String connectionName = "PSQL ->> BigQuery";
+    final String sourceName = "";
+    final String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
+    final boolean isBreaking = false;
+    final String connectionUrl = "http://airbyte.io/your_connection";
+    final String recipient = "";
+
+    final String expectedNotificationMessage = "Airbyte detected schema changes for '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>'.";
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    final UUID workpaceId = UUID.randomUUID();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
+
+    assertTrue(client.notifySchemaDiffToApplyWhenPropagationDisabled(notification, recipient));
+  }
+
+  @Test
   void buildSummaryNewStreamTest() {
     final CatalogDiff diff = new CatalogDiff();
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)

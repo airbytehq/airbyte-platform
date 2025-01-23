@@ -56,6 +56,9 @@ public abstract class NotificationClient {
   public abstract boolean notifySchemaDiffToApply(final SchemaUpdateNotification notification,
                                                   final String recipient);
 
+  public abstract boolean notifySchemaDiffToApplyWhenPropagationDisabled(final SchemaUpdateNotification notification,
+                                                                         final String recipient);
+
   public abstract String getNotificationClientType();
 
   static String formatPrimaryKeyString(List<List<String>> primaryKey) {
