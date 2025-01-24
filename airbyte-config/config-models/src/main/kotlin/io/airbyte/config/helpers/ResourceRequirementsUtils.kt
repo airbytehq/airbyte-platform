@@ -5,9 +5,9 @@ package io.airbyte.config.helpers
 
 import com.google.common.base.Preconditions
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ActorDefinitionResourceRequirements
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.ScopedResourceRequirements
 
 /**
  * Manages resource requirements for different types of jobs. We follow a standard pattern of
@@ -36,7 +36,7 @@ object ResourceRequirementsUtils {
   @JvmStatic
   fun getResourceRequirements(
     connectionResourceReqs: ResourceRequirements?,
-    actorDefinitionResourceReqs: ActorDefinitionResourceRequirements?,
+    actorDefinitionResourceReqs: ScopedResourceRequirements?,
     workerDefaultResourceReqs: ResourceRequirements?,
     jobType: JobTypeResourceLimit.JobType,
   ): ResourceRequirements {
@@ -107,7 +107,7 @@ object ResourceRequirementsUtils {
    */
   @JvmStatic
   fun getResourceRequirementsForJobType(
-    actorDefResourceReqs: ActorDefinitionResourceRequirements?,
+    actorDefResourceReqs: ScopedResourceRequirements?,
     jobType: JobTypeResourceLimit.JobType,
   ): ResourceRequirements? {
     if (actorDefResourceReqs == null) {

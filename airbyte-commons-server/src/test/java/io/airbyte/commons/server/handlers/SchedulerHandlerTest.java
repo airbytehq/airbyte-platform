@@ -84,7 +84,6 @@ import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
@@ -97,6 +96,7 @@ import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -498,7 +498,7 @@ class SchedulerHandlerTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId())
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
+        .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
             JobType.CHECK_CONNECTION).withResourceRequirements(RESOURCE_REQUIREMENT))));
     when(sourceService.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
@@ -630,7 +630,7 @@ class SchedulerHandlerTest {
         .connectionConfiguration(destination.getConfiguration());
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(destination.getDestinationDefinitionId())
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
+        .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
             JobType.CHECK_CONNECTION).withResourceRequirements(RESOURCE_REQUIREMENT))));
     when(destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
@@ -821,7 +821,7 @@ class SchedulerHandlerTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId())
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
+        .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(new JobTypeResourceLimit().withJobType(
             JobType.DISCOVER_SCHEMA).withResourceRequirements(RESOURCE_REQUIREMENT))));
     when(sourceService.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);

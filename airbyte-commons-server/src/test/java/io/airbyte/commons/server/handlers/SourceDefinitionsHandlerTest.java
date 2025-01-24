@@ -45,7 +45,6 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
@@ -53,6 +52,7 @@ import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
@@ -163,7 +163,7 @@ class SourceDefinitionsHandlerTest {
         .withIcon("rss.svg")
         .withIconUrl(ICON_URL)
         .withTombstone(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements()
+        .withResourceRequirements(new ScopedResourceRequirements()
             .withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
 
@@ -245,7 +245,7 @@ class SourceDefinitionsHandlerTest {
         .cdkVersion(null)
         .lastPublished(null)
         .metrics(null)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -264,7 +264,7 @@ class SourceDefinitionsHandlerTest {
         .cdkVersion(null)
         .lastPublished(null)
         .metrics(null)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition2.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -283,7 +283,7 @@ class SourceDefinitionsHandlerTest {
         .cdkVersion(sourceDefinitionVersionWithOptionals.getCdkVersion())
         .lastPublished(apiPojoConverters.toOffsetDateTime(sourceDefinitionVersionWithOptionals.getLastPublished()))
         .metrics(sourceDefinitionWithOptionals.getMetrics())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -321,7 +321,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -337,7 +337,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition2.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -402,7 +402,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -418,7 +418,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition2.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -457,7 +457,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -523,7 +523,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -561,7 +561,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -600,7 +600,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(newSourceDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newSourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -625,7 +625,7 @@ class SourceDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.COMMUNITY)
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newSourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -663,7 +663,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(newSourceDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newSourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -690,7 +690,7 @@ class SourceDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.COMMUNITY)
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newSourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -748,7 +748,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(newSourceDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newSourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -816,7 +816,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -959,7 +959,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -996,7 +996,7 @@ class SourceDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -1047,7 +1047,7 @@ class SourceDefinitionsHandlerTest {
         .withAbInternal(new AbInternal().withSl(100L))
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
         .withLanguage("python");
     when(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
 
@@ -1080,7 +1080,7 @@ class SourceDefinitionsHandlerTest {
           .withAbInternal(new AbInternal().withSl(100L))
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
-          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+          .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
           .withLanguage("python");
       when(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
 

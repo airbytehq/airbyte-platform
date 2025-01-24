@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -38,6 +37,7 @@ import io.airbyte.config.RefreshStream;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -593,9 +593,9 @@ class DefaultJobCreatorTest {
         List.of(STANDARD_SYNC_OPERATION),
         null,
         new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(sourceResourceRequirements)),
         new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
@@ -679,9 +679,9 @@ class DefaultJobCreatorTest {
         List.of(STANDARD_SYNC_OPERATION),
         null,
         new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(sourceResourceRequirements)),
         new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
@@ -761,9 +761,9 @@ class DefaultJobCreatorTest {
         List.of(STANDARD_SYNC_OPERATION),
         null,
         new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(sourceResourceRequirements)),
         new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID,
@@ -829,10 +829,10 @@ class DefaultJobCreatorTest {
         List.of(STANDARD_SYNC_OPERATION),
         null,
         new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID,
@@ -890,9 +890,9 @@ class DefaultJobCreatorTest {
         List.of(STANDARD_SYNC_OPERATION),
         null,
         new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+            .withResourceRequirements(new ScopedResourceRequirements().withDefault(sourceResourceRequirements)),
         new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
-            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            .withResourceRequirements(new ScopedResourceRequirements().withJobSpecific(List.of(
                 new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,

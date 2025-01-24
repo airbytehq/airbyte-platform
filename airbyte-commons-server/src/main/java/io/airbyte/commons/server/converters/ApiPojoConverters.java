@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.ActorDefinitionBreakingChange;
-import io.airbyte.api.model.generated.ActorDefinitionResourceRequirements;
 import io.airbyte.api.model.generated.ActorType;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -24,6 +23,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
+import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.converters.StateConverter;
@@ -58,15 +58,15 @@ public class ApiPojoConverters {
     this.catalogConverter = catalogConverter;
   }
 
-  public io.airbyte.config.ActorDefinitionResourceRequirements actorDefResourceReqsToInternal(final ActorDefinitionResourceRequirements actorDefResourceReqs) {
-    if (actorDefResourceReqs == null) {
+  public io.airbyte.config.ScopedResourceRequirements scopedResourceReqsToInternal(final ScopedResourceRequirements scopedResourceReqs) {
+    if (scopedResourceReqs == null) {
       return null;
     }
 
-    return new io.airbyte.config.ActorDefinitionResourceRequirements()
-        .withDefault(actorDefResourceReqs.getDefault() == null ? null : this.resourceRequirementsToInternal(actorDefResourceReqs.getDefault()))
-        .withJobSpecific(actorDefResourceReqs.getJobSpecific() == null ? null
-            : actorDefResourceReqs.getJobSpecific()
+    return new io.airbyte.config.ScopedResourceRequirements()
+        .withDefault(scopedResourceReqs.getDefault() == null ? null : this.resourceRequirementsToInternal(scopedResourceReqs.getDefault()))
+        .withJobSpecific(scopedResourceReqs.getJobSpecific() == null ? null
+            : scopedResourceReqs.getJobSpecific()
                 .stream()
                 .map(jobSpecific -> new io.airbyte.config.JobTypeResourceLimit()
                     .withJobType(this.toInternalJobType(jobSpecific.getJobType()))
@@ -109,15 +109,15 @@ public class ApiPojoConverters {
         .state(StateConverter.toApi(connectionId, optStateWrapper.orElse(null)));
   }
 
-  public ActorDefinitionResourceRequirements actorDefResourceReqsToApi(final io.airbyte.config.ActorDefinitionResourceRequirements actorDefResourceReqs) {
-    if (actorDefResourceReqs == null) {
+  public ScopedResourceRequirements scopedResourceReqsToApi(final io.airbyte.config.ScopedResourceRequirements scopedResourceReqs) {
+    if (scopedResourceReqs == null) {
       return null;
     }
 
-    return new ActorDefinitionResourceRequirements()
-        ._default(actorDefResourceReqs.getDefault() == null ? null : this.resourceRequirementsToApi(actorDefResourceReqs.getDefault()))
-        .jobSpecific(actorDefResourceReqs.getJobSpecific() == null ? null
-            : actorDefResourceReqs.getJobSpecific()
+    return new ScopedResourceRequirements()
+        ._default(scopedResourceReqs.getDefault() == null ? null : this.resourceRequirementsToApi(scopedResourceReqs.getDefault()))
+        .jobSpecific(scopedResourceReqs.getJobSpecific() == null ? null
+            : scopedResourceReqs.getJobSpecific()
                 .stream()
                 .map(jobSpecific -> new JobTypeResourceLimit()
                     .jobType(this.toApiJobType(jobSpecific.getJobType()))

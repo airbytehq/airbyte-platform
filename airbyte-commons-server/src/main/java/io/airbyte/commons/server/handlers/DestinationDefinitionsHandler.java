@@ -25,11 +25,11 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
@@ -137,7 +137,7 @@ public class DestinationDefinitionsHandler {
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
+          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
           .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
@@ -278,7 +278,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
@@ -328,8 +328,8 @@ public class DestinationDefinitionsHandler {
   @VisibleForTesting
   StandardDestinationDefinition buildDestinationDefinitionUpdate(final StandardDestinationDefinition currentDestination,
                                                                  final DestinationDefinitionUpdate destinationDefinitionUpdate) {
-    final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
-        ? apiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
+    final ScopedResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
+        ? apiPojoConverters.scopedResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
 
     final StandardDestinationDefinition newDestination = new StandardDestinationDefinition()

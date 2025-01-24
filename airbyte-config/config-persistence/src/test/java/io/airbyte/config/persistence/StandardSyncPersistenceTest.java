@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
@@ -29,6 +28,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -477,7 +477,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(sourceDefId)
         .withDockerImageTag("tag-1")
@@ -502,7 +502,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(destDefId)
         .withDockerImageTag("tag-3")

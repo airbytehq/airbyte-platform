@@ -3,9 +3,9 @@
  */
 package io.airbyte.config.helpers
 
-import io.airbyte.config.ActorDefinitionResourceRequirements
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirements
 import io.airbyte.config.helpers.ResourceRequirementsUtils.mergeResourceRequirements
 import org.junit.jupiter.api.Assertions
@@ -44,7 +44,7 @@ internal class ResourceRequirementsUtilsTest {
   fun testDefinitionDefaultReqsOverrideWorker() {
     val workerDefaultReqs = ResourceRequirements().withCpuRequest("1").withCpuLimit("1")
     val definitionDefaultReqs = ResourceRequirements().withCpuLimit("2").withMemoryRequest("100Mi")
-    val definitionReqs = ActorDefinitionResourceRequirements().withDefault(definitionDefaultReqs)
+    val definitionReqs = ScopedResourceRequirements().withDefault(definitionDefaultReqs)
     val result =
       getResourceRequirements(
         null,
@@ -69,7 +69,7 @@ internal class ResourceRequirementsUtilsTest {
         ResourceRequirements().withCpuRequest("2").withMemoryRequest("200Mi").withMemoryLimit("300Mi"),
       )
     val definitionReqs =
-      ActorDefinitionResourceRequirements()
+      ScopedResourceRequirements()
         .withDefault(definitionDefaultReqs)
         .withJobSpecific(listOf(jobTypeResourceLimit))
     val result =
@@ -97,7 +97,7 @@ internal class ResourceRequirementsUtilsTest {
         ResourceRequirements().withCpuLimit("3").withMemoryRequest("200Mi"),
       )
     val definitionReqs =
-      ActorDefinitionResourceRequirements()
+      ScopedResourceRequirements()
         .withDefault(definitionDefaultReqs)
         .withJobSpecific(listOf(jobTypeResourceLimit))
     val connectionResourceRequirements = ResourceRequirements().withMemoryRequest("400Mi").withMemoryLimit(FIVE_HUNDRED_MEM)

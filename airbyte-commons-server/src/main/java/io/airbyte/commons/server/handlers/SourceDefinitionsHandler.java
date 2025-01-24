@@ -26,11 +26,11 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
@@ -139,7 +139,7 @@ public class SourceDefinitionsHandler {
           .cdkVersion(sourceVersion.getCdkVersion())
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
-          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
+          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
           .language(sourceVersion.getLanguage());
 
@@ -283,7 +283,7 @@ public class SourceDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
@@ -331,8 +331,8 @@ public class SourceDefinitionsHandler {
   @VisibleForTesting
   StandardSourceDefinition buildSourceDefinitionUpdate(final StandardSourceDefinition currentSourceDefinition,
                                                        final SourceDefinitionUpdate sourceDefinitionUpdate) {
-    final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
-        ? apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
+    final ScopedResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
+        ? apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
 
     final StandardSourceDefinition newSource = new StandardSourceDefinition()

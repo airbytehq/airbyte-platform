@@ -35,6 +35,6 @@ properties:
     type: boolean
     default: false
   resourceRequirements:
-    "$ref": ActorDefinitionResourceRequirements.yaml
+    "$ref": ScopedResourceRequirements.yaml
   metrics:
     "$ref": ConnectorRegistryEntryMetrics.yaml

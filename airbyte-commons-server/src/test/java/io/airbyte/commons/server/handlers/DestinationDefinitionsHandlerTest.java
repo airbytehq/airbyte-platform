@@ -43,7 +43,6 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
@@ -51,6 +50,7 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.helpers.FieldGenerator;
@@ -159,7 +159,7 @@ class DestinationDefinitionsHandlerTest {
         .withIcon("http.svg")
         .withIconUrl(ICON_URL)
         .withTombstone(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
 
   private ActorDefinitionVersion generateVersionFromDestinationDefinition(final StandardDestinationDefinition destinationDefinition) {
@@ -236,7 +236,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -256,7 +256,7 @@ class DestinationDefinitionsHandlerTest {
         .cdkVersion(destinationDefinitionVersionWithOptionals.getCdkVersion())
         .lastPublished(apiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
         .metrics(destinationDefinitionWithOptionals.getMetrics())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithOptionals.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -288,7 +288,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -348,7 +348,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -386,7 +386,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -457,7 +457,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -497,7 +497,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -536,7 +536,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -561,7 +561,7 @@ class DestinationDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -599,7 +599,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -626,7 +626,7 @@ class DestinationDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -684,7 +684,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -753,7 +753,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -897,7 +897,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -936,7 +936,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -994,7 +994,7 @@ class DestinationDefinitionsHandlerTest {
           .withAbInternal(new AbInternal().withSl(100L))
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
-          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+          .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
           .withLanguage("java");
       when(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
 
