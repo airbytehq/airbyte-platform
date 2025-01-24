@@ -19,6 +19,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "resource_requirements" jsonb,
   constraint "actor_pkey" primary key ("id")
 );
 create table "public"."actor_catalog" (
