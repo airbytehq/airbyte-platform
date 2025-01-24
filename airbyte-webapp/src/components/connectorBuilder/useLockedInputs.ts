@@ -69,10 +69,10 @@ export const useGetUniqueKey = () => {
       }
     }
 
-    const existingKeys = builderInputs.map((input) => input.key);
+    const existingNonLockedKeys = builderInputs.filter((input) => !input.isLocked).map((input) => input.key);
     let key = desiredKey;
     let i = 2;
-    while (existingKeys.includes(key)) {
+    while (existingNonLockedKeys.includes(key)) {
       key = `${desiredKey}_${i}`;
       i++;
     }
