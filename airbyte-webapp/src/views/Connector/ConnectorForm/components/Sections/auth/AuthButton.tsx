@@ -1,5 +1,5 @@
 import classnames from "classnames";
-import React from "react";
+import React, { useImperativeHandle, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -99,46 +99,56 @@ export const AuthButton: React.FC<{
   );
 };
 
-export const AuthButtonBuilder: React.FC<{
-  builderProjectId: string;
-  onComplete: (authPayload: Record<string, unknown>) => void;
-  onClick?: () => void;
-  disabled?: boolean;
-}> = ({ builderProjectId, onComplete, onClick, disabled }) => {
+export const AuthButtonBuilder = React.forwardRef<
+  HTMLDivElement | null,
+  {
+    builderProjectId: string;
+    onComplete: (authPayload: Record<string, unknown>) => void;
+    onClick?: () => void;
+    disabled?: boolean;
+  }
+>(({ builderProjectId, onComplete, onClick, disabled }, ref) => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { loading, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
+  const [isAccented, setIsAccented] = useState(false);
 
-  // if (!selectedConnectorDefinition) {
-  //   console.error("Entered non-auth flow while no supported connector is selected");
-  //   return null;
-  // }
+  const flexRef = useRef<HTMLDivElement>(null);
 
-  // const definitionId = ConnectorSpecification.id(selectedConnectorDefinitionSpecification);
-  // const Component = getButtonComponent(definitionId);
-  const Component = Button;
-
-  // const messageStyle = classnames(styles.message, {
-  //   [styles.error]: authRequiredError,
-  //   [styles.success]: !authRequiredError,
-  //   [styles.success]: true,
-  // });
+  useImperativeHandle(
+    ref,
+    () =>
+      new Proxy(flexRef.current!, {
+        get(target, prop, receiver) {
+          if (prop === "scrollIntoView") {
+            const fn: HTMLElement["scrollIntoView"] = (...args) => {
+              target.scrollIntoView(...args);
+              setIsAccented(true);
+            };
+            return fn;
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      })
+  );
 
   return (
-    <FlexContainer alignItems="center">
-      <Component
-        disabled={disabled}
-        isLoading={loading}
-        type="button"
-        data-testid="oauth-button"
-        onClick={onClick ?? run}
-      >
-        <FormattedMessage id="connectorBuilder.authentication.oauthButton.label" />
-      </Component>
-      {/* {authRequiredError && (
-        <Text as="div" size="lg" className={messageStyle}>
-          <FormattedMessage id="connectorForm.authenticate.required" />
-        </Text>
-      )} */}
+    <FlexContainer alignItems="center" ref={flexRef}>
+      <div className={isAccented ? styles.accented__container : undefined}>
+        <Button
+          disabled={disabled}
+          isLoading={loading}
+          type="button"
+          data-testid="oauth-button"
+          onClick={() => {
+            setIsAccented(false);
+            (onClick ?? run)();
+          }}
+          className={isAccented ? styles.accented__button : undefined}
+        >
+          <FormattedMessage id="connectorBuilder.authentication.oauthButton.label" />
+        </Button>
+      </div>
     </FlexContainer>
   );
-};
+});
+AuthButtonBuilder.displayName = "AuthButtonBuilder";

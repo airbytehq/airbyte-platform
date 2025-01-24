@@ -1,4 +1,4 @@
-import { ComponentProps, useCallback } from "react";
+import { ComponentProps, useCallback, useEffect, useRef } from "react";
 import { useFormContext, useController } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -343,7 +343,13 @@ const DeclarativeOAuthForm = () => {
   const { registerNotification } = useNotificationService();
   const hasNecessaryTestingValues = testingValuesErrors === 0;
 
-  const { setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
+  const { setTestingValuesInputOpen, handleScrollToField } = useConnectorBuilderFormManagementState();
+
+  const authButtonBuilderRef = useRef(null);
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(authButtonBuilderRef, "formValues.global.authenticator.declarative_oauth_flow");
+  }, [handleScrollToField]);
 
   return (
     <>
@@ -351,6 +357,7 @@ const DeclarativeOAuthForm = () => {
         disabled={canPerformOauthFlow}
         control={
           <AuthButtonBuilder
+            ref={authButtonBuilderRef}
             disabled={!canPerformOauthFlow}
             builderProjectId={projectId}
             onClick={
@@ -457,7 +464,6 @@ const DeclarativeOAuthForm = () => {
           authenticatorAccessTokenNameField.onChange
         }
       />
-      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
       <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
         label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
         tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}

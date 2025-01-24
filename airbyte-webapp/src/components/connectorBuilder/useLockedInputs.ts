@@ -323,22 +323,22 @@ export const LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE = {
     },
     refresh_token: {
       key: "client_refresh_token",
-      required: true,
+      required: false,
       definition: {
         type: "string" as const,
         title: "Refresh token",
         airbyte_secret: true,
-        airbyte_hidden: false,
+        airbyte_hidden: true,
       },
     },
     access_token: {
       key: "client_access_token",
-      required: true,
+      required: false,
       definition: {
         type: "string" as const,
         title: "Access token",
         airbyte_secret: true,
-        airbyte_hidden: false,
+        airbyte_hidden: true,
       },
     },
     refresh_token_updater: {

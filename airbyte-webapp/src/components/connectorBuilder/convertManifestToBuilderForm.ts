@@ -1081,6 +1081,18 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
   return supportedAuthTypes.includes(authenticator.type);
 }
 
+const isSpecDeclarativeOAuth = (
+  spec: Spec | undefined
+): spec is Spec & {
+  advanced_auth: {
+    oauth_config_specification: {
+      oauth_connector_input_specification: OAuthConfigSpecificationOauthConnectorInputSpecification;
+    };
+  };
+} => {
+  return !!spec?.advanced_auth?.oauth_config_specification?.oauth_connector_input_specification;
+};
+
 export function manifestAuthenticatorToBuilder(
   authenticator: HttpRequesterAuthenticator | undefined,
   spec: Spec | undefined
@@ -1165,15 +1177,7 @@ export function manifestAuthenticatorToBuilder(
         authenticator.type
       );
 
-      const isOauthConnectorInputSpecification = (
-        x: OAuthConfigSpecificationOauthConnectorInputSpecification | undefined
-      ): x is OAuthConfigSpecificationOauthConnectorInputSpecification => {
-        return !!x;
-      };
-
-      const isDeclarativeOAuth = isOauthConnectorInputSpecification(
-        spec?.advanced_auth?.oauth_config_specification?.oauth_connector_input_specification
-      );
+      const isDeclarativeOAuth = isSpecDeclarativeOAuth(spec);
 
       if (Object.values(oauth.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0) {
         throw new ManifestCompatibilityError(
@@ -1203,27 +1207,25 @@ export function manifestAuthenticatorToBuilder(
       if (isDeclarativeOAuth) {
         builderAuthenticator.declarative = {
           ...(omit(
-            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification,
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification,
             "extract_output",
             "access_token_params",
             "access_token_headers",
             "state"
           ) as BuilderFormDeclarativeOAuthAuthenticator["declarative"]),
           access_token_key:
-            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.extract_output[0],
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output[0],
 
           access_token_params: Object.entries(
-            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.access_token_params ??
-              {}
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_params ?? {}
           ),
           access_token_headers: Object.entries(
-            spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!
-              .access_token_headers ?? {}
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_headers ?? {}
           ),
 
-          state: spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.state
+          state: spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state
             ? JSON.stringify(
-                spec!.advanced_auth!.oauth_config_specification!.oauth_connector_input_specification!.state,
+                spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state,
                 null,
                 2
               )
@@ -1479,10 +1481,16 @@ const extractAndValidateAuthKey = (
   manifestSpec: Spec | undefined,
   streamName?: string
 ) => {
+  const isDeclarativeOAuth = isSpecDeclarativeOAuth(manifestSpec);
   return extractAndValidateSpecKey(
     path,
     get(authenticator, path),
-    get(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type], path),
+    get(
+      LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[
+        isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : authenticator.type
+      ],
+      path
+    ),
     authenticator.type,
     manifestSpec,
     streamName

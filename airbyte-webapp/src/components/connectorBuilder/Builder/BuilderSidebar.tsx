@@ -144,7 +144,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: formValues.inputs.length,
+                number: formValues.inputs.filter(({ definition }) => !definition.airbyte_hidden).length,
               }}
             />
           </Text>
