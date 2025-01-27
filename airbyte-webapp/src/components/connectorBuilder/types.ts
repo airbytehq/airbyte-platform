@@ -1027,6 +1027,9 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
   const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
   const accessTokenKey = authenticator.declarative.access_token_key;
 
+  const accessTokenConfigPath = extractInterpolatedConfigKey(authenticator.access_token_value);
+  const refreshTokenConfigPath = extractInterpolatedConfigKey(authenticator.refresh_token);
+
   updatedSpec.advanced_auth = {
     auth_flow_type: "oauth2.0",
     oauth_config_specification: {
@@ -1055,13 +1058,13 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
         properties: {
           [accessTokenKey]: {
             type: "string",
-            path_in_connector_config: [accessTokenKey],
+            path_in_connector_config: [accessTokenConfigPath],
           },
           ...(isRefreshTokenFlowEnabled
             ? {
                 refresh_token: {
                   type: "string",
-                  path_in_connector_config: ["refresh_token"],
+                  path_in_connector_config: [refreshTokenConfigPath],
                 },
               }
             : {}),
