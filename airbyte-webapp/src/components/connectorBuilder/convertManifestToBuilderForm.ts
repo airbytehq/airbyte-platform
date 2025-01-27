@@ -46,6 +46,7 @@ import {
   SimpleRetrieverDecoder,
   GzipJsonDecoderType,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
+  CheckDynamicStreamType,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -94,6 +95,9 @@ import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
+  if (resolvedManifest.check.type === CheckDynamicStreamType.CheckDynamicStream) {
+    throw new ManifestCompatibilityError(undefined, `${CheckDynamicStreamType.CheckDynamicStream} is not supported`);
+  }
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
   builderFormValues.description = resolvedManifest.description;
 
@@ -177,6 +181,13 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "token_expiry_date_format",
   "refresh_token_updater",
   "inject_into",
+  "client_id_name",
+  "client_secret_name",
+  "grant_type_name",
+  "profile_assertion",
+  "refresh_request_headers",
+  "refresh_token_name",
+  "use_profile_assertion",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -1205,6 +1216,10 @@ export function manifestAuthenticatorToBuilder(
       };
 
       if (isDeclarativeOAuth) {
+        if (!spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output) {
+          throw new ManifestCompatibilityError(undefined, "OAuthAuthenticator.extract_output is missing");
+        }
+
         builderAuthenticator.declarative = {
           ...(omit(
             spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification,
@@ -1320,7 +1335,12 @@ export function manifestAuthenticatorToBuilder(
       }
 
       const decoderType = sessionTokenAuth.decoder?.type;
-      if (![undefined, JsonDecoderType.JsonDecoder, XmlDecoderType.XmlDecoder].includes(decoderType)) {
+      const supportedDecoders: Array<string | undefined> = [
+        undefined,
+        JsonDecoderType.JsonDecoder,
+        XmlDecoderType.XmlDecoder,
+      ];
+      if (!supportedDecoders.includes(decoderType)) {
         throw new ManifestCompatibilityError(undefined, "SessionTokenAuthenticator decoder is not supported");
       }
 
