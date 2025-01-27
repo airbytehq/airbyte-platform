@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -42,13 +42,17 @@ object JobsResponseMapper {
     apiHost: String,
   ): JobsResponse {
     val jobs: List<JobResponse> =
-      jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
-        ALLOWED_CONFIG_TYPES.contains(
-          j.job!!.configType,
-        )
-      }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }.toList()
+      jobsList.jobs
+        .stream()
+        .filter { j: JobWithAttemptsRead ->
+          ALLOWED_CONFIG_TYPES.contains(
+            j.job!!.configType,
+          )
+        }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }
+        .toList()
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
         .queryParam(JOB_TYPE, jobType)
         .queryParam("connectionId", connectionId)
     return JobsResponse(
@@ -78,14 +82,18 @@ object JobsResponseMapper {
     apiHost: String,
   ): JobsResponse {
     val jobs: List<JobResponse> =
-      jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
-        ALLOWED_CONFIG_TYPES.contains(
-          j.job!!.configType,
-        )
-      }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }.toList()
+      jobsList.jobs
+        .stream()
+        .filter { j: JobWithAttemptsRead ->
+          ALLOWED_CONFIG_TYPES.contains(
+            j.job!!.configType,
+          )
+        }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }
+        .toList()
 
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
         .queryParam(JOB_TYPE, jobType)
 
     if (workspaceIds.isNotEmpty()) {

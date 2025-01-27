@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.google.common.hash.Hashing
@@ -465,9 +469,10 @@ class StateCheckSumCountEventHandler(
         } +
         if (includeStreamInLogs) {
           val namesAndCounts =
-            streamPlatformRecordCounts.map { (name, count) ->
-              " $name : $count"
-            }.joinToString("\n")
+            streamPlatformRecordCounts
+              .map { (name, count) ->
+                " $name : $count"
+              }.joinToString("\n")
           " Observed the following record counts per stream: \n$namesAndCounts"
         } else {
           ""

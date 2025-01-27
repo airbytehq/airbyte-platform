@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers.helpers
 
 import com.google.common.annotations.VisibleForTesting
@@ -23,46 +27,44 @@ class ScopedConfigurationRelationshipResolver
     private fun getOrganizationChildScopeIds(
       childScopeType: ConfigScopeType,
       organizationId: UUID,
-    ): List<UUID> {
-      return when (childScopeType) {
+    ): List<UUID> =
+      when (childScopeType) {
         ConfigScopeType.WORKSPACE ->
-          workspacePersistence.listWorkspacesByOrganizationId(
-            organizationId,
-            true,
-            Optional.empty(),
-          ).map { it.workspaceId }
+          workspacePersistence
+            .listWorkspacesByOrganizationId(
+              organizationId,
+              true,
+              Optional.empty(),
+            ).map { it.workspaceId }
         else -> throw IllegalArgumentException("Unsupported child scope type for organization: $childScopeType")
       }
-    }
 
     private fun getWorkspaceParentScopeId(
       parentScopeType: ConfigScopeType,
       workspaceId: UUID,
-    ): UUID? {
-      return when (parentScopeType) {
+    ): UUID? =
+      when (parentScopeType) {
         ConfigScopeType.ORGANIZATION -> workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).getOrNull()
         else -> throw IllegalArgumentException("Unsupported parent scope type for workspace: $parentScopeType")
       }
-    }
 
     private fun getWorkspaceChildScopeIds(
       childScopeType: ConfigScopeType,
       workspaceId: UUID,
-    ): List<UUID> {
-      return when (childScopeType) {
+    ): List<UUID> =
+      when (childScopeType) {
         ConfigScopeType.ACTOR -> {
           sourceService.listWorkspaceSourceConnection(workspaceId).map { it.sourceId } +
             destinationService.listWorkspaceDestinationConnection(workspaceId).map { it.destinationId }
         }
         else -> throw IllegalArgumentException("Unsupported child scope type for workspace: $childScopeType")
       }
-    }
 
     private fun getActorParentScopeId(
       parentScopeType: ConfigScopeType,
       actorId: UUID,
-    ): UUID? {
-      return when (parentScopeType) {
+    ): UUID? =
+      when (parentScopeType) {
         ConfigScopeType.WORKSPACE ->
           try {
             sourceService.getSourceConnection(actorId).workspaceId
@@ -71,7 +73,6 @@ class ScopedConfigurationRelationshipResolver
           }
         else -> throw IllegalArgumentException("Unsupported parent scope type for actor: $parentScopeType")
       }
-    }
 
     /**
      * Returns the parent scope of the given type for the given scope.
@@ -81,13 +82,12 @@ class ScopedConfigurationRelationshipResolver
       scopeType: ConfigScopeType,
       parentType: ConfigScopeType,
       scopeId: UUID,
-    ): UUID? {
-      return when (scopeType) {
+    ): UUID? =
+      when (scopeType) {
         ConfigScopeType.WORKSPACE -> getWorkspaceParentScopeId(parentType, scopeId)
         ConfigScopeType.ACTOR -> getActorParentScopeId(parentType, scopeId)
         else -> throw IllegalArgumentException("Unsupported scope type to get parent: $scopeType")
       }
-    }
 
     /**
      * Returns the child scopes of the given type for the given scope.
@@ -97,13 +97,12 @@ class ScopedConfigurationRelationshipResolver
       scopeType: ConfigScopeType,
       childType: ConfigScopeType,
       scopeId: UUID,
-    ): List<UUID> {
-      return when (scopeType) {
+    ): List<UUID> =
+      when (scopeType) {
         ConfigScopeType.ORGANIZATION -> getOrganizationChildScopeIds(childType, scopeId)
         ConfigScopeType.WORKSPACE -> getWorkspaceChildScopeIds(childType, scopeId)
         else -> throw IllegalArgumentException("Unsupported scope type to get child: $scopeType")
       }
-    }
 
     /**
      * Returns a map of all scopes that are ancestors of the given scope, according to the given scope priority.

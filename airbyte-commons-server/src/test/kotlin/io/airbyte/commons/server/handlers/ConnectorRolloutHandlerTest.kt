@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
@@ -123,12 +127,11 @@ internal class ConnectorRolloutHandlerTest {
       listOf(ConnectorEnumRolloutState.WORKFLOW_STARTED, ConnectorEnumRolloutState.IN_PROGRESS, ConnectorEnumRolloutState.PAUSED)
 
     @JvmStatic
-    fun provideConnectorRolloutStateTerminalNonCanceled(): List<ConnectorRolloutStateTerminal> {
-      return listOf(
+    fun provideConnectorRolloutStateTerminalNonCanceled(): List<ConnectorRolloutStateTerminal> =
+      listOf(
         ConnectorRolloutStateTerminal.SUCCEEDED,
         ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
       )
-    }
   }
 
   @BeforeEach

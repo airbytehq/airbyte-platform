@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.exceptions
@@ -22,7 +23,5 @@ class ContributionException : KnownException {
     this.httpStatus = httpStatus
   }
 
-  override fun getHttpCode(): Int {
-    return httpStatus.code
-  }
+  override fun getHttpCode(): Int = httpStatus.code
 }

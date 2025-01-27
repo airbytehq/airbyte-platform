@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.mapper.configs
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -22,24 +26,18 @@ data class HashingMapperConfig(
   val config: HashingConfig,
   val id: UUID? = null,
 ) : MapperConfig {
-  override fun name(): String {
-    return name
-  }
+  override fun name(): String = name
 
-  override fun documentationUrl(): String? {
-    return documentationUrl
-  }
+  override fun documentationUrl(): String? = documentationUrl
 
-  override fun id(): UUID? {
-    return id
-  }
+  override fun id(): UUID? = id
 
-  override fun config(): HashingConfig {
-    return config
-  }
+  override fun config(): HashingConfig = config
 }
 
-enum class HashingMethods(val value: String) {
+enum class HashingMethods(
+  val value: String,
+) {
   MD2("MD2"),
   MD5("MD5"),
   SHA1("SHA-1"),
@@ -53,9 +51,7 @@ enum class HashingMethods(val value: String) {
   override fun toString() = value
 
   companion object {
-    fun fromValue(value: String): HashingMethods? {
-      return entries.find { it.value == value }
-    }
+    fun fromValue(value: String): HashingMethods? = entries.find { it.value == value }
   }
 }
 

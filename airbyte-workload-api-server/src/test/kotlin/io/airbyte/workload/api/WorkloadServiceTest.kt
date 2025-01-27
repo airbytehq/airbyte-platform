@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -62,14 +66,13 @@ class WorkloadServiceTest {
     private const val DATAPLANE_ID = "dataplaneId"
 
     @JvmStatic
-    fun expectedQueueArgsMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun expectedQueueArgsMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(WorkloadType.SYNC, WorkloadPriority.DEFAULT, DATAPLANE_ID),
         Arguments.of(WorkloadType.CHECK, WorkloadPriority.HIGH, DATAPLANE_ID),
         Arguments.of(WorkloadType.CHECK, WorkloadPriority.DEFAULT, DATAPLANE_ID),
         Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.HIGH, DATAPLANE_ID),
         Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.DEFAULT, DATAPLANE_ID),
       )
-    }
   }
 }

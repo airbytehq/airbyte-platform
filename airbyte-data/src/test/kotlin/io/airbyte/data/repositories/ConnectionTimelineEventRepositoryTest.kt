@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
@@ -21,12 +25,16 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
     @JvmStatic
     fun setup() {
       // Temporarily remove foreign key constraints, so we don't have to deal with making connections and users as well
-      jooqDslContext.alterTable(
-        Tables.CONNECTION_TIMELINE_EVENT,
-      ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_CONNECTION_ID_FKEY.constraint()).execute()
-      jooqDslContext.alterTable(
-        Tables.CONNECTION_TIMELINE_EVENT,
-      ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_USER_ID_FKEY.constraint()).execute()
+      jooqDslContext
+        .alterTable(
+          Tables.CONNECTION_TIMELINE_EVENT,
+        ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_CONNECTION_ID_FKEY.constraint())
+        .execute()
+      jooqDslContext
+        .alterTable(
+          Tables.CONNECTION_TIMELINE_EVENT,
+        ).dropForeignKey(Keys.CONNECTION_TIMELINE_EVENT__CONNECTION_TIMELINE_EVENT_USER_ID_FKEY.constraint())
+        .execute()
     }
   }
 

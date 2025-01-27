@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.NotImplementedMetricClient
@@ -82,7 +86,11 @@ class PodSweeperTest {
         .build()
 
     // Create the pod in the mock cluster
-    client.pods().inNamespace("default").resource(runningPod).create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(runningPod)
+      .create()
 
     val sweeper = podSweeper(ttlMinutes, null, null)
 
@@ -91,7 +99,12 @@ class PodSweeperTest {
 
     // Assert
     // The pod should be deleted because it's older than 60 minutes
-    val stillExists = client.pods().inNamespace("default").withName("my-running-pod").get()
+    val stillExists =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("my-running-pod")
+        .get()
     assertNull(stillExists, "Pod should have been deleted")
   }
 
@@ -123,7 +136,11 @@ class PodSweeperTest {
         .endStatus()
         .build()
 
-    client.pods().inNamespace("default").resource(runningPod).create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(runningPod)
+      .create()
 
     val sweeper = podSweeper(ttlMinutes, null, null)
 
@@ -132,7 +149,12 @@ class PodSweeperTest {
 
     // Assert
     // Pod should still exist because it's only 30 minutes old, which is < 60
-    val stillExists = client.pods().inNamespace("default").withName("recent-running-pod").get()
+    val stillExists =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("recent-running-pod")
+        .get()
     assertNotNull(stillExists, "Pod should NOT have been deleted yet.")
   }
 
@@ -164,7 +186,11 @@ class PodSweeperTest {
         .endStatus()
         .build()
 
-    client.pods().inNamespace("default").resource(succeededPod).create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(succeededPod)
+      .create()
 
     val sweeper = podSweeper(null, succeededTtlMinutes, null)
 
@@ -172,7 +198,12 @@ class PodSweeperTest {
     sweeper.sweepPods()
 
     // Assert
-    val stillExists = client.pods().inNamespace("default").withName("succeeded-pod").get()
+    val stillExists =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("succeeded-pod")
+        .get()
     assertNull(stillExists, "Succeeded pod older than 10 min should have been deleted")
   }
 
@@ -204,7 +235,11 @@ class PodSweeperTest {
         .endStatus()
         .build()
 
-    client.pods().inNamespace("default").resource(failedPod).create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(failedPod)
+      .create()
 
     val sweeper = podSweeper(null, null, unsuccessfulTtlMinutes)
 
@@ -212,7 +247,12 @@ class PodSweeperTest {
     sweeper.sweepPods()
 
     // Assert
-    val stillExists = client.pods().inNamespace("default").withName("failed-pod").get()
+    val stillExists =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("failed-pod")
+        .get()
     assertNull(stillExists, "Failed pod older than 3 hours should have been deleted")
   }
 
@@ -245,8 +285,16 @@ class PodSweeperTest {
         .endStatus()
         .build()
 
-    client.pods().inNamespace("default").resource(noTimePod).create()
-    client.pods().inNamespace("default").resource(malformedDatePod).create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(noTimePod)
+      .create()
+    client
+      .pods()
+      .inNamespace("default")
+      .resource(malformedDatePod)
+      .create()
 
     val sweeper = podSweeper(1, 1, 1)
 
@@ -254,10 +302,20 @@ class PodSweeperTest {
     sweeper.sweepPods()
 
     // Assert - They should NOT be deleted because the code can't parse or find a date
-    val noTimePodCheck = client.pods().inNamespace("default").withName("no-time-pod").get()
+    val noTimePodCheck =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("no-time-pod")
+        .get()
     assertNotNull(noTimePodCheck, "Pod with no time should remain since we cannot compare TTL")
 
-    val malformedDatePodCheck = client.pods().inNamespace("default").withName("malformed-date-pod").get()
+    val malformedDatePodCheck =
+      client
+        .pods()
+        .inNamespace("default")
+        .withName("malformed-date-pod")
+        .get()
     assertNotNull(malformedDatePodCheck, "Pod with malformed date should remain since we cannot parse TTL")
   }
 
@@ -265,8 +323,8 @@ class PodSweeperTest {
     runningTtL: Long?,
     succeededTtl: Long?,
     unSucceededTtl: Long?,
-  ): PodSweeper {
-    return PodSweeper(
+  ): PodSweeper =
+    PodSweeper(
       client,
       mockMetricClient,
       Clock.systemUTC(),
@@ -276,5 +334,4 @@ class PodSweeperTest {
       succeededTtl,
       unSucceededTtl,
     )
-  }
 }

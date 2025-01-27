@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
+import dev.failsafe.function.CheckedSupplier
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
@@ -65,7 +70,8 @@ class PodSweeper(
 
     // List pods labeled 'airbyte=job-pod'
     val podList: PodList =
-      kubernetesClient.pods()
+      kubernetesClient
+        .pods()
         .inNamespace(namespace)
         .withLabel(SWEEPER_LABEL_KEY, SWEEPER_LABEL_VALUE)
         .list()
@@ -80,7 +86,8 @@ class PodSweeper(
       // Compute the "most relevant" date to compare:
       // by default: PodCondition[0].lastTransitionTime if present, else use Pod.status.startTime
       val transitionTime =
-        pod.status?.conditions
+        pod.status
+          ?.conditions
           ?.firstOrNull() // conditions[0] if it exists
           ?.lastTransitionTime
       val startTime = pod.status?.startTime
@@ -128,14 +135,13 @@ class PodSweeper(
   /**
    * Parses an ISO8601 date/time string from Kubernetes fields (e.g., "2025-01-15T10:00:00Z")
    */
-  private fun parseKubeDate(dateStr: String): Instant? {
-    return try {
+  private fun parseKubeDate(dateStr: String): Instant? =
+    try {
       Instant.parse(dateStr)
     } catch (e: Exception) {
       logger.error(e) { "Error parsing date [$dateStr]" }
       null
     }
-  }
 
   /**
    * Actually deletes the given pod from the cluster.
@@ -148,7 +154,13 @@ class PodSweeper(
     pod.metadata?.let {
       it.name?.let { name ->
         logger.info { "Deleting pod [$name]. Reason: $reason" }
-        runKubeCommand { kubernetesClient.pods().inNamespace(namespace).resource(pod).delete() }
+        runKubeCommand {
+          kubernetesClient
+            .pods()
+            .inNamespace(namespace)
+            .resource(pod)
+            .delete()
+        }
         metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, 1, MetricAttribute("phase", phase))
       }
     }
@@ -156,7 +168,11 @@ class PodSweeper(
 
   private fun <T> runKubeCommand(kubeCommand: () -> T) {
     try {
-      Failsafe.with(kubernetesClientRetryPolicy).get { -> kubeCommand() }
+      Failsafe.with(kubernetesClientRetryPolicy).get(
+        object : CheckedSupplier<T> {
+          override fun get(): T = kubeCommand()
+        },
+      )
     } catch (e: Exception) {
       logger.error(e) { "Could not delete the pod" }
     }

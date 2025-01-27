@@ -18,17 +18,11 @@ enum class WorkloadApiMetricMetadata(
   ),
   ;
 
-  override fun getApplication(): MetricEmittingApp {
-    return MetricEmittingApps.WORKLOAD_API
-  }
+  override fun getApplication(): MetricEmittingApp = MetricEmittingApps.WORKLOAD_API
 
-  override fun getMetricName(): String {
-    return metricName
-  }
+  override fun getMetricName(): String = metricName
 
-  override fun getMetricDescription(): String {
-    return description
-  }
+  override fun getMetricDescription(): String = description
 
   companion object {
     const val DATA_PLANE_ID_TAG = "data_plane_id"

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.commons.enums.Enums
@@ -21,8 +25,8 @@ typealias ModelConfigType = JobConfig.ConfigType
 typealias EntityJobStatus = JobStatus
 typealias ModelJobStatus = io.airbyte.config.JobStatus
 
-fun ModelJobStatus.toEntity(): EntityJobStatus {
-  return when (this) {
+fun ModelJobStatus.toEntity(): EntityJobStatus =
+  when (this) {
     ModelJobStatus.PENDING -> EntityJobStatus.pending
     ModelJobStatus.RUNNING -> EntityJobStatus.running
     ModelJobStatus.SUCCEEDED -> EntityJobStatus.succeeded
@@ -30,10 +34,9 @@ fun ModelJobStatus.toEntity(): EntityJobStatus {
     ModelJobStatus.CANCELLED -> EntityJobStatus.cancelled
     ModelJobStatus.INCOMPLETE -> EntityJobStatus.incomplete
   }
-}
 
-fun EntityJobStatus.toConfig(): ModelJobStatus {
-  return when (this) {
+fun EntityJobStatus.toConfig(): ModelJobStatus =
+  when (this) {
     EntityJobStatus.pending -> ModelJobStatus.PENDING
     EntityJobStatus.running -> ModelJobStatus.RUNNING
     EntityJobStatus.succeeded -> ModelJobStatus.SUCCEEDED
@@ -41,10 +44,9 @@ fun EntityJobStatus.toConfig(): ModelJobStatus {
     EntityJobStatus.cancelled -> ModelJobStatus.CANCELLED
     EntityJobStatus.incomplete -> ModelJobStatus.INCOMPLETE
   }
-}
 
-fun EntityJobWithAssociations.toConfigModel(): ModelJob {
-  return ModelJob(
+fun EntityJobWithAssociations.toConfigModel(): ModelJob =
+  ModelJob(
     this.id!!,
     this.configType?.toConfig(),
     this.scope,
@@ -56,10 +58,9 @@ fun EntityJobWithAssociations.toConfigModel(): ModelJob {
     updatedAt?.toEpochSecond() ?: 0,
     this.isScheduled ?: true,
   )
-}
 
-fun EntityJob.toConfigModel(): ModelJob {
-  return ModelJob(
+fun EntityJob.toConfigModel(): ModelJob =
+  ModelJob(
     this.id!!,
     this.configType?.toConfig(),
     this.scope,
@@ -71,10 +72,9 @@ fun EntityJob.toConfigModel(): ModelJob {
     updatedAt?.toEpochSecond() ?: 0,
     this.isScheduled ?: true,
   )
-}
 
-fun ModelJob.toEntity(): EntityJob {
-  return EntityJob(
+fun ModelJob.toEntity(): EntityJob =
+  EntityJob(
     id,
     Enums.convertTo(this.configType, JobConfigType::class.java),
     this.scope,
@@ -84,10 +84,9 @@ fun ModelJob.toEntity(): EntityJob {
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(createdAtInSecond), ZoneOffset.UTC),
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(updatedAtInSecond), ZoneOffset.UTC),
   )
-}
 
-fun EntityConfigType.toConfig(): ModelConfigType {
-  return when (this) {
+fun EntityConfigType.toConfig(): ModelConfigType =
+  when (this) {
     EntityConfigType.sync -> ModelConfigType.SYNC
     EntityConfigType.reset_connection -> ModelConfigType.RESET_CONNECTION
     EntityConfigType.refresh -> ModelConfigType.REFRESH
@@ -96,10 +95,9 @@ fun EntityConfigType.toConfig(): ModelConfigType {
     EntityConfigType.discover_schema -> ModelConfigType.DISCOVER_SCHEMA
     EntityConfigType.get_spec -> ModelConfigType.GET_SPEC
   }
-}
 
-fun ModelConfigType.toEntity(): EntityConfigType {
-  return when (this) {
+fun ModelConfigType.toEntity(): EntityConfigType =
+  when (this) {
     ModelConfigType.SYNC -> EntityConfigType.sync
     ModelConfigType.RESET_CONNECTION -> EntityConfigType.reset_connection
     ModelConfigType.REFRESH -> EntityConfigType.refresh
@@ -109,4 +107,3 @@ fun ModelConfigType.toEntity(): EntityConfigType {
     ModelConfigType.GET_SPEC -> EntityConfigType.get_spec
     JobConfig.ConfigType.CLEAR -> EntityConfigType.reset_connection
   }
-}

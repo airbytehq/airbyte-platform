@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -44,48 +48,36 @@ class WorkloadApiTest(
   @Client("/") val client: HttpClient,
 ) {
   @Singleton
-  fun mockMeterRegistry(): MeterRegistry {
-    return SimpleMeterRegistry()
-  }
+  fun mockMeterRegistry(): MeterRegistry = SimpleMeterRegistry()
 
   private val workloadService = mockk<WorkloadService>()
 
   @MockBean(WorkloadService::class)
   @Replaces(WorkloadService::class)
-  fun workloadService(): WorkloadService {
-    return workloadService
-  }
+  fun workloadService(): WorkloadService = workloadService
 
   private val workloadHandler = mockk<WorkloadHandlerImpl>()
 
   @MockBean(WorkloadHandler::class)
   @Replaces(WorkloadHandler::class)
-  fun workloadHandler(): WorkloadHandler {
-    return workloadHandler
-  }
+  fun workloadHandler(): WorkloadHandler = workloadHandler
 
   private val workflowClient = mockk<WorkflowClient>()
 
   @MockBean(WorkflowClient::class)
   @Replaces(WorkflowClient::class)
-  fun workflowClient(): WorkflowClient {
-    return workflowClient
-  }
+  fun workflowClient(): WorkflowClient = workflowClient
 
   private val workloadClientWrapped = mockk<WorkflowClientWrapped>()
   private val airbyteApiClient: AirbyteApiClient = mockk()
 
   @MockBean(AirbyteApiClient::class)
   @Replaces(AirbyteApiClient::class)
-  fun airbyteApiClient(): AirbyteApiClient {
-    return airbyteApiClient
-  }
+  fun airbyteApiClient(): AirbyteApiClient = airbyteApiClient
 
   @MockBean(WorkflowClientWrapped::class)
   @Replaces(WorkflowClientWrapped::class)
-  fun workloadClientWrapped(): WorkflowClientWrapped {
-    return workloadClientWrapped
-  }
+  fun workloadClientWrapped(): WorkflowClientWrapped = workloadClientWrapped
 
   @Test
   fun `test create success`() {

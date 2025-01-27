@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.services
 
 import io.airbyte.api.model.generated.ActorType
@@ -76,8 +80,8 @@ class DataplaneService(
     connection: StandardSync?,
     actorType: ActorType?,
     actorId: UUID?,
-  ): UUID? {
-    return connection?.let {
+  ): UUID? =
+    connection?.let {
       destinationService.getDestinationConnection(connection.destinationId).workspaceId
     } ?: actorType?.let {
       when (actorType) {
@@ -86,7 +90,6 @@ class DataplaneService(
         else -> null
       }
     }
-  }
 
   /**
    * Given a connectionId and workspaceId, attempt to resolve geography.
@@ -106,14 +109,14 @@ class DataplaneService(
     }
   }
 
-  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean {
-    return workspaceId?.let {
-      scopedConfigurationService.getScopedConfigurations(
-        NetworkSecurityTokenKey,
-        mapOf(ConfigScopeType.WORKSPACE to workspaceId),
-      ).isNotEmpty()
+  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean =
+    workspaceId?.let {
+      scopedConfigurationService
+        .getScopedConfigurations(
+          NetworkSecurityTokenKey,
+          mapOf(ConfigScopeType.WORKSPACE to workspaceId),
+        ).isNotEmpty()
     } ?: false
-  }
 
   /**
    * Build the feature flag context for network security token.
@@ -175,10 +178,9 @@ private fun buildFeatureFlagContext(
   return context
 }
 
-fun Geography.toGeographicRegion(): String {
-  return when (this) {
+fun Geography.toGeographicRegion(): String =
+  when (this) {
     Geography.AUTO -> GeographicRegion.US
     Geography.US -> GeographicRegion.US
     Geography.EU -> GeographicRegion.EU
   }
-}

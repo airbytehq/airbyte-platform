@@ -84,7 +84,8 @@ class GoogleSecretManagerPersistence(
     const val LATEST = "latest"
 
     val replicationPolicy: Replication =
-      Replication.newBuilder()
+      Replication
+        .newBuilder()
         .setAutomatic(Replication.Automatic.newBuilder().build())
         .build()
   }
@@ -100,7 +101,11 @@ class GoogleSecretManagerPersistence(
 
         var expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "false"))
         expiry?.let {
-          val expireTime = com.google.protobuf.Timestamp.newBuilder().setSeconds(it.epochSecond).build()
+          val expireTime =
+            com.google.protobuf.Timestamp
+              .newBuilder()
+              .setSeconds(it.epochSecond)
+              .build()
           secretBuilder.setExpireTime(expireTime)
           expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "true"))
         }
@@ -174,7 +179,8 @@ class GoogleSecretManagerServiceClient(
     val credentialsByteStream = ByteArrayInputStream(gcpCredentialsJson.toByteArray(StandardCharsets.UTF_8))
     val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
     val clientSettings =
-      SecretManagerServiceSettings.newBuilder()
+      SecretManagerServiceSettings
+        .newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
         .build()
     return SecretManagerServiceClient.create(clientSettings)

@@ -148,9 +148,16 @@ class GoogleSecretManagerPersistenceTest {
     persistence.writeWithExpiry(coordinate, secret, expiry)
 
     val sb =
-      Secret.newBuilder().setReplication(
-        replicationPolicy,
-      ).setExpireTime(com.google.protobuf.Timestamp.newBuilder().setSeconds(expiry.epochSecond).build()).build()
+      Secret
+        .newBuilder()
+        .setReplication(
+          replicationPolicy,
+        ).setExpireTime(
+          com.google.protobuf.Timestamp
+            .newBuilder()
+            .setSeconds(expiry.epochSecond)
+            .build(),
+        ).build()
     verify { mockGoogleClient.createSecret(ProjectName.of("test"), coordinate.fullCoordinate, sb) }
     verify { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) }
   }

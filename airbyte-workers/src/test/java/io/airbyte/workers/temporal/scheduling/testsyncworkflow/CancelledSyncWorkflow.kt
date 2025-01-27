@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.temporal.scheduling.testsyncworkflow
 
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
@@ -20,14 +21,13 @@ class CancelledSyncWorkflow : SyncWorkflow {
     destinationLauncherConfig: IntegrationLauncherConfig,
     syncInput: StandardSyncInput,
     connectionId: UUID,
-  ): StandardSyncOutput {
-    return StandardSyncOutput()
+  ): StandardSyncOutput =
+    StandardSyncOutput()
       .withStandardSyncSummary(
         StandardSyncSummary()
           .withStatus(ReplicationStatus.CANCELLED)
           .withTotalStats(SyncStats()),
       )
-  }
 
   override fun checkAsyncActivityStatus() {}
 }

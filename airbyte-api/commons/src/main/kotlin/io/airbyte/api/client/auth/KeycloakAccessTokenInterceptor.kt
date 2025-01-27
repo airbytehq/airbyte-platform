@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.api.client.auth
 
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -29,15 +33,15 @@ private val logger = KotlinLogging.logger {}
 class KeycloakAccessTokenInterceptor(
   @Named("keycloak") private val clientCredentialsClient: ClientCredentialsClient,
 ) : AirbyteApiInterceptor {
-  private fun fetchAccessToken(): Mono<String?> {
-    return Mono.defer { Mono.from(clientCredentialsClient.requestToken()) }
+  private fun fetchAccessToken(): Mono<String?> =
+    Mono
+      .defer { Mono.from(clientCredentialsClient.requestToken()) }
       .map { it.accessToken }
       .retryWhen(
         Retry
           .backoff(3, Duration.ofSeconds(1))
           .filter { it is HttpException },
       )
-  }
 
   override fun intercept(chain: Interceptor.Chain): Response {
     val originalRequest: Request = chain.request()

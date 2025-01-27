@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.auth.config
 
 import io.micronaut.context.annotation.EachProperty
@@ -20,7 +21,5 @@ data class IdentityProviderConfiguration(
 ) {
   // Eventually, AuthOidcConfiguration will simply replace this class.
   // For now, we want to support airbyte.auth.identity-providers for backwards-compatibility.
-  fun toOidcConfig(): OidcConfig {
-    return OidcConfig(domain!!, appName!!, displayName ?: appName!!, clientId!!, clientSecret!!)
-  }
+  fun toOidcConfig(): OidcConfig = OidcConfig(domain!!, appName!!, displayName ?: appName!!, clientId!!, clientSecret!!)
 }

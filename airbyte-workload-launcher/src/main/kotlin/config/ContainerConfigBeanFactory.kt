@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.config
@@ -28,9 +28,7 @@ import java.util.concurrent.ExecutorService
 @Factory
 class ContainerConfigBeanFactory {
   @Singleton
-  fun kubeSerialization(objectMapper: ObjectMapper): KubernetesSerialization {
-    return KubernetesSerialization(objectMapper, true)
-  }
+  fun kubeSerialization(objectMapper: ObjectMapper): KubernetesSerialization = KubernetesSerialization(objectMapper, true)
 
   @Singleton
   fun kubeClient(
@@ -38,13 +36,12 @@ class ContainerConfigBeanFactory {
     kubernetesSerialization: KubernetesSerialization,
     // Configured in application.yml under micronaut.executors.kube-client
     @Named("kube-client") executorService: ExecutorService,
-  ): KubernetesClient {
-    return KubernetesClientBuilder()
+  ): KubernetesClient =
+    KubernetesClientBuilder()
       .withHttpClientFactory(customOkHttpClientFactory)
       .withKubernetesSerialization(kubernetesSerialization)
       .withTaskExecutor(executorService)
       .build()
-  }
 
   @Singleton
   @Named("containerOrchestratorImage")
@@ -98,54 +95,45 @@ class ContainerConfigBeanFactory {
   fun orchestratorKubeContainerInfo(
     @Named("containerOrchestratorImage") containerOrchestratorImage: String,
     @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") containerOrchestratorImagePullPolicy: String,
-  ): KubeContainerInfo {
-    return KubeContainerInfo(
+  ): KubeContainerInfo =
+    KubeContainerInfo(
       containerOrchestratorImage,
       containerOrchestratorImagePullPolicy,
     )
-  }
 
   @Singleton
   @Named("sidecarKubeContainerInfo")
   fun sidecarKubeContainerInfo(
     @Named("connectorSidecarImage") connectorSidecarImage: String,
     @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") connectorSidecarImagePullPolicy: String,
-  ): KubeContainerInfo {
-    return KubeContainerInfo(connectorSidecarImage, connectorSidecarImagePullPolicy)
-  }
+  ): KubeContainerInfo = KubeContainerInfo(connectorSidecarImage, connectorSidecarImagePullPolicy)
 
   @Singleton
   @Named("initContainerInfo")
   fun initContainerInfo(
     @Named("initContainerImage") initContainerImage: String,
     @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") initContainerImagePullPolicy: String,
-  ): KubeContainerInfo {
-    return KubeContainerInfo(initContainerImage, initContainerImagePullPolicy)
-  }
+  ): KubeContainerInfo = KubeContainerInfo(initContainerImage, initContainerImagePullPolicy)
 
   @Singleton
   @Named("replicationWorkerConfigs")
-  fun replicationWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
-    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.REPLICATION)
-  }
+  fun replicationWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs =
+    workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.REPLICATION)
 
   @Singleton
   @Named("checkWorkerConfigs")
-  fun checkWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
-    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.CHECK)
-  }
+  fun checkWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs =
+    workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.CHECK)
 
   @Singleton
   @Named("discoverWorkerConfigs")
-  fun discoverWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
-    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.DISCOVER)
-  }
+  fun discoverWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs =
+    workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.DISCOVER)
 
   @Singleton
   @Named("specWorkerConfigs")
-  fun specWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
-    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.SPEC)
-  }
+  fun specWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs =
+    workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.SPEC)
 
   @Singleton
   @Named("checkConnectorReqs")
@@ -154,13 +142,12 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.kube-job-configs.check.cpu-request}") cpuRequest: String,
     @Value("\${airbyte.worker.kube-job-configs.check.memory-limit}") memoryLimit: String,
     @Value("\${airbyte.worker.kube-job-configs.check.memory-request}") memoryRequest: String,
-  ): ResourceRequirements {
-    return ResourceRequirements()
+  ): ResourceRequirements =
+    ResourceRequirements()
       .withCpuLimit(cpuLimit)
       .withCpuRequest(cpuRequest)
       .withMemoryLimit(memoryLimit)
       .withMemoryRequest(memoryRequest)
-  }
 
   @Singleton
   @Named("discoverConnectorReqs")
@@ -169,13 +156,12 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request}") cpuRequest: String,
     @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit}") memoryLimit: String,
     @Value("\${airbyte.worker.kube-job-configs.discover.memory-request}") memoryRequest: String,
-  ): ResourceRequirements {
-    return ResourceRequirements()
+  ): ResourceRequirements =
+    ResourceRequirements()
       .withCpuLimit(cpuLimit)
       .withCpuRequest(cpuRequest)
       .withMemoryLimit(memoryLimit)
       .withMemoryRequest(memoryRequest)
-  }
 
   @Singleton
   @Named("specConnectorReqs")
@@ -184,13 +170,12 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.kube-job-configs.spec.cpu-request}") cpuRequest: String,
     @Value("\${airbyte.worker.kube-job-configs.spec.memory-limit}") memoryLimit: String,
     @Value("\${airbyte.worker.kube-job-configs.spec.memory-request}") memoryRequest: String,
-  ): ResourceRequirements {
-    return ResourceRequirements()
+  ): ResourceRequirements =
+    ResourceRequirements()
       .withCpuLimit(cpuLimit)
       .withCpuRequest(cpuRequest)
       .withMemoryLimit(memoryLimit)
       .withMemoryRequest(memoryRequest)
-  }
 
   @Singleton
   @Named("sidecarReqs")
@@ -199,24 +184,22 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.connector-sidecar.resources.cpu-request}") cpuRequest: String,
     @Value("\${airbyte.worker.connector-sidecar.resources.memory-limit}") memoryLimit: String,
     @Value("\${airbyte.worker.connector-sidecar.resources.memory-request}") memoryRequest: String,
-  ): ResourceRequirements {
-    return ResourceRequirements()
+  ): ResourceRequirements =
+    ResourceRequirements()
       .withCpuLimit(cpuLimit)
       .withCpuRequest(cpuRequest)
       .withMemoryLimit(memoryLimit)
       .withMemoryRequest(memoryRequest)
-  }
 
   @Singleton
   @Named("fileTransferReqs")
   fun fileTransferReqs(
     @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-limit}") ephemeralStorageLimit: String,
     @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-request}") ephemeralStorageRequest: String,
-  ): ResourceRequirements {
-    return ResourceRequirements()
+  ): ResourceRequirements =
+    ResourceRequirements()
       .withEphemeralStorageLimit(ephemeralStorageLimit)
       .withEphemeralStorageRequest(ephemeralStorageRequest)
-  }
 
   @Singleton
   @Named("replicationPodTolerations")
@@ -308,35 +291,31 @@ class ContainerConfigBeanFactory {
   @Named("replicationImagePullSecrets")
   fun replicationImagePullSecrets(
     @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
-  ): List<LocalObjectReference> {
-    return workerConfigs.jobImagePullSecrets
+  ): List<LocalObjectReference> =
+    workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
-  }
 
   @Singleton
   @Named("checkImagePullSecrets")
   fun checkImagePullSecrets(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
-  ): List<LocalObjectReference> {
-    return workerConfigs.jobImagePullSecrets
+  ): List<LocalObjectReference> =
+    workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
-  }
 
   @Singleton
   @Named("discoverImagePullSecrets")
   fun discoverImagePullSecrets(
     @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
-  ): List<LocalObjectReference> {
-    return workerConfigs.jobImagePullSecrets
+  ): List<LocalObjectReference> =
+    workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
-  }
 
   @Singleton
   @Named("specImagePullSecrets")
   fun specImagePullSecrets(
     @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
-  ): List<LocalObjectReference> {
-    return workerConfigs.jobImagePullSecrets
+  ): List<LocalObjectReference> =
+    workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
-  }
 }

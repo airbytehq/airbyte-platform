@@ -21,7 +21,9 @@ import java.util.stream.Collectors
 
 private val logger = KotlinLogging.logger {}
 
-class JsonSecretsProcessor(private val copySecrets: Boolean = false) {
+class JsonSecretsProcessor(
+  private val copySecrets: Boolean = false,
+) {
   companion object {
     private val VALIDATOR = JsonSchemaValidator()
     const val PROPERTIES_FIELD = "properties"
@@ -40,20 +42,20 @@ class JsonSecretsProcessor(private val copySecrets: Boolean = false) {
       schema: JsonNode?,
     ): JsonNode {
       val pathsWithSecrets =
-        JsonSchemas.collectPathsThatMeetCondition(
-          schema,
-        ) { node: JsonNode ->
-          MoreIterators.toList(node.fields())
-            .stream()
-            .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
-        }
-          .stream()
+        JsonSchemas
+          .collectPathsThatMeetCondition(
+            schema,
+          ) { node: JsonNode ->
+            MoreIterators
+              .toList(node.fields())
+              .stream()
+              .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
+          }.stream()
           .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
             JsonPaths.mapJsonSchemaPathToJsonPath(
               jsonSchemaPath,
             )
-          }
-          .collect(Collectors.toSet())
+          }.collect(Collectors.toSet())
       var copy = Jsons.clone(json)
       for (path in pathsWithSecrets) {
         copy = JsonPaths.replaceAtString(copy, path, AirbyteSecretConstants.SECRETS_MASK)
@@ -61,9 +63,8 @@ class JsonSecretsProcessor(private val copySecrets: Boolean = false) {
       return copy
     }
 
-    fun isSecret(obj: JsonNode): Boolean {
-      return obj.isObject && obj.has(AirbyteSecretConstants.AIRBYTE_SECRET_FIELD) && obj[AirbyteSecretConstants.AIRBYTE_SECRET_FIELD].asBoolean()
-    }
+    fun isSecret(obj: JsonNode): Boolean =
+      obj.isObject && obj.has(AirbyteSecretConstants.AIRBYTE_SECRET_FIELD) && obj[AirbyteSecretConstants.AIRBYTE_SECRET_FIELD].asBoolean()
 
     private fun findJsonCombinationNode(node: JsonNode): Optional<String> {
       for (combinationNode in listOf("allOf", "anyOf", "oneOf")) {
@@ -75,15 +76,14 @@ class JsonSecretsProcessor(private val copySecrets: Boolean = false) {
     }
 
     @VisibleForTesting
-    fun isValidJsonSchema(schema: JsonNode): Boolean {
-      return schema.isObject &&
+    fun isValidJsonSchema(schema: JsonNode): Boolean =
+      schema.isObject &&
         (
           schema.has(PROPERTIES_FIELD) &&
             schema[PROPERTIES_FIELD].isObject ||
             schema.has(ONE_OF_FIELD) &&
             schema[ONE_OF_FIELD].isArray
         )
-    }
   }
 
   /**

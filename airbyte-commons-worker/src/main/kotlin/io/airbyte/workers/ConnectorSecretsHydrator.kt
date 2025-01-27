@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -22,14 +26,13 @@ class ConnectorSecretsHydrator(
   fun hydrateConfig(
     jsonConfig: JsonNode,
     organizationId: UUID?,
-  ): JsonNode? {
-    return if (useRuntimeSecretPersistence) {
+  ): JsonNode? =
+    if (useRuntimeSecretPersistence) {
       hydrateFromRuntimePersistence(jsonConfig, organizationId!!) // useRuntimeHydration null checks org id
     } else {
       // Hydrates secrets from Airbyte's secret manager.
       secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(jsonConfig)
     }
-  }
 
   /**
    *  Hydrates secrets from customer's configured secret manager.

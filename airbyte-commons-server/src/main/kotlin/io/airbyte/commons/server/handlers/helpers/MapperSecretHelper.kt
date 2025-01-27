@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -66,13 +70,9 @@ class MapperSecretHelper(
     deploymentMode,
   )
 
-  private fun getMapper(name: String): Mapper<MapperConfig> {
-    return mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
-  }
+  private fun getMapper(name: String): Mapper<MapperConfig> = mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
 
-  private fun specHasSecrets(spec: JsonNode): Boolean {
-    return SecretsHelpers.getSortedSecretPaths(spec).isNotEmpty()
-  }
+  private fun specHasSecrets(spec: JsonNode): Boolean = SecretsHelpers.getSortedSecretPaths(spec).isNotEmpty()
 
   internal fun shouldRequireRuntimePersistence(
     mapperConfig: MapperConfig,
@@ -116,9 +116,7 @@ class MapperSecretHelper(
     mapperConfig: MapperConfig,
     workspaceId: UUID,
     organizationId: UUID,
-  ): MapperConfig {
-    return handleMapperConfigSecrets(mapperConfig, existingMapperConfig = null, workspaceId, organizationId)
-  }
+  ): MapperConfig = handleMapperConfigSecrets(mapperConfig, existingMapperConfig = null, workspaceId, organizationId)
 
   private fun handleMapperConfigSecrets(
     mapperConfig: MapperConfig,
@@ -247,26 +245,24 @@ class MapperSecretHelper(
     return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, maskedConfig, mapperConfig.id()))
   }
 
-  private fun maskMapperSecretsForStream(stream: ConfiguredAirbyteStream): ConfiguredAirbyteStream {
-    return stream.copy(
+  private fun maskMapperSecretsForStream(stream: ConfiguredAirbyteStream): ConfiguredAirbyteStream =
+    stream.copy(
       mappers =
         stream.mappers.map {
           maskMapperConfigSecrets(it)
         },
     )
-  }
 
   /**
    * Given a catalog with mapper configurations, mask the secrets in the configurations.
    */
-  fun maskMapperSecrets(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
-    return catalog.copy(
+  fun maskMapperSecrets(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog =
+    catalog.copy(
       streams =
         catalog.streams.map {
           maskMapperSecretsForStream(it)
         },
     )
-  }
 
   private fun tryHydrateConfigJson(
     persistedConfigJson: JsonNode?,

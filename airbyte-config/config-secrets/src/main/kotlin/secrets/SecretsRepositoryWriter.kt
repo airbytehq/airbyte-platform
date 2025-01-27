@@ -129,7 +129,8 @@ open class SecretsRepositoryWriter(
     val updatedSplitConfig: SplitSecretConfig =
       SecretsHelpers.splitAndUpdateConfig(workspaceId, oldPartialConfig, fullConfig, spec, secretPersistence)
 
-    updatedSplitConfig.getCoordinateToPayload()
+    updatedSplitConfig
+      .getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
         metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)

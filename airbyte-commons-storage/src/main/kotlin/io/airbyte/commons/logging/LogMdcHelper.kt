@@ -22,15 +22,11 @@ const val DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY = "audit_logging_path"
  */
 @Singleton
 class LogMdcHelper {
-  fun getJobLogPathMdcKey(): String {
-    return DEFAULT_JOB_LOG_PATH_MDC_KEY
-  }
+  fun getJobLogPathMdcKey(): String = DEFAULT_JOB_LOG_PATH_MDC_KEY
 
   fun setJobMdc(path: Path?) {
     path?.let { MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, fullLogPath(path)) } ?: MDC.remove(DEFAULT_JOB_LOG_PATH_MDC_KEY)
   }
 
-  fun fullLogPath(path: Path): String {
-    return path.resolve(DEFAULT_LOG_FILENAME).toString()
-  }
+  fun fullLogPath(path: Path): String = path.resolve(DEFAULT_LOG_FILENAME).toString()
 }

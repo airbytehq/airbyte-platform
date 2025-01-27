@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.containerOrchestrator.observability
 
 import io.airbyte.featureflag.Connection
@@ -60,7 +64,7 @@ class StorageUsageReporter(
 
     // conditionally record staging usage as separate metric
     stagingDir?.let {
-      val stagingMbUsed = measureDirMbViaProc(stagingDir)
+      val stagingMbUsed = measureDirMbViaProc(it)
       stagingMbUsed?.let {
         logger.debug { "Disk used by staging: $stagingMbUsed MB" }
 

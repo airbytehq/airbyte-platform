@@ -86,17 +86,11 @@ data class ContainerIOHandle(
     }
   }
 
-  fun getErrInputStream(): InputStream {
-    return errInputStream
-  }
+  fun getErrInputStream(): InputStream = errInputStream
 
-  fun getInputStream(): InputStream {
-    return inputStream
-  }
+  fun getInputStream(): InputStream = inputStream
 
-  fun getOutputStream(): OutputStream {
-    return outputStream
-  }
+  fun getOutputStream(): OutputStream = outputStream
 
   fun exitCodeExists(): Boolean = exitValueFile.exists()
 

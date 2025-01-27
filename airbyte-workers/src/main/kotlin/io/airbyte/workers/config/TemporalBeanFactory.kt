@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.config
 
 import io.micronaut.context.annotation.Factory
@@ -17,7 +18,8 @@ class TemporalBeanFactory {
   @Singleton
   fun workerFactory(workflowClient: WorkflowClient): WorkerFactory {
     val workerFactoryOptions =
-      WorkerFactoryOptions.newBuilder()
+      WorkerFactoryOptions
+        .newBuilder()
         .build()
     return WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
   }

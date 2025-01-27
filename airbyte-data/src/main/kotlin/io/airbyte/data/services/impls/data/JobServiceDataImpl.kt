@@ -65,9 +65,7 @@ class JobServiceDataImpl(
     scope: String,
     jobId: Long,
     status: JobStatus,
-  ): Job? {
-    return jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
-  }
+  ): Job? = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
 
   private fun buildPageable(
     limit: Int,

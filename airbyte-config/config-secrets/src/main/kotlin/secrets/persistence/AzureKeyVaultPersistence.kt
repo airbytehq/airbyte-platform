@@ -23,12 +23,15 @@ import java.time.Duration
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^azure_key_vault$")
 @Named("secretPersistence")
-class AzureKeyVaultPersistence(private val secretClient: AzureKeyVaultClient) : SecretPersistence {
+class AzureKeyVaultPersistence(
+  private val secretClient: AzureKeyVaultClient,
+) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     val key = coordinate.fullCoordinate.replace("_", "-")
-    return secretClient.client.getSecret(
-      key,
-    ).value
+    return secretClient.client
+      .getSecret(
+        key,
+      ).value
   }
 
   override fun write(
@@ -99,7 +102,6 @@ class AzureKeyVaultClient(
           .clientId(clientId)
           .tenantId(tenantId)
           .build(),
-      )
-      .buildClient()
+      ).buildClient()
   }
 }

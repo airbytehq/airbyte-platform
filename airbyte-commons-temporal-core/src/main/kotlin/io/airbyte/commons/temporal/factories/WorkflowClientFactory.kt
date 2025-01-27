@@ -17,22 +17,22 @@ class WorkflowClientFactory {
     workflowServiceStubs: WorkflowServiceStubs,
     namespace: String,
     dataConverter: DataConverter,
-  ): WorkflowClient {
-    return WorkflowClient.newInstance(
+  ): WorkflowClient =
+    WorkflowClient.newInstance(
       workflowServiceStubs,
-      WorkflowClientOptions.newBuilder()
+      WorkflowClientOptions
+        .newBuilder()
         .setDataConverter(dataConverter)
-        .setNamespace(namespace).build(),
+        .setNamespace(namespace)
+        .build(),
     )
-  }
 
   fun createWorkflowClient(
     workflowServiceStubs: WorkflowServiceStubs,
     options: WorkflowClientOptions,
-  ): WorkflowClient {
-    return WorkflowClient.newInstance(
+  ): WorkflowClient =
+    WorkflowClient.newInstance(
       workflowServiceStubs,
       options,
     )
-  }
 }

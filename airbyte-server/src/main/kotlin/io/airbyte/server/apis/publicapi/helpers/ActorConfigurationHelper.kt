@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -66,8 +66,8 @@ fun removeConfigurationNode(
   }
 }
 
-internal fun getConfiguration(actor: Any): JsonNode? {
-  return when (actor) {
+internal fun getConfiguration(actor: Any): JsonNode? =
+  when (actor) {
     is DestinationCreateRequest -> actor.configuration
     is DestinationPatchRequest -> actor.configuration
     is DestinationPutRequest -> actor.configuration
@@ -76,4 +76,3 @@ internal fun getConfiguration(actor: Any): JsonNode? {
     is SourcePutRequest -> actor.configuration
     else -> null
   }
-}

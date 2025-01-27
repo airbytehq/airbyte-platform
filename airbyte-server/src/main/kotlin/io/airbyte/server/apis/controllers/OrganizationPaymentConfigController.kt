@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationPaymentConfigApi

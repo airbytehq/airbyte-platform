@@ -21,11 +21,10 @@ class MetricAirbytePrefixMeterFilter : MeterFilter {
     const val PREFIX = "airbyte"
   }
 
-  override fun map(id: Meter.Id): Meter.Id {
-    return if (!id.name.startsWith("$PREFIX\\.")) {
+  override fun map(id: Meter.Id): Meter.Id =
+    if (!id.name.startsWith("$PREFIX\\.")) {
       id.withName("$PREFIX.${id.name}")
     } else {
       id
     }
-  }
 }

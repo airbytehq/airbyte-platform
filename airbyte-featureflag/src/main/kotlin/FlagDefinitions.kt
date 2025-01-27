@@ -2,10 +2,6 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-/**
- * Feature-Flag definitions are defined in this file.
- */
-
 package io.airbyte.featureflag
 
 /**

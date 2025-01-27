@@ -4,7 +4,9 @@
 
 package io.airbyte.connector.rollout.client
 
-enum class RolloutCommand(val command: String) {
+enum class RolloutCommand(
+  val command: String,
+) {
   START("start"),
   FIND("find"),
   GET("get"),
@@ -15,9 +17,8 @@ enum class RolloutCommand(val command: String) {
   ;
 
   companion object {
-    fun fromString(command: String): RolloutCommand {
-      return entries.find { it.command.equals(command, ignoreCase = true) }
+    fun fromString(command: String): RolloutCommand =
+      entries.find { it.command.equals(command, ignoreCase = true) }
         ?: throw IllegalArgumentException("Unknown command: $command")
-    }
   }
 }

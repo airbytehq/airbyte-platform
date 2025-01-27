@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.AllowSpotInstances
@@ -63,8 +67,8 @@ data class NodeSelectionFactory(
     return Multi(context)
   }
 
-  private fun buildSpotInstanceAffinity(): Affinity {
-    return AffinityBuilder()
+  private fun buildSpotInstanceAffinity(): Affinity =
+    AffinityBuilder()
       .withNewNodeAffinity()
       .withPreferredDuringSchedulingIgnoredDuringExecution(
         PreferredSchedulingTermBuilder()
@@ -75,12 +79,9 @@ data class NodeSelectionFactory(
               .withValues(spotToleration.value)
               .withOperator("In")
               .build(),
-          )
-          .endPreference()
+          ).endPreference()
           .withWeight(100)
           .build(),
-      )
-      .endNodeAffinity()
+      ).endNodeAffinity()
       .build()
-  }
 }

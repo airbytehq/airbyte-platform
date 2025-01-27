@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.pod
 
 import io.airbyte.workers.pod.Metadata.CHECK_JOB
@@ -245,8 +249,8 @@ class PodLabelerTest {
     const val ORCHESTRATOR_IMAGE_NAME: String = "an image"
 
     @JvmStatic
-    private fun replInputWorkloadIdMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun replInputWorkloadIdMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(
           UUID.randomUUID().toString(),
           UUID.randomUUID().toString(),
@@ -272,11 +276,10 @@ class PodLabelerTest {
           UUID.randomUUID().toString(),
         ),
       )
-    }
 
     @JvmStatic
-    private fun randomStringMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun randomStringMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of("random string id 1"),
         Arguments.of("RANdoM strIng Id 2"),
         Arguments.of("literally anything"),
@@ -284,6 +287,5 @@ class PodLabelerTest {
         Arguments.of("false"),
         Arguments.of("{}"),
       )
-    }
   }
 }

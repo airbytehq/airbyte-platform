@@ -39,14 +39,13 @@ class ApplicationBeanFactory {
 
   @Singleton
   @Named("kubeHttpErrorRetryPredicate")
-  fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean {
-    return { e: Throwable ->
+  fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean =
+    { e: Throwable ->
       e is KubernetesClientTimeoutException ||
         e.cause is SocketTimeoutException ||
         e.cause?.cause is StreamResetException ||
         (e.cause is IOException && e.cause?.message == "timeout")
     }
-  }
 
   @Singleton
   @Named("kubernetesClientRetryPolicy")
@@ -58,7 +57,8 @@ class ApplicationBeanFactory {
   ): RetryPolicy<Any> {
     val metricTags = arrayOf("max_retries", maxRetries.toString())
 
-    return RetryPolicy.builder<Any>()
+    return RetryPolicy
+      .builder<Any>()
       .handleIf(predicate)
       .onRetry { l ->
         meterRegistry
@@ -74,32 +74,28 @@ class ApplicationBeanFactory {
               l.lastException.javaClass.name,
             ),
           )?.increment()
-      }
-      .onAbort { l ->
+      }.onAbort { l ->
         meterRegistry
           ?.counter(
             "kube_api_client.abort",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
           )?.increment()
-      }
-      .onFailedAttempt { l ->
+      }.onFailedAttempt { l ->
         meterRegistry
           ?.counter(
             "kube_api_client.failed",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
           )?.increment()
-      }
-      .onSuccess { l ->
+      }.onSuccess { l ->
         meterRegistry
           ?.counter(
             "kube_api_client.success",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
           )?.increment()
-      }
-      .withDelay(Duration.ofSeconds(retryDelaySeconds))
+      }.withDelay(Duration.ofSeconds(retryDelaySeconds))
       .withMaxRetries(maxRetries)
       .build()
   }
@@ -109,18 +105,15 @@ class ApplicationBeanFactory {
   fun staticFlagContext(
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
     @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
-  ): List<Context> {
-    return if (dataPlaneName.isNullOrBlank()) {
+  ): List<Context> =
+    if (dataPlaneName.isNullOrBlank()) {
       listOf(Geography(geography))
     } else {
       listOf(Geography(geography), PlaneName(dataPlaneName))
     }
-  }
 
   @Singleton
-  fun connectorApmSupportHelper(): ConnectorApmSupportHelper {
-    return ConnectorApmSupportHelper()
-  }
+  fun connectorApmSupportHelper(): ConnectorApmSupportHelper = ConnectorApmSupportHelper()
 
   @Singleton
   @Named("claimedProcessorBackoffDuration")

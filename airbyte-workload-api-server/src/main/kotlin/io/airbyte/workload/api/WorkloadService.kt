@@ -90,9 +90,8 @@ open class WorkloadService(
   }
 }
 
-fun WorkloadPriority.toApiRequest(): io.airbyte.api.client.model.generated.WorkloadPriority {
-  return when (this) {
+fun WorkloadPriority.toApiRequest(): io.airbyte.api.client.model.generated.WorkloadPriority =
+  when (this) {
     WorkloadPriority.HIGH -> io.airbyte.api.client.model.generated.WorkloadPriority.HIGH
     WorkloadPriority.DEFAULT -> io.airbyte.api.client.model.generated.WorkloadPriority.DEFAULT
   }
-}

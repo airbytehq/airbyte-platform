@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.exceptions
@@ -18,14 +19,11 @@ import jakarta.inject.Singleton
 @Produces
 @Singleton
 @Requires(classes = [ContributionException::class])
-class ContributionExceptionHandler :
-  ExceptionHandler<ContributionException?, HttpResponse<*>?> {
+class ContributionExceptionHandler : ExceptionHandler<ContributionException?, HttpResponse<*>?> {
   val helper: ExceptionHelper = ExceptionHelper()
 
   override fun handle(
     request: HttpRequest<*>?,
     exception: ContributionException?,
-  ): HttpResponse<*>? {
-    return helper.handle(request, exception, exception?.httpStatus)
-  }
+  ): HttpResponse<*>? = helper.handle(request, exception, exception?.httpStatus)
 }

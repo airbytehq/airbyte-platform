@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.data.services.impls.jooq
 
 import com.google.common.io.Resources
@@ -46,9 +47,8 @@ internal class DbConverterTest {
     // Until we defined our internal model (<=0.58), this was how we were loading catalog strings from
     // our persistence layer.
     // This is to ensure we remain backward compatible so it should remain as is until we drop support
-    private fun parseConfiguredAirbyteCatalogAsProtocol(catalogString: String): ProtocolConfiguredAirbyteCatalog {
-      return Jsons.deserialize(catalogString, ProtocolConfiguredAirbyteCatalog::class.java)
-    }
+    private fun parseConfiguredAirbyteCatalogAsProtocol(catalogString: String): ProtocolConfiguredAirbyteCatalog =
+      Jsons.deserialize(catalogString, ProtocolConfiguredAirbyteCatalog::class.java)
 
     private fun parseConfiguredAirbyteCatalog(catalogString: String): InternalConfiguredAirbyteCatalog {
       // TODO this should be using the proper SerDe stack once migrated to support our internal models

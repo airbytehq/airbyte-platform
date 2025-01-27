@@ -95,20 +95,23 @@ open class OidcTokenValidator(
   ): Authentication? {
     log.debug("Validating token: $token\nwith endpoint ${endpointConfig.userInfoEndpoint}")
 
-    client.newCall(
-      Request.Builder()
-        .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $token")
-        .url(endpointConfig.userInfoEndpoint)
-        .get()
-        .build(),
-    ).execute().use { response ->
-      if (response.isSuccessful && response.body != null) {
-        return convertUserInfoResponseToAuthentication(response = response.body!!.string(), request = request)
+    client
+      .newCall(
+        Request
+          .Builder()
+          .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+          .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $token")
+          .url(endpointConfig.userInfoEndpoint)
+          .get()
+          .build(),
+      ).execute()
+      .use { response ->
+        if (response.isSuccessful && response.body != null) {
+          return convertUserInfoResponseToAuthentication(response = response.body!!.string(), request = request)
+        }
+        log.warn("The response from the userinfo endpoint was not valid. The status code was: ${response.code} with body: \n${response.body}")
+        return null
       }
-      log.warn("The response from the userinfo endpoint was not valid. The status code was: ${response.code} with body: \n${response.body}")
-      return null
-    }
   }
 
   /**
@@ -139,8 +142,8 @@ open class OidcTokenValidator(
   /**
    * Check that the UserInfo map contains all the key/value pairs we care about.
    */
-  private fun userInfoMapIsValid(userInfoMap: Map<String, String>): Boolean {
-    return if (userInfoMap[fieldMappingConfig.name].isNullOrBlank()) {
+  private fun userInfoMapIsValid(userInfoMap: Map<String, String>): Boolean =
+    if (userInfoMap[fieldMappingConfig.name].isNullOrBlank()) {
       log.warn("The token did not contain a claim for key ${fieldMappingConfig.name}")
       false
     } else if (userInfoMap[fieldMappingConfig.email].isNullOrBlank()) {
@@ -152,7 +155,6 @@ open class OidcTokenValidator(
     } else {
       true
     }
-  }
 
   /**
    * Helper method for reporting success/failure metrics.

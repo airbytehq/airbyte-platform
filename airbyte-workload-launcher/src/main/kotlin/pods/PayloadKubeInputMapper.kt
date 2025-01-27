@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
@@ -242,13 +246,12 @@ class PayloadKubeInputMapper(
     usesCustomConnector: Boolean,
     workerConfigs: WorkerConfigs,
     connectionId: UUID? = null,
-  ): Map<String, String> {
-    return if (usesCustomConnector) {
+  ): Map<String, String> =
+    if (usesCustomConnector) {
       workerConfigs.workerIsolatedKubeNodeSelectors.orElse(workerConfigs.getworkerKubeNodeSelectors())
     } else {
       getNodeSelectorsOverride(connectionId) ?: workerConfigs.getworkerKubeNodeSelectors()
     }
-  }
 
   private fun getNodeSelectorsOverride(connectionId: UUID?): Map<String, String>? {
     if (contexts.isEmpty() && connectionId == null) {

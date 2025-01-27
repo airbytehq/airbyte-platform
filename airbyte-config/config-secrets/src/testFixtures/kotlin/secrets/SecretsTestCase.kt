@@ -66,19 +66,20 @@ interface SecretsTestCase {
   fun getNodeResource(
     testCase: String,
     fileName: String,
-  ): JsonNode {
-    return Jsons.deserialize(MoreResources.readResource("$testCase/$fileName"))
-  }
+  ): JsonNode = Jsons.deserialize(MoreResources.readResource("$testCase/$fileName"))
 
   @get:Throws(IOException::class)
   val expectedSecretsPaths: List<String>
     get() {
-      return Arrays.stream(
-        MoreResources.readResource("$name/expectedPaths")
-          .trim { it <= ' ' }
-          .split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray(),
-      )
-        .sorted()
+      return Arrays
+        .stream(
+          MoreResources
+            .readResource("$name/expectedPaths")
+            .trim { it <= ' ' }
+            .split(";".toRegex())
+            .dropLastWhile { it.isEmpty() }
+            .toTypedArray(),
+        ).sorted()
         .toList()
     }
 
@@ -107,8 +108,6 @@ interface SecretsTestCase {
       workspaceId: UUID = WORKSPACE_ID,
       secret: String = SECRET,
       uuidIndex: Int,
-    ): String {
-      return prefix + workspaceId + secret + UUIDS[uuidIndex]
-    }
+    ): String = prefix + workspaceId + secret + UUIDS[uuidIndex]
   }
 }

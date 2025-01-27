@@ -19,7 +19,5 @@ class SplitSecretConfig(
   val partialConfig: JsonNode,
   private val coordinateToPayload: Map<SecretCoordinate, String>,
 ) {
-  fun getCoordinateToPayload(): Map<SecretCoordinate, String> {
-    return coordinateToPayload
-  }
+  fun getCoordinateToPayload(): Map<SecretCoordinate, String> = coordinateToPayload
 }

@@ -25,14 +25,16 @@ private val SOURCE_WITH_PARTIAL_CONFIG =
     .withSourceId(UUID1)
     .withConfiguration(PARTIAL_CONFIG)
 private val SOURCE_WITH_FULL_CONFIG =
-  Jsons.clone(SOURCE_WITH_PARTIAL_CONFIG)
+  Jsons
+    .clone(SOURCE_WITH_PARTIAL_CONFIG)
     .withConfiguration(FULL_CONFIG)
 private val DESTINATION_WITH_PARTIAL_CONFIG =
   DestinationConnection()
     .withDestinationId(UUID1)
     .withConfiguration(PARTIAL_CONFIG)
 private val DESTINATION_WITH_FULL_CONFIG =
-  Jsons.clone(DESTINATION_WITH_PARTIAL_CONFIG)
+  Jsons
+    .clone(DESTINATION_WITH_PARTIAL_CONFIG)
     .withConfiguration(FULL_CONFIG)
 
 class SecretsRepositoryReaderTest {

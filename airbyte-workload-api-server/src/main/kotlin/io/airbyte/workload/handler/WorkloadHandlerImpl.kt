@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -37,14 +41,12 @@ class WorkloadHandlerImpl(
       listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
   }
 
-  override fun getWorkload(workloadId: String): ApiWorkload {
-    return getDomainWorkload(workloadId).toApi()
-  }
+  override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
 
-  private fun getDomainWorkload(workloadId: String): DomainWorkload {
-    return workloadRepository.findById(workloadId)
+  private fun getDomainWorkload(workloadId: String): DomainWorkload =
+    workloadRepository
+      .findById(workloadId)
       .orElseThrow { NotFoundException("Could not find workload with id: $workloadId") }
-  }
 
   override fun getWorkloads(
     dataplaneId: List<String>?,
@@ -61,9 +63,7 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
-  override fun workloadAlreadyExists(workloadId: String): Boolean {
-    return workloadRepository.existsById(workloadId)
-  }
+  override fun workloadAlreadyExists(workloadId: String): Boolean = workloadRepository.existsById(workloadId)
 
   override fun createWorkload(
     workloadId: String,

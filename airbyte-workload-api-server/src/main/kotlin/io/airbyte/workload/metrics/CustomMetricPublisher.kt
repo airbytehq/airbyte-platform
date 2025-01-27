@@ -33,8 +33,7 @@ class CustomMetricPublisher(
   }
 
   companion object {
-    fun toTags(vararg attributes: MetricAttribute): List<Tag> {
-      return Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
-    }
+    fun toTags(vararg attributes: MetricAttribute): List<Tag> =
+      Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
   }
 }

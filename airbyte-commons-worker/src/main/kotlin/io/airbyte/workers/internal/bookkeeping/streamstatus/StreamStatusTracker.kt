@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import com.google.common.annotations.VisibleForTesting
@@ -161,7 +165,8 @@ class StreamStatusTracker(
     if (store.isGlobalComplete(id)) {
       logger.info { "Destination complete for GLOBAL" }
 
-      store.entries()
+      store
+        .entries()
         .filter { it.value.sourceComplete }
         .map { it.key }
         .forEach { sendUpdate(it, ApiEnum.COMPLETE, null) }

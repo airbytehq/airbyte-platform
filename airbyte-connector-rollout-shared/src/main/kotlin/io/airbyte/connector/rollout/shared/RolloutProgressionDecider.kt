@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared
 
 import com.google.common.annotations.VisibleForTesting
@@ -88,9 +92,7 @@ class RolloutProgressionDecider {
     nActorsPinned: Int,
     nActorsEligibleOrAlreadyPinned: Int,
     finalPercentageToPin: Int,
-  ): Boolean {
-    return (nActorsPinned.toFloat() / nActorsEligibleOrAlreadyPinned) * 100 >= finalPercentageToPin
-  }
+  ): Boolean = (nActorsPinned.toFloat() / nActorsEligibleOrAlreadyPinned) * 100 >= finalPercentageToPin
 
   @VisibleForTesting
   internal fun hasEnoughFinishedSyncs(
@@ -99,9 +101,10 @@ class RolloutProgressionDecider {
     percentageRequired: Int,
   ): Boolean {
     val actorsWithCompletedSyncs =
-      actorSyncs.filter { (_, syncInfo) ->
-        syncInfo.getNumSucceeded() >= 1 || syncInfo.getNumFailed() >= 1
-      }.count()
+      actorSyncs
+        .filter { (_, syncInfo) ->
+          syncInfo.getNumSucceeded() >= 1 || syncInfo.getNumFailed() >= 1
+        }.count()
     val percentageActorsWithCompletedSyncs = actorsWithCompletedSyncs / nActorsPinned * 100
     logger.info {
       "RolloutProgressionDecider.hasEnoughFinishedSyncs " +

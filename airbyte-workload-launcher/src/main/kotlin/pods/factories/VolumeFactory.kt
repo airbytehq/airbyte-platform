@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
@@ -60,8 +64,7 @@ data class VolumeFactory(
             .withSecretName(secretName)
             .withDefaultMode(420)
             .build(),
-        )
-        .build()
+        ).build()
 
     val mount =
       VolumeMountBuilder()
@@ -88,8 +91,7 @@ data class VolumeFactory(
             .withSecretName(dataPlaneCredsSecretName)
             .withDefaultMode(420)
             .build(),
-        )
-        .build()
+        ).build()
 
     val mount =
       VolumeMountBuilder()

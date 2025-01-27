@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.queue
 
 import io.airbyte.commons.temporal.WorkflowClientWrapped
@@ -6,7 +10,9 @@ import io.temporal.client.WorkflowOptions
 /**
  * Generic message producer for a temporal based queue.
  */
-class TemporalMessageProducer<T : Any>(private val workflowClientWrapped: WorkflowClientWrapped) {
+class TemporalMessageProducer<T : Any>(
+  private val workflowClientWrapped: WorkflowClientWrapped,
+) {
   /**
    * Publish a message to the subject.
    */
@@ -27,7 +33,8 @@ class TemporalMessageProducer<T : Any>(private val workflowClientWrapped: Workfl
     messageId: String,
   ) {
     val workflowOptions =
-      WorkflowOptions.newBuilder()
+      WorkflowOptions
+        .newBuilder()
         .setTaskQueue(subject)
         .setWorkflowId(messageId)
         .build()

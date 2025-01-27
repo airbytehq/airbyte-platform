@@ -43,7 +43,8 @@ class LocalContainerAirbyteDestination(
     const val CALLER = "airbyte-destination"
 
     val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope.Builder()
+      MdcScope
+        .Builder()
         .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
   }
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.workflows
 
 import io.airbyte.commons.temporal.TemporalConstants
@@ -48,7 +52,8 @@ class ConnectorCommandWorkflowTest {
     @BeforeAll
     fun setup() {
       val shortActivityOptions =
-        ActivityOptions.newBuilder()
+        ActivityOptions
+          .newBuilder()
           .setStartToCloseTimeout(10.seconds.toJavaDuration())
           .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
           .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())

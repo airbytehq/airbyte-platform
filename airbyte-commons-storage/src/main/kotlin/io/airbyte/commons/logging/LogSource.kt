@@ -22,14 +22,11 @@ enum class LogSource(
   SOURCE(displayName = SOURCE_DISPLAY_NAME),
   ;
 
-  fun toMdc(): Map<String, String> {
-    return mapOf(LOG_SOURCE_MDC_KEY to displayName)
-  }
+  fun toMdc(): Map<String, String> = mapOf(LOG_SOURCE_MDC_KEY to displayName)
 
   companion object {
     @JvmStatic
-    fun find(displayName: String): LogSource? {
-      return entries.find { it.displayName.lowercase(Locale.getDefault()) == displayName.lowercase(Locale.getDefault()) }
-    }
+    fun find(displayName: String): LogSource? =
+      entries.find { it.displayName.lowercase(Locale.getDefault()) == displayName.lowercase(Locale.getDefault()) }
   }
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -11,24 +15,17 @@ class ManuallyStartedEvent(
   private val jobType: String,
   private val streams: List<StreamDescriptor>? = null,
 ) : ConnectionEvent {
-  fun getJobId(): Long {
-    return jobId
-  }
+  fun getJobId(): Long = jobId
 
-  fun getStartTimeEpochSeconds(): Long {
-    return startTimeEpochSeconds
-  }
+  fun getStartTimeEpochSeconds(): Long = startTimeEpochSeconds
 
-  fun getStreams(): List<StreamDescriptor>? {
-    return streams
-  }
+  fun getStreams(): List<StreamDescriptor>? = streams
 
-  override fun getEventType(): ConnectionEvent.Type {
-    return when (jobType) {
+  override fun getEventType(): ConnectionEvent.Type =
+    when (jobType) {
       ConfigType.SYNC.name -> ConnectionEvent.Type.SYNC_STARTED
       ConfigType.REFRESH.name -> ConnectionEvent.Type.REFRESH_STARTED
       ConfigType.CLEAR.name, ConfigType.RESET_CONNECTION.name -> ConnectionEvent.Type.CLEAR_STARTED
       else -> ConnectionEvent.Type.UNKNOWN
     }
-  }
 }

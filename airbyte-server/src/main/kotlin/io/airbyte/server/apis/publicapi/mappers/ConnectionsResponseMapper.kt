@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -37,7 +37,8 @@ object ConnectionsResponseMapper {
     apiHost: String,
   ): ConnectionsResponse {
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
     if (workspaceIds.isNotEmpty()) {
@@ -47,8 +48,7 @@ object ConnectionsResponseMapper {
       next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
       data =
-        connectionReadList.connections.map {
-            connectionRead: ConnectionRead ->
+        connectionReadList.connections.map { connectionRead: ConnectionRead ->
           ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId)
         },
     )

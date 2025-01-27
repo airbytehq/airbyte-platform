@@ -16,25 +16,17 @@ import jakarta.inject.Singleton
 @Requires(missingBeans = [SecretPersistence::class])
 @Singleton
 class NoOpSecretsHydrator : SecretsHydrator {
-  override fun hydrateFromDefaultSecretPersistence(partialConfig: JsonNode): JsonNode {
-    return partialConfig
-  }
+  override fun hydrateFromDefaultSecretPersistence(partialConfig: JsonNode): JsonNode = partialConfig
 
   override fun hydrateFromRuntimeSecretPersistence(
     partialConfig: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode {
-    return partialConfig
-  }
+  ): JsonNode = partialConfig
 
-  override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode {
-    return secretCoordinate
-  }
+  override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode = secretCoordinate
 
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode {
-    return secretCoordinate
-  }
+  ): JsonNode = secretCoordinate
 }

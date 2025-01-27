@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.client
 
 import io.airbyte.commons.temporal.factories.WorkflowClientFactory
@@ -12,9 +16,7 @@ import jakarta.inject.Singleton
 class WorkflowClientWrapper(
   private val workflowClient: WorkflowClient,
 ) {
-  fun getClient(): WorkflowClient {
-    return workflowClient
-  }
+  fun getClient(): WorkflowClient = workflowClient
 }
 
 @Factory

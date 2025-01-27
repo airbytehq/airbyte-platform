@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -11,9 +15,7 @@ import jakarta.inject.Singleton
 class CreatePermissionAuditProvider(
   private val helper: AuditLoggingHelper,
 ) : AuditProvider {
-  override fun generateSummaryFromRequest(request: Any?): String {
-    return AuditProvider.EMPTY_SUMMARY
-  }
+  override fun generateSummaryFromRequest(request: Any?): String = AuditProvider.EMPTY_SUMMARY
 
   override fun generateSummaryFromResult(result: Any?): String {
     if (result is PermissionRead) {

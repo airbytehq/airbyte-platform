@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -83,8 +87,7 @@ class CheckCommand(
             StandardCheckConnectionOutput()
               .withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage(failureReason.externalMessage),
-          )
-          .withFailureReason(failureReason)
+          ).withFailureReason(failureReason)
       }
 
     metricClient.count(
