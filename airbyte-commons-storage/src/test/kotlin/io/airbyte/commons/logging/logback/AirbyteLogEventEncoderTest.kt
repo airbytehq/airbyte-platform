@@ -22,6 +22,7 @@ internal class AirbyteLogEventEncoderTest {
   @BeforeEach
   fun setUp() {
     encoder = AirbyteLogEventEncoder()
+    encoder.start()
   }
 
   @Test
