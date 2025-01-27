@@ -4,10 +4,11 @@ import classNames from "classnames";
 import { useDeferredValue, useState, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { TagBadge } from "components/ui/TagBadge";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -57,9 +58,7 @@ const CreateTagControl: React.FC<{
         <Text>
           <FormattedMessage id="connection.tags.create" />
         </Text>
-        <div className={styles.selectConnectionTags__tagBadge} style={{ backgroundColor: color }}>
-          <Text size="sm">{tagName}</Text>
-        </div>
+        <TagBadge color={color} text={tagName} />
       </FlexContainer>
     </button>
   );
@@ -89,10 +88,24 @@ const TagRow: React.FC<TagRowProps> = ({ disabled, handleTagChange, isSelected, 
     >
       <FlexContainer gap="sm" alignItems="center">
         <CheckBox disabled={disabled} id={`tag-checkbox-${tag.tagId}`} checked={isSelected} />
-        <div className={styles.selectConnectionTags__tagBadge} style={{ backgroundColor: tag.color }}>
-          <Text size="sm">{tag.name}</Text>
-        </div>
+        <TagBadge color={tag.color} text={tag.name} />
       </FlexContainer>
+    </button>
+  );
+};
+
+interface TriggerButtonProps {
+  icon: "plus" | "pencil";
+}
+
+/**
+ * TODO: refactor our main <Button> so we don't have to reimplement it here
+ * https://github.com/airbytehq/airbyte-internal-issues/issues/11481
+ */
+const TriggerButton: React.FC<TriggerButtonProps> = ({ icon }) => {
+  return (
+    <button className={styles.selectConnectionTags__trigger}>
+      <Icon size="xs" type={icon} />
     </button>
   );
 };
@@ -153,10 +166,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
         return (
           <>
             <PopoverButton ref={reference} as="span">
-              <Tooltip
-                placement="top"
-                control={<Button variant="secondary" icon={selectedTags.length === 0 ? "plus" : "pencil"} />}
-              >
+              <Tooltip placement="top" control={<TriggerButton icon={selectedTags.length === 0 ? "plus" : "pencil"} />}>
                 <FormattedMessage id={selectedTags.length === 0 ? "connection.tags.add" : "connection.tags.edit"} />
               </Tooltip>
             </PopoverButton>

@@ -1,0 +1,30 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.tagBadge {
+  height: variables.$tag-height;
+  display: flex;
+  align-items: center;
+  padding-inline: variables.$spacing-sm;
+  border-radius: variables.$border-radius-2xs;
+  cursor: default;
+  white-space: nowrap;
+
+  &--fallback {
+    background-color: colors.$grey-100;
+  }
+
+  // Note: intentionally using explicit colors here instead of CSS variables. Because the way our themes are set up, the
+  // base color palette is not available in the CSS variables, e.g. colors.$dark-blue-900 will be a very light blue in
+  // the dark theme. This doesn't work in the context of tags, where the tag color does not change with the theme.
+  &__text {
+    &--light {
+      color: white;
+    }
+
+    &--dark {
+      // dark-blue-900
+      color: hsl(241, 51%, 20%);
+    }
+  }
+}
