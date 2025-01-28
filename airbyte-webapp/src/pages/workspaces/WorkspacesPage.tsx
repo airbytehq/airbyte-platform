@@ -9,10 +9,8 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
-import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
 import { useListWorkspacesInfinite } from "core/api";
@@ -65,57 +63,51 @@ export const WorkspacesPage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "workspaces.title" }]} />
-      <Box px="lg" className={styles.brandingHeader}>
-        <FlexContainer justifyContent="space-between" alignItems="center">
-          <AirbyteLogo width={110} />
+      <div className={styles.content}>
+        <FlexContainer justifyContent="space-between">
+          <AirbyteLogo className={styles.workspacesPage__logo} />
           {logout && (
             <Button variant="clear" onClick={() => handleLogout()} isLoading={isLogoutLoading}>
               <FormattedMessage id="settings.accountSettings.logoutText" />
             </Button>
           )}
         </FlexContainer>
-      </Box>
-      <PageHeader
-        leftComponent={
-          <FlexContainer direction="column" alignItems="flex-start" justifyContent="flex-start">
-            <FlexContainer direction="row" gap="none">
-              <Heading as="h1" size="md">
-                <FormattedMessage id="workspaces.title" />
-              </Heading>
-              <InfoTooltip>
-                <Text inverseColor>
-                  <FormattedMessage id="workspaces.subtitle" />
-                </Text>
-              </InfoTooltip>
-            </FlexContainer>
-          </FlexContainer>
-        }
-      />
-      <Box py="2xl" className={styles.content}>
+        <FlexContainer justifyContent="center">
+          <Heading as="h1" size="lg">
+            <FormattedMessage id="workspaces.title" />
+          </Heading>
+        </FlexContainer>
         {showNoWorkspacesContent ? (
           <NoWorkspacePermissionsContent organizations={organizationsMemberOnly} />
         ) : (
           <>
+            <Box py="xl">
+              <Text align="center">
+                <FormattedMessage id="workspaces.subtitle" />
+              </Text>
+            </Box>
             <Box pb="xl">
               <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
             </Box>
             <Box pb="lg">
               <WorkspacesCreateControl />
             </Box>
-            <WorkspacesList
-              workspaces={workspaces}
-              isLoading={isLoading}
-              fetchNextPage={fetchNextPage}
-              hasNextPage={hasNextPage}
-            />
-            {isFetchingNextPage && (
-              <Box py="2xl">
-                <LoadingSpinner />
-              </Box>
-            )}
+            <Box pb="2xl">
+              <WorkspacesList
+                workspaces={workspaces}
+                isLoading={isLoading}
+                fetchNextPage={fetchNextPage}
+                hasNextPage={hasNextPage}
+              />
+              {isFetchingNextPage ? (
+                <Box py="2xl" className={styles.workspacesPage__loadingSpinner}>
+                  <LoadingSpinner />
+                </Box>
+              ) : null}
+            </Box>
           </>
         )}
-      </Box>
+      </div>
     </>
   );
 };
