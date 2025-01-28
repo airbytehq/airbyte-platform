@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.commons.json.Jsons
@@ -21,12 +22,14 @@ private val log = KotlinLogging.logger {}
 /**
  * Class representing a RuntimeSecretPersistence to be used for BYO secrets customers.
  */
-class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersistenceConfig) : SecretPersistence {
+class RuntimeSecretPersistence(
+  private val secretPersistenceConfig: SecretPersistenceConfig,
+) : SecretPersistence {
   private val awsAccessKey: String? = System.getenv(AWS_ASSUME_ROLE_ACCESS_KEY_ID)
   private val awsSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
 
-  private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence {
-    return when (secretPersistenceConfig.secretPersistenceType) {
+  private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence =
+    when (secretPersistenceConfig.secretPersistenceType) {
       SecretPersistenceConfig.SecretPersistenceType.TESTING -> {
         throw IllegalStateException("Testing secret persistence is not supported")
       }
@@ -60,7 +63,6 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
         "Unexpected value: " + secretPersistenceConfig.secretPersistenceType,
       )
     }
-  }
 
   override fun read(coordinate: SecretCoordinate): String {
     val secretPersistence = buildSecretPersistence(secretPersistenceConfig)
@@ -118,16 +120,17 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
   }
 }
 
-enum class AwsAuthType(val value: String) {
+enum class AwsAuthType(
+  val value: String,
+) {
   ACCESS_KEY("ACCESS_KEY"),
   IAM_ROLE("IAM_ROLE"),
   ;
 
-  fun fromString(value: String): AwsAuthType {
-    return when (value) {
+  fun fromString(value: String): AwsAuthType =
+    when (value) {
       ACCESS_KEY.value -> ACCESS_KEY
       IAM_ROLE.value -> IAM_ROLE
       else -> throw IllegalArgumentException("Invalid auth type: $value")
     }
-  }
 }

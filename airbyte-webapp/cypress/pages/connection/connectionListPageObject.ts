@@ -13,7 +13,7 @@ export const visit = () => {
   cy.wait("@listConnections", { timeout: 20000 });
 };
 
-export const getSchemaChangeIcon = (connection: WebBackendConnectionListItem, type: "breaking" | "non_breaking") =>
+export const getSchemaChangeIcon = (connection: WebBackendConnectionListItem, type: "error" | "warning") =>
   cy.get(`${schemaChangeCell(connection.connectionId)} ${changesStatusIcon(type)}`);
 
 export const getConnectionStateSwitch = (connection: WebBackendConnectionListItem) =>

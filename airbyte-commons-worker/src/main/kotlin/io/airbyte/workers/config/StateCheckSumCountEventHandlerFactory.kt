@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.config
 
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
@@ -6,7 +10,9 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class StateCheckSumCountEventHandlerFactory(private val applicationContext: ApplicationContext) {
+class StateCheckSumCountEventHandlerFactory(
+  private val applicationContext: ApplicationContext,
+) {
   fun get(
     connectionId: UUID,
     workspaceId: UUID,

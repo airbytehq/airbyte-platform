@@ -1,13 +1,20 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
+import io.airbyte.config.mapper.configs.TestConfig
+import io.airbyte.config.mapper.configs.TestEnums
+import io.airbyte.config.mapper.configs.TestMapperConfig
 import io.airbyte.mappers.mocks.FailingTestMapper
 import io.airbyte.mappers.mocks.TestMapper
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -47,7 +54,11 @@ class DestinationCatalogGeneratorTest {
 
     val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
-    assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.catalog.streams[0].stream.jsonSchema)
+    assertEquals(
+      catalog.streams[0].stream.jsonSchema,
+      catalogCopy.catalog.streams[0]
+        .stream.jsonSchema,
+    )
   }
 
   @Test
@@ -226,7 +237,7 @@ class DestinationCatalogGeneratorTest {
                 ]
               ]
             },
-            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "mappers": [{"name": "test-mapper", "config": {"field1": "random_value", "field2": "random_value", "enumField": "ONE"}}],
             "sync_mode": "incremental",
             "primary_key": [
               [
@@ -293,7 +304,7 @@ class DestinationCatalogGeneratorTest {
                 ]
               ]
             },
-            "mappers": [{"name": "test", "config": {"target": "*"}}],
+            "mappers": [{"name": "test-mapper", "config": {"field1": "random_value", "field2": "random_value", "enumField": "ONE"}}],
             "sync_mode": "incremental",
             "primary_key": [
               [
@@ -316,7 +327,7 @@ class DestinationCatalogGeneratorTest {
 
   @Test
   fun `test generateDestinationCatalogMissingMapper`() {
-    val mapperConfig = ConfiguredMapper("test", mapOf())
+    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.ONE, ""))
     val configuredUsersStream =
       ConfiguredAirbyteStream(
         stream =
@@ -343,14 +354,18 @@ class DestinationCatalogGeneratorTest {
 
     val result = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
-    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    assertTrue(
+      result.catalog.streams[0]
+        .mappers
+        .isEmpty(),
+    )
     val streamDescriptor = StreamDescriptor().withName("users")
-    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.MISSING_MAPPER), result.errors[streamDescriptor])
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.MISSING_MAPPER, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
 
   @Test
   fun `test generateDestinationCatalogFailedSchema`() {
-    val mapperConfig = ConfiguredMapper("test", mapOf())
+    val mapperConfig = TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("field1", TestEnums.ONE, "field2"))
     val configuredUsersStream =
       ConfiguredAirbyteStream(
         stream =
@@ -377,9 +392,13 @@ class DestinationCatalogGeneratorTest {
 
     val result = destinationCatalogGeneratorWithFailingMapper.generateDestinationCatalog(catalog)
 
-    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    assertTrue(
+      result.catalog.streams[0]
+        .mappers
+        .isEmpty(),
+    )
     val streamDescriptor = StreamDescriptor().withName("users")
-    assertEquals(mapOf(mapperConfig to DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG), result.errors[streamDescriptor])
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
 
   @Test
@@ -419,7 +438,11 @@ class DestinationCatalogGeneratorTest {
             Field(name = "field1_1", type = FieldType.STRING),
             Field(name = "field1_2", type = FieldType.DATE),
           ),
-        mappers = listOf(ConfiguredMapper("test", mapOf()), ConfiguredMapper("test", mapOf())),
+        mappers =
+          listOf(
+            TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.ONE, "")),
+            TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, "")),
+          ),
       )
 
     val resultFields = destinationCatalogGeneratorWithMapper.applyMapperToFields(configuredUsersStream).slimStream.fields
@@ -459,7 +482,7 @@ class DestinationCatalogGeneratorTest {
             Field(name = "field1_1", type = FieldType.STRING),
             Field(name = "field1_2", type = FieldType.DATE),
           ),
-        mappers = listOf(ConfiguredMapper("test", mapOf())),
+        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, ""))),
       )
 
     val configuredUsersStream2 =
@@ -484,7 +507,7 @@ class DestinationCatalogGeneratorTest {
           listOf(
             Field(name = "field2_1", type = FieldType.INTEGER),
           ),
-        mappers = listOf(ConfiguredMapper("test", mapOf())),
+        mappers = listOf(TestMapperConfig(TEST_MAPPER_NAME, null, null, TestConfig("", TestEnums.TWO, ""))),
       )
 
     val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream1, configuredUsersStream2))
@@ -504,7 +527,8 @@ class DestinationCatalogGeneratorTest {
           "additionalProperties" to true,
         ),
       ),
-      catalogCopy.catalog.streams[0].stream.jsonSchema,
+      catalogCopy.catalog.streams[0]
+        .stream.jsonSchema,
     )
     assertEquals(
       Jsons.jsonNode(
@@ -518,7 +542,8 @@ class DestinationCatalogGeneratorTest {
           "additionalProperties" to true,
         ),
       ),
-      catalogCopy.catalog.streams[1].stream.jsonSchema,
+      catalogCopy.catalog.streams[1]
+        .stream.jsonSchema,
     )
   }
 

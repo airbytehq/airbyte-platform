@@ -7,10 +7,10 @@ import { useCancelUserInvitation, useCurrentWorkspace } from "core/api";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
-import { UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
+import { UnifiedUserModel } from "./util";
 
 interface CancelInvitationMenuItemProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
 }
 
 export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> = ({ user }) => {

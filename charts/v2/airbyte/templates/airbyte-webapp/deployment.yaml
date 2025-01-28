@@ -1,0 +1,141 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-webapp
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.webapp.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.webapp.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.webapp.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.webapp.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.webapp.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.webapp.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.webapp.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.webapp.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webapp.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webapp.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.webapp.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.webapp.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: airbyte-webapp-container
+        image: {{ include "imageUrl" (list .Values.webapp.image $) }}
+        imagePullPolicy: "{{ .Values.webapp.image.pullPolicy }}"
+        env:
+
+        {{ include "airbyte.common.envs" . | nindent 8 }}
+        {{ include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 8 }}
+        {{ include "airbyte.tracking.envs" . | nindent 8 }}
+        {{ include "airbyte.webapp.envs" . | nindent 8 }}
+
+        # Values from secret
+        {{- if .Values.webapp.secrets }}
+        {{- range $k, $v := .Values.webapp.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: webapp-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.webapp.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.webapp.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.webapp.extraEnv }}
+        {{- toYaml .Values.webapp.extraEnv | nindent 8 }}
+        {{- end }}
+
+
+        {{- if .Values.webapp.livenessProbe.enabled }}
+        livenessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: {{ .Values.webapp.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.webapp.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.webapp.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.webapp.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.webapp.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.webapp.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /index.html
+            port: http
+          initialDelaySeconds: {{ .Values.webapp.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.webapp.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.webapp.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.webapp.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.webapp.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        {{- if .Values.webapp.resources }}
+        resources: {{- toYaml .Values.webapp.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.webapp.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.webapp.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.webapp.extraVolumeMounts }}
+  {{ toYaml .Values.webapp.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+  {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.webapp.extraContainers }}
+      {{ toYaml .Values.webapp.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.webapp.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if .Values.webapp.extraVolumes }}
+{{ toYaml .Values.webapp.extraVolumes | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraVolumes }}
+{{ toYaml .Values.global.extraVolumes | nindent 6 }}
+      {{- end }}

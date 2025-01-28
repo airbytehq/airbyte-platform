@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -226,7 +226,7 @@ class SyncAcceptanceTests {
 
     // NOTE: this cron should run once every two minutes.
     final ConnectionScheduleData connectionScheduleData = new ConnectionScheduleData(null,
-        new ConnectionScheduleDataCron("* */2 * * * ?", "UTC"));
+        new ConnectionScheduleDataCron("0 */2 * * * ?", "UTC"));
     final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
     final AirbyteCatalog catalog = modifyCatalog(

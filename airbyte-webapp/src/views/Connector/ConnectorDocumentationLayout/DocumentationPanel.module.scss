@@ -32,3 +32,9 @@
   padding: variables.$spacing-md variables.$spacing-2xl 0;
   width: 100%;
 }
+
+// This class is used solely in the EnterpriseDocumentationPanel, to override the header style
+.enterpriseDocsHeader {
+  font-size: 32px;
+  line-height: 56px;
+}

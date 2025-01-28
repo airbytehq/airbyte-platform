@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -11,6 +11,7 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.util.MoreIterators;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -26,16 +27,18 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Shared code for interacting with JSONSchema.
  */
 // todo (cgardens) - we need the ability to identify jsonschemas that Airbyte considers invalid for
 // a connector (e.g. "not" keyword).
-@Slf4j
 @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
 public class JsonSchemas {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String JSON_SCHEMA_ENUM_KEY = "enum";
   private static final String JSON_SCHEMA_TYPE_KEY = "type";

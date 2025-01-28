@@ -34,6 +34,12 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   // todo
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
   [ConnectionEventType.UNKNOWN]: "",
+
+  // TODO: waiting for the backend to add these
+  // issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/10947
+  // [ConnectionEventType.MAPPING_CREATE]: "connection.timeline.mapping_create",
+  // [ConnectionEventType.MAPPING_UPDATE]: "connection.timeline.mapping_update",
+  // [ConnectionEventType.MAPPING_DELETE]: "connection.timeline.mapping_delete",
 };
 
 /**
@@ -57,7 +63,7 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
 
 export interface TimelineFilterValues {
   status: "success" | "failure" | "incomplete" | "cancelled" | "";
-  eventCategory: "sync" | "clear" | "refresh" | "connection_settings" | "";
+  eventCategory: "sync" | "clear" | "refresh" | "connection_settings" | "schema_update" | "";
   startDate: string;
   endDate: string;
   eventId: string;
@@ -118,6 +124,7 @@ export const eventTypeByTypeFilterValue: Record<
     ConnectionEventType.CONNECTION_DISABLED,
     ConnectionEventType.CONNECTION_SETTINGS_UPDATE,
   ],
+  schema_update: [ConnectionEventType.SCHEMA_UPDATE],
 };
 
 export const getStatusByEventType = (eventType: ConnectionEventType) => {
@@ -211,7 +218,31 @@ export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
     generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),
     generateEventTypeFilterOption("clear", "connection.timeline.filters.clear"),
     ...(filterValues.status === ""
-      ? [generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings")]
+      ? [
+          generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings"),
+          generateEventTypeFilterOption("schema_update", "connection.timeline.filters.schema_update"),
+        ]
       : []),
   ];
+};
+
+export const isSemanticVersionTags = (newTag: string, oldTag: string): boolean =>
+  [newTag, oldTag].every((tag) => /^\d+\.\d+\.\d+$/.test(tag));
+
+export const isVersionUpgraded = (newVersion: string, oldVersion: string): boolean => {
+  const parseVersion = (version: string) => version.split(".").map(Number);
+  const newParsedVersion = parseVersion(newVersion);
+  const oldParsedVersion = parseVersion(oldVersion);
+
+  for (let i = 0; i < Math.max(newParsedVersion.length, oldParsedVersion.length); i++) {
+    const num1 = newParsedVersion[i] || 0;
+    const num2 = oldParsedVersion[i] || 0;
+    if (num1 > num2) {
+      return true;
+    }
+    if (num1 < num2) {
+      return false;
+    }
+  }
+  return false;
 };

@@ -1,8 +1,13 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
+import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.JobConfig.ConfigType
@@ -36,7 +41,7 @@ class StreamRefreshesHandler(
     connectionId: UUID,
     refreshMode: RefreshMode,
     streams: List<ConnectionStream>,
-  ): Boolean {
+  ): io.airbyte.api.model.generated.JobRead? {
     val destinationId = connectionService.getStandardSync(connectionId).destinationId
     val destinationDefinitionVersion =
       actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(
@@ -45,7 +50,7 @@ class StreamRefreshesHandler(
     val shouldRunRefresh = destinationDefinitionVersion.supportsRefreshes
 
     if (!shouldRunRefresh) {
-      return false
+      return null
     }
 
     val streamDescriptors: List<StreamDescriptor> =
@@ -59,7 +64,7 @@ class StreamRefreshesHandler(
 
     // Store connection timeline event (start a refresh).
     val manualSyncResult = eventRunner.startNewManualSync(connectionId)
-    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it.get()) }
+    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it) }
     job?.let {
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =
@@ -68,20 +73,17 @@ class StreamRefreshesHandler(
           startTimeEpochSeconds = job.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            job.config.refresh.streamsToRefresh.map {
-                refreshStream ->
+            job.config.refresh.streamsToRefresh.map { refreshStream ->
               refreshStream.streamDescriptor
             },
         )
       connectionTimelineEventService.writeEvent(connectionId, refreshStartedEvent, userId)
     }
 
-    return true
+    return if (job == null) null else JobConverter.getJobRead(job)
   }
 
-  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
-    return streamRefreshesRepository.findByConnectionId(connectionId)
-  }
+  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> = streamRefreshesRepository.findByConnectionId(connectionId)
 
   private fun createRefreshesForStreams(
     connectionId: UUID,
@@ -92,13 +94,12 @@ class StreamRefreshesHandler(
   }
 
   companion object {
-    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> {
-      return connectionStreams.map { connectionStream ->
+    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> =
+      connectionStreams.map { connectionStream ->
         StreamDescriptor()
           .withName(connectionStream.streamName)
           .withNamespace(connectionStream.streamNamespace)
       }
-    }
 
     private fun RefreshMode.toConfigObject(): RefreshStream.RefreshType =
       when (this) {

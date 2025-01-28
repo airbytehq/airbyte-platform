@@ -1,27 +1,18 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.pod;
 
 import io.airbyte.commons.helper.DockerImageNameHelper;
-import io.airbyte.config.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
-import java.util.HashMap;
-import java.util.Map;
+import io.airbyte.commons.random.RandomKt;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Left-over utility methods from the various old process-related singletons and factories.
  */
 public class PodUtils {
-
-  private static final Logger log = LoggerFactory.getLogger(PodUtils.class);
 
   static Pattern ALPHABETIC = Pattern.compile("[a-zA-Z]+");
 
@@ -36,7 +27,7 @@ public class PodUtils {
   static String createProcessName(final String fullImagePath, final String jobType, final String jobId, final int attempt, final int lenLimit) {
 
     var imageName = DockerImageNameHelper.extractShortImageName(fullImagePath);
-    final var randSuffix = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+    final var randSuffix = RandomKt.randomAlpha(5).toLowerCase();
     final String suffix = jobType + "-" + jobId + "-" + attempt + "-" + randSuffix;
 
     var processName = imageName + "-" + suffix;
@@ -85,55 +76,6 @@ public class PodUtils {
       return fullImagePath.substring(colonIndex + 1);
     }
     return null;
-  }
-
-  public static ResourceRequirementsBuilder getResourceRequirementsBuilder(final ResourceRequirements resourceRequirements) {
-    if (resourceRequirements != null) {
-      Quantity cpuLimit = null;
-      Quantity memoryLimit = null;
-      final Map<String, Quantity> limitMap = new HashMap<>();
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
-        cpuLimit = Quantity.parse(resourceRequirements.getCpuLimit());
-        limitMap.put("cpu", cpuLimit);
-      }
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryLimit())) {
-        memoryLimit = Quantity.parse(resourceRequirements.getMemoryLimit());
-        limitMap.put("memory", memoryLimit);
-      }
-      final Map<String, Quantity> requestMap = new HashMap<>();
-      // if null then use unbounded resource allocation
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuRequest())) {
-        final Quantity cpuRequest = Quantity.parse(resourceRequirements.getCpuRequest());
-        requestMap.put("cpu", min(cpuRequest, cpuLimit));
-      }
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryRequest())) {
-        final Quantity memoryRequest = Quantity.parse(resourceRequirements.getMemoryRequest());
-        requestMap.put("memory", min(memoryRequest, memoryLimit));
-      }
-      return new ResourceRequirementsBuilder()
-          .withRequests(requestMap)
-          .withLimits(limitMap);
-    }
-    return new ResourceRequirementsBuilder();
-  }
-
-  public static io.fabric8.kubernetes.api.model.ResourceRequirements buildResourceRequirements(final ResourceRequirements resourceRequirements) {
-    return getResourceRequirementsBuilder(resourceRequirements).build();
-  }
-
-  private static Quantity min(final Quantity request, final Quantity limit) {
-    if (limit == null) {
-      return request;
-    }
-    if (request == null) {
-      return limit;
-    }
-    if (request.getNumericalAmount().compareTo(limit.getNumericalAmount()) <= 0) {
-      return request;
-    } else {
-      log.info("Invalid resource requirements detected, requested {} while limit is {}, falling back to requesting {}.", request, limit, limit);
-      return limit;
-    }
   }
 
 }

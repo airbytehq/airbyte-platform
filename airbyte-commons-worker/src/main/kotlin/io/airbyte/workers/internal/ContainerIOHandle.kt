@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal
@@ -86,17 +86,11 @@ data class ContainerIOHandle(
     }
   }
 
-  fun getErrInputStream(): InputStream {
-    return errInputStream
-  }
+  fun getErrInputStream(): InputStream = errInputStream
 
-  fun getInputStream(): InputStream {
-    return inputStream
-  }
+  fun getInputStream(): InputStream = inputStream
 
-  fun getOutputStream(): OutputStream {
-    return outputStream
-  }
+  fun getOutputStream(): OutputStream = outputStream
 
   fun exitCodeExists(): Boolean = exitValueFile.exists()
 

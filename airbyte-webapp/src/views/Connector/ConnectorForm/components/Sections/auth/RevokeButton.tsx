@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 
-import { ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 
 import { useFormOauthRevocationAdapter } from "./useOauthRevocationAdapter";
 import { FlexContainer } from "../../../../../../components/ui/Flex";
@@ -11,7 +11,7 @@ import { useConnectorForm } from "../../../connectorFormContext";
 
 interface RevokeButtonProps {
   sourceId: string;
-  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
+  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecificationRead;
 }
 
 export const RevokeButton: React.FC<RevokeButtonProps> = ({ sourceId, selectedConnectorDefinitionSpecification }) => {

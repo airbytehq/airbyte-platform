@@ -1,9 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
- */
-
-/**
- * Feature-Flag definitions are defined in this file.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.featureflag
@@ -26,10 +22,6 @@ object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orches
 object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orchestrator-java-opts", default = "")
 
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
-
-object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
-
-object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
@@ -87,7 +79,7 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
-object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
+object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -162,22 +154,28 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
-object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
-
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
-
-object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
 
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)
 
 object ReplicationBufferOverride : Temporary<Int>(key = "platform.replication-buffer-override", default = 0)
 
-object DisableAuthHeaderReplacement : Temporary<Boolean>(key = "platform.disable-auth-header-replacement", default = false)
-
 object NodeSelectorOverride : Temporary<String>(key = "platform.node-selector-override", default = "")
 
-object UseAsyncReplicate : Temporary<Boolean>(key = "platform.use-async-replicate", default = false)
+object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-connector-disk-usage", default = false)
 
-object UseRouteToTaskRouting : Temporary<Boolean>(key = "platform.use-route-to-task-routing", default = true)
+object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
+
+object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = true)
+
+object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
+
+object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)
+
+object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
+
+object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
+
+object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)

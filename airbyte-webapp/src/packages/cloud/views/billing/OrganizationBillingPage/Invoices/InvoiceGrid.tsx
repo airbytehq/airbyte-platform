@@ -82,9 +82,7 @@ export const InvoiceGrid: React.FC<InvoiceGridProps> = ({ invoices, hasMore }) =
               />
             </Text>
 
-            <div>
-              <Badge variant={invoiceStatusToBadgeVariant(invoice.status)}>{invoice.status}</Badge>
-            </div>
+            <Badge variant={invoiceStatusToBadgeVariant(invoice.status)}>{invoice.status}</Badge>
 
             <div className={styles.invoiceGrid__open}>
               <Text>

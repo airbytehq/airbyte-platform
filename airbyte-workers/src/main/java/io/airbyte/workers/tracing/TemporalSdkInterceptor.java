@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.tracing;
@@ -14,13 +14,11 @@ import io.micronaut.core.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Custom {@link TraceInterceptor} to handle Temporal SDK traces that include a non-error used to
  * exit Workflows.
  */
-@Slf4j
 public class TemporalSdkInterceptor implements TraceInterceptor {
 
   /**

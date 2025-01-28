@@ -1,0 +1,178 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-workload-api-server
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  minReadySeconds: 30
+  replicas: {{ .Values.workloadApiServer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.workloadApiServer.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.workloadApiServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.workloadApiServer.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.workloadApiServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.workloadApiServer.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.workloadApiServer.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.workloadApiServer.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workloadApiServer.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workloadApiServer.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workloadApiServer.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.workloadApiServer.extraInitContainers | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-workload-api-server-container
+        image: {{ include "imageUrl" (list .Values.workloadApiServer.image $) }}
+        imagePullPolicy: "{{ .Values.workloadApiServer.image.pullPolicy }}"
+        env:
+        {{- if .Values.workloadApiServer.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadApiServer.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end }}
+
+        {{- if (eq .Values.global.deploymentMode "oss") }}
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- end }}
+
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.envs" . | nindent 8 }}
+        {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
+
+        {{- if (eq .Values.global.edition "enterprise") }}
+        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- end }}
+
+        # Values from secret
+        {{- if .Values.workloadApiServer.secrets }}
+        {{- range $k, $v := .Values.workloadApiServer.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: workload-api-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.workloadApiServer.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.workloadApiServer.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.workloadApiServer.extraEnv }}
+        {{- toYaml .Values.workloadApiServer.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.workloadApiServer.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.workloadApiServer.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.workloadApiServer.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.workloadApiServer.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.workloadApiServer.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.workloadApiServer.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.workloadApiServer.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.workloadApiServer.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.workloadApiServer.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.workloadApiServer.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.workloadApiServer.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.workloadApiServer.readinessProbe.failureThreshold }}
+        {{- end }}
+
+        ports:
+        - name: http
+          containerPort: 8007
+          protocol: TCP
+        {{- if .Values.workloadApiServer.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.workloadApiServer.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.workloadApiServer.resources }}
+        resources: {{- toYaml .Values.workloadApiServer.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.workloadApiServer.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.workloadApiServer.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
+        - name: gcs-log-creds-volume
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
+          readOnly: true
+        {{- end }}
+        {{- if .Values.workloadApiServer.extraVolumeMounts }}
+        {{- toYaml .Values.workloadApiServer.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+        {{- toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.workloadApiServer.extraContainers }}
+      {{- toYaml .Values.workloadApiServer.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.workloadApiServer.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ include "airbyte.storage.secretName" }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
+      {{- end }}
+      {{- if .Values.workloadApiServer.extraVolumes }}
+      {{- toYaml .Values.workloadApiServer.extraVolumes | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraVolumes }}
+      {{- toYaml .Values.global.extraVolumes | nindent 6 }}
+      {{- end }}

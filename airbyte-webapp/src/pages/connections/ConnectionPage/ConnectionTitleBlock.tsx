@@ -59,7 +59,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, support
 export const ConnectionTitleBlock = () => {
   const connection = useCurrentConnection();
   const { name, source, destination, status: connectionStatus } = connection;
-  const { isRunning, status } = useConnectionStatus(connection.connectionId);
+  const { status } = useConnectionStatus(connection.connectionId);
   const sourceDefinition = useSourceDefinition(connection.source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(connection.source.sourceId);
   const destinationDefinition = useDestinationDefinition(connection.destination.destinationDefinitionId);
@@ -72,7 +72,7 @@ export const ConnectionTitleBlock = () => {
       )}
       <FlexContainer alignItems="center" justifyContent="space-between" wrap="wrap">
         <FlexContainer alignItems="center" className={styles.titleContainer}>
-          <ConnectionStatusIndicator status={status} withBox loading={isRunning} />
+          <ConnectionStatusIndicator status={status} withBox />
           <FlexContainer direction="column" gap="xs" className={styles.textEllipsis}>
             <Heading as="h1" size="sm" title={name} className={styles.heading}>
               {name}

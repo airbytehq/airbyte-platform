@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -18,9 +16,12 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
+
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -28,6 +29,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.junit.jupiter.system.stubs)
+  testImplementation(libs.platform.testcontainers.postgresql)
 
   testImplementation(project(":oss:airbyte-test-utils"))
 }
@@ -40,4 +42,13 @@ airbyte {
   docker {
     imageName = "keycloak-setup"
   }
+}
+
+val copyScripts = tasks.register<Copy>("copyScripts") {
+  from("scripts")
+  into("build/airbyte/docker/")
+}
+
+tasks.named("dockerCopyDistribution") {
+  dependsOn(copyScripts)
 }

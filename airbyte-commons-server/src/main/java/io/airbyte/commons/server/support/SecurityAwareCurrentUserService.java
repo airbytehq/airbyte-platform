@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -11,7 +11,9 @@ import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.runtime.http.scope.RequestScope;
 import io.micronaut.security.utils.SecurityService;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Interface for retrieving the current Airbyte User associated with the current request. Replaces
@@ -23,8 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(property = "micronaut.security.enabled",
           value = "true")
 @Replaces(CommunityCurrentUserService.class)
-@Slf4j
 public class SecurityAwareCurrentUserService implements CurrentUserService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final UserPersistence userPersistence;
   private final SecurityService securityService;

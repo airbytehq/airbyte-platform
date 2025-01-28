@@ -2,35 +2,32 @@ import uniqueId from "lodash/uniqueId";
 import { ChangeEvent, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useDebounce } from "react-use";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
-import {
-  CRON_DEFAULT_VALUE,
-  cronTimeZones,
-} from "components/connection/ConnectionForm/ScheduleFormField/CronScheduleFormControl";
 import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
   useBasicFrequencyDropdownData,
 } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "components/connection/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
+import { FormControlFooter, FormControlFooterInfo, FormControlErrorMessage } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
-import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { ListBox, Option } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { useDescribeCronExpression } from "core/api";
 import { ConnectionScheduleDataBasicSchedule, ConnectionScheduleType } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
-import { humanizeCron } from "core/utils/cron";
+import { cronTimeZones, CRON_DEFAULT_VALUE } from "core/utils/cron";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { InputContainer } from "./InputContainer";
 import styles from "./SimplifiedConnectionScheduleFormField.module.scss";
+
+export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
 
 export const SimplifiedConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
@@ -194,15 +191,14 @@ const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ d
 };
 
 const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
-  const [debouncedErrorMessage, setDebouncedErrorMessage] = useState("");
-  const [debouncedCronDescription, setDebouncedCronDescription] = useState("");
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const { errors } = useFormState<FormConnectionFormValues>();
-  const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
+  const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
+  const cronExpressionDescription = useDescribeCronExpression(cronExpression);
 
-  const cronValidationError = errors?.scheduleData?.cron?.cronExpression?.message;
+  const error = errors?.scheduleData?.cron?.cronExpression;
 
   const onCronExpressionChange = (value: string): void => {
     setValue("scheduleData.cron.cronExpression", value, { shouldValidate: true, shouldDirty: true });
@@ -210,22 +206,7 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
   const onCronTimeZoneSelect = (value: string): void => {
     setValue("scheduleData.cron.cronTimeZone", value, { shouldDirty: true });
   };
-
-  const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
   const cronTimeZone = useWatch({ name: "scheduleData.cron.cronTimeZone", control });
-
-  useDebounce(
-    () => {
-      setDebouncedErrorMessage(cronValidationError ?? "");
-      try {
-        setDebouncedCronDescription(humanizeCron(cronExpression));
-      } catch (e) {
-        setDebouncedErrorMessage("form.cronExpression.invalid");
-      }
-    },
-    300,
-    [cronValidationError, cronExpression]
-  );
 
   return (
     <Controller
@@ -253,7 +234,7 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
               </FlexContainer>
             }
           />
-          <>
+          <div className={styles.errorMessageContainer}>
             <FlexContainer alignItems="flex-start">
               <InputContainer>
                 <Input
@@ -274,41 +255,43 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
                 selectedValue={cronTimeZone}
                 onSelect={onCronTimeZoneSelect}
                 optionClassName={styles.cronZoneOption}
-                optionsMenuClassName={styles.cronZonesOptionsMenu}
                 buttonClassName={styles.cronZonesListBoxBtn}
               />
             </FlexContainer>
-            {debouncedErrorMessage && (
-              <Box mt="sm">
-                <Text color="red" data-testid="cronExpressionError">
-                  <FormattedMessage
-                    id={debouncedErrorMessage}
-                    {...(!allowSubOneHourCronExpressions &&
-                    debouncedErrorMessage === "form.cronExpression.underOneHourNotAllowed"
-                      ? {
-                          values: {
-                            lnk: (btnText: React.ReactNode) => (
-                              <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
-                            ),
-                          },
-                        }
-                      : {
-                          values: {
-                            lnk: (lnk: React.ReactNode) => (
-                              <ExternalLink href={links.cronReferenceLink}>{lnk}</ExternalLink>
-                            ),
-                          },
-                        })}
-                  />
-                </Text>
-              </Box>
-            )}
-            {!debouncedErrorMessage && debouncedCronDescription && (
-              <Box mt="sm">
-                <Text>{debouncedCronDescription}</Text>
-              </Box>
-            )}
-          </>
+            <FormControlFooter>
+              {cronExpressionDescription.isFetching && (
+                <FormControlFooterInfo>
+                  <FormattedMessage id="form.cronExpression.validating" />
+                </FormControlFooterInfo>
+              )}
+
+              {!cronExpressionDescription.isFetching && (
+                <>
+                  {error ? (
+                    <FormControlErrorMessage<FormConnectionFormValues>
+                      name="scheduleData.cron.cronExpression"
+                      message={
+                        error?.message === I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED ? (
+                          <FormattedMessage
+                            id={I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED}
+                            values={{
+                              lnk: (btnText: React.ReactNode) => (
+                                <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
+                              ),
+                            }}
+                          />
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    cronExpressionDescription.data?.isValid && (
+                      <FormControlFooterInfo>{cronExpressionDescription.data.cronDescription}</FormControlFooterInfo>
+                    )
+                  )}
+                </>
+              )}
+            </FormControlFooter>
+          </div>
         </FormFieldLayout>
       )}
     />

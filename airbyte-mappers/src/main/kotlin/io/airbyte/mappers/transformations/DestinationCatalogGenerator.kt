@@ -1,15 +1,19 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
-import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.JsonsSchemaConstants.PROPERTIES
 import io.airbyte.config.JsonsSchemaConstants.TYPE
 import io.airbyte.config.JsonsSchemaConstants.TYPE_OBJECT
+import io.airbyte.config.MapperConfig
 import io.airbyte.config.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -18,13 +22,25 @@ val log = KotlinLogging.logger {}
 
 @Singleton
 class DestinationCatalogGenerator(
-  val mappers: List<Mapper>,
+  val mappers: List<Mapper<out MapperConfig>>,
 ) {
   private val mappersByName = mappers.associateBy { it.name }
 
+  enum class MapperErrorType {
+    MISSING_MAPPER,
+    INVALID_MAPPER_CONFIG,
+    FIELD_NOT_FOUND,
+    FIELD_ALREADY_EXISTS,
+  }
+
+  data class MapperError(
+    val type: MapperErrorType,
+    val message: String,
+  )
+
   data class CatalogGenerationResult(
     val catalog: ConfiguredAirbyteCatalog,
-    val errors: Map<StreamDescriptor, Map<ConfiguredMapper, MapperError>>,
+    val errors: Map<StreamDescriptor, Map<MapperConfig, MapperError>>,
   )
 
   /**
@@ -40,7 +56,7 @@ class DestinationCatalogGenerator(
     }
   }
 
-  internal fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<ConfiguredMapper, MapperError> {
+  private fun applyCatalogMapperTransformations(stream: ConfiguredAirbyteStream): Map<MapperConfig, MapperError> {
     val (updateFields, _, errors) = applyMapperToFields(stream)
 
     val jsonSchema =
@@ -65,24 +81,19 @@ class DestinationCatalogGenerator(
 
   data class MapperToFieldAccumulator(
     val slimStream: SlimStream,
-    val validConfig: List<ConfiguredMapper>,
-    val errors: Map<ConfiguredMapper, MapperError>,
+    val validConfig: List<MapperConfig>,
+    val errors: Map<MapperConfig, MapperError>,
   )
-
-  enum class MapperError {
-    MISSING_MAPPER,
-    INVALID_MAPPER_CONFIG,
-  }
 
   internal fun applyMapperToFields(stream: ConfiguredAirbyteStream): MapperToFieldAccumulator {
     val result =
-      stream.mappers.map {
-        Pair(
-          mappersByName[it.name],
-          it,
-        )
-      }
-        .fold(
+      stream.mappers
+        .map {
+          Pair(
+            mappersByName[it.name()],
+            it,
+          )
+        }.fold(
           MapperToFieldAccumulator(
             SlimStream(
               fields = stream.fields ?: listOf(),
@@ -94,23 +105,42 @@ class DestinationCatalogGenerator(
             listOf(),
             mapOf(),
           ),
-        ) {
-            mapperAcc, (mapperInstance, configuredMapper) ->
+        ) { mapperAcc, (mapperInstance, mapperConfig) ->
           if (mapperInstance == null) {
-            log.warn { "Trying to use a mapper named ${configuredMapper.name} which doesn't have a known implementation. The mapper won't be apply" }
-            mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.MISSING_MAPPER))
+            log.warn { "Trying to use a mapper named ${mapperConfig.name()} which doesn't have a known implementation. The mapper won't be apply" }
+            mapperAcc.copy(
+              errors =
+                mapperAcc.errors +
+                  Pair(
+                    mapperConfig,
+                    MapperError(type = MapperErrorType.MISSING_MAPPER, message = "Cannot find mapper ${mapperConfig.name()}, ignoring."),
+                  ),
+            )
           } else {
             try {
               mapperAcc.copy(
-                slimStream = mapperInstance.schema(configuredMapper, mapperAcc.slimStream),
-                validConfig = mapperAcc.validConfig + configuredMapper,
+                slimStream = (mapperInstance as Mapper<MapperConfig>).schema(mapperConfig, mapperAcc.slimStream),
+                validConfig = mapperAcc.validConfig + mapperConfig,
               )
-            } catch (e: Exception) {
-              log.warn {
-                "Trying to use a mapper named ${configuredMapper.name} which failed to resolve its schema for the config:" +
-                  " ${configuredMapper.config}. The mapper won't be apply"
+            } catch (e: MapperException) {
+              log.error(e) {
+                "Trying to use a mapper named ${mapperConfig.name()} which failed to resolve its schema for the config:" +
+                  " ${mapperConfig.config()}. The mapper won't be applied"
               }
-              mapperAcc.copy(errors = mapperAcc.errors + Pair(configuredMapper, MapperError.INVALID_MAPPER_CONFIG))
+              mapperAcc.copy(errors = mapperAcc.errors + Pair(mapperConfig, MapperError(type = e.type, message = e.message ?: "Unexpected error")))
+            } catch (e: Exception) {
+              log.error(e) {
+                "Trying to use a mapper named ${mapperConfig.name()} which failed to resolve its schema for the config:" +
+                  " ${mapperConfig.config()}. The mapper won't be apply"
+              }
+              mapperAcc.copy(
+                errors =
+                  mapperAcc.errors +
+                    Pair(
+                      mapperConfig,
+                      MapperError(type = MapperErrorType.INVALID_MAPPER_CONFIG, message = e.message ?: "Unexpected error"),
+                    ),
+              )
             }
           }
         }
@@ -123,8 +153,8 @@ class DestinationCatalogGenerator(
   internal fun generateJsonSchemaFromFields(
     fields: List<Field>,
     jsonSchema: JsonNode,
-  ): String {
-    return Jsons.serialize(
+  ): String =
+    Jsons.serialize(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
           Pair(it.name, jsonSchema.get(PROPERTIES).get(it.name))
@@ -133,5 +163,4 @@ class DestinationCatalogGenerator(
         }
       },
     )
-  }
 }

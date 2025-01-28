@@ -5,7 +5,6 @@ import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
@@ -49,11 +48,7 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
       children: (
         <>
           <BuilderField type="array" path={buildPath("path")} manifestPath="AddedFieldDefinition.properties.path" />
-          <BuilderFieldWithInputs
-            type="string"
-            path={buildPath("value")}
-            manifestPath="AddedFieldDefinition.properties.value"
-          />
+          <BuilderField type="jinja" path={buildPath("value")} manifestPath="AddedFieldDefinition.properties.value" />
         </>
       ),
     },

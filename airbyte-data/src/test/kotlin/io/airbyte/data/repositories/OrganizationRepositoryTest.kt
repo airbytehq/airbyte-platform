@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Organization
@@ -19,8 +23,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     organizationRepository.save(organization)
 
@@ -41,8 +43,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
 
     organizationRepository.save(organization)
@@ -62,8 +62,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     organizationRepository.save(organization)
 
@@ -105,8 +103,6 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Organization",
         email = "test@example.com",
         userId = UUID.randomUUID(),
-        pba = true,
-        orgLevelBilling = true,
       )
     val savedOrg = organizationRepository.save(organization)
 

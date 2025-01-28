@@ -1,18 +1,30 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
 import io.airbyte.config.SignalInput
 import io.temporal.client.WorkflowClient
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
 class SignalHandler(
-  private val workflowClient: WorkflowClient,
+  @Named("workerWorkflowClient") private val workflowClient: WorkflowClient,
 ) {
   fun signal(signalInput: SignalInput) {
-    if (signalInput.workflowType == SignalInput.SYNC_WORKFLOW) {
-      signalSync(signalInput)
+    when (signalInput.workflowType) {
+      SignalInput.CONNECTOR_COMMAND_WORKFLOW -> signalConnectorCommand(signalInput)
+      SignalInput.SYNC_WORKFLOW -> signalSync(signalInput)
     }
+  }
+
+  private fun signalConnectorCommand(signalInput: SignalInput) {
+    val workflow = getWorkflowStub(signalInput.workflowId, ConnectorCommandWorkflow::class.java)
+    workflow.checkTerminalStatus()
   }
 
   private fun signalSync(signalInput: SignalInput) {
@@ -23,7 +35,5 @@ class SignalHandler(
   fun <T> getWorkflowStub(
     workflowId: String,
     workflowType: Class<T>,
-  ): T {
-    return workflowClient.newWorkflowStub(workflowType, workflowId)
-  }
+  ): T = workflowClient.newWorkflowStub(workflowType, workflowId)
 }

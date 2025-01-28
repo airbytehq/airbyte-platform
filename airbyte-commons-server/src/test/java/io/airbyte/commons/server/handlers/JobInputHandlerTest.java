@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -38,10 +39,14 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.ScopedConfigurationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -67,7 +72,6 @@ import org.junit.jupiter.api.Test;
 class JobInputHandlerTest {
 
   private static JobPersistence jobPersistence;
-  private static ConfigRepository configRepository;
   private static ConfigInjector configInjector;
   private static OAuthConfigSupplier oAuthConfigSupplier;
   private static Job job;
@@ -95,12 +99,17 @@ class JobInputHandlerTest {
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
   private ContextBuilder contextBuilder;
+  private SourceService sourceService;
+  private DestinationService destinatinonService;
+  private ConnectionService connectionService;
+  private ScopedConfigurationService scopedConfigurationService;
+
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @BeforeEach
-  void init() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void init() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     jobPersistence = mock(JobPersistence.class);
-    configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
@@ -111,14 +120,24 @@ class JobInputHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     contextBuilder = mock(ContextBuilder.class);
 
+    sourceService = mock(SourceService.class);
+    destinatinonService = mock(DestinationService.class);
+    connectionService = mock(ConnectionService.class);
+    scopedConfigurationService = mock(ScopedConfigurationService.class);
+
     jobInputHandler = new JobInputHandler(jobPersistence,
-        configRepository,
         featureFlagClient,
         oAuthConfigSupplier,
         configInjector,
         attemptHandler,
         stateHandler,
-        actorDefinitionVersionHelper, contextBuilder);
+        actorDefinitionVersionHelper,
+        contextBuilder,
+        connectionService,
+        sourceService,
+        destinatinonService,
+        apiPojoConverters,
+        scopedConfigurationService);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
@@ -128,10 +147,10 @@ class JobInputHandlerTest {
         .withWorkspaceId(WORKSPACE_ID)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withConfiguration(DESTINATION_CONFIGURATION);
-    when(configRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destinationConnection);
-    when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(mock(StandardDestinationDefinition.class));
+    when(destinatinonService.getDestinationConnection(DESTINATION_ID)).thenReturn(destinationConnection);
+    when(destinatinonService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(mock(StandardDestinationDefinition.class));
     final StandardDestinationDefinition destinationDefinition = mock(StandardDestinationDefinition.class);
-    when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
+    when(destinatinonService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
         .thenReturn(mock(ActorDefinitionVersion.class));
     when(oAuthConfigSupplier.injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION))
@@ -140,7 +159,7 @@ class JobInputHandlerTest {
     final StandardSync standardSync = new StandardSync()
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID);
-    when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+    when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
   }
 
   @Test
@@ -153,7 +172,7 @@ class JobInputHandlerTest {
         .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(WORKSPACE_ID)
         .withConfiguration(SOURCE_CONFIGURATION);
-    when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
+    when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
     when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
     when(configInjector.injectConfig(SOURCE_CONFIG_WITH_OAUTH, sourceDefinitionId))
@@ -186,7 +205,8 @@ class JobInputHandlerTest {
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withIsReset(false)
-        .withUseAsyncReplicate(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -227,7 +247,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
+        .syncConfig(apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test
@@ -261,7 +281,8 @@ class JobInputHandlerTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true)
-        .withUseAsyncReplicate(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -301,7 +322,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
+        .syncConfig(apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test
@@ -314,8 +335,8 @@ class JobInputHandlerTest {
         .withWorkspaceId(WORKSPACE_ID)
         .withSourceDefinitionId(sourceDefId)
         .withConfiguration(SOURCE_CONFIGURATION);
-    when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(sourceDefId)).thenReturn(mock(StandardSourceDefinition.class));
+    when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(sourceDefId)).thenReturn(mock(StandardSourceDefinition.class));
     when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
 

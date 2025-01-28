@@ -1,0 +1,13 @@
+.subscription {
+  &__header {
+    position: relative;
+  }
+
+  // Pull out the plan change button of the flex box to not extend
+  // the flexbox's height, but still center it vertically with the title
+  &__changePlan {
+    position: absolute;
+    right: 0;
+    align-self: center;
+  }
+}

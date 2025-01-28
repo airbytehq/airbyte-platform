@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.notification.config
 
 import io.micronaut.context.annotation.Factory
@@ -9,7 +13,5 @@ import okhttp3.OkHttpClient
 class HttpClientFactory {
   @Singleton
   @Named("webhookHttpClient")
-  fun okHttpClient(): OkHttpClient {
-    return OkHttpClient()
-  }
+  fun okHttpClient(): OkHttpClient = OkHttpClient()
 }

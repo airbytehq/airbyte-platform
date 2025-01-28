@@ -24,17 +24,20 @@ export const AirbyteHomeLink: React.FC = () => {
         <AirbyteLogo height={24} className={styles.homeLink__logo} />
       </Link>
       <IfFeatureEnabled feature={FeatureItem.EnterpriseBranding}>
-        <BrandingBadge product="enterprise" />
+        <BrandingBadge product="enterprise" testId="enterprise-badge" />
       </IfFeatureEnabled>
       <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
-        <BrandingBadge product="cloudForTeams" />
+        <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge" />
       </IfFeatureEnabled>
     </div>
   );
 };
 
-const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams" }> = ({ product }) => (
-  <Badge variant={product === "enterprise" ? "darkBlue" : "blue"}>
+export const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams"; testId?: string }> = ({
+  product,
+  testId,
+}) => (
+  <Badge variant={product === "enterprise" ? "darkBlue" : "blue"} data-testid={testId}>
     <FlexContainer alignItems="center">
       <FormattedMessage id={product === "enterprise" ? "enterprise.enterprise" : "cloud.cloudForTeams"} />
     </FlexContainer>

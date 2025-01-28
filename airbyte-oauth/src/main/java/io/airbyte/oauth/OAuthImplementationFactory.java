@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
 import io.airbyte.oauth.flows.AirtableOAuthFlow;
 import io.airbyte.oauth.flows.AmazonAdsOAuthFlow;
 import io.airbyte.oauth.flows.AmazonSellerPartnerOAuthFlow;
@@ -62,8 +63,11 @@ import io.airbyte.oauth.flows.google.GoogleDriveOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSheetsOAuthFlow;
 import io.airbyte.oauth.flows.google.YouTubeAnalyticsOAuthFlow;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import java.net.http.HttpClient;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * OAuth Implementation Factory.
@@ -71,8 +75,11 @@ import java.util.Map;
 public class OAuthImplementationFactory {
 
   private final Map<String, OAuthFlowImplementation> oauthFlowMapping;
+  private final HttpClient httpClient;
+  private static final Logger LOGGER = LoggerFactory.getLogger(OAuthImplementationFactory.class);
 
   public OAuthImplementationFactory(final HttpClient httpClient) {
+    this.httpClient = httpClient;
     final Builder<String, OAuthFlowImplementation> builder = ImmutableMap.builder();
     builder.put("airbyte/source-airtable", new AirtableOAuthFlow(httpClient)); // revert me
     builder.put("airbyte/source-amazon-ads", new AmazonAdsOAuthFlow(httpClient));
@@ -132,18 +139,47 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-zendesk-talk", new ZendeskTalkOAuthFlow(httpClient));
     builder.put("airbyte/destination-snowflake", new DestinationSnowflakeOAuthFlow(httpClient));
     builder.put("airbyte/destination-google-sheets", new DestinationGoogleSheetsOAuthFlow(httpClient));
-    oauthFlowMapping = builder
-        .build();
+    oauthFlowMapping = builder.build();
+  }
+
+  private static boolean hasDeclarativeOAuthConfigSpecification(final ConnectorSpecification spec) {
+    return spec != null && spec.getAdvancedAuth() != null && spec.getAdvancedAuth().getOauthConfigSpecification() != null
+        && spec.getAdvancedAuth().getOauthConfigSpecification().getOauthConnectorInputSpecification() != null;
   }
 
   /**
-   * Returns the OAuthFlowImplementation for a given source or destination, by docker repository.
+   * Returns the OAuthFlowImplementation for a given source or destination, preferring the declarative
+   * OAuth flow if declared in the connector's spec, and falling back to specific implementations
+   * otherwise.
    *
    * @param imageName - docker repository name for the connector
+   * @param connectorSpecification - the spec for the connector
    * @return OAuthFlowImplementation
    */
-  public OAuthFlowImplementation create(final String imageName) {
+  public OAuthFlowImplementation create(final String imageName, final ConnectorSpecification connectorSpecification) {
+    try {
+      return createDeclarativeOAuthImplementation(connectorSpecification);
+    } catch (final IllegalStateException e) {
+      return createNonDeclarativeOAuthImplementation(imageName);
+    }
+  }
+
+  /**
+   * Creates a DeclarativeOAuthFlow for a given connector spec.
+   *
+   * @param connectorSpecification - the spec for the connector
+   * @return DeclarativeOAuthFlow
+   */
+  public DeclarativeOAuthFlow createDeclarativeOAuthImplementation(final ConnectorSpecification connectorSpecification) {
+    if (!hasDeclarativeOAuthConfigSpecification(connectorSpecification)) {
+      throw new IllegalStateException("Cannot create DeclarativeOAuthFlow without a declarative OAuth config spec.");
+    }
+    return new DeclarativeOAuthFlow(httpClient);
+  }
+
+  private OAuthFlowImplementation createNonDeclarativeOAuthImplementation(final String imageName) {
     if (oauthFlowMapping.containsKey(imageName)) {
+      LOGGER.info("Using {} for {}", oauthFlowMapping.get(imageName).getClass().getSimpleName(), imageName);
       return oauthFlowMapping.get(imageName);
     } else {
       throw new IllegalStateException(

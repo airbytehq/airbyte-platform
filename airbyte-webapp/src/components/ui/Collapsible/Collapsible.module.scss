@@ -1,7 +1,7 @@
 @use "scss/variables";
 @use "scss/colors";
 
-$icon-width: 18px;
+$icon-width: 20px;
 
 .container:not(:last-child) {
   margin-bottom: variables.$spacing-xl;
@@ -62,6 +62,7 @@ $icon-width: 18px;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .icon {
@@ -79,6 +80,7 @@ $icon-width: 18px;
 
 .body {
   width: 100%;
+  word-break: break-word;
 
   &:not(&--noPadding) {
     padding-left: calc($icon-width + variables.$spacing-sm);

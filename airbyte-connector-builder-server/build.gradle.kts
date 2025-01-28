@@ -44,6 +44,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-server"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
@@ -59,6 +60,7 @@ dependencies {
   implementation("io.pebbletemplates:pebble:3.2.2")
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

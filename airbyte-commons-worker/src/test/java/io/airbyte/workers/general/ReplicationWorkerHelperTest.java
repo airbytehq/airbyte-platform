@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -27,7 +27,7 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.ConfiguredMapper;
+import io.airbyte.config.MapperConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerDestinationConfig;
@@ -66,6 +66,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -129,7 +131,7 @@ class ReplicationWorkerHelperTest {
         mock(VoidCallable.class),
         workloadApiClient,
         analyticsMessageTracker,
-        Optional.empty(),
+        "workload-id",
         airbyteApiClient,
         streamStatusCompletionTracker,
         streamStatusTrackerFactory,
@@ -313,7 +315,7 @@ class ReplicationWorkerHelperTest {
   @Test
   void testApplyTransformationNoMapper() throws IOException {
     mockSupportRefreshes(false);
-    ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
+    final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     // Need to pass in a replication context
@@ -340,7 +342,33 @@ class ReplicationWorkerHelperTest {
 
     final ConfiguredAirbyteCatalog catalog = mock(ConfiguredAirbyteCatalog.class);
     final ConfiguredAirbyteStream stream = mock(ConfiguredAirbyteStream.class);
-    final List<ConfiguredMapper> mappers = List.of(new ConfiguredMapper("test", Map.of()));
+    final List<MapperConfig> mappers = List.of(new MapperConfig() {
+
+      @NotNull
+      @Override
+      public String name() {
+        return "test";
+      }
+
+      @Nullable
+      @Override
+      public String documentationUrl() {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public UUID id() {
+        return null;
+      }
+
+      @NotNull
+      @Override
+      public Object config() {
+        return Map.of();
+      }
+
+    });
 
     when(stream.getStreamDescriptor()).thenReturn(new StreamDescriptor().withName("stream"));
     when(stream.getMappers()).thenReturn(mappers);
@@ -371,7 +399,8 @@ class ReplicationWorkerHelperTest {
             UUID.randomUUID(),
             "dockerRepository",
             "dockerImageTag",
-            supportsRefreshes));
+            supportsRefreshes,
+            false));
   }
 
   private ConfiguredAirbyteCatalog buildConfiguredAirbyteCatalog() {

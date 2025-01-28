@@ -11,7 +11,6 @@ dependencies {
 
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.kubernetes.client)
-  implementation(libs.bundles.log4j)
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.temporal)
   implementation(libs.bundles.temporal.telemetry)
@@ -22,6 +21,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.guava)
   implementation(libs.kotlin.logging)
+  implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.micronaut.jooq)
   implementation(libs.bundles.micronaut.kotlin)
@@ -33,8 +33,10 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
@@ -49,12 +51,8 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
-  runtimeOnly(libs.appender.log4j2)
   runtimeOnly(libs.bundles.bouncycastle)
-
-  // Required for secret hydration in OSS
-  runtimeOnly(libs.hikaricp)
-  runtimeOnly(libs.h2.database)
+  runtimeOnly(libs.bundles.logback)
 
   kspTest((platform(libs.micronaut.platform)))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
@@ -68,9 +66,10 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(project(":oss:airbyte-json-validation"))
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(libs.jakarta.ws.rs.api)
+  testImplementation(libs.kubernetes.mock.server)
+
 }
 
 airbyte {
@@ -81,8 +80,8 @@ airbyte {
       mapOf(
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test"
-      )
+        "MICRONAUT_ENVIRONMENTS" to "test",
+      ),
     )
   }
   docker {

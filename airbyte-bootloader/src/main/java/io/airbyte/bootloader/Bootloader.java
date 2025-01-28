@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
 
-import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.annotation.InternalForTesting;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -12,9 +12,9 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseMigrator;
@@ -25,17 +25,20 @@ import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Ensures that the databases are migrated to the appropriate level.
  */
 @Singleton
-@Slf4j
 public class Bootloader {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   // Ordered list of version upgrades that must be completed before upgrading to latest.
   private static final List<AirbyteVersion> REQUIRED_VERSION_UPGRADES = List.of(
@@ -43,7 +46,7 @@ public class Bootloader {
       new AirbyteVersion("0.37.0-alpha"));
 
   private final boolean autoUpgradeConnectors;
-  private final ConfigRepository configRepository;
+  private final WorkspaceService workspaceService;
   private final DatabaseMigrator configsDatabaseMigrator;
   private final DatabaseInitializer configsDatabaseInitializer;
   private final AirbyteVersion currentAirbyteVersion;
@@ -58,7 +61,7 @@ public class Bootloader {
 
   public Bootloader(
                     @Value("${airbyte.bootloader.auto-upgrade-connectors}") final boolean autoUpgradeConnectors,
-                    final ConfigRepository configRepository,
+                    final WorkspaceService workspaceService,
                     @Named("configsDatabaseInitializer") final DatabaseInitializer configsDatabaseInitializer,
                     @Named("configsDatabaseMigrator") final DatabaseMigrator configsDatabaseMigrator,
                     final AirbyteVersion currentAirbyteVersion,
@@ -71,7 +74,7 @@ public class Bootloader {
                     @Value("${airbyte.auth.default-realm}") final String defaultRealm,
                     final PostLoadExecutor postLoadExecution) {
     this.autoUpgradeConnectors = autoUpgradeConnectors;
-    this.configRepository = configRepository;
+    this.workspaceService = workspaceService;
     this.configsDatabaseInitializer = configsDatabaseInitializer;
     this.configsDatabaseMigrator = configsDatabaseMigrator;
     this.currentAirbyteVersion = currentAirbyteVersion;
@@ -113,7 +116,7 @@ public class Bootloader {
     runFlywayMigration(runMigrationOnStartup, configsDatabaseMigrator, jobsDatabaseMigrator);
 
     log.info("Creating workspace (if none exists)...");
-    createWorkspaceIfNoneExists(configRepository);
+    createWorkspaceIfNoneExists(workspaceService);
 
     log.info("Creating deployment (if none exists)...");
     createDeploymentIfNoneExists(jobPersistence);
@@ -195,8 +198,8 @@ public class Bootloader {
         .withKeycloakRealm(defaultRealm));
   }
 
-  private void createWorkspaceIfNoneExists(final ConfigRepository configRepository) throws JsonValidationException, IOException {
-    if (!configRepository.listStandardWorkspaces(true).isEmpty()) {
+  private void createWorkspaceIfNoneExists(final WorkspaceService workspaceService) throws JsonValidationException, IOException {
+    if (!workspaceService.listStandardWorkspaces(true).isEmpty()) {
       log.info("Workspace already exists for the deployment.");
       return;
     }
@@ -221,7 +224,7 @@ public class Bootloader {
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID);
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
   }
 
   private void initializeDatabases() throws DatabaseInitializationException {
@@ -231,7 +234,10 @@ public class Bootloader {
     log.info("Databases initialized.");
   }
 
-  @VisibleForTesting
+  // Using the @InternalForTesting annotation here even though this hasn't been converted to kotlin
+  // yet.
+  // No reason to bring in guava for a single @VisibleForTesting annotation.
+  @InternalForTesting
   Optional<AirbyteVersion> getRequiredVersionUpgrade(@Nullable final AirbyteVersion airbyteDatabaseVersion, final AirbyteVersion airbyteVersion) {
     // means there was no previous version so upgrade even needs to happen. always legal.
     if (airbyteDatabaseVersion == null) {

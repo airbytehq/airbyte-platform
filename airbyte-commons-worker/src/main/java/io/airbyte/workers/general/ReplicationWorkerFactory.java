@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -11,13 +11,13 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.logging.LoggingHelper;
-import io.airbyte.commons.logging.LoggingHelper.Color;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -70,13 +70,15 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for the BufferedReplicationWorker.
@@ -86,8 +88,9 @@ import lombok.extern.slf4j.Slf4j;
  * dependencies of the DefaultReplicationWorker were stateless.
  */
 @Singleton
-@Slf4j
 public class ReplicationWorkerFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
@@ -105,12 +108,10 @@ public class ReplicationWorkerFactory {
   private final DestinationCatalogGenerator destinationCatalogGenerator;
 
   public static final MdcScope.Builder DESTINATION_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
-      .setPrefixColor(Color.YELLOW_BACKGROUND);
+      .setExtraMdcEntries(LogSource.DESTINATION.toMdc());
 
   public static final MdcScope.Builder SOURCE_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix(LoggingHelper.SOURCE_LOGGER_PREFIX)
-      .setPrefixColor(Color.BLUE_BACKGROUND);
+      .setExtraMdcEntries(LogSource.SOURCE.toMdc());
 
   public ReplicationWorkerFactory(
                                   final AirbyteMessageSerDeProvider serDeProvider,
@@ -151,7 +152,7 @@ public class ReplicationWorkerFactory {
                                           final IntegrationLauncherConfig sourceLauncherConfig,
                                           final IntegrationLauncherConfig destinationLauncherConfig,
                                           final VoidCallable onReplicationRunning,
-                                          final Optional<String> workloadId)
+                                          final String workloadId)
       throws IOException {
     final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(
         new SourceIdRequestBody(replicationInput.getSourceId())).getSourceDefinitionId();
@@ -161,7 +162,7 @@ public class ReplicationWorkerFactory {
     final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
-    log.info("Setting up source...");
+    log.info("Setting up source with image {}.", replicationInput.getSourceLauncherConfig().getDockerImage());
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
@@ -170,14 +171,14 @@ public class ReplicationWorkerFactory {
 
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource()
+        ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
         : new LocalContainerAirbyteSource(
             heartbeatMonitor,
             getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
             new MessageMetricsTracker(metricClient),
             ContainerIOHandle.source());
 
-    log.info("Setting up destination...");
+    log.info("Setting up destination with image {}.", replicationInput.getDestinationLauncherConfig().getDockerImage());
     final AirbyteMessageBufferedWriterFactory messageWriterFactory =
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(replicationInput.getCatalog()));
@@ -187,7 +188,8 @@ public class ReplicationWorkerFactory {
         new MessageMetricsTracker(metricClient),
         messageWriterFactory,
         destinationTimeout,
-        ContainerIOHandle.dest());
+        ContainerIOHandle.dest(),
+        replicationInput.getUseFileTransfer());
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
@@ -262,9 +264,9 @@ public class ReplicationWorkerFactory {
   /**
    * Create MessageTracker.
    */
-  private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                            final ReplicationInput replicationInput,
-                                                            final FeatureFlagClient featureFlagClient) {
+  private AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
+                                                     final ReplicationInput replicationInput,
+                                                     final FeatureFlagClient featureFlagClient) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final ReplicationFeatureFlagReader replicationFeatureFlagReader = new ReplicationFeatureFlagReader(featureFlagClient, flagContext);
     final var ffs = replicationFeatureFlagReader.readReplicationFeatureFlags();
@@ -312,7 +314,7 @@ public class ReplicationWorkerFactory {
                                                                    final DestinationTimeoutMonitor destinationTimeout,
                                                                    final WorkloadApiClient workloadApiClient,
                                                                    final AnalyticsMessageTracker analyticsMessageTracker,
-                                                                   final Optional<String> workloadId,
+                                                                   final String workloadId,
                                                                    final AirbyteApiClient airbyteApiClient,
                                                                    final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                    final StreamStatusTrackerFactory streamStatusTrackerFactory,
@@ -395,7 +397,7 @@ public class ReplicationWorkerFactory {
                                                                           final DestinationTimeoutMonitor destinationTimeout,
                                                                           final WorkloadApiClient workloadApiClient,
                                                                           final AnalyticsMessageTracker analyticsMessageTracker,
-                                                                          final Optional<String> workloadId,
+                                                                          final String workloadId,
                                                                           final AirbyteApiClient airbyteApiClient,
                                                                           final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                           final StreamStatusTrackerFactory streamStatusTrackerFactory,

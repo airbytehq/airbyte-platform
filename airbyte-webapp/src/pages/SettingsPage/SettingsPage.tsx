@@ -48,13 +48,20 @@ export const SettingsPage: React.FC = () => {
         {canViewWorkspaceSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
             {multiWorkspaceUI && (
-              <SettingsLink
-                iconType="community"
-                name={formatMessage({
-                  id: "settings.general",
-                })}
-                to={SettingsRoutePaths.Workspace}
-              />
+              <>
+                <SettingsLink
+                  iconType="gear"
+                  name={formatMessage({
+                    id: "settings.general",
+                  })}
+                  to={SettingsRoutePaths.Workspace}
+                />
+                <SettingsLink
+                  iconType="community"
+                  name={formatMessage({ id: "settings.members" })}
+                  to={SettingsRoutePaths.WorkspaceMembers}
+                />
+              </>
             )}
             {!multiWorkspaceUI && (
               <>

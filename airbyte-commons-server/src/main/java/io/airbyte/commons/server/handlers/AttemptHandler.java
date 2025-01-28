@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -83,6 +83,7 @@ public class AttemptHandler {
   private final DestinationService destinationService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final StreamAttemptMetadataService streamAttemptMetadataService;
+  private final ApiPojoConverters apiPojoConverters;
 
   public AttemptHandler(final JobPersistence jobPersistence,
                         final StatePersistence statePersistence,
@@ -94,7 +95,8 @@ public class AttemptHandler {
                         final ConnectionService connectionService,
                         final DestinationService destinationService,
                         final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                        final StreamAttemptMetadataService streamAttemptMetadataService) {
+                        final StreamAttemptMetadataService streamAttemptMetadataService,
+                        final ApiPojoConverters apiPojoConverters) {
     this.jobPersistence = jobPersistence;
     this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
@@ -106,6 +108,7 @@ public class AttemptHandler {
     this.destinationService = destinationService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.streamAttemptMetadataService = streamAttemptMetadataService;
+    this.apiPojoConverters = apiPojoConverters;
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
@@ -144,25 +147,24 @@ public class AttemptHandler {
     return new CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber);
   }
 
-  private void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
-    // Update done for every attempt
+  @VisibleForTesting
+  void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
     // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
     // databases.
-    final var removeFullRefreshStreamState =
-        job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
-    if (removeFullRefreshStreamState && supportRefreshes) {
-      boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
-      final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
-          job.getId(),
-          enableResumableFullRefresh);
-      if (!stateToClear.isEmpty()) {
-        generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
-        statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
-      }
+    final boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
+    final boolean evaluateResumableFlag = enableResumableFullRefresh && supportRefreshes;
+    final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
+        job.getId(),
+        evaluateResumableFlag);
+
+    generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
+    if (!stateToClear.isEmpty()) {
+      statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
     }
   }
 
-  private void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
+  @VisibleForTesting
+  void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
     if (job.getConfigType() == JobConfig.ConfigType.REFRESH) {
       if (!supportRefreshes) {
         throw new IllegalStateException("Trying to create a refresh attempt for a destination which doesn't support refreshes");
@@ -312,7 +314,7 @@ public class AttemptHandler {
       jobPersistence.writeAttemptSyncConfig(
           requestBody.getJobId(),
           requestBody.getAttemptNumber(),
-          ApiPojoConverters.attemptSyncConfigToInternal(requestBody.getSyncConfig()));
+          apiPojoConverters.attemptSyncConfigToInternal(requestBody.getSyncConfig()));
     } catch (final IOException ioe) {
       LOGGER.error("IOException when saving AttemptSyncConfig for attempt;", ioe);
       return new InternalOperationResult().succeeded(false);
@@ -352,6 +354,7 @@ public class AttemptHandler {
 
     final Job job = jobPersistence.getJob(jobId);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.emitAttemptCompletedEventIfAttemptPresent(job);
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
   }
 

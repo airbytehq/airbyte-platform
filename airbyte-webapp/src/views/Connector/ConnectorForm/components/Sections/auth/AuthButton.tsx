@@ -1,5 +1,5 @@
 import classnames from "classnames";
-import React from "react";
+import React, { useImperativeHandle, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -7,12 +7,12 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
-import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 
 import styles from "./AuthButton.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import QuickBooksAuthButton from "./QuickBooksAuthButton";
-import { useFormOauthAdapter } from "./useOauthFlowAdapter";
+import { useFormOauthAdapter, useFormOauthAdapterBuilder } from "./useOauthFlowAdapter";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
 
@@ -52,12 +52,12 @@ function getAuthenticateMessageId(connectorDefinitionId: string): string {
 }
 
 export const AuthButton: React.FC<{
-  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
+  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecificationRead;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
 
   const { hiddenAuthFieldErrors } = useAuthentication();
-  const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
+  const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { loading, done, run } = useFormOauthAdapter(
@@ -98,3 +98,57 @@ export const AuthButton: React.FC<{
     </FlexContainer>
   );
 };
+
+export const AuthButtonBuilder = React.forwardRef<
+  HTMLDivElement | null,
+  {
+    builderProjectId: string;
+    onComplete: (authPayload: Record<string, unknown>) => void;
+    onClick?: () => void;
+    disabled?: boolean;
+  }
+>(({ builderProjectId, onComplete, onClick, disabled }, ref) => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const { loading, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
+  const [isAccented, setIsAccented] = useState(false);
+
+  const flexRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(
+    ref,
+    () =>
+      new Proxy(flexRef.current!, {
+        get(target, prop, receiver) {
+          if (prop === "scrollIntoView") {
+            const fn: HTMLElement["scrollIntoView"] = (...args) => {
+              target.scrollIntoView(...args);
+              setIsAccented(true);
+            };
+            return fn;
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      })
+  );
+
+  return (
+    <FlexContainer alignItems="center" ref={flexRef}>
+      <div className={isAccented ? styles.accented__container : undefined}>
+        <Button
+          disabled={disabled}
+          isLoading={loading}
+          type="button"
+          data-testid="oauth-button"
+          onClick={() => {
+            setIsAccented(false);
+            (onClick ?? run)();
+          }}
+          className={isAccented ? styles.accented__button : undefined}
+        >
+          <FormattedMessage id="connectorBuilder.authentication.oauthButton.label" />
+        </Button>
+      </div>
+    </FlexContainer>
+  );
+});
+AuthButtonBuilder.displayName = "AuthButtonBuilder";

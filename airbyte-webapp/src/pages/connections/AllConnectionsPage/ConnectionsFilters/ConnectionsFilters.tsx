@@ -87,7 +87,6 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
           <FlexItem>
             <ListBox
               buttonClassName={styles.filterButton}
-              optionsMenuClassName={styles.filterOptionsMenu}
               optionClassName={styles.filterOption}
               optionTextAs="span"
               options={availableSourceOptions}

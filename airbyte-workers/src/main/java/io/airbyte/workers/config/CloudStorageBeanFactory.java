@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -24,22 +24,22 @@ import jakarta.inject.Singleton;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
 
-  // @Singleton
-  // @Named("logStorageConfigs")
-  // public StorageConfig logStorageConfigs(final StorageConfig storageConfig) {
-  // return storageConfig;
-  // }
-
   @Singleton
   @Named("logDocumentStore")
   public StorageClient logStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.LOGS);
+    return factory.create(DocumentType.LOGS);
+  }
+
+  @Singleton
+  @Named("auditLoggingDocumentStore")
+  public StorageClient auditLoggingStorageClient(final StorageClientFactory factory) {
+    return factory.create(DocumentType.AUDIT_LOGS);
   }
 
   @Singleton
   @Named("stateDocumentStore")
   public StorageClient stateStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.STATE);
+    return factory.create(DocumentType.STATE);
   }
 
   @SuppressWarnings("LineLength")
@@ -47,13 +47,13 @@ public class CloudStorageBeanFactory {
   @Singleton
   @Named("outputDocumentStore")
   public StorageClient workloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.WORKLOAD_OUTPUT);
+    return factory.create(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Singleton
   @Named("payloadDocumentStore")
   public StorageClient payloadStorageClient(final StorageClientFactory factory) {
-    return factory.get(DocumentType.ACTIVITY_PAYLOADS);
+    return factory.create(DocumentType.ACTIVITY_PAYLOADS);
   }
 
   @Singleton

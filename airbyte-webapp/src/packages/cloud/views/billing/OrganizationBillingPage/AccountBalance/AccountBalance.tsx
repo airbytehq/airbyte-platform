@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import React, { useMemo } from "react";
 import { FormattedDate, FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
+import { BorderedTile } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -11,24 +12,27 @@ import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentWorkspace, useGetOrganizationBillingBalance } from "core/api";
+import { useCurrentWorkspace, useGetOrganizationSubscriptionInfo } from "core/api";
 import { CreditBlockRead } from "core/api/types/AirbyteClient";
 import { useFormatCredits } from "core/utils/numberHelper";
 
 export const AccountBalance = () => {
   const { organizationId } = useCurrentWorkspace();
   const {
-    data: balance,
+    data: subscriptionInfo,
     isLoading: balanceIsLoading,
     isError: balanceError,
-  } = useGetOrganizationBillingBalance(organizationId);
+  } = useGetOrganizationSubscriptionInfo(organizationId);
   const { formatCredits } = useFormatCredits();
 
-  const hasPositiveCreditBalance = !!balance?.credits?.balance && balance.credits.balance > 0;
-  const showCreditBalance = hasPositiveCreditBalance || balance?.planType === "prepaid";
+  const hasPositiveCreditBalance = !!subscriptionInfo?.credits?.balance && subscriptionInfo.credits.balance > 0;
+
+  if (subscriptionInfo?.balanceHidden) {
+    return null;
+  }
 
   return (
-    <>
+    <BorderedTile>
       <Heading as="h2" size="sm">
         <FormattedMessage id="settings.organization.billing.accountBalance" />
       </Heading>
@@ -39,26 +43,28 @@ export const AccountBalance = () => {
             <LoadingSkeleton />
           </FlexContainer>
         )}
-        {balance && (
+        {subscriptionInfo && (
           <FlexContainer justifyContent="space-between" gap="lg" direction="column">
-            {showCreditBalance && (
+            {hasPositiveCreditBalance && (
               <FlexItem>
                 <FlexContainer alignItems="center" gap="xs">
                   <Text>
                     <FormattedMessage id="settings.organization.billing.remainingCredits" />
                   </Text>
-                  {balance?.credits?.blocks?.length && <CreditExpiryTooltip creditBlocks={balance.credits.blocks} />}
+                  {!!subscriptionInfo?.credits?.blocks?.length && (
+                    <CreditExpiryTooltip creditBlocks={subscriptionInfo.credits.blocks} />
+                  )}
                 </FlexContainer>
 
                 <Text size="lg">
                   <FormattedMessage
                     id="settings.organization.billing.remainingCreditsAmount"
-                    values={{ amount: formatCredits(balance.credits?.balance ?? 0) }}
+                    values={{ amount: formatCredits(subscriptionInfo.credits?.balance ?? 0) }}
                   />
                 </Text>
               </FlexItem>
             )}
-            {balance.planType === "in_arrears" && (
+            {subscriptionInfo.upcomingInvoice && (
               <>
                 <FlexItem>
                   <Text size="sm">
@@ -67,11 +73,11 @@ export const AccountBalance = () => {
                   <Text size="lg">
                     <FormattedNumber
                       value={
-                        isNaN(parseFloat(balance.upcomingInvoice.amount))
+                        isNaN(parseFloat(subscriptionInfo.upcomingInvoice.amount))
                           ? 0
-                          : parseFloat(balance.upcomingInvoice.amount)
+                          : parseFloat(subscriptionInfo.upcomingInvoice.amount)
                       }
-                      currency={balance.upcomingInvoice.currency}
+                      currency={subscriptionInfo.upcomingInvoice.currency}
                       style="currency"
                       minimumFractionDigits={2}
                       maximumFractionDigits={2}
@@ -83,7 +89,10 @@ export const AccountBalance = () => {
                     <FormattedMessage id="settings.organization.billing.invoiceDate" />
                   </Text>
                   <Text size="lg">
-                    <FormattedDate value={balance.upcomingInvoice.dueDate} dateStyle="medium" />
+                    <FormattedDate
+                      value={dayjs(subscriptionInfo.upcomingInvoice.dueDate).toDate()}
+                      dateStyle="medium"
+                    />
                   </Text>
                 </FlexItem>
               </>
@@ -96,7 +105,7 @@ export const AccountBalance = () => {
           </DataLoadingError>
         )}
       </Box>
-    </>
+    </BorderedTile>
   );
 };
 

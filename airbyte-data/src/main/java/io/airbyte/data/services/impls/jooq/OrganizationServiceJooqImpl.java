@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -54,8 +54,12 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
   }
 
   @Override
-  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) {
-    throw new UnsupportedOperationException("Not implemented - use OrganizationServiceDataImpl instead");
+  public Optional<Organization> getOrganizationForWorkspaceId(UUID workspaceId) throws IOException {
+    final Result<Record> result = database
+        .query(ctx -> ctx.select(ORGANIZATION.asterisk()).from(ORGANIZATION).innerJoin(WORKSPACE).on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+            .where(WORKSPACE.ID.eq(workspaceId)))
+        .fetch();
+    return result.stream().findFirst().map(DbConverter::buildOrganization);
   }
 
   /**
@@ -79,8 +83,6 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.EMAIL, organization.getEmail())
             .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(ORGANIZATION.UPDATED_AT, timestamp)
-            .set(ORGANIZATION.PBA, organization.getPba())
-            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
             .execute();
       } else {
@@ -91,8 +93,6 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(WORKSPACE.CREATED_AT, timestamp)
             .set(WORKSPACE.UPDATED_AT, timestamp)
-            .set(ORGANIZATION.PBA, organization.getPba())
-            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .execute();
       }
       return null;

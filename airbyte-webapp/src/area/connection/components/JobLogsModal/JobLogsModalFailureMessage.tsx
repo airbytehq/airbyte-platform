@@ -1,14 +1,12 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
+import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
 import { AttemptFailureSummary, FailureType } from "core/api/types/AirbyteClient";
-import { copyToClipboard } from "core/utils/clipboard";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
-import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobLogsModalFailureMessage.module.scss";
 
@@ -17,7 +15,6 @@ interface JobLogsModalFailureMessageProps {
 }
 
 export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProps> = ({ failureSummary }) => {
-  const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const failureUiDetails = failureUiDetailsFromReason(failureSummary?.failures[0], formatMessage);
 
@@ -30,19 +27,6 @@ export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProp
     return null;
   }
 
-  const onCopyTextBtnClick = async () => {
-    if (!failureUiDetails.secondaryMessage) {
-      return;
-    }
-    await copyToClipboard(failureUiDetails.secondaryMessage);
-
-    registerNotification({
-      type: "success",
-      text: formatMessage({ id: "jobs.failure.copyText.success" }),
-      id: "jobs.failure.copyText.success",
-    });
-  };
-
   return (
     <Box px="md">
       <div className={styles.internalFailureContainer}>
@@ -54,16 +38,14 @@ export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProp
                 id="failureMessage.label"
                 values={{ type: `${failureUiDetails.typeLabel}:`, message: failureUiDetails.message }}
               />
-
-              {failureUiDetails.secondaryMessage && (
-                <Button onClick={onCopyTextBtnClick}>
-                  <FormattedMessage id="jobs.failure.copyText" />
-                </Button>
-              )}
             </FlexContainer>
           }
         >
-          {failureUiDetails.secondaryMessage}
+          {failureUiDetails.secondaryMessage && (
+            <Collapsible label={formatMessage({ id: "jobHistory.logs.moreDetails" })} initiallyOpen={false}>
+              {failureUiDetails.secondaryMessage}
+            </Collapsible>
+          )}
         </Message>
       </div>
     </Box>

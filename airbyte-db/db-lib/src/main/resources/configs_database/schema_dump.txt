@@ -19,6 +19,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "resource_requirements" jsonb,
   constraint "actor_pkey" primary key ("id")
 );
 create table "public"."actor_catalog" (
@@ -66,6 +67,7 @@ create table "public"."actor_definition_breaking_change" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "scoped_impact" jsonb,
+  "deadline_action" varchar(256),
   constraint "actor_definition_breaking_change_pkey" primary key ("actor_definition_id", "version")
 );
 create table "public"."actor_definition_config_injection" (
@@ -101,6 +103,7 @@ create table "public"."actor_definition_version" (
   "last_published" timestamp(6) with time zone,
   "internal_support_level" bigint not null,
   "language" varchar(256),
+  "supports_file_transfer" boolean not null default false,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
@@ -133,6 +136,14 @@ create table "public"."airbyte_configs_migrations" (
   "execution_time" int not null,
   "success" boolean not null,
   constraint "airbyte_configs_migrations_pk" primary key ("installed_rank")
+);
+create table "public"."application" (
+  "id" uuid not null,
+  "user_id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "client_id" varchar(2147483647) not null,
+  "client_secret" varchar(2147483647) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp
 );
 create table "public"."auth_refresh_token" (
   "value" varchar(2147483647) not null,
@@ -185,6 +196,15 @@ create table "public"."connection_operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_operation_pkey" primary key ("id", "connection_id", "operation_id")
 );
+create table "public"."connection_tag" (
+  "id" uuid not null,
+  "tag_id" uuid not null,
+  "connection_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "connection_tag_pkey" primary key ("id"),
+  constraint "connection_tag_tag_id_connection_id_key" unique ("tag_id", "connection_id")
+);
 create table "public"."connection_timeline_event" (
   "id" uuid not null,
   "connection_id" uuid not null,
@@ -207,6 +227,7 @@ create table "public"."connector_builder_project" (
   "base_actor_definition_version_id" uuid,
   "contribution_pull_request_url" varchar(256),
   "contribution_actor_definition_id" uuid,
+  "components_file_content" text,
   constraint "connector_builder_project_pkey" primary key ("id")
 );
 create table "public"."connector_rollout" (
@@ -229,6 +250,7 @@ create table "public"."connector_rollout" (
   "failed_reason" varchar(1024),
   "rollout_strategy" varchar(256),
   "workflow_run_id" varchar(64),
+  "paused_reason" varchar(1024),
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."declarative_manifest" (
@@ -277,8 +299,6 @@ create table "public"."organization" (
   "email" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "pba" boolean not null default false,
-  "org_level_billing" boolean not null default false,
   "tombstone" boolean not null default false,
   constraint "organization_pkey" primary key ("id")
 );
@@ -298,6 +318,7 @@ create table "public"."organization_payment_config" (
   "usage_category_override" "public"."usage_category_override",
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "subscription_status" "public"."subscription_status" not null default cast('pre_subscription' as subscription_status),
   constraint "organization_payment_config_pkey" primary key ("organization_id"),
   constraint "organization_payment_config_payment_provider_id_key" unique ("payment_provider_id")
 );
@@ -325,8 +346,8 @@ create table "public"."schema_management" (
 create table "public"."scoped_configuration" (
   "id" uuid not null,
   "key" varchar(256) not null,
-  "resource_type" "public"."config_resource_type" not null,
-  "resource_id" uuid not null,
+  "resource_type" "public"."config_resource_type",
+  "resource_id" uuid,
   "scope_type" "public"."config_scope_type" not null,
   "scope_id" uuid not null,
   "value" varchar(256) not null,
@@ -407,6 +428,16 @@ create table "public"."stream_reset" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "stream_reset_connection_id_stream_name_stream_namespace_key" unique ("connection_id", "stream_name", "stream_namespace")
+);
+create table "public"."tag" (
+  "id" uuid not null,
+  "workspace_id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "color" char(6) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "tag_pkey" primary key ("id"),
+  constraint "tag_name_workspace_id_key" unique ("name", "workspace_id")
 );
 create table "public"."user" (
   "id" uuid not null,
@@ -529,6 +560,7 @@ create index "stream_refreshes_connection_id_idx" on "public"."stream_refreshes"
 create index "stream_refreshes_connection_id_stream_name_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc);
 create index "stream_refreshes_connection_id_stream_name_stream_namespace_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
+create index "tag_workspace_id_idx" on "public"."tag"("workspace_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
 create unique index "user_email_unique_key" on "public"."user"(lower((email)::text) asc);
 create index "user_invitation_accepted_by_user_id_index" on "public"."user_invitation"("accepted_by_user_id" asc);
@@ -560,6 +592,8 @@ alter table "public"."connection" add constraint "connection_destination_id_fkey
 alter table "public"."connection" add constraint "connection_source_id_fkey" foreign key ("source_id") references "public"."actor" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_operation_id_fkey" foreign key ("operation_id") references "public"."operation" ("id");
+alter table "public"."connection_tag" add constraint "connection_tag_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."connection_tag" add constraint "connection_tag_tag_id_fkey" foreign key ("tag_id") references "public"."tag" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."connector_builder_project" add constraint "connector_builder_project_base_adv_id_fkey" foreign key ("base_actor_definition_version_id") references "public"."actor_definition_version" ("id");
@@ -579,6 +613,7 @@ alter table "public"."sso_config" add constraint "sso_config_organization_id_fke
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."stream_generation" add constraint "stream_generation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."stream_refreshes" add constraint "stream_refreshes_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."tag" add constraint "tag_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."user" add constraint "user_default_workspace_id_fkey" foreign key ("default_workspace_id") references "public"."workspace" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_accepted_by_user_id_fkey" foreign key ("accepted_by_user_id") references "public"."user" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_inviter_user_id_fkey" foreign key ("inviter_user_id") references "public"."user" ("id");

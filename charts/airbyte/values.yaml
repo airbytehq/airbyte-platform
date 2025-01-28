@@ -21,6 +21,17 @@ global:
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
 
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as temporal, minio, etc.
+    tag: ""
+
+  # Docker image pull secret
+  imagePullSecrets: []
+
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
@@ -84,6 +95,8 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
+
+
   storage:
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
@@ -143,6 +156,10 @@ global:
       # -- Job resource limits
       limits: {}
 
+    local:
+      volume:
+        enabled: false
+
     kube:
       ## JOB_KUBE_ANNOTATIONS
       # pod annotations of the sync job and the default pod annotations fallback for others jobs
@@ -167,14 +184,6 @@ global:
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       # -- image pull secret to use for job pod
       main_container_image_pull_secret: ""
-
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        # -- busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_CURL_IMAGE
-        # -- curl image used by the job pod
-        curl: ""
 
 ## @section Common Parameters
 
@@ -220,16 +229,13 @@ webapp:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=101(nginx)
-    fsGroup: 101
+    fsGroup: 1000
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=101(nginx)
-    runAsUser: 101
-    # gid=101(nginx)
-    runAsGroup: 101
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -327,9 +333,10 @@ webapp:
     #   hosts:
     #   - chart-example.local
 
-    api:
+  api:
     # -- The webapp API url
     url: /api/v1/
+
   connector-builder-server:
     url: /connector-builder-api
 
@@ -429,14 +436,10 @@ webapp:
 ## @section Pod Sweeper parameters
 
 pod-sweeper:
-  enabled: true
+  enabled: false
   image:
     # -- The image repository to use for the pod sweeper
-    repository: bitnami/kubectl
-    # -- The pull policy for the pod sweeper image
-    pullPolicy: IfNotPresent
-    # -- The pod sweeper image tag to use
-    tag: 1.28.9
+    repository: airbyte/pod-sweeper
 
   # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
@@ -446,16 +449,13 @@ pod-sweeper:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=1001(anon)
-    fsGroup: 1001
+    fsGroup: 1000
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1001(anon)
-    runAsUser: 1001
-    # gid=1001(anon)
-    runAsGroup: 1001
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -844,10 +844,6 @@ worker:
   debug:
     enabled: false
 
-  containerOrchestrator:
-    # -- Orchestrator image
-    image: ""
-
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
@@ -987,15 +983,18 @@ workload-launcher:
     # -- Enable or disable Orchestrator
     enabled: true
     # -- Orchestrator image
-    image: ""
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/container-orchestrator:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   connectorSidecar:
     # -- Connector Sidecar image
-    image: ""
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/connector-sidecar:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
-  # -- Workload init image
   workloadInit:
-    image: ""
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   ## current no exist documentations
   activityMaxAttempt: ""
@@ -1404,7 +1403,7 @@ temporal:
     # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
-    tag: "1.23.0"
+    tag: "1.26"
 
   service:
     # -- The Kubernetes Service Type
@@ -1714,8 +1713,6 @@ externalDatabase:
   # -- Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
   jdbcUrl: ""
 
-## @section Logs parameters
-
 minio:
   image:
     # -- Minio image used by Minio helm chart
@@ -1738,8 +1735,14 @@ minio:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  resources:
+     requests:
+       memory: 1Gi
+       cpu: 250m
+     limits:
+       cpu: 300m
+       memory: 2Gi
 ## @section cron parameters
-
 cron:
   enabled: true
   # -- Number of cron replicas
@@ -2011,7 +2014,6 @@ connector-builder-server:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-
 keycloak:
   enabled: true
   env_vars: {}
@@ -2020,22 +2022,23 @@ keycloak:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  image:
+    repository: airbyte/keycloak
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
-    # gid=0(root)
-    fsGroup: 0
+    fsGroup: 1000
 
   initContainers:
     initDb:
-      image: {}
+      image: "postgres:13-alpine"
 
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=70(postgres)
-    runAsUser: 70
-    # gid=70(postgres)
-    runAsGroup: 70
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -2045,10 +2048,8 @@ keycloak:
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1000(keycloak)
     runAsUser: 1000
-    # gid=0(root)
-    runAsGroup: 0
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
@@ -2069,6 +2070,10 @@ keycloak-setup:
   enabled: true
   env_vars: {}
 
+  image:
+    repository: airbyte/keycloak-setup
+    pullPolicy: IfNotPresent
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2077,19 +2082,13 @@ keycloak-setup:
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # gid=100(curl_user)
-    runAsUser: 100
-    # gid=101(curl_group)
-    runAsGroup: 101
+    runAsUser: 1000
+    runAsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-
-  initContainers:
-    keycloakReadinessCheck:
-      image: {}
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
@@ -2237,7 +2236,6 @@ workload-api-server:
 featureflag-server:
   enabled: false
 
-
   # -- workload-api-server replicas
   replicaCount: 1
 
@@ -2352,3 +2350,8 @@ featureflag-server:
     # - secretName: chart-example-tls
     #   hosts:
     #   - chart-example.local
+
+testWebapp:
+  image:
+    repository: airbyte/airbyte-base-java-image
+    tag: 3.3.2

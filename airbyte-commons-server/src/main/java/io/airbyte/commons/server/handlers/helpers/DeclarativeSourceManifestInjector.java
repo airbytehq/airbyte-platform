@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -8,8 +8,10 @@ import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
 import java.net.URI;
@@ -62,7 +64,8 @@ public class DeclarativeSourceManifestInjector {
         // https://github.com/airbytehq/airbyte/issues/24047
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withDocumentationUrl(URI.create(declarativeManifestSpec.path("documentationUrl").asText("")))
-        .withConnectionSpecification(declarativeManifestSpec.get("connectionSpecification"));
+        .withConnectionSpecification(declarativeManifestSpec.get("connectionSpecification"))
+        .withAdvancedAuth(Jsons.object(declarativeManifestSpec.get("advancedAuth"), AdvancedAuth.class));
   }
 
   /**

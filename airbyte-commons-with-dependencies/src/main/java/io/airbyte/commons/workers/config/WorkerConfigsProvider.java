@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.workers.config;
@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Provide WorkerConfigs.
@@ -34,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
  * `airbyte.worker.kube-job-configs` key.
  */
 @Singleton
-@Slf4j
 public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   /**
@@ -153,7 +151,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   @Singleton
   record WorkerConfigsDefaults(
                                @Named("default") KubeResourceConfig defaultKubeResourceConfig,
-                               List<TolerationPOJO> jobKubeTolerations,
+                               @Value("${airbyte.worker.job.kube.tolerations}") String jobKubeTolerations,
                                @Value("${airbyte.worker.isolated.kube.node-selectors}") String isolatedNodeSelectors,
                                @Value("${airbyte.worker.isolated.kube.use-custom-node-selector}") boolean useCustomNodeSelector,
                                @Value("${airbyte.worker.job.kube.main.container.image-pull-secret}") List<String> mainContainerImagePullSecret,
@@ -224,7 +222,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
     return new WorkerConfigs(
         getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
-        workerConfigsDefaults.jobKubeTolerations(),
+        TolerationPOJO.getJobKubeTolerations(workerConfigsDefaults.jobKubeTolerations()),
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         annotations,
@@ -350,7 +348,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .withCpuLimit(useDefaultIfEmpty(kubeResourceConfig.getCpuLimit(), defaultConfig.getCpuLimit()))
         .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
         .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
-        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
+        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()))
+        .withEphemeralStorageLimit(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageLimit(), defaultConfig.getEphemeralStorageLimit()))
+        .withEphemeralStorageRequest(useDefaultIfEmpty(kubeResourceConfig.getEphemeralStorageRequest(), defaultConfig.getEphemeralStorageRequest()));
   }
 
   private static String useDefaultIfEmpty(final String value, final String defaultValue) {

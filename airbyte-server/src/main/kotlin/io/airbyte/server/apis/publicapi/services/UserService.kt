@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -42,7 +42,8 @@ open class UserServiceImpl(
   override fun getAllWorkspaceIdsForUser(userId: UUID): List<UUID> {
     val listWorkspacesByUserRequestBody = ListWorkspacesByUserRequestBody().userId(userId)
     val result =
-      kotlin.runCatching { workspacesHandler.listWorkspacesByUser(listWorkspacesByUserRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.listWorkspacesByUser(listWorkspacesByUserRequestBody) }
         .onFailure {
           log.error("Error for listWorkspacesByUser", it)
           ConfigClientErrorHandler.handleError(it)
@@ -61,10 +62,10 @@ open class UserServiceImpl(
     // 1. Get all users in the organization.
     val organizationIdRequestBody = OrganizationIdRequestBody().organizationId(organizationId)
     val result =
-      kotlin.runCatching {
-        userHandler.listUsersInOrganization(organizationIdRequestBody)
-      }
-        .onFailure {
+      kotlin
+        .runCatching {
+          userHandler.listUsersInOrganization(organizationIdRequestBody)
+        }.onFailure {
           log.error("Error for getUsersInAnOrganization", it)
           ConfigClientErrorHandler.handleError(it)
         }

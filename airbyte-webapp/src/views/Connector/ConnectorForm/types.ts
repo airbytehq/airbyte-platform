@@ -4,6 +4,10 @@
 export type ConnectorFormValues<T = unknown> = {
   name: string;
   connectionConfiguration: T;
+  resourceAllocation?: {
+    cpu: string;
+    memory: string;
+  };
 };
 
 // The whole ConnectorCard form values

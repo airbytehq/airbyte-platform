@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.validation
 
 import com.google.common.collect.Iterators
@@ -37,7 +41,9 @@ class CatalogValidator(
           } else {
             val fieldNames: Iterator<String> =
               if (s.stream.jsonSchema.get(PROPERTIES_KEY) != null) {
-                s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames()
+                s.stream.jsonSchema
+                  .get(PROPERTIES_KEY)
+                  .fieldNames()
               } else {
                 emptyList<String>().iterator()
               }

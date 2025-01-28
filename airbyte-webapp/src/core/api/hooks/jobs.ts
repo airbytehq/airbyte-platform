@@ -1,127 +1,27 @@
-import {
-  Updater,
-  UseQueryOptions,
-  useInfiniteQuery,
-  useIsMutating,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useIntl } from "react-intl";
 
-import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { trackError } from "core/utils/datadog";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { useNotificationService } from "hooks/services/Notification";
 
+import { useCurrentWorkspace } from "./workspaces";
 import {
   cancelJob,
   getAttemptCombinedStats,
   getAttemptForJob,
   getJobDebugInfo,
   getJobInfoWithoutLogs,
-  listJobsFor,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AttemptStats, JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { AttemptInfoRead, AttemptRead, LogEvents, LogRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
-  list: (
-    connectionId: string | undefined,
-    filters: string | Record<string, string | number | string[] | undefined> = {}
-  ) => [...jobsKeys.all(connectionId), { filters }] as const,
-  useListJobsForConnectionStatus: (connectionId: string) =>
-    [...jobsKeys.all(connectionId), "connectionStatus"] as const,
-};
-
-export const useListJobs = (requestParams: Omit<JobListRequestBody, "pagination">, pageSize: number) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = jobsKeys.list(requestParams.configId, {
-    includingJobId: requestParams.includingJobId,
-    statuses: requestParams.statuses,
-    updatedAtStart: requestParams.updatedAtStart,
-    updatedAtEnd: requestParams.updatedAtEnd,
-    pageSize,
-  });
-
-  return useInfiniteQuery(
-    queryKey,
-    async ({ pageParam = 0 }: { pageParam?: number }) => {
-      return {
-        data: await listJobsFor(
-          {
-            ...requestParams,
-            includingJobId: pageParam > 0 ? undefined : requestParams.includingJobId,
-            pagination: { pageSize, rowOffset: pageSize * pageParam },
-          },
-          requestOptions
-        ),
-        pageParam,
-      };
-    },
-    {
-      refetchInterval: (data) => {
-        const jobStatus = data?.pages[0].data.jobs[0]?.job?.status;
-        return jobStatus && jobStatusesIndicatingFinishedExecution.includes(jobStatus) ? 10000 : 2500;
-      },
-      getPreviousPageParam: (firstPage) => {
-        return firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined;
-      },
-      getNextPageParam: (lastPage, allPages) => {
-        if (allPages.reduce((acc, page) => acc + page.data.jobs.length, 0) < lastPage.data.totalJobCount) {
-          if (lastPage.pageParam === 0 && requestParams.includingJobId) {
-            // the API will sometimes return more items than we request. If we include includingJobId, it will return as many pages as necessary to include the job with the given id. In this case, we cannot trust the pageParam, so we need to calculate the actual page number.
-            const actualPageNumber = lastPage.data.jobs.length / pageSize - 1;
-            return actualPageNumber + 1;
-          }
-          // all the data we have loaded is less than the total indicated by the API, so we can get another page
-          return lastPage.pageParam + 1;
-        }
-        return undefined;
-      },
-    }
-  );
-};
-
-export const useListJobsForConnectionStatus = (connectionId: string) => {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(
-    jobsKeys.useListJobsForConnectionStatus(connectionId),
-    () =>
-      listJobsFor(
-        {
-          configId: connectionId,
-          configTypes: ["sync", "reset_connection", "clear", "refresh"],
-          pagination: {
-            // This is an arbitrary number. We have to look back at several jobs to determine the current status of the connection. Just knowing whether it's running or not is not sufficient, we want to know the status of the last completed job as well.
-            pageSize: 3,
-          },
-        },
-        requestOptions
-      ),
-    {
-      refetchInterval: (data) => {
-        return data?.jobs?.[0]?.job?.status &&
-          jobStatusesIndicatingFinishedExecution.includes(data?.jobs?.[0]?.job?.status)
-          ? 10000
-          : 2500;
-      },
-    }
-  );
-};
-
-export const useSetConnectionJobsData = (connectionId: string) => {
-  const queryClient = useQueryClient();
-  return (data: Updater<JobReadList | undefined, JobReadList>) =>
-    queryClient.setQueriesData(jobsKeys.useListJobsForConnectionStatus(connectionId), data);
-};
-
-// A disabled useQuery that can be called manually to download job logs
-export const useGetDebugInfoJobManual = (id: number) => {
-  const requestOptions = useRequestOptions();
-  return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
-    enabled: false,
-  });
 };
 
 export const useCancelJob = () => {
@@ -152,11 +52,23 @@ export const useJobInfoWithoutLogs = (id: number) => {
   );
 };
 
+type AttemptInfoReadWithFormattedLogs = AttemptInfoRead & { logType: "formatted"; logs: LogRead };
+type AttemptInfoReadWithStructuredLogs = AttemptInfoRead & { logType: "structured"; logs: LogEvents };
+export type AttemptInfoReadWithLogs = AttemptInfoReadWithFormattedLogs | AttemptInfoReadWithStructuredLogs;
+
+export function attemptHasFormattedLogs(attempt: AttemptInfoRead): attempt is AttemptInfoReadWithFormattedLogs {
+  return attempt.logType === "formatted";
+}
+
+export function attemptHasStructuredLogs(attempt: AttemptInfoRead): attempt is AttemptInfoReadWithStructuredLogs {
+  return attempt.logType === "structured";
+}
+
 export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(
+  return useQuery(
     [SCOPE_WORKSPACE, "jobs", "attemptForJob", jobId, attemptNumber],
-    () => getAttemptForJob({ jobId, attemptNumber }, requestOptions),
+    () => getAttemptForJob({ jobId, attemptNumber }, requestOptions) as Promise<AttemptInfoReadWithLogs>,
     {
       refetchInterval: (data) => {
         // keep refetching data while the job is still running or hasn't ended too long ago.
@@ -171,20 +83,96 @@ export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
   );
 };
 
-export const useAttemptCombinedStatsForJob = (
-  jobId: number,
-  attemptNumber: number,
-  options?: Readonly<Omit<UseQueryOptions<AttemptStats>, "queryKey" | "queryFn" | "suspense">>
-) => {
+export const useAttemptCombinedStatsForJob = (jobId: number, attempt: AttemptRead) => {
   const requestOptions = useRequestOptions();
-  // the endpoint returns a 404 if there aren't stats for this attempt
-  try {
-    return useSuspenseQuery(
-      [SCOPE_WORKSPACE, "jobs", "attemptCombinedStatsForJob", jobId, attemptNumber],
-      () => getAttemptCombinedStats({ jobId, attemptNumber }, requestOptions),
-      options
-    );
-  } catch (e) {
-    return undefined;
-  }
+  return useQuery(
+    [SCOPE_WORKSPACE, "jobs", "attemptCombinedStatsForJob", jobId, attempt.id],
+    () => getAttemptCombinedStats({ jobId, attemptNumber: attempt.id }, requestOptions),
+    {
+      refetchInterval: () => {
+        // if the attempt hasn't ended refetch every 2.5 seconds
+        return attempt.endedAt ? false : 2500;
+      },
+    }
+  );
+};
+
+export const useDonwnloadJobLogsFetchQuery = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
+  const workspace = useCurrentWorkspace();
+  const { formatMessage } = useIntl();
+
+  return useCallback(
+    (connectionName: string, jobId: number) => {
+      // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
+      queryClient.fetchQuery({
+        queryKey: [SCOPE_WORKSPACE, "jobs", "getDebugInfo", jobId],
+        queryFn: async () => {
+          const notificationId = `download-logs-${jobId}`;
+          registerNotification({
+            type: "info",
+            text: formatMessage(
+              {
+                id: "jobHistory.logs.logDownloadPending",
+              },
+              { jobId }
+            ),
+            id: notificationId,
+            timeout: false,
+          });
+          try {
+            return await Promise.all([
+              getJobDebugInfo({ id: jobId }, requestOptions)
+                .then((data) => {
+                  if (!data) {
+                    throw new Error("No logs returned from server");
+                  }
+                  const file = new Blob(
+                    [
+                      data.attempts
+                        .flatMap((info, index) => [
+                          `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
+                          ...(attemptHasFormattedLogs(info) ? info.logs.logLines : []),
+                          ...(attemptHasStructuredLogs(info)
+                            ? info.logs.events.map((event) => formatLogEvent(event))
+                            : []),
+                          `\n\n\n`,
+                        ])
+                        .join("\n"),
+                    ],
+                    {
+                      type: FILE_TYPE_DOWNLOAD,
+                    }
+                  );
+                  downloadFile(file, fileizeString(`${connectionName}-logs-${jobId}.txt`));
+                })
+                .catch((e) => {
+                  trackError(e, { workspaceId: workspace.workspaceId, jobId });
+                  registerNotification({
+                    type: "error",
+                    text: formatMessage({
+                      id: "jobHistory.logs.logDownloadFailed",
+                    }),
+                    id: `download-logs-error-${jobId}`,
+                  });
+                }),
+              new Promise((resolve) => setTimeout(resolve, 1000)),
+            ]);
+          } finally {
+            unregisterNotificationById(notificationId);
+          }
+        },
+      });
+    },
+    [
+      formatMessage,
+      queryClient,
+      registerNotification,
+      requestOptions,
+      unregisterNotificationById,
+      workspace.workspaceId,
+    ]
+  );
 };

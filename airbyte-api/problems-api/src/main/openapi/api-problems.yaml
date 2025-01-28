@@ -337,6 +337,48 @@ components:
               default: The integration service denied access.
             data:
               $ref: "#/components/schemas/DbtCloudIntegrationData"
+    DbtCloudPaidPlanRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:dbtcloud/paid-plan-required
+            title:
+              type: string
+              default: Unable to access dbt Cloud integration
+            detail:
+              type: string
+              default: To use the dbt Cloud integration, you must be on a paid plan.
+            data:
+              $ref: "#/components/schemas/DbtCloudIntegrationData"
+    DbtCloudGenericProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:dbtcloud/generic
+            title:
+              type: string
+              default: Unable to access dbt Cloud integration
+            detail:
+              type: string
+              default: There was an error communicating with dbt Cloud.
+            data:
+              $ref: "#/components/schemas/DbtCloudIntegrationData"
     CronValidationMissingCronProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -440,6 +482,131 @@ components:
               default: The specified cron timezone is invalid
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
+    CronValidationUnderOneHourNotAllowedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/under-one-hour-not-allowed
+            title:
+              type: string
+              default: Cron sync schedules more frequent than once per hour are not allowed
+            detail:
+              type: string
+              default: Syncs
+            data:
+              $ref: "#/components/schemas/ProblemCronExpressionData"
+    MapperValidationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation
+            title:
+              type: string
+              default: Mapper validation failed
+            detail:
+              type: string
+              default: The mapper configuration is invalid
+            data:
+              $ref: "#/components/schemas/ProblemMapperErrorsData"
+    MapperValidationMissingRequiredParamProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/missing-required-param
+            title:
+              type: string
+              default: Mapper configuration missing required parameter
+            detail:
+              type: string
+              default: The mapper configuration is missing a required parameter
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+    MapperValidationInvalidConfigProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/invalid-config
+            title:
+              type: string
+              default: Invalid Mapper Configuration
+            detail:
+              type: string
+              default: The mapper configuration is invalid and cannot be parsed
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+    MapperSecretNotFoundProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:mapper-validation/secret-not-found
+            title:
+              type: string
+              default: Mapper secret not found
+            detail:
+              type: string
+              default: Attempted to use pre-existing secret values, but an existing secret for that mapper was not found. Please provide the secret values.
+            data:
+              $ref: "#/components/schemas/ProblemMapperIdData"
+
+    RuntimeSecretsManagerRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:mapper-validation/runtime-secrets-manager-required
+            title:
+              type: string
+              default: Runtime Secrets Manager Required
+            detail:
+              type: string
+              default: The requested operation requires a runtime secrets manager to be configured.
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -468,7 +635,7 @@ components:
           properties:
             status:
               type: integer
-              default: 400
+              default: 404
             type:
               type: string
               default: https://reference.airbyte.com/reference/errors#resource-not-found
@@ -565,7 +732,59 @@ components:
             title:
               type: string
               default: A subscription is required for this operation to succeed.
-    BillingTooManyNonPrepaidSubscriptionsProblemResponse:
+    BillingInvalidStatusProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: error:billing/insufficient-payment-status
+            title:
+              type: string
+              default: The payment status of the associated Organization is insufficient.
+            data:
+              $ref: "#/components/schemas/BillingInvalidStatusProblemData"
+    BillingInsufficientCreditBalanceProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: error:billing/insufficient-credit-balance
+            title:
+              type: string
+              default: The credit balance of the associated Workspace or Organization is insufficient.
+            data:
+              $ref: "#/components/schemas/BillingInsufficientCreditBalanceProblemData"
+    BillingNoActiveSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:billing/no-active-subscription
+            title:
+              type: string
+              default: The organization doesn't have an active subscription.
+    BillingNoCancelableSubscriptionProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
       allOf:
@@ -577,10 +796,171 @@ components:
               default: 400
             type:
               type: string
-              default: error:billing/subscription/too-many-incompatible-subscriptions
+              default: error:billing/no-cancelable-subscription
             title:
               type: string
-              default: Found more than one subscription with some not being prepaid.
+              default: The organization doesn't have any active cancelable subscription.
+    BillingNoScheduledCancellationSubscriptionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:billing/no-scheduled-cancellation-subscription
+            title:
+              type: string
+              default: The organization doesn't have any cancelable subscription with a scheduled cancellation.
+    ConnectorRolloutInvalidRequestProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/invalid-request
+            title:
+              type: string
+              default: Invalid Connector Rollout request
+            detail:
+              type: string
+              default: Invalid connector rollout request.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/rollout-percentage-reached
+            title:
+              type: string
+              default: Max rollout percentage already reached
+            detail:
+              type: string
+              default: Cannot pin more actors; the maximum rollout percentage was already reached
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    ConnectorRolloutNotEnoughActorsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connector-rollout/not-enough-actors
+            title:
+              type: string
+              default: Not Enough Actors for Connector Rollout
+            detail:
+              type: string
+              default: Not enough actors are eligible for the progressive rollout.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:tag-already-exists
+            title:
+              type: string
+              default: Tag already exists
+            detail:
+              type: string
+              default: A tag with this name already exists in this workspace.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagInvalidHexColorProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-invalid-hex-color
+            title:
+              type: string
+              default: Invalid hex color
+            detail:
+              type: string
+              default: The hex color provided is invalid.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagNameTooLongProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-name-too-long
+            title:
+              type: string
+              default: Tag name too long
+            detail:
+              type: string
+              default: The tag name can be maximuim 30 characters.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagLimitForWorkspaceReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-limit-for-workspace-reached
+            title:
+              type: string
+              default: Tag limit for workspace reached
+            detail:
+              type: string
+              default: The workspace has reached the maximum number of tags.
     ProblemCronData:
       type: object
       properties:
@@ -593,12 +973,11 @@ components:
     ProblemCronExpressionData:
       type: object
       required:
-        - connectionId
         - cronExpression
       properties:
-        connectionId:
-          type: string
         cronExpression:
+          type: string
+        validationErrorMessage:
           type: string
     ProblemCronTimezoneData:
       type: object
@@ -610,6 +989,51 @@ components:
           type: string
         cronTimezone:
           type: string
+    ProblemMapperIdData:
+      type: object
+      required:
+        - mapperType
+      properties:
+        mapperId:
+          type: string
+          format: uuid
+        mapperType:
+          type: string
+        message:
+          type: string
+    ProblemMapperErrorsData:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemMapperErrorData"
+    ProblemMapperErrorData:
+      type: object
+      required:
+        - stream
+        - error
+        - mapper
+      properties:
+        stream:
+          type: string
+        error:
+          type: string
+        mapper:
+          type: object
+          required:
+            - type
+            - mapperConfiguration
+          properties:
+            id:
+              type: string
+              format: uuid
+            type:
+              type: string
+            mapperConfiguration:
+              type: object
     ProblemEmailData:
       type: object
       required:
@@ -669,4 +1093,33 @@ components:
         status:
           type: integer
         message:
+          type: string
+    BillingInvalidStatusProblemData:
+      type: object
+      properties:
+        invalidPaymentStatus:
+          $ref: "#/components/schemas/PaymentStatusEnum"
+        invalidSubscriptionStatus:
+          $ref: "#/components/schemas/SubscriptionStatusEnum"
+    PaymentStatusEnum:
+      type: string
+      enum:
+        - uninitialized
+        - okay
+        - grace_period
+        - disabled
+        - locked
+        - manual
+    SubscriptionStatusEnum:
+      type: string
+      enum:
+        - pre_subscription
+        - subscribed
+        - unsubscribed
+    BillingInsufficientCreditBalanceProblemData:
+      type: object
+      required:
+        - currentBalance
+      properties:
+        currentBalance:
           type: string

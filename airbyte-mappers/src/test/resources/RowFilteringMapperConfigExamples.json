@@ -1,0 +1,12 @@
+[
+  {
+    "name": "row-filtering",
+    "config": {
+      "conditions": {
+        "type": "EQUAL",
+        "fieldName": "status",
+        "comparisonValue": "active"
+      }
+    }
+  }
+]

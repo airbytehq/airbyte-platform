@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -7,7 +7,9 @@ package io.airbyte.commons.server.support;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.runtime.http.scope.RequestScope;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link CurrentUserService} that uses the default user from the
@@ -16,9 +18,10 @@ import lombok.extern.slf4j.Slf4j;
  * `@RequestScope` means one bean is created per request, so the default user is cached for any
  * subsequent calls to getCurrentUser() within the same request.
  */
-@Slf4j
 @RequestScope
 public class CommunityCurrentUserService implements CurrentUserService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final UserPersistence userPersistence;
   private AuthenticatedUser retrievedDefaultUser;

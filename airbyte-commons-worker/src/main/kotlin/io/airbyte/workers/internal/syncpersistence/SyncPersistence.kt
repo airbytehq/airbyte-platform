@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.syncpersistence
 
 import datadog.trace.api.Trace
@@ -34,7 +38,9 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import kotlin.jvm.optionals.getOrNull
 
-interface SyncPersistence : SyncStatsTracker, AutoCloseable {
+interface SyncPersistence :
+  SyncStatsTracker,
+  AutoCloseable {
   /**
    * Buffers a state for a given connectionId for eventual persistence.
    *
@@ -52,7 +58,11 @@ private const val RUN_IMMEDIATELY: Long = 0
 private const val FLUSH_TERMINATION_TIMEOUT_IN_SECONDS: Long = 60
 
 // For overriding the jitter config when testing
-data class RetryWithJitterConfig(val jitterMaxIntervalSecs: Int, val finalIntervalSecs: Int, val maxTries: Int)
+data class RetryWithJitterConfig(
+  val jitterMaxIntervalSecs: Int,
+  val finalIntervalSecs: Int,
+  val maxTries: Int,
+)
 
 @Prototype
 class SyncPersistenceImpl
@@ -67,7 +77,8 @@ class SyncPersistenceImpl
     @param:Parameter private val connectionId: UUID,
     @param:Parameter private val jobId: Long,
     @param:Parameter private val attemptNumber: Int,
-  ) : SyncPersistence, SyncStatsTracker by syncStatsTracker {
+  ) : SyncPersistence,
+    SyncStatsTracker by syncStatsTracker {
     private var stateBuffer = stateAggregatorFactory.create()
     private var stateFlushFuture: ScheduledFuture<*>? = null
     private var isReceivingStats = false
@@ -342,9 +353,10 @@ private fun buildSaveStatsRequest(
     stats = totalSyncStats.toAttemptStats(),
     connectionId = connectionId,
     streamStats =
-      streamSyncStats.map {
-        AttemptStreamStats(streamName = it.streamName, streamNamespace = it.streamNamespace, stats = it.stats.toAttemptStats())
-      }.toList(),
+      streamSyncStats
+        .map {
+          AttemptStreamStats(streamName = it.streamName, streamNamespace = it.streamNamespace, stats = it.stats.toAttemptStats())
+        }.toList(),
   )
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -16,7 +16,7 @@ import static org.jooq.impl.DSL.select;
 
 import io.airbyte.config.Organization;
 import io.airbyte.config.SsoConfig;
-import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
@@ -24,7 +24,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.Result;
@@ -34,7 +33,6 @@ import org.jooq.Result;
  * <p>
  * Handle persisting Permission to the Config Database and perform all SQL queries.
  */
-@Slf4j
 public class OrganizationPersistence {
 
   private final ExceptionWrappingDatabase database;
@@ -269,8 +267,6 @@ public class OrganizationPersistence {
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
         .set(ORGANIZATION.USER_ID, organization.getUserId())
-        .set(ORGANIZATION.PBA, organization.getPba())
-        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
         .execute();
@@ -291,8 +287,6 @@ public class OrganizationPersistence {
         .set(ORGANIZATION.USER_ID, organization.getUserId())
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
-        .set(ORGANIZATION.PBA, organization.getPba())
-        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.CREATED_AT, timestamp)
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .execute();
@@ -324,9 +318,7 @@ public class OrganizationPersistence {
         .withName(record.get(ORGANIZATION.NAME))
         .withEmail(record.get(ORGANIZATION.EMAIL))
         .withUserId(record.get(ORGANIZATION.USER_ID))
-        .withSsoRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM))
-        .withPba(record.get(ORGANIZATION.PBA))
-        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+        .withSsoRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM));
   }
 
   private static SsoConfig createSsoConfigFromRecord(final Record record) {

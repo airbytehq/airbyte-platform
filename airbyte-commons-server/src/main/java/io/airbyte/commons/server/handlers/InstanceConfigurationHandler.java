@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -16,9 +16,12 @@ import io.airbyte.api.model.generated.LicenseStatus;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AuthConfigs;
 import io.airbyte.commons.auth.config.AuthMode;
+import io.airbyte.commons.auth.config.OidcEndpointConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper;
+import io.airbyte.commons.server.helpers.PermissionDeniedException;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
@@ -26,13 +29,16 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.api.model.Node;
+import io.fabric8.kubernetes.api.model.NodeList;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
+import io.fabric8.kubernetes.client.dsl.Resource;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -42,7 +48,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +55,14 @@ import org.slf4j.LoggerFactory;
  * InstanceConfigurationHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@Slf4j
 @Singleton
 public class InstanceConfigurationHandler {
 
   public static final Set<Permission.PermissionType> EDITOR_ROLES =
       Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
-          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN);
+          Permission.PermissionType.ORGANIZATION_RUNNER,
+          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
+          Permission.PermissionType.WORKSPACE_RUNNER);
   private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
@@ -69,7 +75,8 @@ public class InstanceConfigurationHandler {
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
   private final Clock clock;
-  private final Optional<KubernetesClient> kubernetesClient;
+  private final Optional<OidcEndpointConfig> oidcEndpointConfig;
+  private final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -83,7 +90,8 @@ public class InstanceConfigurationHandler {
                                       final AuthConfigs authConfigs,
                                       final PermissionService permissionService,
                                       final Optional<Clock> clock,
-                                      final Optional<KubernetesClient> kubernetesClient) {
+                                      final Optional<OidcEndpointConfig> oidcEndpointConfig,
+                                      final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -96,7 +104,8 @@ public class InstanceConfigurationHandler {
     this.authConfigs = authConfigs;
     this.permissionService = permissionService;
     this.clock = clock.orElse(Clock.systemUTC());
-    this.kubernetesClient = kubernetesClient;
+    this.oidcEndpointConfig = oidcEndpointConfig;
+    this.kubernetesClientPermissionHelper = kubernetesClientPermissionHelper;
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(InstanceConfigurationHandler.class);
@@ -150,12 +159,17 @@ public class InstanceConfigurationHandler {
 
     // if Enterprise configurations are present, set OIDC-specific configs
     if (authConfigs.getAuthMode().equals(AuthMode.OIDC)) {
-      // OIDC depends on Keycloak configuration being present
-      if (authConfigs.getKeycloakConfig() == null) {
-        throw new IllegalStateException("Keycloak configuration is required for OIDC mode.");
+      if (oidcEndpointConfig.isPresent()) {
+        authConfig.setAuthorizationServerUrl(oidcEndpointConfig.get().getAuthorizationServerEndpoint());
+        authConfig.setClientId(oidcEndpointConfig.get().getClientId());
+      } else if (authConfigs.getKeycloakConfig() != null && airbyteUrl.isPresent()) {
+        authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
+        authConfig.setAuthorizationServerUrl(
+            airbyteUrl.get() + "/auth/realms/" + authConfigs.getKeycloakConfig().getAirbyteRealm());
+      } else {
+        // TODO: This is a bad error message. Once we figure out what the final config should look like
+        throw new IllegalStateException("OIDC must be configured either for Keycloak or in generic oidc mode.");
       }
-      authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
-      authConfig.setDefaultRealm(authConfigs.getKeycloakConfig().getAirbyteRealm());
     }
 
     return authConfig;
@@ -216,15 +230,14 @@ public class InstanceConfigurationHandler {
   }
 
   public LicenseInfoResponse licenseInfo() {
-    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
-    if (licenseMaybe.isPresent()) {
-      final AirbyteLicense license = licenseMaybe.get();
+    final AirbyteLicense license = activeAirbyteLicense.map(ActiveAirbyteLicense::getLicense).orElse(null);
+    if (license != null) {
       return new LicenseInfoResponse()
-          .edition(license.type().toString())
+          .edition(license.getType().toString())
           .expirationDate(licenseExpirationDate())
           .usedEditors(editorsUsage())
-          .maxEditors(license.maxEditors().orElse(null))
-          .maxNodes(license.maxNodes().orElse(null))
+          .maxEditors(license.getMaxEditors())
+          .maxNodes(license.getMaxNodes())
           .usedNodes(nodesUsage())
           .licenseStatus(currentLicenseStatus());
     }
@@ -232,11 +245,13 @@ public class InstanceConfigurationHandler {
   }
 
   private Long licenseExpirationDate() {
-    final Optional<AirbyteLicense> licenseMaybe = activeAirbyteLicense.flatMap(ActiveAirbyteLicense::getLicense);
+    final AirbyteLicense license = activeAirbyteLicense.map(ActiveAirbyteLicense::getLicense).orElse(null);
 
-    if (licenseMaybe.isPresent()) {
-      final AirbyteLicense license = licenseMaybe.get();
-      return license.expirationDate().map(d -> d.toInstant().toEpochMilli() / 1000).orElse(null);
+    if (license != null) {
+      var expDate = license.getExpirationDate();
+      if (expDate != null) {
+        return expDate.toInstant().toEpochMilli() / 1000;
+      }
     }
     return null;
   }
@@ -254,23 +269,37 @@ public class InstanceConfigurationHandler {
     if (activeAirbyteLicense.isEmpty()) {
       return null;
     }
-    if (activeAirbyteLicense.get().getLicense().isEmpty()
-        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.INVALID
-        || activeAirbyteLicense.get().getLicense().get().type() == AirbyteLicense.LicenseType.PRO) {
+    if (activeAirbyteLicense.get().getLicense() == null
+        || activeAirbyteLicense.get().getLicense().getType() == AirbyteLicense.LicenseType.INVALID
+        || activeAirbyteLicense.get().getLicense().getType() == AirbyteLicense.LicenseType.PRO) {
       return LicenseStatus.INVALID;
     }
-    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense().get();
-    if (actualLicense.expirationDate().map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
+    final AirbyteLicense actualLicense = activeAirbyteLicense.get().getLicense();
+    if (Optional.ofNullable(actualLicense.getExpirationDate()).map(exp -> exp.toInstant().isBefore(clock.instant())).orElse(false)) {
       return LicenseStatus.EXPIRED;
     }
-    if (actualLicense.maxEditors().map(m -> editorsUsage() > m).orElse(false)) {
+    if (Optional.ofNullable(actualLicense.getMaxEditors()).map(m -> editorsUsage() > m).orElse(false)) {
       return LicenseStatus.EXCEEDED;
     }
     return LicenseStatus.PRO;
   }
 
   private Integer nodesUsage() {
-    return kubernetesClient.map(client -> client.nodes().list().getItems().size()).orElse(null);
+    try {
+      final NonNamespaceOperation<Node, NodeList, Resource<Node>> nodes =
+          this.kubernetesClientPermissionHelper
+              .map(KubernetesClientPermissionHelper::listNodes)
+              .orElse(null);
+
+      if (nodes != null) {
+        return nodes.list().getItems().size();
+      }
+    } catch (PermissionDeniedException e) {
+      LOGGER.warn("Permission denied while attempting to get node usage: {}", e.getMessage());
+    } catch (Exception e) {
+      LOGGER.error("Unexpected error while fetching Kubernetes nodes: {}", e.getMessage(), e);
+    }
+    return null;
   }
 
 }

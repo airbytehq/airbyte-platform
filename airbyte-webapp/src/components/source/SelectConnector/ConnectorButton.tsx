@@ -6,15 +6,16 @@ import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { ConnectorDefinition } from "core/domain/connector";
+import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectorButton.module.scss";
 
-interface ConnectorButtonProps<T extends ConnectorDefinition> {
+interface ConnectorButtonProps<T extends ConnectorDefinitionOrEnterpriseStub> {
   className?: string;
   onClick: (definition: T) => void;
   definition: T;
@@ -22,7 +23,15 @@ interface ConnectorButtonProps<T extends ConnectorDefinition> {
   maxLines: 2 | 3;
 }
 
-export const ConnectorButton = <T extends ConnectorDefinition>({
+const EnterpriseBadge = () => {
+  return (
+    <span className={styles.supportLevel}>
+      <SupportLevelBadge supportLevel="enterprise" custom={false} className={styles.enterpriseBadge} />
+    </span>
+  );
+};
+
+export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
   className,
   definition,
   onClick,
@@ -43,13 +52,19 @@ export const ConnectorButton = <T extends ConnectorDefinition>({
           {definition.name}
         </Text>
       </FlexContainer>
-
-      {showMetrics && (
-        <FlexContainer className={styles.metrics}>
-          <MetricIcon metric="success" connectorDefinition={definition} />
-          <MetricIcon metric="usage" connectorDefinition={definition} />
-        </FlexContainer>
-      )}
+      {
+        // Conditionally render the metrics only if it is not an EnterpriseSourceStub
+        showMetrics && !("isEnterprise" in definition) && (
+          <FlexContainer className={styles.metrics}>
+            <MetricIcon metric="success" connectorDefinition={definition} />
+            <MetricIcon metric="usage" connectorDefinition={definition} />
+          </FlexContainer>
+        )
+      }
+      {
+        // Conditionally render the support level badge only if it is an EnterpriseSourceStub
+        "isEnterprise" in definition ? <EnterpriseBadge /> : null
+      }
     </button>
   );
 };

@@ -1,22 +1,11 @@
 import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
-import { clickOnCellInTable, submitButtonClick } from "commands/common";
+import { submitButtonClick } from "commands/common";
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
 
 const settingsTab = "a[data-testid='settings-step']";
-const sourceColumnName = "Source name";
-const destinationColumnName = "Destination name";
-const connectionsTable = "table[data-testid='connectionsTable']";
 export const resetDataButton = "[data-testid='resetDataButton']";
 export const deleteConnectionButton = "[data-testid='open-delete-modal']";
-
-export const openConnectionOverviewBySourceName = (sourceName: string) => {
-  clickOnCellInTable(connectionsTable, sourceColumnName, sourceName);
-};
-
-export const openConnectionOverviewByDestinationName = (destinationName: string) => {
-  clickOnCellInTable(connectionsTable, destinationColumnName, destinationName);
-};
 
 export const goToSettingsPage = () => {
   cy.get(settingsTab).click();

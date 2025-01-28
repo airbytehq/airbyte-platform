@@ -2,15 +2,51 @@
 // NOTE: this settings is only discovered when running from oss/build.gradle
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 pluginManagement {
+
+  plugins {
+    val airbyteGradlePluginsVersion: String by settings
+    id("io.airbyte.gradle.jvm") version "${airbyteGradlePluginsVersion}" apply false
+    id("io.airbyte.gradle.jvm.app") version "${airbyteGradlePluginsVersion}" apply false
+    id("io.airbyte.gradle.jvm.lib") version "${airbyteGradlePluginsVersion}" apply false
+    id("io.airbyte.gradle.docker") version "${airbyteGradlePluginsVersion}" apply false
+    id("io.airbyte.gradle.publish") version "${airbyteGradlePluginsVersion}" apply false
+    id("io.airbyte.gradle.kube-reload") version "${airbyteGradlePluginsVersion}" apply false
+
+    id("com.github.eirnym.js2p") version "1.0" apply false
+    id("org.openapi.generator") version "7.10.0" apply false
+  }
+
   repositories {
-    // uncomment for local dev
-    // maven {
-    // name = "localPluginRepo"
-    // url = uri("../.gradle-plugins-local")
-    // }
+    maven {
+      name = "localPluginRepo"
+      url = uri("../.gradle-plugins-local")
+    }
     maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
     gradlePluginPortal()
     maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+  }
+}
+
+buildscript {
+  dependencies {
+    classpath("com.bmuschko:gradle-docker-plugin:8.0.0")
+    // Plugin `com.bmuschko:gradle-docker-plugin:8.0.0` transitively depends on jackson 2.10.3,
+    // which is not binary compatible with jackson 2.14 that is used elsewhere.
+    // This causes `NoSuchMethodError` exceptions while building.
+    //
+    // Dependency chain:
+    // `com.bmuschko:gradle-docker-plugin:8.0.0` ->
+    // `com.github.docker-java:docker-java-core:3.2.14` ->
+    // `com.fasterxml.jackson.core:jackson-databind:2.10.3`
+    //
+    // As this is a third-party dependency, we cannot (without forking) update it to use a newer jackson version.
+    // There is however a PR that was created to update this version to the latest jackson version:
+    // https://github.com/docker-java/docker-java/pull/2056
+    //
+    // TODO: once oss has been inlined, revisit where the version of jackson is defined.
+    classpath("com.fasterxml.jackson.core:jackson-core:2.14.2")
+
+    classpath("org.codehaus.groovy:groovy-yaml:3.0.3")
   }
 }
 
@@ -80,6 +116,7 @@ include(":oss:airbyte-api:connector-builder-api")
 include(":oss:airbyte-api:problems-api")
 include(":oss:airbyte-api:public-api")
 include(":oss:airbyte-api:workload-api")
+include(":oss:airbyte-audit-logging")
 include(":oss:airbyte-workload-api-server")
 include(":oss:airbyte-commons-protocol")
 include(":oss:airbyte-config:specs")
@@ -121,10 +158,12 @@ include(":oss:airbyte-connector-rollout-worker")
 include(":oss:airbyte-connector-rollout-client")
 include(":oss:airbyte-container-orchestrator")
 include(":oss:airbyte-cron")
+include(":oss:airbyte-csp-check")
 include(":oss:airbyte-keycloak")
 include(":oss:airbyte-keycloak-setup")
 include(":oss:airbyte-mappers")
 include(":oss:airbyte-metrics:reporter")
+include(":oss:airbyte-pod-sweeper")
 include(":oss:airbyte-server")
 include(":oss:airbyte-temporal")
 include(":oss:airbyte-tests")
@@ -133,6 +172,7 @@ include(":oss:airbyte-workers")
 include(":oss:airbyte-workload-launcher")
 include(":oss:airbyte-connector-sidecar")
 include(":oss:airbyte-workload-init-container")
+include(":oss:airbyte-pmd-rules")
 
 project(":oss:airbyte-commons").projectDir = file("airbyte-commons")
 project(":oss:airbyte-api").projectDir = file("airbyte-api")
@@ -142,6 +182,7 @@ project(":oss:airbyte-api:connector-builder-api").projectDir = file("airbyte-api
 project(":oss:airbyte-api:problems-api").projectDir = file("airbyte-api/problems-api")
 project(":oss:airbyte-api:public-api").projectDir = file("airbyte-api/public-api")
 project(":oss:airbyte-api:workload-api").projectDir = file("airbyte-api/workload-api")
+project(":oss:airbyte-audit-logging").projectDir = file("airbyte-audit-logging")
 project(":oss:airbyte-workload-api-server").projectDir = file("airbyte-workload-api-server")
 project(":oss:airbyte-commons-protocol").projectDir = file("airbyte-commons-protocol")
 project(":oss:airbyte-config:specs").projectDir = file("airbyte-config/specs")
@@ -160,6 +201,7 @@ project(":oss:airbyte-commons-converters").projectDir = file("airbyte-commons-co
 project(":oss:airbyte-commons-worker").projectDir = file("airbyte-commons-worker")
 project(":oss:airbyte-config:config-persistence").projectDir = file("airbyte-config/config-persistence")
 project(":oss:airbyte-config:config-secrets").projectDir = file("airbyte-config/config-secrets")
+project(":oss:airbyte-csp-check").projectDir = file("airbyte-csp-check")
 project(":oss:airbyte-featureflag").projectDir = file("airbyte-featureflag")
 project(":oss:airbyte-featureflag-server").projectDir = file("airbyte-featureflag-server")
 project(":oss:airbyte-db:jooq").projectDir = file("airbyte-db/jooq")
@@ -185,6 +227,7 @@ project(":oss:airbyte-keycloak").projectDir = file("airbyte-keycloak")
 project(":oss:airbyte-keycloak-setup").projectDir = file("airbyte-keycloak-setup")
 project(":oss:airbyte-mappers").projectDir = file("airbyte-mappers")
 project(":oss:airbyte-metrics:reporter").projectDir = file("airbyte-metrics/reporter")
+project(":oss:airbyte-pod-sweeper").projectDir = file("airbyte-pod-sweeper")
 project(":oss:airbyte-server").projectDir = file("airbyte-server")
 project(":oss:airbyte-temporal").projectDir = file("airbyte-temporal")
 project(":oss:airbyte-tests").projectDir = file("airbyte-tests")
@@ -193,3 +236,4 @@ project(":oss:airbyte-workers").projectDir = file("airbyte-workers")
 project(":oss:airbyte-workload-launcher").projectDir = file("airbyte-workload-launcher")
 project(":oss:airbyte-connector-sidecar").projectDir = file("airbyte-connector-sidecar")
 project(":oss:airbyte-workload-init-container").projectDir = file("airbyte-workload-init-container")
+project(":oss:airbyte-pmd-rules").projectDir = file("airbyte-pmd-rules")

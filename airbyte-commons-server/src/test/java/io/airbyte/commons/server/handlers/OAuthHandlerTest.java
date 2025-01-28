@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,22 +20,22 @@ import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,10 +48,9 @@ import org.mockito.Mockito;
 
 class OAuthHandlerTest {
 
-  private ConfigRepository configRepository;
   private OAuthHandler handler;
   private TrackingClient trackingClient;
-  private HttpClient httpClient;
+  private OAuthImplementationFactory oauthImplementationFactory;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
@@ -67,9 +67,8 @@ class OAuthHandlerTest {
 
   @BeforeEach
   public void init() {
-    configRepository = Mockito.mock(ConfigRepository.class);
     trackingClient = mock(TrackingClient.class);
-    httpClient = Mockito.mock(HttpClient.class);
+    oauthImplementationFactory = mock(OAuthImplementationFactory.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -79,13 +78,21 @@ class OAuthHandlerTest {
     oauthService = mock(OAuthService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     workspaceService = mock(WorkspaceService.class);
-    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryWriter,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, destinationService, oauthService, secretPersistenceConfigService,
+    handler = new OAuthHandler(
+        oauthImplementationFactory,
+        trackingClient,
+        secretsRepositoryWriter,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        destinationService,
+        oauthService,
+        secretPersistenceConfigService,
         workspaceService);
   }
 
   @Test
-  void setSourceInstancewideOauthParams() throws JsonValidationException, IOException {
+  void setSourceInstancewideOauthParams() throws IOException {
     final UUID sourceDefId = UUID.randomUUID();
     final Map<String, Object> params = new HashMap<>();
     params.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -98,13 +105,13 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(actualRequest);
 
     final ArgumentCaptor<SourceOAuthParameter> argument = ArgumentCaptor.forClass(SourceOAuthParameter.class);
-    Mockito.verify(configRepository).writeSourceOAuthParam(argument.capture());
+    Mockito.verify(oauthService).writeSourceOAuthParam(argument.capture());
     assertEquals(Jsons.jsonNode(params), argument.getValue().getConfiguration());
     assertEquals(sourceDefId, argument.getValue().getSourceDefinitionId());
   }
 
   @Test
-  void resetSourceInstancewideOauthParams() throws JsonValidationException, IOException {
+  void resetSourceInstancewideOauthParams() throws IOException {
     final UUID sourceDefId = UUID.randomUUID();
     final Map<String, Object> firstParams = new HashMap<>();
     firstParams.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -115,7 +122,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(configRepository.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
+    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
         .thenReturn(Optional.of(new SourceOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -127,7 +134,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(secondRequest);
 
     final ArgumentCaptor<SourceOAuthParameter> argument = ArgumentCaptor.forClass(SourceOAuthParameter.class);
-    Mockito.verify(configRepository, Mockito.times(2)).writeSourceOAuthParam(argument.capture());
+    Mockito.verify(oauthService, Mockito.times(2)).writeSourceOAuthParam(argument.capture());
     final List<SourceOAuthParameter> capturedValues = argument.getAllValues();
     assertEquals(Jsons.jsonNode(firstParams), capturedValues.get(0).getConfiguration());
     assertEquals(Jsons.jsonNode(secondParams), capturedValues.get(1).getConfiguration());
@@ -137,7 +144,7 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void setDestinationInstancewideOauthParams() throws JsonValidationException, IOException {
+  void setDestinationInstancewideOauthParams() throws IOException {
     final UUID destinationDefId = UUID.randomUUID();
     final Map<String, Object> params = new HashMap<>();
     params.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -150,13 +157,13 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(actualRequest);
 
     final ArgumentCaptor<DestinationOAuthParameter> argument = ArgumentCaptor.forClass(DestinationOAuthParameter.class);
-    Mockito.verify(configRepository).writeDestinationOAuthParam(argument.capture());
+    Mockito.verify(oauthService).writeDestinationOAuthParam(argument.capture());
     assertEquals(Jsons.jsonNode(params), argument.getValue().getConfiguration());
     assertEquals(destinationDefId, argument.getValue().getDestinationDefinitionId());
   }
 
   @Test
-  void resetDestinationInstancewideOauthParams() throws JsonValidationException, IOException {
+  void resetDestinationInstancewideOauthParams() throws IOException {
     final UUID destinationDefId = UUID.randomUUID();
     final Map<String, Object> firstParams = new HashMap<>();
     firstParams.put(CLIENT_ID_KEY, CLIENT_ID);
@@ -167,7 +174,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(configRepository.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
+    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
         .thenReturn(Optional.of(new DestinationOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -179,7 +186,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(secondRequest);
 
     final ArgumentCaptor<DestinationOAuthParameter> argument = ArgumentCaptor.forClass(DestinationOAuthParameter.class);
-    Mockito.verify(configRepository, Mockito.times(2)).writeDestinationOAuthParam(argument.capture());
+    Mockito.verify(oauthService, Mockito.times(2)).writeDestinationOAuthParam(argument.capture());
     final List<DestinationOAuthParameter> capturedValues = argument.getAllValues();
     assertEquals(Jsons.jsonNode(firstParams), capturedValues.get(0).getConfiguration());
     assertEquals(Jsons.jsonNode(secondParams), capturedValues.get(1).getConfiguration());
@@ -266,7 +273,8 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void testCompleteSourceOAuthHandleReturnSecret() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCompleteSourceOAuthHandleReturnSecret()
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
 
@@ -275,12 +283,13 @@ class OAuthHandlerTest {
         .sourceDefinitionId(sourceDefinitionId)
         .workspaceId(workspaceId);
 
-    final OAuthHandler handlerSpy = Mockito.spy(handler);
+    final OAuthHandler handlerSpy = spy(handler);
 
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy).completeSourceOAuth(any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy)
+            .completeSourceOAuth(any());
     doReturn(
-        handler.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
+        OAuthHelper.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
 
     handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest);
 
@@ -307,7 +316,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigNoFeatureFlag()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
@@ -316,7 +325,7 @@ class OAuthHandlerTest {
         .withConfiguration(Jsons.deserialize("""
                                              {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
                                              """));
-    when(oauthService.getSourceOAuthParameterWithSecrets(any(), any())).thenReturn(sourceOAuthParameter);
+    when(oauthService.getSourceOAuthParameterWithSecretsOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(sourceOAuthParameter.getConfiguration());
 
     final JsonNode expected = Jsons.deserialize("""
@@ -327,7 +336,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigFeatureFlagNoOverride()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
@@ -336,7 +345,7 @@ class OAuthHandlerTest {
         .withConfiguration(Jsons.deserialize("""
                                              {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
                                              """));
-    when(oauthService.getSourceOAuthParameterWithSecrets(any(), any())).thenReturn(sourceOAuthParameter);
+    when(oauthService.getSourceOAuthParameterWithSecretsOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(sourceOAuthParameter.getConfiguration());
 

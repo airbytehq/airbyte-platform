@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -12,16 +12,19 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class that provides methods for dealing with stream reset records.
  */
 @Singleton
-@Slf4j
 public class StreamResetRecordsHelper {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final JobPersistence jobPersistence;
   private final StreamResetPersistence streamResetPersistence;

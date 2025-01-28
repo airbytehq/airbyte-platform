@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -18,11 +16,10 @@ dependencies {
   implementation(libs.bundles.flyway)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
-  implementation(libs.guava)
-  implementation(libs.apache.commons.lang)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:init"))
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -37,6 +34,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -56,9 +54,6 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
-
-  integrationTestCompileOnly(libs.lombok)
-  integrationTestAnnotationProcessor(libs.lombok)
 }
 
 airbyte {
@@ -79,8 +74,8 @@ airbyte {
   }
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 @file:Suppress("PackageName")
@@ -51,18 +51,22 @@ object ConfigClientErrorHandler {
       HttpStatus.NOT_FOUND -> throw ResourceNotFoundProblem(ProblemResourceData().resourceId(resourceId))
       HttpStatus.CONFLICT -> {
         val message: String =
-          response.getBody(MutableMap::class.java)
+          response
+            .getBody(MutableMap::class.java)
             .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_CONFLICT_MESSAGE)) }
-            .getOrDefault(MESSAGE, DEFAULT_CONFLICT_MESSAGE).toString()
+            .getOrDefault(MESSAGE, DEFAULT_CONFLICT_MESSAGE)
+            .toString()
         throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
       }
 
       HttpStatus.UNAUTHORIZED -> throw InvalidApiKeyProblem()
       HttpStatus.UNPROCESSABLE_ENTITY -> {
         val message: String =
-          response.getBody(MutableMap::class.java)
+          response
+            .getBody(MutableMap::class.java)
             .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)) }
-            .getOrDefault(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE).toString()
+            .getOrDefault(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)
+            .toString()
         // Exclude the part of a schema validation message that's ugly if it's there
         throw UnprocessableEntityProblem(
           ProblemMessageData()
@@ -82,6 +86,10 @@ object ConfigClientErrorHandler {
   fun handleError(throwable: Throwable) {
     when (throwable) {
       is ConfigNotFoundException -> throw ResourceNotFoundProblem(ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId))
+      is io.airbyte.data.exceptions.ConfigNotFoundException -> throw ResourceNotFoundProblem(
+        ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId),
+      )
+
       is ValueConflictKnownException -> {
         val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
         throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
@@ -114,6 +122,8 @@ object ConfigClientErrorHandler {
         throw OAuthCallbackFailureProblem(ProblemMessageData().message(throwable.message))
       }
 
+      is AbstractThrowableProblem -> throw throwable
+
       else -> {
         val message = throwable.message ?: DEFAULT_INTERNAL_SERVER_ERROR_MESSAGE
         if (message.contains("Could not find job with id")) {
@@ -134,8 +144,8 @@ object ConfigClientErrorHandler {
   fun handleCreateConnectionError(
     throwable: Throwable,
     connectionCreate: ConnectionCreateRequest,
-  ): AbstractThrowableProblem {
-    return when (throwable) {
+  ): AbstractThrowableProblem =
+    when (throwable) {
       is JsonValidationException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
       is IOException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
       is ConfigNotFoundException ->
@@ -148,7 +158,6 @@ object ConfigClientErrorHandler {
         }
       else -> UnexpectedProblem()
     }
-  }
 
   /**
    * Throws an UnexpectedProblem if the response contains an error code 400 or above.

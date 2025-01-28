@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.auth;
@@ -18,8 +18,9 @@ import java.util.stream.Stream;
  */
 public enum OrganizationAuthRole implements AuthRoleInterface {
 
-  ORGANIZATION_ADMIN(400, AuthRoleConstants.ORGANIZATION_ADMIN),
-  ORGANIZATION_EDITOR(300, AuthRoleConstants.ORGANIZATION_EDITOR),
+  ORGANIZATION_ADMIN(500, AuthRoleConstants.ORGANIZATION_ADMIN),
+  ORGANIZATION_EDITOR(400, AuthRoleConstants.ORGANIZATION_EDITOR),
+  ORGANIZATION_RUNNER(300, AuthRoleConstants.ORGANIZATION_RUNNER),
   ORGANIZATION_READER(200, AuthRoleConstants.ORGANIZATION_READER),
   ORGANIZATION_MEMBER(100, AuthRoleConstants.ORGANIZATION_MEMBER),
   NONE(0, AuthRoleConstants.NONE);

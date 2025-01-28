@@ -1,0 +1,53 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  container-type: inline-size;
+}
+
+$cardBreakPoint: 1000px;
+
+.cardLayout {
+  flex-direction: column;
+  @container (width > #{$cardBreakPoint}) {
+    flex-direction: row;
+  }
+}
+
+.graphCard {
+  position: relative; // to position/center the loading overlay
+  flex-basis: 50%;
+
+  @container (width > #{$cardBreakPoint}) {
+    // lets ResponsiveContainer resize the charts down, otherwise the achieved width is maintained as a min-width
+    max-width: 50%;
+  }
+
+  svg {
+    cursor: pointer; // clicking on either graph opens the logs for that sync
+  }
+}
+
+.loadingState {
+  $spacingTop: 50px; // push the overlay down to not obscure the card title & buttons
+
+  position: absolute;
+  top: $spacingTop;
+  height: calc(100% - $spacingTop);
+  width: calc(100% - calc(variables.$spacing-xl * 2)); // adjust for padding on the card
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    backdrop-filter: blur(2px) saturate(50%);
+  }
+
+  .loadingPage {
+    position: relative; // changes the stacking context so the backdrop-filter doesn't apply
+    top: calc($spacingTop * -0.5);
+  }
+}

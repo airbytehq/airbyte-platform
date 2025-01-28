@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.bookkeeping;
@@ -16,7 +16,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage.Type;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.helper.FailureHelper;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;

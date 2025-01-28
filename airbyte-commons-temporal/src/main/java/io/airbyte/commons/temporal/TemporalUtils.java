@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
 
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
@@ -21,20 +22,22 @@ import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Temporal Utility functions.
  */
 // todo (cgardens) - rename? utils implies it's static utility function
-@Slf4j
 @Singleton
 public class TemporalUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final Duration WAIT_INTERVAL = Duration.ofSeconds(2);
   private static final Duration MAX_TIME_TO_CONNECT = Duration.ofMinutes(2);
@@ -121,14 +124,14 @@ public class TemporalUtils {
     final var currentRetentionGrpcDuration = client.describeNamespace(describeNamespaceRequest).getConfig().getWorkflowExecutionRetentionTtl();
     final var currentRetention = Duration.ofSeconds(currentRetentionGrpcDuration.getSeconds());
     final var workflowExecutionTtl = Duration.ofDays(temporalRetentionInDays);
-    final var humanReadableWorkflowExecutionTtl = DurationFormatUtils.formatDurationWords(workflowExecutionTtl.toMillis(), true, true);
+    final var humanReadableWorkflowExecutionTtl = DurationKt.formatMilli(workflowExecutionTtl.toMillis());
 
     if (currentRetention.equals(workflowExecutionTtl)) {
       log.info("Workflow execution TTL already set for namespace " + DEFAULT_NAMESPACE + ". Remains unchanged as: "
           + humanReadableWorkflowExecutionTtl);
     } else {
       final var newGrpcDuration = com.google.protobuf.Duration.newBuilder().setSeconds(workflowExecutionTtl.getSeconds()).build();
-      final var humanReadableCurrentRetention = DurationFormatUtils.formatDurationWords(currentRetention.toMillis(), true, true);
+      final var humanReadableCurrentRetention = DurationKt.formatMilli(currentRetention.toMillis());
       final var namespaceConfig = NamespaceConfig.newBuilder().setWorkflowExecutionRetentionTtl(newGrpcDuration).build();
       final var updateNamespaceRequest = UpdateNamespaceRequest.newBuilder().setNamespace(DEFAULT_NAMESPACE).setConfig(namespaceConfig).build();
       log.info("Workflow execution TTL differs for namespace " + DEFAULT_NAMESPACE + ". Changing from (" + humanReadableCurrentRetention + ") to ("

@@ -1,0 +1,15 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.controlButton {
+  white-space: nowrap;
+  overflow: hidden;
+
+  p {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+  }
+}

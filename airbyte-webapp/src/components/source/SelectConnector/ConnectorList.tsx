@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { FlexContainer } from "components/ui/Flex";
 
-import { ConnectorDefinition } from "core/domain/connector";
+import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 
 import { BuilderConnectorButton, ConnectorButton } from "./ConnectorButton";
@@ -12,18 +12,18 @@ import { RequestNewConnectorButton } from "./RequestNewConnectorButton";
 import { ConnectorSorting } from "./SelectConnector";
 import { SuggestedConnectors } from "./SuggestedConnectors";
 
-interface ConnectorListProps<T extends ConnectorDefinition> {
+interface ConnectorListProps {
   sorting: ConnectorSorting;
   displayType?: "grid" | "list";
-  connectorDefinitions: T[];
+  connectorDefinitions: ConnectorDefinitionOrEnterpriseStub[];
   noSearchResultsContent: React.ReactNode;
   suggestedConnectorDefinitionIds?: string[];
-  onConnectorButtonClick: (definition: ConnectorDefinition) => void;
+  onConnectorButtonClick: (definition: ConnectorDefinitionOrEnterpriseStub) => void;
   onOpenRequestConnectorModal: () => void;
   showConnectorBuilderButton?: boolean;
 }
 
-export const ConnectorList = <T extends ConnectorDefinition>({
+export const ConnectorList: React.FC<ConnectorListProps> = ({
   sorting,
   displayType,
   connectorDefinitions,
@@ -32,7 +32,7 @@ export const ConnectorList = <T extends ConnectorDefinition>({
   onConnectorButtonClick,
   onOpenRequestConnectorModal,
   showConnectorBuilderButton = false,
-}: ConnectorListProps<T>) => {
+}) => {
   const sortedConnectorDefinitions = useMemo(
     () =>
       [...connectorDefinitions].sort((a, b) => {
@@ -67,9 +67,12 @@ export const ConnectorList = <T extends ConnectorDefinition>({
       {displayType === "grid" ? (
         <div className={styles.connectorGrid}>
           {sortedConnectorDefinitions.map((definition) => {
-            const key = isSourceDefinition(definition)
-              ? definition.sourceDefinitionId
-              : definition.destinationDefinitionId;
+            const key =
+              "isEnterprise" in definition
+                ? definition.id
+                : isSourceDefinition(definition)
+                ? definition.sourceDefinitionId
+                : definition.destinationDefinitionId;
             return <ConnectorButton definition={definition} onClick={onConnectorButtonClick} key={key} maxLines={3} />;
           })}
 
@@ -79,16 +82,19 @@ export const ConnectorList = <T extends ConnectorDefinition>({
       ) : (
         <FlexContainer className={styles.connectorList} direction="column" gap="sm">
           {sortedConnectorDefinitions.map((definition) => {
-            const key = isSourceDefinition(definition)
-              ? definition.sourceDefinitionId
-              : definition.destinationDefinitionId;
+            const key =
+              "isEnterprise" in definition
+                ? definition.id
+                : isSourceDefinition(definition)
+                ? definition.sourceDefinitionId
+                : definition.destinationDefinitionId;
             return (
               <ConnectorButton
                 className={styles.connectorListButton}
                 definition={definition}
                 onClick={onConnectorButtonClick}
                 key={key}
-                showMetrics
+                showMetrics={"metrics" in definition}
                 maxLines={2}
               />
             );
@@ -106,7 +112,14 @@ export const ConnectorList = <T extends ConnectorDefinition>({
 
 type NumericMetric = number | undefined;
 
-const getNumericMetric = (connectorDefinition: ConnectorDefinition, metric: "successRate" | "usage"): NumericMetric => {
+const getNumericMetric = (
+  connectorDefinition: ConnectorDefinitionOrEnterpriseStub,
+  metric: "successRate" | "usage"
+): NumericMetric => {
+  if ("isEnterprise" in connectorDefinition) {
+    return 1;
+  }
+
   const rawMetricValue =
     metric === "successRate"
       ? connectorDefinition.metrics?.all?.sync_success_rate

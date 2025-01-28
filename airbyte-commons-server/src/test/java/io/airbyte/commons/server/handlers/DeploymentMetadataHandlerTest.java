@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -24,7 +24,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class DeploymentMetadataHandlerTest {
 
   @ParameterizedTest
-  @ValueSource(strings = {Environment.KUBERNETES, Environment.TEST})
+  @ValueSource(strings = {Environment.TEST})
   void testRetrievingDeploymentMetadata(final String activeEnvironment) {
     final UUID deploymentId = UUID.randomUUID();
     final String version = "0.1.2";

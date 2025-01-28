@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import io.airbyte.commons.version.Version
@@ -13,6 +14,7 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
 import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate
 import io.airbyte.config.persistence.BreakingChangesHelper
+import io.airbyte.config.persistence.BreakingChangesHelper.WorkspaceBreakingChangeInfo
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
@@ -60,19 +62,19 @@ internal class SupportStateUpdaterTest {
 
     justRun { mActorDefinitionService.setActorDefinitionVersionSupportStates(any(), any()) }
     justRun { mBreakingChangeNotificationHelper.notifyDeprecatedSyncs(any()) }
+    justRun { mBreakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(any()) }
   }
 
   private fun createBreakingChange(
     version: String,
     upgradeDeadline: String,
-  ): ActorDefinitionBreakingChange {
-    return ActorDefinitionBreakingChange()
+  ): ActorDefinitionBreakingChange =
+    ActorDefinitionBreakingChange()
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withVersion(Version(version))
       .withMessage("This is a breaking change for version $version")
       .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#$version")
       .withUpgradeDeadline(upgradeDeadline)
-  }
 
   private fun createActorDefinitionVersion(version: String): ActorDefinitionVersion {
     return ActorDefinitionVersion()
@@ -213,7 +215,7 @@ internal class SupportStateUpdaterTest {
         destinationDefinition.destinationDefinitionId,
         listOf(destV0MinorADV.versionId),
       )
-    } returns workspaceIdsToNotify.stream().map { id: UUID -> Pair(id, listOf(UUID.randomUUID())) }.toList()
+    } returns workspaceIdsToNotify.stream().map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID()), listOf()) }.toList()
     supportStateUpdater.updateSupportStates(LocalDate.parse("2020-01-15"))
 
     verify {
@@ -240,6 +242,7 @@ internal class SupportStateUpdaterTest {
           BreakingChangeNotificationData(ActorType.DESTINATION, destinationDefinition.name, workspaceIdsToNotify, destV1BreakingChange),
         ),
       )
+      mBreakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(listOf())
       mSourceService.listPublicSourceDefinitions(false)
       mDestinationService.listPublicDestinationDefinitions(false)
       mActorDefinitionService.listBreakingChanges()
@@ -390,7 +393,9 @@ internal class SupportStateUpdaterTest {
         listOf(v3MajorADV.versionId),
       )
     } returns
-      workspaceIds.stream().map { id: UUID -> Pair(id, listOf(UUID.randomUUID(), UUID.randomUUID())) }
+      workspaceIds
+        .stream()
+        .map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
         .toList()
     val latestBreakingChange =
       ActorDefinitionBreakingChange()
@@ -439,7 +444,9 @@ internal class SupportStateUpdaterTest {
         listOf(v3MajorADV.versionId),
       )
     } returns
-      workspaceIds.stream().map { id: UUID -> Pair(id, listOf(UUID.randomUUID(), UUID.randomUUID())) }
+      workspaceIds
+        .stream()
+        .map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
         .toList()
     val latestBreakingChange =
       ActorDefinitionBreakingChange()

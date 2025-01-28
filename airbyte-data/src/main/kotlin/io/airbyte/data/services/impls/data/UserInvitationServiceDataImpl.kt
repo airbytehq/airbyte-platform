@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ConfigSchema
@@ -8,6 +12,7 @@ import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.services.InvitationDuplicateException
+import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
@@ -25,22 +30,23 @@ open class UserInvitationServiceDataImpl(
   private val userInvitationRepository: UserInvitationRepository,
   private val permissionRepository: PermissionRepository,
 ) : UserInvitationService {
-  override fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation {
-    return userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
-      ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
-    }.toConfigModel()
-  }
+  override fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation =
+    userInvitationRepository
+      .findByInviteCode(inviteCode)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+      }.toConfigModel()
 
   override fun getPendingInvitations(
     scopeType: ScopeType,
     scopeId: UUID,
-  ): List<UserInvitation> {
-    return userInvitationRepository.findByStatusAndScopeTypeAndScopeId(
-      EntityInvitationStatus.pending,
-      scopeType.toEntity(),
-      scopeId,
-    ).map { it.toConfigModel() }
-  }
+  ): List<UserInvitation> =
+    userInvitationRepository
+      .findByStatusAndScopeTypeAndScopeId(
+        EntityInvitationStatus.pending,
+        scopeType.toEntity(),
+        scopeId,
+      ).map { it.toConfigModel() }
 
   override fun createUserInvitation(invitation: UserInvitation): UserInvitation {
     // throw an exception if a pending invitation already exists for the same email and scope
@@ -51,6 +57,9 @@ open class UserInvitationServiceDataImpl(
         invitation.scopeId,
         invitation.invitedEmail,
       )
+
+    throwIfUserHasPermissionInScope(invitation.invitedEmail, invitation.scopeId)
+
     if (existingInvitations.isNotEmpty()) {
       throw InvitationDuplicateException(
         "A pending invitation already exists for InvitedEmail: ${invitation.invitedEmail}, ScopeType: ${invitation.scopeType} " +
@@ -129,6 +138,24 @@ open class UserInvitationServiceDataImpl(
         "Expected invitation for ScopeType: ${invitation.scopeType} and ScopeId: ${invitation.scopeId} to " +
           "be PENDING, but instead it had Status: ${invitation.status}",
       )
+    }
+  }
+
+  /**
+   * Throws an exception if the invited user already has permissions in the scope.
+   * Explicitly does not check redundant permissions for invites bc the frontend calls through to the createPermissions API which does that.
+   */
+  private fun throwIfUserHasPermissionInScope(
+    invitedEmail: String,
+    scopeId: UUID,
+  ) {
+    val existingUserPermissions = permissionRepository.findByUserEmail(invitedEmail)
+    val scopedPermissions =
+      existingUserPermissions.filter {
+        it.organizationId == scopeId || it.workspaceId == scopeId
+      }
+    if (scopedPermissions.isNotEmpty()) {
+      throw InvitationPermissionOverlapException("User with email $invitedEmail already has permissions in scope $scopeId")
     }
   }
 }

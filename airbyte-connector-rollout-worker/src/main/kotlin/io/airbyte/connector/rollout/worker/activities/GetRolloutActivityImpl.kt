@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker.activities
@@ -11,34 +11,36 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutReadResponse
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
-import org.slf4j.LoggerFactory
 import java.io.IOException
 
-@Singleton
-class GetRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : GetRolloutActivity {
-  private val log = LoggerFactory.getLogger(GetRolloutActivityImpl::class.java)
+private val logger = KotlinLogging.logger {}
 
+@Singleton
+class GetRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : GetRolloutActivity {
   init {
-    log.info("Initialized GetRolloutActivityImpl")
+    logger.info { "Initialized GetRolloutActivityImpl" }
   }
 
   override fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
-    log.info("Getting rollout for ${input.dockerRepository}:${input.dockerImageTag}")
+    logger.info { "Getting rollout for ${input.dockerRepository}:${input.dockerImageTag}" }
 
     val client: ConnectorRolloutApi = airbyteApiClient.connectorRolloutApi
     val body = ConnectorRolloutReadRequestBody(input.rolloutId)
 
     return try {
       val response: ConnectorRolloutReadResponse = client.getConnectorRolloutById(body)
-      log.info("ConnectorRolloutReadResponse = ${response.data}")
+      logger.info { "ConnectorRolloutReadResponse = ${response.data}" }
       ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
     } catch (e: IOException) {
       throw Activity.wrap(e)
     } catch (e: ClientException) {
-      throw Activity.wrap(e)
+      handleAirbyteApiClientException(e)
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -431,7 +431,9 @@ public class BufferedReplicationWorker {
           if (message == null) {
             continue;
           }
-
+          if (replicationInput.getUseFileTransfer()) {
+            LOGGER.info("writeToDestination: writing message to transfer file");
+          }
           try (final var t = writeToDestStopwatch.start()) {
             destination.accept(message);
           }

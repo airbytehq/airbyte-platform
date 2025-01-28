@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.converters;
@@ -49,6 +49,7 @@ class ConnectorConfigUpdaterTest {
         Jsons.jsonNode(Map.of()),
         SOURCE_NAME,
         SOURCE_NAME,
+        1L,
         null, null, null, null, null));
 
     when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
@@ -59,7 +60,7 @@ class ConnectorConfigUpdaterTest {
             Jsons.jsonNode(Map.of()),
             DESTINATION_NAME,
             DESTINATION_NAME,
-            null, null, null, null, null));
+            1L, null, null, null, null, null));
 
     when(mAirbyteApiClient.getDestinationApi()).thenReturn(mDestinationApi);
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
@@ -81,7 +82,7 @@ class ConnectorConfigUpdaterTest {
         configJson,
         SOURCE_NAME,
         SOURCE_NAME,
-        null, null, null, null, null));
+        1L, null, null, null, null, null));
 
     connectorConfigUpdater.updateSource(SOURCE_ID, newConfiguration);
     verify(mSourceApi).updateSource(expectedSourceUpdate);
@@ -100,7 +101,7 @@ class ConnectorConfigUpdaterTest {
         configJson,
         DESTINATION_NAME,
         DESTINATION_NAME,
-        null, null, null, null, null);
+        1L, null, null, null, null, null);
 
     when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
         .thenReturn(destinationRead);

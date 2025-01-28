@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.stages
@@ -11,14 +11,10 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
-import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.CheckConnectionInputHydrator
-import io.airbyte.workers.DiscoverCatalogInputHydrator
-import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.JobInput
@@ -34,32 +30,30 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class BuildInputStageTest {
   @Test
-  fun `parses sync input and hydrates`() {
+  fun `deserializes and maps sync input`() {
     val inputStr = "foo"
     val sourceConfig = POJONode("bar")
     val destConfig = POJONode("baz")
     val sourceConfig1 = POJONode("hello")
     val destConfig1 = POJONode("world")
-    val unhydrated = ReplicationActivityInput()
-    unhydrated.connectionId = UUID.randomUUID()
-    unhydrated.workspaceId = UUID.randomUUID()
-    unhydrated.jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L)
-    val hydrated =
+    val input =
+      ReplicationActivityInput(
+        connectionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+      )
+
+    val mapped =
       ReplicationInput()
         .withSourceConfiguration(sourceConfig)
         .withDestinationConfiguration(destConfig)
 
-    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
-    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val ffClient: TestClient = mockk()
     JobInput(
       null,
       null,
@@ -68,20 +62,15 @@ class BuildInputStageTest {
         .withSourceConfiguration(sourceConfig1)
         .withDestinationConfiguration(destConfig1),
     )
-    every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
-    every { replicationInputHydrator.getHydratedReplicationInput(unhydrated) } returns hydrated
-    every { replicationInputHydrator.mapActivityInputToReplInput(unhydrated) } returns hydrated
+    every { deserializer.toReplicationActivityInput(inputStr) } returns input
+    every { replicationInputMapper.toReplicationInput(input) } returns mapped
 
     val stage =
       BuildInputStage(
-        checkInputHydrator,
-        discoverInputHydrator,
-        replicationInputHydrator,
+        replicationInputMapper,
         deserializer,
         mockk(),
         "dataplane-id",
-        ffClient,
-        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
@@ -92,57 +81,42 @@ class BuildInputStageTest {
     }
 
     verify {
-      replicationInputHydrator.mapActivityInputToReplInput(unhydrated)
+      replicationInputMapper.toReplicationInput(input)
     }
 
     when (val payload = result.payload) {
-      is SyncPayload -> assert(hydrated == payload.input)
+      is SyncPayload -> assert(mapped == payload.input)
       else -> "Incorrect payload type: ${payload?.javaClass?.name}"
     }
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `parses check input and hydrates`(fetchFromInit: Boolean) {
+  @Test
+  fun `deserializes check input`() {
     val inputStr = "foo"
-    val checkInput = CheckConnectionInput()
-    checkInput.launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID())
-    val unhydratedConfig =
+
+    val input =
       StandardCheckConnectionInput()
         .withActorId(UUID.randomUUID())
         .withAdditionalProperty("whatever", "random value")
         .withActorType(ActorType.DESTINATION)
-    val unhydrated =
-      checkInput.apply {
-        checkConnectionInput = unhydratedConfig
-      }
 
-    val hydratedConfig =
-      StandardCheckConnectionInput()
-        .withActorId(UUID.randomUUID())
-        .withAdditionalProperty("whatever", "random value")
-        .withActorType(ActorType.DESTINATION)
-        .withConnectionConfiguration(POJONode("bar"))
+    val deserialized =
+      CheckConnectionInput(
+        launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+        checkConnectionInput = input,
+      )
 
-    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
-    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val ffClient: TestClient = mockk()
-    every { deserializer.toCheckConnectionInput(inputStr) } returns unhydrated
-    every { checkInputHydrator.getHydratedStandardCheckInput(unhydratedConfig) } returns hydratedConfig
-    every { ffClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns fetchFromInit
+    every { deserializer.toCheckConnectionInput(inputStr) } returns deserialized
 
     val stage =
       BuildInputStage(
-        checkInputHydrator,
-        discoverInputHydrator,
-        replicationInputHydrator,
+        replicationInputMapper,
         deserializer,
         mockk(),
         "dataplane-id",
-        ffClient,
-        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
 
@@ -152,59 +126,37 @@ class BuildInputStageTest {
       deserializer.toCheckConnectionInput(inputStr)
     }
 
-    if (!fetchFromInit) {
-      verify { checkInputHydrator.getHydratedStandardCheckInput(unhydratedConfig) }
-      val payload = (result.payload as CheckPayload)
-      assert(hydratedConfig == payload.input.checkConnectionInput)
-    } else {
-      val payload = (result.payload as CheckPayload)
-      assert(unhydratedConfig == payload.input.checkConnectionInput)
-    }
+    val payload = (result.payload as CheckPayload)
+    assert(input == payload.input.checkConnectionInput)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `parses discover input and hydrates`(fetchFromInit: Boolean) {
+  @Test
+  fun `deserializes discover input`() {
     val inputStr = "foo"
-    val discoverInput = DiscoverCatalogInput()
-    discoverInput.launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID())
-    val unhydratedConfig =
+    val input =
       StandardDiscoverCatalogInput()
         .withSourceId(UUID.randomUUID().toString())
         .withConfigHash(UUID.randomUUID().toString())
         .withAdditionalProperty("whatever", "random value")
-    val unhydrated =
-      discoverInput.apply {
-        discoverCatalogInput = unhydratedConfig
-      }
 
-    val hydratedConfig =
-      StandardDiscoverCatalogInput()
-        .withSourceId(UUID.randomUUID().toString())
-        .withConfigHash(UUID.randomUUID().toString())
-        .withAdditionalProperty("whatever", "random value")
-        .withConnectionConfiguration(POJONode("bar"))
+    val deserialized =
+      DiscoverCatalogInput(
+        discoverCatalogInput = input,
+        launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
+        jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
+      )
 
-    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
-    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    val ffClient: TestClient = mockk()
 
-    every { deserializer.toDiscoverCatalogInput(inputStr) } returns unhydrated
-    every { discoverInputHydrator.getHydratedStandardDiscoverInput(unhydratedConfig) } returns hydratedConfig
-    every { ffClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns fetchFromInit
+    every { deserializer.toDiscoverCatalogInput(inputStr) } returns deserialized
 
     val stage =
       BuildInputStage(
-        checkInputHydrator,
-        discoverInputHydrator,
-        replicationInputHydrator,
+        replicationInputMapper,
         deserializer,
         mockk(),
         "dataplane-id",
-        ffClient,
-        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
 
@@ -214,36 +166,24 @@ class BuildInputStageTest {
       deserializer.toDiscoverCatalogInput(inputStr)
     }
 
-    if (!fetchFromInit) {
-      verify { discoverInputHydrator.getHydratedStandardDiscoverInput(unhydratedConfig) }
-      val payload = (result.payload as DiscoverCatalogPayload)
-      assert(hydratedConfig == payload.input.discoverCatalogInput)
-    } else {
-      val payload = (result.payload as DiscoverCatalogPayload)
-      assert(unhydratedConfig == payload.input.discoverCatalogInput)
-    }
+    val payload = (result.payload as DiscoverCatalogPayload)
+    assert(input == payload.input.discoverCatalogInput)
   }
 
   @Test
-  fun `parses spec input (no need to hydrate)`() {
+  fun `deserializes spec input`() {
     val inputStr = "foo"
-    val specInput = SpecInput()
+    val specInput = mockk<SpecInput>()
 
-    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
-    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
-    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val replicationInputMapper: ReplicationInputMapper = mockk()
     val deserializer: PayloadDeserializer = mockk()
     every { deserializer.toSpecInput(inputStr) } returns specInput
     val stage =
       BuildInputStage(
-        checkInputHydrator,
-        discoverInputHydrator,
-        replicationInputHydrator,
+        replicationInputMapper,
         deserializer,
         mockk(),
         "dataplane-id",
-        TestClient(),
-        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SPEC))
 

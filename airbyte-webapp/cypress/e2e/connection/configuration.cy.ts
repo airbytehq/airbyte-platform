@@ -23,7 +23,6 @@ import {
 } from "@cy/commands/interceptors";
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { getSyncEnabledSwitch, visit } from "@cy/pages/connection/connectionPageObject";
-import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import * as connectionSettings from "@cy/pages/connection/connectionSettingsPageObject";
 import * as statusPage from "@cy/pages/connection/statusPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
@@ -453,35 +452,6 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
         });
       });
     });
-    describe("Replication tab", () => {
-      it("Cannot enable/disable streams", () => {
-        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          // enable/disable all switch
-          cy.get('[data-testid="all-streams-sync-switch"]').should("be.disabled");
-
-          const row = streamsTable.getRow("no-namespace", "pokemon");
-          row.checkSyncToggleDisabled();
-        });
-      });
-      it("Cannot change sync mode", () => {
-        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          const row = streamsTable.getRow("no-namespace", "pokemon");
-          row.checkSyncModeDropdownDisabled();
-        });
-      });
-      it("Stream filters are still enabled", () => {
-        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          // input for filtering streams by name
-          cy.get('input[placeholder*="Search stream name"]').should("be.enabled");
-
-          // "hide disabled streams" switch
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.enabled");
-        });
-      });
-    });
 
     describe("Settings tab", () => {
       it("Can edit the connection name", () => {
@@ -560,7 +530,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
       interceptUpdateConnectionRequest();
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
-        cy.get(replicationPage.refreshSourceSchemaBtn).should("not.be.disabled");
+        streamsTable.isRefreshSourceSchemaBtnEnabled(true);
 
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Settings}`);
         connectionForm.selectScheduleType("Scheduled");

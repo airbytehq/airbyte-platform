@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init
@@ -139,8 +139,8 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
     connectorId: UUID,
     connectorVersion: String,
     incompatibleAirbyteVersion: String,
-  ): AirbyteCompatibleConnectorVersionsMatrix {
-    return AirbyteCompatibleConnectorVersionsMatrix().withCompatibleConnectors(
+  ): AirbyteCompatibleConnectorVersionsMatrix =
+    AirbyteCompatibleConnectorVersionsMatrix().withCompatibleConnectors(
       listOf(
         ConnectorInfo()
           .withConnectorName(CONNECTOR_NAME)
@@ -155,5 +155,4 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
           ),
       ),
     )
-  }
 }

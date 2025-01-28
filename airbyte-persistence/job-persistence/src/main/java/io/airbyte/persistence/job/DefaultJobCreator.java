@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -52,6 +52,7 @@ import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -59,14 +60,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Default implementation of enqueueing a job. Hides the details of building the Job object and
  * storing it in the jobs db.
  */
-@Slf4j
 public class DefaultJobCreator implements JobCreator {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   // Resets use an empty source which doesn't have a source definition.
   private static final StandardSourceDefinition RESET_SOURCE_DEFINITION = null;
@@ -104,7 +107,8 @@ public class DefaultJobCreator implements JobCreator {
                                       final StandardDestinationDefinition destinationDefinition,
                                       final ActorDefinitionVersion sourceDefinitionVersion,
                                       final ActorDefinitionVersion destinationDefinitionVersion,
-                                      final UUID workspaceId)
+                                      final UUID workspaceId,
+                                      final boolean isScheduled)
       throws IOException {
     final SyncResourceRequirements syncResourceRequirements =
         getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
@@ -133,7 +137,7 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, isScheduled);
   }
 
   @Override
@@ -193,7 +197,7 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   @VisibleForTesting
@@ -249,7 +253,7 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.RESET_CONNECTION)
         .withResetConnection(resetConnectionConfig);
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   private SyncResourceRequirements getSyncResourceRequirements(final UUID workspaceId,
@@ -313,13 +317,13 @@ public class DefaultJobCreator implements JobCreator {
     final ResourceRequirements defaultOrchestratorRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType, variant);
 
-    final var mergedRrsReqs = ResourceRequirementsUtils.getResourceRequirements(
+    final var mergedRrsReqs = ResourceRequirementsUtils.mergeResourceRequirements(
         standardSync.getResourceRequirements(),
         defaultOrchestratorRssReqs);
 
     final var overrides = getOrchestratorResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRrsReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRrsReqs);
   }
 
   private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync,
@@ -337,7 +341,7 @@ public class DefaultJobCreator implements JobCreator {
 
     final var overrides = getSourceResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRssReqs);
   }
 
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
@@ -356,7 +360,7 @@ public class DefaultJobCreator implements JobCreator {
 
     final var overrides = getDestinationResourceOverrides(ffContext);
 
-    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
+    return ResourceRequirementsUtils.mergeResourceRequirements(overrides, mergedRssReqs);
   }
 
   private ResourceRequirements getDestinationResourceOverrides(final Context ffCtx) {

@@ -1,103 +1,61 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.commons.json.Jsons
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.config.MapperOperationName.ENCRYPTION
+import io.airbyte.config.MapperOperationName.FIELD_RENAMING
+import io.airbyte.config.MapperOperationName.HASHING
+import io.airbyte.config.MapperOperationName.ROW_FILTERING
+import io.airbyte.config.mapper.configs.EncryptionMapperConfig
+import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
+import io.airbyte.config.mapper.configs.HashingMapperConfig
+import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
+import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
+import io.airbyte.config.mapper.configs.TestMapperConfig
+import java.util.UUID
 
 object MapperOperationName {
+  const val ENCRYPTION = "encryption"
+  const val FIELD_RENAMING = "field-renaming"
   const val HASHING = "hashing"
+  const val ROW_FILTERING = "row-filtering"
 }
-
-/**
- * Data model to describe the interfaces of mappers.
- *
- * Intent is to power the UI and eventually mapper validation
- */
-typealias MapperSpecificationFieldName = String
-
-@JsonDeserialize(using = MapperSpecificationFieldDeserializer::class)
-interface MapperSpecificationField<out T : Any> {
-  val title: String
-  val description: String
-  val type: String
-  val examples: List<T>?
-  val default: T?
-}
-
-@JsonDeserialize(`as` = MapperSpecificationFieldString::class)
-data class MapperSpecificationFieldString(
-  override val title: String,
-  override val description: String,
-  override val examples: List<String>? = null,
-  override val default: String? = null,
-) : MapperSpecificationField<String> {
-  override val type = "string"
-}
-
-@JsonDeserialize(`as` = MapperSpecificationFieldInt::class)
-data class MapperSpecificationFieldInt(
-  override val title: String,
-  override val description: String,
-  override val examples: List<Int>?,
-  override val default: Int?,
-  val minimum: Int?,
-  val maximum: Int?,
-) : MapperSpecificationField<Int> {
-  override val type = "integer"
-}
-
-@JsonDeserialize(`as` = MapperSpecificationFieldEnum::class)
-data class MapperSpecificationFieldEnum(
-  override val title: String,
-  override val description: String,
-  val enum: List<String>,
-  override val default: String?,
-  override val examples: List<String>?,
-) : MapperSpecificationField<String> {
-  override val type = "string"
-}
-
-class MapperSpecificationFieldDeserializer : JsonDeserializer<MapperSpecificationField<Any>>() {
-  override fun deserialize(
-    jsonParser: JsonParser,
-    deserializationContext: DeserializationContext,
-  ): MapperSpecificationField<Any> {
-    val mapper = jsonParser.codec as ObjectMapper
-    val root: ObjectNode = mapper.readTree(jsonParser)
-
-    if (root.has("type")) {
-      when (root.get("type").asText()) {
-        "string" -> {
-          if (root.has("enum")) {
-            return Jsons.deserialize(root.toString(), MapperSpecificationFieldEnum::class.java)
-          } else {
-            return Jsons.deserialize(root.toString(), MapperSpecificationFieldString::class.java)
-          }
-        }
-        "integer" -> {
-          return Jsons.deserialize(root.toString(), MapperSpecificationFieldInt::class.java)
-        }
-      }
-    }
-
-    throw IllegalStateException("Deserializing an unexpected object")
-  }
-}
-
-data class MapperSpecification(
-  val name: String,
-  val documentationUrl: String?,
-  val config: Map<MapperSpecificationFieldName, MapperSpecificationField<Any>>,
-)
 
 /**
  * Configured mapper we want to apply.
  */
+@JsonTypeInfo(
+  use = JsonTypeInfo.Id.NAME,
+  include = JsonTypeInfo.As.EXISTING_PROPERTY,
+  property = "name",
+  visible = true,
+)
+@JsonSubTypes(
+  JsonSubTypes.Type(value = TestMapperConfig::class, name = TEST_MAPPER_NAME),
+  JsonSubTypes.Type(value = EncryptionMapperConfig::class, name = ENCRYPTION),
+  JsonSubTypes.Type(value = HashingMapperConfig::class, name = HASHING),
+  JsonSubTypes.Type(value = FieldRenamingMapperConfig::class, name = FIELD_RENAMING),
+  JsonSubTypes.Type(value = RowFilteringMapperConfig::class, name = ROW_FILTERING),
+)
+interface MapperConfig {
+  fun name(): String
+
+  fun id(): UUID?
+
+  fun documentationUrl(): String?
+
+  fun config(): Any
+}
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class ConfiguredMapper(
   val name: String,
-  val config: Map<String, String>,
+  val config: JsonNode,
+  val id: UUID? = null,
 )

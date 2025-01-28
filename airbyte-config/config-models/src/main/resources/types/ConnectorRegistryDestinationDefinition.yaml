@@ -57,7 +57,7 @@ properties:
     type: string
     format: date
   resourceRequirements:
-    "$ref": ActorDefinitionResourceRequirements.yaml
+    "$ref": ScopedResourceRequirements.yaml
   protocolVersion:
     type: string
     description: the Airbyte Protocol version supported by the connector
@@ -77,3 +77,7 @@ properties:
   language:
     description: The language that the connector is written in.
     type: string
+  supportsFileTransfer:
+    type: boolean
+    description: flag indicating whether the file transfer mode is available for this destination.
+    default: false

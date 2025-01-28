@@ -22,6 +22,25 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 {{- end }}
+  
+{{/*
+Renders a value that contains template perhaps with scope if the scope is present.
+Usage:
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ ) }}
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ "scope" $app ) }}
+*/}}
+{{- define "airbyte.tplvalues.render" -}}
+{{- $value := typeIs "string" .value | ternary .value (.value | toYaml) }}
+{{- if contains "{{" (toJson .value) }}
+  {{- if .scope }}
+      {{- tpl (cat "{{- with $.RelativeScope -}}" $value "{{- end }}") (merge (dict "RelativeScope" .scope) .context) }}
+  {{- else }}
+    {{- tpl $value .context }}
+  {{- end }}
+{{- else }}
+    {{- $value }}
+{{- end }}
+{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
@@ -126,63 +145,6 @@ Returns the GCP credentials path
 {{- else -}}
     {{- printf "%s" "/secrets/gcs-log-creds/gcp.json" -}}
 {{- end -}}
-{{- end -}}
-
-
-{{/*
-Returns the Airbyte Scheduler Image
-*/}}
-{{- define "airbyte.schedulerImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.scheduler.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Server Image
-*/}}
-{{- define "airbyte.serverImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.server.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Webapp Image
-*/}}
-{{- define "airbyte.webappImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.webapp.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte PodSweeper Image
-*/}}
-{{- define "airbyte.podSweeperImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.podSweeper.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Worker Image
-*/}}
-{{- define "airbyte.workerImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Workload Launcher Image
-*/}}
-{{- define "airbyte.workloadLauncherImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Airbyte Bootloader Image
-*/}}
-{{- define "airbyte.bootloaderImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.bootloader.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Returns the Temporal Image. TODO: This will probably be replaced if we move to using temporal as a dependency, like minio and postgres.
-*/}}
-{{- define "airbyte.temporalImage" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.temporal.image "global" .Values.global) -}}
 {{- end -}}
 
 {{/*

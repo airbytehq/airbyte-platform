@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -10,6 +10,7 @@ import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
+import io.airbyte.config.ScopeType
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
@@ -51,7 +52,7 @@ class SegmentTrackingClientTest {
   @BeforeEach
   fun setup() {
     every { deploymentFetcher.get() } returns deployment
-    every { trackingIdentityFetcher.apply(any()) } returns identity
+    every { trackingIdentityFetcher.apply(any(), any()) } returns identity
     every { segmentAnalyticsClient.analyticsClient } returns analytics
 
     segmentTrackingClient =
@@ -68,7 +69,7 @@ class SegmentTrackingClientTest {
     val builderSlot = slot<IdentifyMessage.Builder>()
     every { analytics.enqueue(capture(builderSlot)) } returns Unit
 
-    segmentTrackingClient.identify(workspaceId)
+    segmentTrackingClient.identify(workspaceId, ScopeType.WORKSPACE)
 
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
@@ -99,7 +100,7 @@ class SegmentTrackingClientTest {
     val builderSlot = slot<IdentifyMessage.Builder>()
     every { analytics.enqueue(capture(builderSlot)) } returns Unit
 
-    segmentTrackingClient.identify(workspaceId)
+    segmentTrackingClient.identify(workspaceId, ScopeType.WORKSPACE)
 
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
@@ -133,7 +134,7 @@ class SegmentTrackingClientTest {
     val builderSlot = slot<IdentifyMessage.Builder>()
     every { analytics.enqueue(capture(builderSlot)) } returns Unit
 
-    segmentTrackingClient.identify(workspaceId)
+    segmentTrackingClient.identify(workspaceId, ScopeType.WORKSPACE)
 
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
@@ -167,7 +168,7 @@ class SegmentTrackingClientTest {
         SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deploymentMetadata.mode,
       )
 
-    segmentTrackingClient.track(workspaceId, JUMP)
+    segmentTrackingClient.track(workspaceId, ScopeType.WORKSPACE, JUMP)
 
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
@@ -191,7 +192,7 @@ class SegmentTrackingClientTest {
         SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID to deploymentMetadata.id.toString(),
         SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deploymentMetadata.mode,
       )
-    segmentTrackingClient.track(workspaceId, JUMP, metadata)
+    segmentTrackingClient.track(workspaceId, ScopeType.WORKSPACE, JUMP, metadata)
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
     Assertions.assertEquals(JUMP, actual.event())
@@ -226,7 +227,7 @@ class SegmentTrackingClientTest {
         SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deploymentMetadata.mode,
         INSTALLATION_ID to installationId,
       )
-    segmentTrackingClient.track(workspaceId, JUMP, metadata)
+    segmentTrackingClient.track(workspaceId, ScopeType.WORKSPACE, JUMP, metadata)
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
     Assertions.assertEquals(JUMP, actual.event())
@@ -254,7 +255,7 @@ class SegmentTrackingClientTest {
           "user_id" to identity.customerId,
           SegmentTrackingClient.AIRBYTE_SOURCE to SegmentTrackingClient.UNKNOWN,
         )
-      segmentTrackingClient.track(workspaceId, JUMP, metadata)
+      segmentTrackingClient.track(workspaceId, ScopeType.WORKSPACE, JUMP, metadata)
     }
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()

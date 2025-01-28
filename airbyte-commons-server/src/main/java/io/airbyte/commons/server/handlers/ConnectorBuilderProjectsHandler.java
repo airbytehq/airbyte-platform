@@ -1,16 +1,21 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTOR_BUILDER_PROJECT_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.api.model.generated.BaseActorDefinitionVersionInfo;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody;
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
+import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest;
+import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
@@ -21,6 +26,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner;
@@ -32,12 +38,14 @@ import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.NotFoundException;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -71,7 +79,11 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.oauth.OAuthImplementationFactory;
+import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.annotation.Nullable;
@@ -116,6 +128,7 @@ public class ConnectorBuilderProjectsHandler {
   private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
   private final ActorDefinitionService actorDefinitionService;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private final OAuthImplementationFactory oAuthImplementationFactory;
 
   public static final String SPEC_FIELD = "spec";
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
@@ -135,7 +148,8 @@ public class ConnectorBuilderProjectsHandler {
                                          @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient,
                                          final ActorDefinitionService actorDefinitionService,
-                                         final RemoteDefinitionsProvider remoteDefinitionsProvider) {
+                                         final RemoteDefinitionsProvider remoteDefinitionsProvider,
+                                         @Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory) {
     this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
@@ -151,6 +165,7 @@ public class ConnectorBuilderProjectsHandler {
     this.connectorBuilderServerApiClient = connectorBuilderServerApiClient;
     this.actorDefinitionService = actorDefinitionService;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
+    this.oAuthImplementationFactory = oauthImplementationFactory;
   }
 
   private ConnectorBuilderProjectDetailsRead getProjectDetailsWithoutBaseAdvInfo(final ConnectorBuilderProject project) {
@@ -251,6 +266,7 @@ public class ConnectorBuilderProjectsHandler {
 
     connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
+        projectCreate.getBuilderProject().getComponentsFileContent(),
         projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
         projectCreate.getBuilderProject().getContributionActorDefinitionId());
 
@@ -368,7 +384,8 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
+    validateProjectUnderRightWorkspace(connectorBuilderPublishRequestBody.getBuilderProjectId(), connectorBuilderPublishRequestBody.getWorkspaceId());
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
     manifestInjector.addInjectedDeclarativeManifest(spec);
@@ -420,10 +437,10 @@ public class ConnectorBuilderProjectsHandler {
     return source.getSourceDefinitionId();
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
   public JsonNode updateConnectorBuilderProjectTestingValues(final ConnectorBuilderProjectTestingValuesUpdate testingValuesUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     try {
+      validateProjectUnderRightWorkspace(testingValuesUpdate.getBuilderProjectId(), testingValuesUpdate.getWorkspaceId());
       final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(testingValuesUpdate.getBuilderProjectId(), false);
       final Optional<JsonNode> existingTestingValues = Optional.ofNullable(project.getTestingValues());
 
@@ -494,7 +511,11 @@ public class ConnectorBuilderProjectsHandler {
 
   private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
-        .logs(streamRead.getLogs())
+        .logs(streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
+            .message(log.getMessage())
+            .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
+            .internalMessage(log.getInternalMessage())
+            .stacktrace(log.getStacktrace())).toList())
         .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
             .sliceDescriptor(slice.getSliceDescriptor())
             .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
@@ -598,10 +619,74 @@ public class ConnectorBuilderProjectsHandler {
           log.error(errorMessage);
           throw new NotFoundException(errorMessage);
         });
+
+    final String customComponentsContent =
+        remoteDefinitionsProvider.getConnectorCustomComponents(defaultVersion.getDockerRepository(), defaultVersion.getDockerImageTag())
+            .orElse(null);
+
     final ConnectorBuilderProjectDetails projectDetails = new ConnectorBuilderProjectDetails().name(sourceDefinition.getName())
-        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest);
+        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest).componentsFileContent(customComponentsContent);
     return createConnectorBuilderProject(
         new ConnectorBuilderProjectWithWorkspaceId().workspaceId(requestBody.getWorkspaceId()).builderProject(projectDetails));
+  }
+
+  public OAuthConsentRead getConnectorBuilderProjectOAuthConsent(final BuilderProjectOauthConsentRequest requestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), true);
+    final ConnectorSpecification spec = Jsons.object(project.getManifestDraft().get("spec"), ConnectorSpecification.class);
+
+    final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+    final JsonNode existingHydratedTestingValues =
+        getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
+
+    final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, requestBody.getWorkspaceId(), CONNECTOR_BUILDER_PROJECT_ID_KEY,
+        requestBody.getBuilderProjectId());
+    ApmTraceUtils.addTagsToTrace(traceTags);
+    ApmTraceUtils.addTagsToRootSpan(traceTags);
+
+    final OAuthConfigSpecification oauthConfigSpecification = spec.getAdvancedAuth().getOauthConfigSpecification();
+    OAuthHelper.updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification);
+
+    final DeclarativeOAuthFlow oAuthFlowImplementation = oAuthImplementationFactory.createDeclarativeOAuthImplementation(spec);
+    return new OAuthConsentRead().consentUrl(oAuthFlowImplementation.getSourceConsentUrl(
+        requestBody.getWorkspaceId(),
+        null,
+        requestBody.getRedirectUrl(),
+        existingHydratedTestingValues,
+        oauthConfigSpecification,
+        existingHydratedTestingValues));
+  }
+
+  public CompleteOAuthResponse completeConnectorBuilderProjectOAuth(final CompleteConnectorBuilderProjectOauthRequest requestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), true);
+    final ConnectorSpecification spec = Jsons.object(project.getManifestDraft().get("spec"), ConnectorSpecification.class);
+
+    final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+    final JsonNode existingHydratedTestingValues =
+        getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
+
+    final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, requestBody.getWorkspaceId(), CONNECTOR_BUILDER_PROJECT_ID_KEY,
+        requestBody.getBuilderProjectId());
+    ApmTraceUtils.addTagsToTrace(traceTags);
+    ApmTraceUtils.addTagsToRootSpan(traceTags);
+
+    final OAuthConfigSpecification oauthConfigSpecification = spec.getAdvancedAuth().getOauthConfigSpecification();
+    OAuthHelper.updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification);
+
+    final DeclarativeOAuthFlow oAuthFlowImplementation = oAuthImplementationFactory.createDeclarativeOAuthImplementation(spec);
+    final Map<String, Object> result = oAuthFlowImplementation.completeSourceOAuth(
+        requestBody.getWorkspaceId(),
+        null,
+        requestBody.getQueryParams(),
+        requestBody.getRedirectUrl(),
+        existingHydratedTestingValues,
+        oauthConfigSpecification,
+        existingHydratedTestingValues);
+
+    return OAuthHelper.mapToCompleteOAuthResponse(result);
   }
 
 }

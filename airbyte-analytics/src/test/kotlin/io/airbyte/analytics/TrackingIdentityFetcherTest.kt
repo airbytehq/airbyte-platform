@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -8,6 +8,9 @@ import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.config.Organization
+import io.airbyte.config.ScopeType
+import io.airbyte.data.services.OrganizationService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -18,20 +21,27 @@ import java.util.function.Function
 
 class TrackingIdentityFetcherTest {
   private lateinit var workspaceApi: WorkspaceApi
+  private lateinit var organizationService: OrganizationService
   private lateinit var trackingIdentityFetcher: TrackingIdentityFetcher
   private lateinit var workspaceFetcher: Function<UUID, WorkspaceRead>
+  private lateinit var organizationFetcher: Function<UUID, Organization>
 
   @BeforeEach
   fun setup() {
     workspaceApi = mockk()
+    organizationService = mockk()
     workspaceFetcher =
-      Function {
-          workspaceId: UUID ->
+      Function { workspaceId: UUID ->
         workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true))
+      }
+    organizationFetcher =
+      Function { organizationId: UUID ->
+        organizationService.getOrganization(organizationId).orElseThrow()
       }
     trackingIdentityFetcher =
       TrackingIdentityFetcher(
         workspaceFetcher = workspaceFetcher,
+        organizationFetcher = organizationFetcher,
       )
   }
 
@@ -65,8 +75,8 @@ class TrackingIdentityFetcherTest {
     every { workspaceApi.getWorkspace(workspaceRequestBody1) } returns workspaceRead1
     every { workspaceApi.getWorkspace(workspaceRequestBody2) } returns workspaceRead2
 
-    val workspace1Actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId1)
-    val workspace2Actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId2)
+    val workspace1Actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId1, ScopeType.WORKSPACE)
+    val workspace2Actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId2, ScopeType.WORKSPACE)
 
     val workspace1Expected =
       TrackingIdentity(
@@ -105,7 +115,7 @@ class TrackingIdentityFetcherTest {
 
     every { workspaceApi.getWorkspace(workspaceRequestBody1) } returns workspaceRead1
 
-    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId1)
+    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId1, ScopeType.WORKSPACE)
 
     val expected =
       TrackingIdentity(
@@ -125,15 +135,22 @@ class TrackingIdentityFetcherTest {
     val workspaceRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true)
     val workspaceRead =
       WorkspaceRead(
-        workspaceId = workspaceId, customerId = customerId, email = EMAIL,
-        anonymousDataCollection = false, news = true, securityUpdates = true,
+        workspaceId = workspaceId,
+        customerId = customerId,
+        email = EMAIL,
+        anonymousDataCollection = false,
+        news = true,
+        securityUpdates = true,
         defaultGeography =
           Geography.AUTO,
-        name = "", slug = "", initialSetupComplete = true, organizationId = workspaceId,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId,
       )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody) } returns workspaceRead
-    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
+    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId, ScopeType.WORKSPACE)
 
     val expected =
       TrackingIdentity(
@@ -153,15 +170,22 @@ class TrackingIdentityFetcherTest {
     val workspaceRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true)
     val workspaceRead =
       WorkspaceRead(
-        workspaceId = workspaceId, customerId = customerId, email = EMAIL,
-        anonymousDataCollection = true, news = true, securityUpdates = true,
+        workspaceId = workspaceId,
+        customerId = customerId,
+        email = EMAIL,
+        anonymousDataCollection = true,
+        news = true,
+        securityUpdates = true,
         defaultGeography =
           Geography.AUTO,
-        name = "", slug = "", initialSetupComplete = true, organizationId = workspaceId,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId,
       )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody) } returns workspaceRead
-    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
+    val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId, ScopeType.WORKSPACE)
 
     val expected =
       TrackingIdentity(

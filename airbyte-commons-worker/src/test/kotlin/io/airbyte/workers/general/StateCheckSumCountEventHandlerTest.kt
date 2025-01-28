@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.google.common.hash.Hashing
@@ -56,7 +60,7 @@ class StateCheckSumCountEventHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    every { trackingIdentityFetcher.apply(any()) } returns trackingIdentity
+    every { trackingIdentityFetcher.apply(any(), any()) } returns trackingIdentity
     every { deploymentFetcher.get() } returns deployment
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
@@ -123,8 +127,20 @@ class StateCheckSumCountEventHandlerTest {
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0))
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(sourceStateMessage, 1.0, AirbyteMessageOrigin.SOURCE, true, true)
-      handler.validateStateChecksum(destinationStateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = sourceStateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.SOURCE,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
+      handler.validateStateChecksum(
+        stateMessage = destinationStateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -147,8 +163,20 @@ class StateCheckSumCountEventHandlerTest {
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0))
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(sourceStateMessage, 1.0, AirbyteMessageOrigin.SOURCE, true, true)
-      handler.validateStateChecksum(destinationStateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = sourceStateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.SOURCE,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
+      handler.validateStateChecksum(
+        stateMessage = destinationStateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(false)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -164,7 +192,13 @@ class StateCheckSumCountEventHandlerTest {
         airbyteStateMessageWithOutAnyCounts()
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.SOURCE, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.SOURCE,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -178,7 +212,13 @@ class StateCheckSumCountEventHandlerTest {
           .withSourceStats(AirbyteStateStats().withRecordCount(2.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.SOURCE, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.SOURCE,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
       handler.close(true)
@@ -191,7 +231,13 @@ class StateCheckSumCountEventHandlerTest {
     internal fun `source count is missing`() {
       val stateMessage = airbyteStateMessageWithOutAnyCounts()
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.SOURCE, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.SOURCE,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -207,7 +253,13 @@ class StateCheckSumCountEventHandlerTest {
         airbyteStateMessageWithOutAnyCounts()
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -226,10 +278,22 @@ class StateCheckSumCountEventHandlerTest {
           .withDestinationStats(AirbyteStateStats().withRecordCount(2.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, false, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = false,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -248,7 +312,13 @@ class StateCheckSumCountEventHandlerTest {
           .withDestinationStats(AirbyteStateStats().withRecordCount(1.0))
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -264,7 +334,13 @@ class StateCheckSumCountEventHandlerTest {
           .withSourceStats(AirbyteStateStats().withRecordCount(2.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
       handler.close(true)
@@ -287,7 +363,13 @@ class StateCheckSumCountEventHandlerTest {
           .withSourceStats(AirbyteStateStats().withRecordCount(2.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
       handler.close(true)
@@ -310,7 +392,13 @@ class StateCheckSumCountEventHandlerTest {
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
       handler.close(true)
@@ -333,7 +421,13 @@ class StateCheckSumCountEventHandlerTest {
           .withSourceStats(AirbyteStateStats().withRecordCount(3.0))
 
       assertThrows<InvalidChecksumException> {
-        handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+        handler.validateStateChecksum(
+          stateMessage = stateMessage,
+          platformRecordCount = 1.0,
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = true,
+          checksumValidationEnabled = true,
+        )
       }
 
       handler.close(true)
@@ -352,7 +446,13 @@ class StateCheckSumCountEventHandlerTest {
     internal fun `destination count and source count both are missing`() {
       val stateMessage = airbyteStateMessageWithOutAnyCounts()
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -369,7 +469,13 @@ class StateCheckSumCountEventHandlerTest {
         airbyteStateMessageWithOutAnyCounts()
           .withSourceStats(AirbyteStateStats().withRecordCount(1.0))
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }
@@ -387,7 +493,13 @@ class StateCheckSumCountEventHandlerTest {
         airbyteStateMessageWithOutAnyCounts()
           .withSourceStats(AirbyteStateStats().withRecordCount(2.0))
 
-      handler.validateStateChecksum(stateMessage, 1.0, AirbyteMessageOrigin.DESTINATION, true, true)
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 1.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
       handler.close(true)
 
       verify(exactly = 1) { pubSubWriter.close() }

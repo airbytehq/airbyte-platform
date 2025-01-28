@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging
@@ -12,6 +12,7 @@ import java.nio.file.Path
 
 /** The default log file name. */
 const val DEFAULT_LOG_TAIL_SIZE = 1000000
+val EMPTY_PATH = Path.of("")
 
 /**
  * Airbyte's logging layer entrypoint. Handles logs written to local disk as well as logs written to
@@ -33,8 +34,20 @@ class LogClientManager(
   @Throws(IOException::class)
   fun getJobLogFile(logPath: Path?): List<String> =
     when {
-      logPath == null || logPath == Path.of("") -> emptyList()
+      logPath == null || logPath == EMPTY_PATH -> emptyList()
       else -> logClient.tailCloudLogs(logPath = logPath.toString(), numLines = logTailSize)
+    }
+
+  /**
+   * Returns the structured logs associated with the given log path.
+   *
+   * @param logPath log path
+   * @return The structured log events associated with the given log path (may be empty).
+   */
+  fun getLogs(logPath: Path?): LogEvents =
+    when {
+      logPath == null || logPath == EMPTY_PATH -> LogEvents(events = emptyList())
+      else -> logClient.getLogs(logPath = logPath.toString(), numLines = logTailSize)
     }
 
   /**
@@ -54,15 +67,6 @@ class LogClientManager(
    */
   fun setJobMdc(path: Path?) {
     logMdcHelper.setJobMdc(path = path)
-  }
-
-  /**
-   * Set workspace MDC.
-   *
-   * @param path log path
-   */
-  fun setWorkspaceMdc(path: Path) {
-    logMdcHelper.setWorkspaceMdc(path = path)
   }
 
   fun fullLogPath(path: Path): String = logMdcHelper.fullLogPath(path = path)

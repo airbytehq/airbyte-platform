@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.test.cases
@@ -9,7 +9,7 @@ import io.airbyte.config.secrets.SecretsTestCase
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.function.Consumer
 
-class ArrayOneOfTestCase() : SecretsTestCase {
+class ArrayOneOfTestCase : SecretsTestCase {
   override val name: String
     get() = "array_of_oneof"
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.templates
@@ -51,8 +55,8 @@ class ContributionTemplates {
     return pagination?.get("type") as? String
   }
 
-  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> {
-    return streams?.map { stream ->
+  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> =
+    streams?.map { stream ->
       TemplateStream(
         name = stream["name"] as? String,
         primaryKey = primaryKeyToString(stream["primary_key"]),
@@ -60,6 +64,23 @@ class ContributionTemplates {
         incrementalSyncEnabled = stream["incremental_sync"] != null,
       )
     } ?: emptyList()
+
+  fun getAllowedHosts(streams: List<Map<String, Any>>): List<String> {
+    val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
+
+    val hosts =
+      streams.mapNotNull { stream ->
+        val retriever = stream["retriever"] as? Map<String, Any>
+        val requester = retriever?.get("requester") as? Map<String, Any>
+        val baseUrl = requester?.get("url_base") as? String
+
+        baseUrl?.let { url ->
+          hostnameRegex.find(url)?.groupValues?.getOrNull(1)
+        }
+      }
+
+    // Since the requester is on every stream, we only need unique hostnames
+    return hosts.distinct()
   }
 
   /**
@@ -72,13 +93,12 @@ class ContributionTemplates {
    * - ["id", ["name", "age"]] -> "id.name.age"
    * - [["id"], ["name", "age"]] -> "id.name.age"
    */
-  fun primaryKeyToString(primaryKey: Any?): String {
-    return when (primaryKey) {
+  fun primaryKeyToString(primaryKey: Any?): String =
+    when (primaryKey) {
       is String -> primaryKey
       is List<*> -> primaryKey.joinToString(".") { primaryKeyToString(it) }
       else -> ""
     }
-  }
 
   fun toTemplateSpecProperties(spec: Map<String, Any>): List<TemplateSpecProperty> {
     val connectionSpec = spec["connection_specification"] as Map<String, Any>
@@ -133,12 +153,15 @@ class ContributionTemplates {
     contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
   ): String {
+    val manifestParser = ManifestParser(contributionInfo.manifestYaml)
+    val allowedHosts = getAllowedHosts(manifestParser.streams)
+
     // TODO: Ensure metadata is correctly formatted
     // TODO: Merge metadata with existing metadata if it exists
     val context =
       mapOf(
         // TODO: Parse Allowed Hosts from manifest
-        "allowedHosts" to listOf("*"),
+        "allowedHosts" to allowedHosts,
         "connectorImageName" to contributionInfo.connectorImageName,
         "baseImage" to contributionInfo.baseImage,
         "actorDefinitionId" to contributionInfo.actorDefinitionId,
@@ -150,16 +173,14 @@ class ContributionTemplates {
     return renderTemplateString("contribution_templates/metadata.yaml.peb", context)
   }
 
-  fun renderIconSvg(): String {
-    return renderTemplateString("contribution_templates/icon.svg", emptyMap())
-  }
+  fun renderIconSvg(): String = renderTemplateString("contribution_templates/icon.svg", emptyMap())
 
   fun renderAcceptanceTestConfigYaml(contributionInfo: BuilderContributionInfo): String {
     val context = mapOf("connectorImageName" to contributionInfo.connectorImageName)
     return renderTemplateString("contribution_templates/acceptance-test-config.yml.peb", context)
   }
 
-  fun renderNewContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
+  fun renderContributionPullRequestDescription(contributionInfo: BuilderContributionInfo): String {
     val manifestParser = ManifestParser(contributionInfo.manifestYaml)
     val streams = toTemplateStreams(manifestParser.streams)
     val specProperties = toTemplateSpecProperties(manifestParser.spec)
@@ -171,6 +192,12 @@ class ContributionTemplates {
         "specProperties" to specProperties,
         "streams" to streams,
       )
-    return renderTemplateString("contribution_templates/pull-request-new-connector.md.peb", context)
+    val templatePath =
+      if (contributionInfo.isEdit) {
+        "contribution_templates/pull-request-edit.md.peb"
+      } else {
+        "contribution_templates/pull-request-new-connector.md.peb"
+      }
+    return renderTemplateString(templatePath, context)
   }
 }

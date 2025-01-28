@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -170,8 +170,8 @@ class StreamStatusesHandlerTest {
         .transitionedAt(OffsetDateTime.now())
         .runState(JobStreamStatusRunState.complete).build();
 
-    final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
-    final Job jobTwo = new Job(2, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
+    final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
+    final Job jobTwo = new Job(2, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
 
     final long jobOneBytesCommitted = 12345L;
     final long jobOneBytesEmitted = 23456L;

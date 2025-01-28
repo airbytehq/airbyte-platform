@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -108,6 +108,33 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.SERVER,
       "authentication_request",
       "increments when an authentication request is attempted."),
+  COMMAND(
+      MetricEmittingApps.WORKER,
+      "command",
+      "increments when a command is done."),
+  COMMAND_DURATION(
+      MetricEmittingApps.WORKER,
+      "command_duration",
+      "tracks the duration of a command."),
+  COMMAND_STEP(
+      MetricEmittingApps.WORKER,
+      "command_step",
+      "increments when a command step is done."),
+  COMMAND_STEP_DURATION(
+      MetricEmittingApps.WORKER,
+      "command_step_duration",
+      "tracks the duration of a command step."),
+
+  KEYCLOAK_TOKEN_VALIDATION(
+      MetricEmittingApps.SERVER,
+      "keycloak_token_validation",
+      "increments when a keycloak auth token validation occurs"),
+
+  OIDC_TOKEN_VALIDATION(
+      MetricEmittingApps.SERVER,
+      "oidc_token_validation",
+      "increments when a oidc auth token validation occurs"),
+
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
       "a breaking schema change has been detected"),
@@ -125,9 +152,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
       "inconsistent_activity_input",
       "whenever we detect a mismatch between the input and the actual config"),
-  INVALID_MAPPER_CONFIG(MetricEmittingApps.ORCHESTRATOR,
-      "invalid_mapper_config",
-      "a mapper configuration is invalid"),
   JOB_CANCELLED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "job_cancelled_by_release_stage",
@@ -164,12 +188,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   LOG_CLIENT_FILES_RETRIEVAL_TIME_MS(MetricEmittingApps.SERVER,
       "log_client_file_retrieval_time_ms",
       "the amount of time spent retrieving a job log in milliseconds"),
+  MAPPER_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "mapper_error",
+      "increments when mapper errors are detected"),
   MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
       "missing_apply_schema_change_input",
       "one expected value for applying the schema change is missing"),
-  MISSING_MAPPER(MetricEmittingApps.ORCHESTRATOR,
-      "missing_mapper",
-      "a mapper implementation is missing"),
   NORMALIZATION_IN_DESTINATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_destination_container",
@@ -238,6 +262,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "running_pods_found_for_connection_id",
       "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
 
+  REPLICATION_THROUGHPUT_BPS(MetricEmittingApps.WORKER,
+      "replication_throughput_bps",
+      "throughput of replication in bytes per second"),
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),
@@ -397,6 +424,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
       "Number of kube error in the workload launcher"),
+  WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_pods_cleaned",
+      "Number of pods cleaned up by the pod sweeper"),
   WORKLOAD_LAUNCHER_KUBE_COPY_SUCCESS_OOM(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_launcher_kube_copy_success_oom",
       "Number of kube cp errors when trying to write the success file in the launcher"),
@@ -473,6 +503,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "excessive_catalog_size",
       "Distribution of input catalog field counts that exceed the configured limit."),
 
+  NOTIFICATION_SUCCESS(MetricEmittingApps.SERVER,
+      "notification_success",
+      "A notification was successfully sent"),
+
+  NOTIFICATION_FAILED(MetricEmittingApps.SERVER,
+      "notification_failure",
+      "A notification failed to send"),
+
   REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "replication_context_not_initialized_error",
       "The replication context was not initialized when it was expected to be."),
@@ -495,7 +533,27 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   CONNECTOR_FAILURE_EXIT_VALUE(MetricEmittingApps.ORCHESTRATOR,
       "connector_failure_exit_value",
-      "Count of failure exit codes produced by a connector.");
+      "Count of failure exit codes produced by a connector."),
+
+  CONNECTOR_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connector_storage_usage_mb",
+      "Storage in mb used by a connector."),
+
+  CONNECTION_STAGING_STORAGE_USAGE_MB(MetricEmittingApps.ORCHESTRATOR,
+      "connection_staging_storage_usage_mb",
+      "Staging storage in mb used by a connection."),
+
+  SECRETS_HYDRATION_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "secrets_hydration_failure",
+      "Count of secrets hydration failures."),
+
+  WORKLOAD_HYDRATION_FETCH_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "workload_hydration_fetch_failure",
+      "Count of failures fetching workload during hydration step."),
+
+  INIT_FILE_CLIENT_FAILURE(MetricEmittingApps.WORKLOAD_INIT,
+      "init_file_client_failure",
+      "Count of failures prepping files during hydration step.");
 
   private final MetricEmittingApp application;
   private final String metricName;

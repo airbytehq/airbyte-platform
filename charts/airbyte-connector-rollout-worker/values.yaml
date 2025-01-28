@@ -13,6 +13,14 @@ global:
     secretName: ""
     secretValue: ""
 
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as temporal, minio, etc.
+    tag: ""
+
   enterprise:
     connectorRolloutOptIn: false
 
@@ -68,21 +76,7 @@ global:
       ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
       main_container_image_pull_secret: ""
 
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        ## busybox image used by the job pod
-        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_SOCAT_IMAGE
-        ## socat image used by the job pod
-        ##   jobs.kube.images.socat [string] socat image used by the job pod
-        socat: ""
-        ## JOB_KUBE_CURL_IMAGE
-        ## curl image used by the job pod
-        ##   jobs.kube.images.curl [string] curl image used by the job pod
-        curl: ""
-
-enabled: false
+enabled: true
 ##  connector-rollout-worker.replicaCount Number of connector-rollout-worker replicas
 replicaCount: 1
 
@@ -248,8 +242,6 @@ secrets: {}
 #   # Workspace storage for running jobs (logs, etc)
 #   WORKSPACE_ROOT: /workspace
 #   WORKSPACE_DOCKER_MOUNT: airbyte_workspace
-
-#   LOCAL_ROOT: /tmp/airbyte_local
 
 #   # Miscellaneous
 #   TRACKING_STRATEGY: segment

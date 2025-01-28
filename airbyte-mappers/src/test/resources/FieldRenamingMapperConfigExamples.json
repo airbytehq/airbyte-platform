@@ -1,0 +1,9 @@
+[
+  {
+    "name": "field-renaming",
+    "config": {
+      "originalFieldName": "original_column_name",
+      "newFieldName": "new_column_name"
+    }
+  }
+]

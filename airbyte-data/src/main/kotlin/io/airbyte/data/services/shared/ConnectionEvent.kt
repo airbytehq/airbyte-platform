@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -28,6 +32,7 @@ interface ConnectionEvent {
     CONNECTION_ENABLED,
     CONNECTION_DISABLED,
     SCHEMA_UPDATE,
+    SCHEMA_CONFIG_UPDATE,
     CONNECTOR_UPDATE,
     UNKNOWN,
   }

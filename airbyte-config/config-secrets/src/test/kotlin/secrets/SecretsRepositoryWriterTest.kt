@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
-import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricAttribute
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.UUID
 
 internal class SecretsRepositoryWriterTest {
-  private lateinit var configRepository: ConfigRepository
   private lateinit var secretPersistence: MemorySecretPersistence
   private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
   private lateinit var secretsHydrator: RealSecretsHydrator
@@ -40,7 +38,6 @@ internal class SecretsRepositoryWriterTest {
 
   @BeforeEach
   fun setup() {
-    configRepository = mockk()
     secretPersistence = spyk(MemorySecretPersistence())
     metricClient = mockk()
     featureFlagClient = mockk()
@@ -394,9 +391,7 @@ internal class SecretsRepositoryWriterTest {
 //  }
 
   // this only works if the secrets store has one secret.
-  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate {
-    return secretPersistence.map.keys.first()
-  }
+  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate = secretPersistence.map.keys.first()
 
 //  @Test
 //  @Throws(JsonValidationException::class, IOException::class)
@@ -476,8 +471,7 @@ internal class SecretsRepositoryWriterTest {
     private const val TEST_WEBHOOK_NAME = "test-webhook-name"
     private const val TEST_AUTH_TOKEN = "test-auth-token"
 
-    private fun injectCoordinate(coordinate: String): JsonNode {
-      return Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
-    }
+    private fun injectCoordinate(coordinate: String): JsonNode =
+      Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
   }
 }

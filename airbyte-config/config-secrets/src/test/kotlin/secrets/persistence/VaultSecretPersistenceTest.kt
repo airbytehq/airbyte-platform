@@ -1,16 +1,16 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
-import org.apache.commons.lang3.RandomUtils
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.testcontainers.vault.VaultContainer
+import kotlin.random.Random
 
 internal class VaultSecretPersistenceTest {
   private lateinit var persistence: VaultSecretPersistence
@@ -25,7 +25,7 @@ internal class VaultSecretPersistenceTest {
     val vaultAddress = "http://${vaultContainer.host}:${vaultContainer.firstMappedPort}"
     vaultClient = VaultClient(address = vaultAddress, token = "vault-dev-token-id")
     persistence = VaultSecretPersistence(vaultClient = vaultClient, pathPrefix = "secret/testing")
-    baseCoordinate = "VaultSecretPersistenceIntegrationTest_coordinate_${RandomUtils.nextInt() % 20000}"
+    baseCoordinate = "VaultSecretPersistenceIntegrationTest_coordinate_${Random.nextInt() % 20000}"
   }
 
   @AfterEach
@@ -47,7 +47,8 @@ internal class VaultSecretPersistenceTest {
     persistence.write(coordinate1, firstPayload)
     val secondRead: String = persistence.read(coordinate1)
     Assertions.assertThat(secondRead.isNotBlank()).isTrue()
-    org.junit.jupiter.api.Assertions.assertEquals(firstPayload, secondRead)
+    org.junit.jupiter.api.Assertions
+      .assertEquals(firstPayload, secondRead)
 
     // update
     val secondPayload = "def"
@@ -56,6 +57,7 @@ internal class VaultSecretPersistenceTest {
     persistence.write(coordinate2, secondPayload)
     val thirdRead: String = persistence.read(coordinate2)
     Assertions.assertThat(thirdRead.isNotBlank()).isTrue()
-    org.junit.jupiter.api.Assertions.assertEquals(secondPayload, thirdRead)
+    org.junit.jupiter.api.Assertions
+      .assertEquals(secondPayload, thirdRead)
   }
 }

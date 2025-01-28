@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -51,19 +55,21 @@ class ResumableFullRefreshStatsHelper {
   fun getStreamsWithStates(state: State?): Set<StreamDescriptor> =
     StateMessageHelper
       .getTypedState(state?.state)
-      .map(this::getStreams).orElse(listOf())
+      .map(this::getStreams)
+      .orElse(listOf())
       .toSet()
 
-  private fun getStreams(stateWrapper: StateWrapper): List<StreamDescriptor> {
-    return when (stateWrapper.stateType) {
+  private fun getStreams(stateWrapper: StateWrapper): List<StreamDescriptor> =
+    when (stateWrapper.stateType) {
       StateType.STREAM -> stateWrapper.stateMessages.map { it.stream.streamDescriptor }
-      StateType.GLOBAL -> stateWrapper.global.global.streamStates.map { s -> s.streamDescriptor }
+      StateType.GLOBAL ->
+        stateWrapper.global.global.streamStates
+          .map { s -> s.streamDescriptor }
       else -> {
         logger.warn { "Legacy states are no longer supported" }
         listOf()
       }
     }.map { it.toConfigObject() }
-  }
 
   private fun StreamSyncStats.streamDescriptor(): StreamDescriptor = StreamDescriptor().withName(this.streamName).withNamespace(this.streamNamespace)
 

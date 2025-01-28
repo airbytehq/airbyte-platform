@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -18,48 +18,44 @@ object ConnectionHelper {
   /**
    * Convert namespace definition enum -> NamespaceDefinitionType.
    */
-  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnum?): NamespaceDefinitionType {
-    return if (namespaceDefinitionEnum === NamespaceDefinitionEnum.CUSTOM_FORMAT) {
+  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnum?): NamespaceDefinitionType =
+    if (namespaceDefinitionEnum === NamespaceDefinitionEnum.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
       NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
     }
-  }
 
   /**
    * Convert namespace definition enum -> NamespaceDefinitionType.
    */
-  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnumNoDefault?): NamespaceDefinitionType {
-    return if (namespaceDefinitionEnum === NamespaceDefinitionEnumNoDefault.CUSTOM_FORMAT) {
+  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnumNoDefault?): NamespaceDefinitionType =
+    if (namespaceDefinitionEnum === NamespaceDefinitionEnumNoDefault.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
       NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
     }
-  }
 
   /**
    * Convert non-breaking schema updates behavior enum -> NonBreakingChangesPreference.
    */
   fun convertNonBreakingSchemaUpdatesBehaviorEnum(
     nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnum?,
-  ): NonBreakingChangesPreference {
-    return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION) {
+  ): NonBreakingChangesPreference =
+    if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
       NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
     }
-  }
 
   /**
    * Convert non-breaking schema updates behavior enum -> NonBreakingChangesPreference.
    */
   fun convertNonBreakingSchemaUpdatesBehaviorEnum(
     nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnumNoDefault?,
-  ): NonBreakingChangesPreference {
-    return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION) {
+  ): NonBreakingChangesPreference =
+    if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
       NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
     }
-  }
 }

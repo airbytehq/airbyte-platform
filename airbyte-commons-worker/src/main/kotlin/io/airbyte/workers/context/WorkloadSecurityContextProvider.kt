@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.context
@@ -83,14 +83,13 @@ class WorkloadSecurityContextProvider(
   private fun baseContainerSecurityContext(
     user: Long,
     group: Long,
-  ): SecurityContextBuilder {
-    return SecurityContextBuilder()
+  ): SecurityContextBuilder =
+    SecurityContextBuilder()
       .withRunAsUser(user)
       .withRunAsGroup(group)
       .withAllowPrivilegeEscalation(false)
       .withReadOnlyRootFilesystem(false)
       .withCapabilities(CapabilitiesBuilder().addAllToDrop(DEFAULT_CAPABILITIES).build())
-  }
 
   companion object {
     val DEFAULT_CAPABILITIES = listOf("ALL")

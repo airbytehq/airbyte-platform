@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -81,6 +81,10 @@ public class JsonPaths {
       }
 
     });
+  }
+
+  public static String jsonPathPrefix() {
+    return JSON_PATH_START_CHARACTER + JSON_PATH_FIELD_SEPARATOR;
   }
 
   public static String empty() {
@@ -190,6 +194,36 @@ public class JsonPaths {
 
     Preconditions.checkState(jsonNodes.size() <= 1, String.format("Path returned more than one item. path: %s items: %s", jsonPath, jsonNodes));
     return jsonNodes.isEmpty() ? Optional.empty() : Optional.of(jsonNodes.get(0));
+  }
+
+  /**
+   * Retrieves a single text value from the specified JSON node based on the provided JSON path. If
+   * the value is not found, returns null.
+   *
+   * @param json the JSON node to search within
+   * @param jsonPath the JSON path to locate the value
+   * @return the text value at the specified JSON path, or null if not found
+   */
+  public static String getSingleValueTextOrNull(final JsonNode json, final String jsonPath) {
+    final Optional<JsonNode> jsonNode = getSingleValue(json, jsonPathPrefix() + jsonPath);
+    return jsonNode.map(JsonNode::asText).orElse(null);
+  }
+
+  /**
+   * Extracts the final segment of a dot-separated string. If the input string contains one or more
+   * dots, the method splits the string by dots and returns the last segment. If the input string does
+   * not contain any dots, the method returns the input string itself.
+   *
+   * @param string the input string to process
+   * @return the final segment of the dot-separated string, or the input string if no dots are present
+   */
+  public static String getTargetKeyFromJsonPath(final String jsonPath) {
+    if (jsonPath.contains(".")) {
+      final String[] parts = jsonPath.split("\\.");
+      return parts[parts.length - 1];
+    }
+
+    return jsonPath;
   }
 
   /**

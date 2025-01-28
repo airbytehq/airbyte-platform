@@ -5,7 +5,6 @@ import { LoadingPage } from "components";
 import { LicenseBanner } from "components/LicenseBanner/LicenseBanner";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useListWorkspacesInfinite } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
@@ -20,11 +19,7 @@ const MainView: React.FC<React.PropsWithChildren> = (props) => {
     <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
       <LicenseBanner />
       <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
-        <SideBar
-          workspaceFetcher={useListWorkspacesInfinite}
-          bottomSlot={<HelpDropdown />}
-          settingHighlight={hasNewVersions}
-        />
+        <SideBar bottomSlot={<HelpDropdown />} settingHighlight={hasNewVersions} />
         <div className={styles.content}>
           <DefaultErrorBoundary>
             <React.Suspense fallback={<LoadingPage />}>{props.children}</React.Suspense>

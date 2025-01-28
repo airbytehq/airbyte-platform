@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.OrganizationPaymentConfig
@@ -14,6 +18,11 @@ class OrganizationPaymentConfigServiceDataImpl(
 ) : OrganizationPaymentConfigService {
   override fun findByOrganizationId(organizationId: UUID): OrganizationPaymentConfig? =
     organizationPaymentConfigRepository.findById(organizationId).orElse(null)?.toConfigModel()
+
+  override fun findByPaymentProviderId(paymentProviderId: String): OrganizationPaymentConfig? {
+    val organizationPaymentConfigEntity = organizationPaymentConfigRepository.findByPaymentProviderId(paymentProviderId)
+    return organizationPaymentConfigEntity?.toConfigModel()
+  }
 
   override fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig) {
     if (organizationPaymentConfigRepository.existsById(organizationPaymentConfig.organizationId)) {

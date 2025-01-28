@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -200,6 +201,7 @@ public class CatalogServiceJooqImpl implements CatalogService {
    * @throws IOException - error while interacting with db
    */
   @Override
+  @Trace
   public Map<UUID, ActorCatalogFetchEvent> getMostRecentActorCatalogFetchEventForSources(
                                                                                          List<UUID> sourceIds)
       throws IOException {

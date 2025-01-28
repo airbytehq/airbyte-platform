@@ -1,15 +1,21 @@
 ##  global.serviceAccountName Name of service account to be associated with service
 global:
   serviceAccountName: &service-account-name "airbyte-admin"
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as temporal, minio, etc.
+    tag: ""
 
-enabled: true
+enabled: false
 ##  podSweeper.image.repository The image repository to use for the pod sweeper
 ##  podSweeper.image.pullPolicy The pull policy for the pod sweeper image
 ##  podSweeper.image.tag The pod sweeper image tag to use
 image:
-  repository: bitnami/kubectl
+  repository: airbyte/pod-sweeper
   pullPolicy: IfNotPresent
-  tag: latest
 
 ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
 ##
@@ -107,7 +113,7 @@ timeToDeletePods:
   ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
   unsuccessful: 120
 
-replicaCount: 1
+replicaCount: 0
 
 ## namespace [string] namespace to deploy pod-sweeper at
 namespace: ""

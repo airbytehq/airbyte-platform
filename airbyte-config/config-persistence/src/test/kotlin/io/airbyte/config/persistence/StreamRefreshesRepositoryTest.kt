@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence
 
 import io.airbyte.config.RefreshStream
@@ -129,9 +133,9 @@ class StreamRefreshesRepositoryTest : RepositoryTestSetup() {
     assertEquals(2, refreshes.size)
     refreshes.forEach {
       assertEquals(connectionId1, it.connectionId)
-      if (streamRefresh1.streamName.equals(it.streamName)) {
+      if (streamRefresh1.streamName == it.streamName) {
         assertEquals(streamRefresh1.streamNamespace, it.streamNamespace)
-      } else if (streamRefresh2.streamName.equals(it.streamName)) {
+      } else if (streamRefresh2.streamName == it.streamName) {
         assertEquals(streamRefresh2.streamNamespace, it.streamNamespace)
       } else {
         throw RuntimeException("Unknown stream name " + it.streamName)
@@ -168,11 +172,12 @@ class StreamRefreshesRepositoryTest : RepositoryTestSetup() {
         StreamRefresh(null, connectionId1, "stream1", "ns1", null, expectedRefreshType),
         StreamRefresh(null, connectionId1, "stream2", "ns2", null, expectedRefreshType),
       ),
-      refreshes.map {
-        it.id = null
-        it.createdAt = null
-        it
-      }.toSet(),
+      refreshes
+        .map {
+          it.id = null
+          it.createdAt = null
+          it
+        }.toSet(),
     )
   }
 }

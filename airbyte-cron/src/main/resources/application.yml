@@ -14,8 +14,6 @@ micronaut:
       expire-after-write: 15s
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
@@ -46,9 +44,6 @@ airbyte:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
@@ -65,7 +60,6 @@ airbyte:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
   workload:
     monitor:
-      enabled: ${WORKLOAD_MONITOR_ENABLED:false}
       claim-check-rate: PT1M
       heartbeat-check-rate: PT1M
       not-started-check-rate: PT1M
@@ -178,5 +172,11 @@ temporal:
 
 logger:
   levels:
-# Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

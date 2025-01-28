@@ -4,7 +4,6 @@ import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
-import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 
 import { useConnectorForm } from "./connectorFormContext";
@@ -50,6 +49,12 @@ interface AuthenticationHook {
    * whether we will render "authenticate" or "re-authenticate" on the OAuth button text
    */
   hasAuthFieldValues: boolean;
+  /**
+   * This will return true if Airbyte global credentials are unavailable for the connector.
+   * This is used to determine whether we should render an info tooltip for the user to
+   * tell them what the redirect URL of their OAuth app should be.
+   */
+  shouldShowRedirectUrlTooltip: boolean;
 }
 
 export const useAuthentication = (): AuthenticationHook => {
@@ -60,8 +65,6 @@ export const useAuthentication = (): AuthenticationHook => {
   } = useFormContext<ConnectorFormValues>();
   const values = watch();
   const { getValues, selectedConnectorDefinitionSpecification: connectorSpec } = useConnectorForm();
-
-  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
 
   const advancedAuth = connectorSpec?.advancedAuth;
 
@@ -93,12 +96,13 @@ export const useAuthentication = (): AuthenticationHook => {
   const isAuthButtonVisible = useMemo(
     () =>
       Boolean(
-        allowOAuthConnector &&
-          advancedAuth &&
+        advancedAuth &&
           shouldShowButtonForAdvancedAuth(advancedAuth.predicateKey, advancedAuth.predicateValue, valuesWithDefaults)
       ),
-    [advancedAuth, valuesWithDefaults, allowOAuthConnector]
+    [advancedAuth, valuesWithDefaults]
   );
+
+  const shouldShowRedirectUrlTooltip = connectorSpec?.advancedAuthGlobalCredentialsAvailable === false;
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(
@@ -127,8 +131,8 @@ export const useAuthentication = (): AuthenticationHook => {
     }
     return implicitAuthFieldPaths.reduce<Record<string, string>>((authErrors, fieldName) => {
       const { error } = getFieldState(fieldName as FieldPath<ConnectorFormValues>);
-      if (submitCount > 0 && error && error.message) {
-        authErrors[fieldName] = error.message;
+      if (submitCount > 0 && error && error.type) {
+        authErrors[fieldName] = error.type;
       }
       return authErrors;
     }, {});
@@ -155,5 +159,6 @@ export const useAuthentication = (): AuthenticationHook => {
     hiddenAuthFieldErrors,
     shouldShowAuthButton,
     hasAuthFieldValues,
+    shouldShowRedirectUrlTooltip,
   };
 };

@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, useMemo, useContext } from "react";
+import { useRef, useMemo, useContext, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -12,7 +12,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ScrollParentContext } from "components/ui/ScrollParent";
+import { SearchInput } from "components/ui/SearchInput";
 import { Table } from "components/ui/Table";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
@@ -23,13 +25,14 @@ import { useCurrentConnection } from "core/api";
 import { DataFreshnessCell } from "./DataFreshnessCell";
 import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
-import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
 export const StreamsList: React.FC = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
+  const [showBytes, setShowBytes] = useToggle(false);
+
   const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
   const trackCountRef = useRef(0);
@@ -45,26 +48,66 @@ export const StreamsList: React.FC = () => {
         cell: StatusCell,
         meta: { thClassName: styles.statusHeader },
       }),
-      columnHelper.accessor("streamName", {
+      columnHelper.accessor("streamNameWithPrefix", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
-        cell: (props) => <span data-testid="streams-list-name-cell-content">{props.cell.getValue()}</span>,
-        meta: { responsive: true },
+        cell: (props) => (
+          <div data-testid="streams-list-name-cell-content" className={styles.nameContent}>
+            {props.cell.getValue()}
+          </div>
+        ),
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
-        header: () => <FormattedMessage id="connection.stream.status.table.latestSync" />,
+        header: () => (
+          <FlexContainer alignItems="baseline" gap="none">
+            <FormattedMessage
+              id="connection.stream.status.table.latestSync"
+              values={{
+                denomination: (
+                  <Tooltip
+                    placement="top"
+                    control={
+                      <button className={styles.clickableHeader} onClick={setShowBytes}>
+                        <Text color="grey" size="sm">
+                          {showBytes ? (
+                            <FormattedMessage id="connection.stream.status.table.latestSync.bytes" />
+                          ) : (
+                            <FormattedMessage id="connection.stream.status.table.latestSync.records" />
+                          )}
+                        </Text>
+                      </button>
+                    }
+                  >
+                    <FormattedMessage
+                      id={
+                        showBytes
+                          ? "connection.stream.status.table.latestSync.showRecords"
+                          : "connection.stream.status.table.latestSync.showBytes"
+                      }
+                    />
+                  </Tooltip>
+                ),
+              }}
+            />
+          </FlexContainer>
+        ),
         cell: (props) => {
           return (
             <LatestSyncCell
               recordsLoaded={props.row.original.recordsLoaded}
               recordsExtracted={props.row.original.recordsExtracted}
+              bytesLoaded={props.row.original.bytesLoaded}
+              bytesExtracted={props.row.original.bytesExtracted}
               syncStartedAt={props.row.original.activeJobStartedAt}
               status={props.row.original.status}
               isLoadingHistoricalData={props.row.original.isLoadingHistoricalData}
+              showBytes={showBytes}
             />
           );
         },
-        meta: { responsive: true },
+        meta: {
+          thClassName: styles.latestSyncHeader,
+        },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
@@ -89,7 +132,9 @@ export const StreamsList: React.FC = () => {
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
         ),
-        meta: { responsive: true },
+        meta: {
+          thClassName: styles.dataFreshAsOfHeader,
+        },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => null,
@@ -98,6 +143,7 @@ export const StreamsList: React.FC = () => {
           <StreamActionsMenu
             streamName={props.row.original.streamName}
             streamNamespace={props.row.original.streamNamespace}
+            catalogStream={props.row.original.catalogStream}
           />
         ),
         meta: {
@@ -105,7 +151,7 @@ export const StreamsList: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, setShowRelativeTime, showRelativeTime]
+    [columnHelper, setShowBytes, setShowRelativeTime, showBytes, showRelativeTime]
   );
 
   const {
@@ -115,6 +161,7 @@ export const StreamsList: React.FC = () => {
     recordsLoaded,
   } = useConnectionStatus(connection.connectionId);
 
+  const [filtering, setFiltering] = useState("");
   const customScrollParent = useContext(ScrollParentContext);
 
   return (
@@ -132,8 +179,9 @@ export const StreamsList: React.FC = () => {
               recordsExtracted={recordsExtracted}
             />
           </FlexContainer>
-
-          <StreamSearchFiltering className={styles.search} />
+          <div className={styles.search}>
+            <SearchInput value={filtering} onChange={({ target: { value } }) => setFiltering(value)} />
+          </div>
         </FlexContainer>
       </Box>
       <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
@@ -145,11 +193,11 @@ export const StreamsList: React.FC = () => {
           rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
           getRowClassName={(stream) =>
             classNames(styles.row, {
-              [styles["syncing--next"]]:
-                activeStatuses.includes(stream.status) && stream.status !== StreamStatusType.Queued,
+              [styles.syncing]: activeStatuses.includes(stream.status) && stream.status !== StreamStatusType.Queued,
             })
           }
           sorting={false}
+          columnFilters={[{ id: "streamNameWithPrefix", value: filtering }]}
           virtualized
           virtualizedProps={{ customScrollParent: customScrollParent ?? undefined, useWindowScroll: true }}
         />

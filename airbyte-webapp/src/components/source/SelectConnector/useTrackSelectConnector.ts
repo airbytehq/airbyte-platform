@@ -1,6 +1,7 @@
 import capitalize from "lodash/capitalize";
 import { useCallback } from "react";
 
+import { EnterpriseSourceStubType } from "core/domain/connector";
 import { useAnalyticsService, Action, Namespace } from "core/services/analytics";
 
 export const useTrackSelectConnector = (connectorType: "source" | "destination") => {
@@ -17,5 +18,19 @@ export const useTrackSelectConnector = (connectorType: "source" | "destination")
       });
     },
     [analytics, connectorType, namespaceType]
+  );
+};
+
+export const useTrackSelectEnterpriseStub = () => {
+  const analytics = useAnalyticsService();
+
+  return useCallback(
+    (enterpriseSourceStub: EnterpriseSourceStubType) => {
+      analytics.track(Namespace.ENTERPRISE_SOURCE_STUB, Action.SELECT, {
+        actionDescription: "Enterprise stub selected",
+        ...enterpriseSourceStub,
+      });
+    },
+    [analytics]
   );
 };

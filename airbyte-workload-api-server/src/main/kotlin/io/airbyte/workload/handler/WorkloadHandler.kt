@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadType
@@ -34,7 +38,6 @@ interface WorkloadHandler {
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
-    geography: String,
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,

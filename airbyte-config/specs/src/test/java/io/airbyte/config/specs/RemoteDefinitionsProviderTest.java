@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.specs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,15 +20,19 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RemoteDefinitionsProviderTest {
 
   private MockWebServer webServer;
@@ -64,6 +70,18 @@ class RemoteDefinitionsProviderTest {
         .addHeader("Content-Type", "application/json; charset=utf-8")
         .addHeader("Cache-Control", "no-cache")
         .setBody(body);
+  }
+
+  // Helper method to create a test zip file with specified content
+  private byte[] createTestZip(String filename, String content) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+      ZipEntry entry = new ZipEntry(filename);
+      zos.putNextEntry(entry);
+      zos.write(content.getBytes(StandardCharsets.UTF_8));
+      zos.closeEntry();
+    }
+    return baos.toByteArray();
   }
 
   @Test
@@ -143,6 +161,27 @@ class RemoteDefinitionsProviderTest {
     final int expectedNumberOfDestinations = MoreIterators.toList(jsonCatalog.get("destinations").elements()).size();
     assertEquals(expectedNumberOfDestinations, destinationDefinitions.size());
     assertTrue(destinationDefinitions.stream().allMatch(destDef -> destDef.getProtocolVersion().length() > 0));
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("0eeee7fb-518f-4045-bacc-9619e31c43ea"));
+    assertTrue(destinationDefinitionWithFileTransfer.getSupportsFileTransfer());
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithNoFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("b4c5d105-31fd-4817-96b6-cb923bfc04cb"));
+    assertFalse(destinationDefinitionWithNoFileTransfer.getSupportsFileTransfer());
+
+    final ConnectorRegistryDestinationDefinition destinationDefinitionWithoutFileTransfer =
+        getDestinationDefinitionById(destinationDefinitions, UUID.fromString("22f6c74f-5699-40ff-833c-4a879ea40133"));
+    assertFalse(destinationDefinitionWithoutFileTransfer.getSupportsFileTransfer());
+  }
+
+  private ConnectorRegistryDestinationDefinition getDestinationDefinitionById(
+                                                                              final List<ConnectorRegistryDestinationDefinition> destDefs,
+                                                                              final UUID destDefId) {
+    return destDefs.stream()
+        .filter(destDef -> destDef.getDestinationDefinitionId().equals(destDefId))
+        .findFirst()
+        .orElseThrow();
   }
 
   @Test
@@ -311,6 +350,81 @@ class RemoteDefinitionsProviderTest {
     final Optional<JsonNode> manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(manifestResult.isPresent());
     assertEquals(manifestResult.get(), Yamls.deserialize(connectorManifestBody));
+  }
+
+  @Test
+  void testGetConnectorCustomComponents() throws IOException {
+    // Create a zip file containing components.py with test content
+    final String expectedContent = "def test_function():\n    return 'test'";
+    final byte[] zipBytes = createTestZip("components.py", expectedContent);
+
+    final MockResponse validResponse = new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/zip")
+        .setBody(new okio.Buffer().write(zipBytes));
+
+    webServer.enqueue(validResponse);
+
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> customComponentsResult =
+        remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+
+    assertTrue(customComponentsResult.isPresent());
+    assertEquals(expectedContent, customComponentsResult.get());
+  }
+
+  @Test
+  void testGetMissingConnectorCustomComponents() {
+    webServer.enqueue(makeResponse(404, "not found"));
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> customComponentsResult =
+        remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+    assertTrue(customComponentsResult.isEmpty());
+  }
+
+  @Test
+  void testGetConnectorCustomComponentsWithNoComponentsFile() throws IOException {
+    // Create a zip file containing a different file
+    final String content = "some other content";
+    final byte[] zipBytes = createTestZip("different-file.txt", content);
+
+    final MockResponse validResponse = new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/zip")
+        .setBody(new okio.Buffer().write(zipBytes));
+
+    webServer.enqueue(validResponse);
+
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> customComponentsResult =
+        remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+
+    // Verify that an empty Optional is returned when components.py is not found
+    assertTrue(customComponentsResult.isEmpty());
+  }
+
+  @Test
+  void testGetConnectorCustomComponentsWithMalformedZip() {
+    // Create an invalid zip file (just some random bytes)
+    final byte[] invalidZipBytes = "not a valid zip file content".getBytes(StandardCharsets.UTF_8);
+
+    final MockResponse invalidResponse = new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/zip")
+        .setBody(new okio.Buffer().write(invalidZipBytes));
+
+    webServer.enqueue(invalidResponse);
+
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> customComponentsResult =
+        remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
+
+    // Verify that an empty Optional is returned when the zip is malformed
+    assertTrue(customComponentsResult.isEmpty());
   }
 
   @Test

@@ -1,5 +1,10 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.local
 
+import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.data.services.ExternalUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Primary
@@ -10,7 +15,7 @@ private val logger = KotlinLogging.logger { }
 
 @Singleton
 @Primary
-@Requires(env = ["local-test"])
+@Requires(env = [EnvConstants.LOCAL_TEST])
 class ExternalUserServiceLocalImpl : ExternalUserService {
   override fun deleteUserByExternalId(
     authUserId: String,
@@ -26,7 +31,5 @@ class ExternalUserServiceLocalImpl : ExternalUserService {
     logger.info { "LOCAL MODE (No-op): Would have deleted user by email on non $realmToKeep realms: $email" }
   }
 
-  override fun getRealmByAuthUserId(authUserId: String): String? {
-    return null
-  }
+  override fun getRealmByAuthUserId(authUserId: String): String? = null
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.ConnectionRead
@@ -23,6 +27,7 @@ internal class ConnectionReadMapperTest {
     connectionRead.namespaceDefinition = NamespaceDefinitionType.DESTINATION
     connectionRead.namespaceFormat = "namespaceFormat"
     connectionRead.prefix = "prefix"
+    connectionRead.createdAt = 1L
 
     val workspaceId = UUID.randomUUID()
     val connectionResponse = ConnectionReadMapper.from(connectionRead, workspaceId)
@@ -34,5 +39,6 @@ internal class ConnectionReadMapperTest {
     assertEquals(connectionResponse.schedule.scheduleType.toString(), connectionRead.scheduleType.toString())
     assertEquals(connectionResponse.sourceId, connectionRead.sourceId.toString())
     assertEquals(connectionResponse.destinationId, connectionRead.destinationId.toString())
+    assertEquals(connectionResponse.createdAt, connectionRead.createdAt)
   }
 }

@@ -4,19 +4,13 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
+  annotationProcessor(platform(libs.micronaut.platform))
+  annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  annotationProcessor(libs.micronaut.jaxrs.processor)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.micronaut.jaxrs.processor)
-
-  kspTest(platform(libs.micronaut.platform))
-  kspTest(libs.bundles.micronaut.test.annotation.processor)
-
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-  annotationProcessor(libs.micronaut.jaxrs.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -32,16 +26,16 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
   implementation(libs.bundles.apache)
-  implementation(libs.slugify)
   implementation(libs.quartz.scheduler)
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
-  implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
   implementation(libs.kotlin.logging)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)
+  implementation(libs.guava)
+  implementation(libs.cron.utils)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
@@ -51,8 +45,8 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
@@ -74,8 +68,12 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(project(":oss:airbyte-worker-models"))
   implementation(project(":oss:airbyte-notification"))
+  implementation(project(":oss:airbyte-csp-check"))
 
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -90,6 +88,7 @@ dependencies {
   testImplementation(libs.micronaut.http)
   testImplementation(libs.mockk)
   testImplementation(libs.reactor.test)
+  testImplementation(libs.bundles.kotest)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

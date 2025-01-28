@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduling;
@@ -28,5 +28,11 @@ public interface AirbyteTaskExecutors extends TaskExecutors {
    * the public API.
    */
   String PUBLIC_API = "public-api";
+
+  /**
+   * The name of the {@link java.util.concurrent.ExecutorService} used for webhook endpoints that are
+   * called by external systems.
+   */
+  String WEBHOOK = "webhook";
 
 }

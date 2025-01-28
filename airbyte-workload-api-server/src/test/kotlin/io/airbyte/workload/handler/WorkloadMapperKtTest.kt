@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.workload.repository.domain.WorkloadLabel
@@ -27,7 +31,6 @@ class WorkloadMapperKtTest {
         workloadLabels = listOf(WorkloadLabel(id = UUID.randomUUID(), key = "key", value = "value")),
         inputPayload = "inputPayload",
         logPath = "log/path",
-        geography = "geography",
         mutexKey = "mutexKey",
         type = WorkloadType.SYNC,
         terminationReason = "terminationReason",
@@ -46,7 +49,6 @@ class WorkloadMapperKtTest {
     assertEquals(domainWorkload.workloadLabels!!.map { x -> x.value }, apiWorkload.labels.map { x -> x.value })
     assertEquals(domainWorkload.inputPayload, apiWorkload.inputPayload)
     assertEquals(domainWorkload.logPath, apiWorkload.logPath)
-    assertEquals(domainWorkload.geography, apiWorkload.geography)
     assertEquals(domainWorkload.mutexKey, apiWorkload.mutexKey)
     assertEquals(ApiWorkloadType.SYNC, apiWorkload.type)
     assertEquals(domainWorkload.terminationReason, apiWorkload.terminationReason)

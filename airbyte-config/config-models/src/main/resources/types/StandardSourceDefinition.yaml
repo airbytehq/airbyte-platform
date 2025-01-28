@@ -42,7 +42,7 @@ properties:
     type: boolean
     default: false
   resourceRequirements:
-    "$ref": ActorDefinitionResourceRequirements.yaml
+    "$ref": ScopedResourceRequirements.yaml
   maxSecondsBetweenMessages:
     description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
     type: integer

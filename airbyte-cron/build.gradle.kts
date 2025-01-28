@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -26,7 +24,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
   implementation(libs.sentry.java)
-  implementation(libs.lombok)
   implementation(libs.commons.io)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -35,6 +32,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
@@ -47,6 +45,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
@@ -72,16 +71,19 @@ airbyte {
   }
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// Once lombok has been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // Copies the connector <> platform compatibility JSON file for use in tests
 tasks.register<Copy>("copyPlatformCompatibilityMatrix") {
-  val platformCompatibilityFile = project.rootProject.layout.projectDirectory.file("tools/connectors/platform-compatibility/platform-compatibility.json")
-  if(file(platformCompatibilityFile).exists()) {
+  val platformCompatibilityFile =
+    project.rootProject.layout.projectDirectory.file(
+      "tools/connectors/platform-compatibility/platform-compatibility.json",
+    )
+  if (file(platformCompatibilityFile).exists()) {
     from(platformCompatibilityFile)
     into(project.layout.projectDirectory.dir("src/test/resources"))
   }

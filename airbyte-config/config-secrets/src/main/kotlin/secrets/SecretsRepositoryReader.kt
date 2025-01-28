@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -55,22 +55,20 @@ open class SecretsRepositoryReader(
    * @param configWithSecrets Config with _secrets in it.
    * @return Config with _secrets hydrated.
    */
-  fun hydrateConfigFromDefaultSecretPersistence(configWithSecrets: JsonNode?): JsonNode? {
-    return if (configWithSecrets != null) {
+  fun hydrateConfigFromDefaultSecretPersistence(configWithSecrets: JsonNode?): JsonNode? =
+    if (configWithSecrets != null) {
       secretsHydrator.hydrateFromDefaultSecretPersistence(configWithSecrets)
     } else {
       null
     }
-  }
 
   fun hydrateConfigFromRuntimeSecretPersistence(
     configuration: JsonNode?,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode? {
-    return if (configuration != null) {
+  ): JsonNode? =
+    if (configuration != null) {
       secretsHydrator.hydrateFromRuntimeSecretPersistence(configuration, runtimeSecretPersistence)
     } else {
       null
     }
-  }
 }

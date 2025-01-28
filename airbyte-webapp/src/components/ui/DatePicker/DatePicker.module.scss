@@ -234,3 +234,12 @@ $nav-arrow-spacing-side: 15px;
     background-color: colors.$blue-500;
   }
 }
+
+:global(.react-datepicker__month-text--keyboard-selected.react-datepicker__month-text--keyboard-selected) {
+  color: colors.$foreground;
+  background-color: colors.$blue-400;
+
+  &:hover {
+    background-color: colors.$blue-500;
+  }
+}

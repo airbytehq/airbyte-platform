@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.errorHandlers
 
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
@@ -31,7 +35,8 @@ class ConfigClientErrorHandlerTest {
     assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(notFoundResponse, resourceId.toString()) }
 
     val conflictResponse =
-      httpResponseFactory.status<String>(HttpStatus.CONFLICT, "test")
+      httpResponseFactory
+        .status<String>(HttpStatus.CONFLICT, "test")
         .body(mapOf("message" to "test"))
     assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(conflictResponse, resourceId.toString()) }
 
@@ -39,7 +44,8 @@ class ConfigClientErrorHandlerTest {
     assertThrows<InvalidApiKeyProblem> { ConfigClientErrorHandler.handleError(unauthorizedResponse, resourceId.toString()) }
 
     val unprocessibleEntityResponse =
-      httpResponseFactory.status<String>(HttpStatus.UNPROCESSABLE_ENTITY, "test")
+      httpResponseFactory
+        .status<String>(HttpStatus.UNPROCESSABLE_ENTITY, "test")
         .body(mapOf("message" to "test"))
     assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(unprocessibleEntityResponse, resourceId.toString()) }
 

@@ -130,16 +130,6 @@ global:
       ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
       main_container_image_pull_secret: ""
 
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        ## busybox image used by the job pod
-        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_CURL_IMAGE
-        ## curl image used by the job pod
-        ##   jobs.kube.images.curl [string] curl image used by the job pod
-        curl: ""
-
 ## @section Common Parameters
 
 ##  nameOverride -- String to partially override airbyte.fullname template with a string (will prepend the release name)
@@ -1093,7 +1083,7 @@ temporal:
   image:
     repository: temporalio/auto-setup
     pullPolicy: IfNotPresent
-    tag: "1.23.0"
+    tag: "1.26"
 
   ##  temporal.service.type The Kubernetes Service Type
   ##  temporal.service.port The temporal port and exposed kubernetes port

@@ -1,8 +1,6 @@
 micronaut:
   application:
     name: airbyte-workers
-  env:
-    cloud-deduction: true
   server:
     netty:
       aggregator:
@@ -42,6 +40,7 @@ airbyte:
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
     check-timeout: ${ACTIVITY_CHECK_TIMEOUT:10}
     discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
+    async-timeout: ${ACTIVITY_ASYNC_TIMEOUT_SECONDS:120}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -53,12 +52,11 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      local:
-        root: ${LOCAL_ROOT:}
       minio:
         access-key: ${AWS_ACCESS_KEY_ID:}
         endpoint: ${MINIO_ENDPOINT:}
@@ -73,17 +71,6 @@ airbyte:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
-  container:
-    orchestrator:
-      enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
-      image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
-      java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
-      secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
-      secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
-      data-plane-creds:
-        secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
-        secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
-    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -114,9 +101,6 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
@@ -162,6 +146,7 @@ airbyte:
           jitter-amount-minutes: ${SCHEDULE_VERY_LOW_JITTER_AMOUNT_MINUTES:25} # anything greater than every 6.5 hours has up to 25 minutes of added jitter
     discover:
       enabled: ${SHOULD_RUN_DISCOVER_WORKFLOWS:true}
+      auto-refresh-window: ${DISCOVER_REFRESH_WINDOW_MINUTES:1440}
       max-workers: ${MAX_CHECK_WORKERS:5}
     job:
       error-reporting:
@@ -294,6 +279,11 @@ temporal:
 
 logger:
   levels:
-    io.airbyte.bootloader: DEBUG
-# Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

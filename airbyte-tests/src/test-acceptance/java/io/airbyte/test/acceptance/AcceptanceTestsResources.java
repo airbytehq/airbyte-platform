@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -7,6 +7,8 @@ package io.airbyte.test.acceptance;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
@@ -138,10 +140,10 @@ public class AcceptanceTestsResources {
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
-    Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
-    Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
+    assertTrue(stream.getDefaultCursorField().isEmpty());
+    assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
@@ -251,10 +253,10 @@ public class AcceptanceTestsResources {
     final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
     final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
-    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     Assertions.assertFalse(stream.getSourceDefinedCursor());
-    Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
-    Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
+    assertTrue(stream.getDefaultCursorField().isEmpty());
+    assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
@@ -293,7 +295,12 @@ public class AcceptanceTestsResources {
     Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
 
-    return new SyncIds(connectionId, connectionSyncRead1.getJob().getId(), connectionSyncRead1.getAttempts().size() - 1);
+    // Assert that job logs exist
+    final var jobId = connectionSyncRead1.getJob().getId();
+    final var attemptId = connectionSyncRead1.getAttempts().size() - 1;
+    testHarness.validateLogs(jobId, attemptId);
+
+    return new SyncIds(connectionId, jobId, attemptId);
   }
 
   void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {

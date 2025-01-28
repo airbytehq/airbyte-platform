@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ChartOffset } from "recharts/types/util/types";
+import { useLayoutEffect, useState } from "react";
+import { BaseAxisProps, ChartOffset } from "recharts/types/util/types";
 
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 
@@ -37,6 +37,7 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   orderedTooltipTicks: Array<{ coordinate: number }>;
   activeTooltipIndex: number;
   isTooltipActive: boolean;
+  xAxisMap: Record<string, BaseAxisProps>;
 }
 
 type WaffleColor = "green" | "red" | "yellow" | "blue" | "empty";
@@ -79,14 +80,18 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
     activeTooltipIndex,
     isTooltipActive,
     streamsCount,
+    xAxisMap,
   } = props as InjectedStreamWaffleChartProps;
 
   const { top: offsetTop = 0, right: offsetRight, bottom: offsetBottom = 0, left: offsetLeft } = offset;
 
-  useEffect(() => {
+  // @ts-expect-error `scaleLinear` doesn't have a bandwidth method, but we gave it one
+  const barWidth = xAxisMap["0"]?.scale?.bandwidth?.();
+
+  // layout effect so drawing happens immediately, prevents flicker when resizing the window
+  useLayoutEffect(() => {
     if (canvas) {
       const availableHeight = height - offsetTop - offsetBottom;
-      const barWidth = 30;
       const halfBarWidth = barWidth / 2;
       const cellHeight = availableHeight / streamsCount;
 
@@ -211,6 +216,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
     activeTooltipIndex,
     isTooltipActive,
     maxStreamsCount,
+    barWidth,
   ]);
 
   return (

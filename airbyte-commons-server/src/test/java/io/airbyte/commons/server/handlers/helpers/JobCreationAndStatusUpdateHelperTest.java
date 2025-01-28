@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -26,7 +26,8 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -44,7 +45,8 @@ import org.junit.jupiter.api.Test;
  */
 class JobCreationAndStatusUpdateHelperTest {
 
-  ConfigRepository mConfigRepository;
+  ActorDefinitionService mActorDefinitionService;
+  ConnectionService mConnectionService;
   JobNotifier mJobNotifier;
 
   JobPersistence mJobPersistence;
@@ -56,7 +58,8 @@ class JobCreationAndStatusUpdateHelperTest {
 
   @BeforeEach
   void setup() {
-    mConfigRepository = mock(ConfigRepository.class);
+    mActorDefinitionService = mock(ActorDefinitionService.class);
+    mConnectionService = mock(ConnectionService.class);
     mJobNotifier = mock(JobNotifier.class);
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
@@ -64,9 +67,11 @@ class JobCreationAndStatusUpdateHelperTest {
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
-        mConfigRepository,
+        mActorDefinitionService,
+        mConnectionService,
         mJobNotifier,
-        mJobTracker, connectionTimelineEventHelper);
+        mJobTracker,
+        connectionTimelineEventHelper);
   }
 
   @Test
@@ -186,9 +191,9 @@ class JobCreationAndStatusUpdateHelperTest {
             .withSourceDefinitionVersionId(sourceDefVersionId)
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(Fixtures.JOB_ID, ConfigType.SYNC, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
-        0L, 0L, 0L);
+        0L, 0L, 0L, true);
 
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+    when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
@@ -206,9 +211,9 @@ class JobCreationAndStatusUpdateHelperTest {
         .withResetConnection(new JobResetConnectionConfig()
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(Fixtures.JOB_ID, RESET_CONNECTION, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
-        0L, 0L, 0L);
+        0L, 0L, 0L, true);
 
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+    when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
     final List<ReleaseStage> releaseStages = helper.getJobToReleaseStages(job);
@@ -223,15 +228,15 @@ class JobCreationAndStatusUpdateHelperTest {
     private static final long JOB_ID = 123L;
 
     static Job job(final long id, final long createdAt) {
-      return new Job(id, null, null, null, null, null, null, createdAt, 0);
+      return new Job(id, null, null, null, null, null, null, createdAt, 0, true);
     }
 
     static Job job(final JobStatus status) {
-      return new Job(1, null, null, null, null, status, null, 0, 0);
+      return new Job(1, null, null, null, null, status, null, 0, 0, true);
     }
 
     static Job job(final long id, final List<Attempt> attempts, final JobStatus status) {
-      return new Job(id, null, null, null, attempts, status, null, 0, 0);
+      return new Job(id, null, null, null, attempts, status, null, 0, 0, true);
     }
 
     static Attempt attempt(final int number, final long jobId, final AttemptStatus status) {

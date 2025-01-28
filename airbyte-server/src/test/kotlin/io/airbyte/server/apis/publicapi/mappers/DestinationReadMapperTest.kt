@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.DestinationRead
@@ -16,6 +20,7 @@ class DestinationReadMapperTest {
     destinationRead.destinationDefinitionId = UUID.randomUUID()
     destinationRead.workspaceId = UUID.randomUUID()
     destinationRead.connectionConfiguration = Jsons.deserialize("{}")
+    destinationRead.createdAt = 1L
 
     // When
     val destinationResponse = DestinationReadMapper.from(destinationRead)
@@ -26,5 +31,7 @@ class DestinationReadMapperTest {
     assertEquals(DEFINITION_ID_TO_DESTINATION_NAME.getOrDefault(destinationRead.destinationDefinitionId, ""), destinationResponse.destinationType)
     assertEquals(destinationRead.workspaceId.toString(), destinationResponse.workspaceId)
     assertEquals(destinationRead.connectionConfiguration, destinationResponse.configuration)
+    assertEquals(destinationRead.destinationDefinitionId.toString(), destinationResponse.definitionId)
+    assertEquals(destinationRead.createdAt, destinationResponse.createdAt)
   }
 }

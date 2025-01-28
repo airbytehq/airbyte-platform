@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.ANONYMOUS
@@ -9,7 +13,7 @@ import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.PodUtils
+import io.airbyte.workers.pod.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -18,15 +22,12 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.Toleration
-import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
-import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
+import java.util.UUID
 
-class ConnectorPodFactory(
+data class ConnectorPodFactory(
   private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
-  private val connectorReqs: AirbyteResourceRequirements,
-  private val sidecarReqs: AirbyteResourceRequirements,
   private val tolerations: List<Toleration>,
   private val imagePullSecrets: List<LocalObjectReference>,
   private val connectorEnvVars: List<EnvVar>,
@@ -37,47 +38,23 @@ class ConnectorPodFactory(
   private val initContainerFactory: InitContainerFactory,
   private val connectorArgs: Map<String, String>,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
+  private val resourceRequirementsFactory: ResourceRequirementsFactory,
 ) {
   fun create(
     allLabels: Map<String, String>,
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
+    connectorContainerReqs: ResourceRequirements,
+    initContainerReqs: ResourceRequirements,
     runtimeEnvVars: List<EnvVar>,
-    useFetchingInit: Boolean,
+    workspaceId: UUID,
   ): Pod {
-    val volumes: MutableList<Volume> = ArrayList()
-    val volumeMounts: MutableList<VolumeMount> = ArrayList()
-    val secretVolumeMounts: MutableList<VolumeMount> = ArrayList()
+    val volumeMountPairs = volumeFactory.connector()
 
-    val config = volumeFactory.config()
-    volumes.add(config.volume)
-    volumeMounts.add(config.mount)
-
-    val secrets = volumeFactory.secret()
-    if (secrets != null) {
-      volumes.add(secrets.volume)
-      secretVolumeMounts.add(secrets.mount)
-    }
-
-    val dataPlaneCreds = volumeFactory.dataplaneCreds()
-    if (dataPlaneCreds != null) {
-      volumes.add(dataPlaneCreds.volume)
-      secretVolumeMounts.add(dataPlaneCreds.mount)
-    }
-
-    val connectorResourceReqs = PodUtils.getResourceRequirementsBuilder(connectorReqs).build()
-    val internalVolumeMounts = volumeMounts + secretVolumeMounts
-
-    val init: Container =
-      if (useFetchingInit) {
-        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars)
-      } else {
-        initContainerFactory.createWaiting(connectorResourceReqs, internalVolumeMounts)
-      }
-
-    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
-    val sidecar: Container = buildSidecarContainer(internalVolumeMounts)
+    val init: Container = initContainerFactory.create(initContainerReqs, volumeMountPairs.initMounts, runtimeEnvVars, workspaceId)
+    val main: Container = buildMainContainer(connectorContainerReqs, volumeMountPairs.mainMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
+    val sidecar: Container = buildSidecarContainer(volumeMountPairs.sidecarMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -96,7 +73,7 @@ class ConnectorPodFactory(
       .withRestartPolicy("Never")
       .withContainers(sidecar, main)
       .withInitContainers(init)
-      .withVolumes(volumes)
+      .withVolumes(volumeMountPairs.volumes)
       .withNodeSelector<String, String>(nodeSelectors)
       .withTolerations(tolerations)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
@@ -112,10 +89,10 @@ class ConnectorPodFactory(
     runtimeEnvVars: List<EnvVar>,
   ): Container {
     val configArgs =
-      connectorArgs.map {
-          (k, v) ->
-        "--$k $v"
-      }.joinToString(prefix = " ", separator = " ")
+      connectorArgs
+        .map { (k, v) ->
+          "--$k $v"
+        }.joinToString(prefix = " ", separator = " ")
 
     val mainCommand = ContainerCommandFactory.connectorOperation(operationCommand, configArgs)
 
@@ -134,6 +111,7 @@ class ConnectorPodFactory(
 
   private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
     val mainCommand = ContainerCommandFactory.sidecar()
+    val sidecarReqs = resourceRequirementsFactory.sidecar()
 
     return ContainerBuilder()
       .withName(ContainerConstants.SIDECAR_CONTAINER_NAME)
@@ -143,7 +121,7 @@ class ConnectorPodFactory(
       .withWorkingDir(FileConstants.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
-      .withResources(PodUtils.getResourceRequirementsBuilder(sidecarReqs).build())
+      .withResources(ResourceConversionUtils.domainToApi(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .build()
   }

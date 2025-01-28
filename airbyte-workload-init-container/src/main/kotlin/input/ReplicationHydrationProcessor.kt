@@ -1,7 +1,10 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.MetricAttribute
@@ -36,7 +39,6 @@ class ReplicationHydrationProcessor(
   private val serializer: ObjectSerializer,
   private val protocolSerializer: ProtocolSerializer,
   private val fileClient: FileClient,
-  private val featureFlagClient: FeatureFlagClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
 ) : InputHydrationProcessor {
@@ -89,7 +91,9 @@ class ReplicationHydrationProcessor(
 
     val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
 
-    sendMapperErrorMetrics(transformedCatalog, parsed.connectionId)
+    parsed.connectionId?.let {
+      sendMapperErrorMetrics(transformedCatalog, it)
+    }
 
     val destinationCatalog = mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
 
@@ -116,27 +120,12 @@ class ReplicationHydrationProcessor(
   ) {
     transformedCatalog.errors.entries.forEach { streamErrors ->
       streamErrors.value.values.forEach { streamError ->
-        when (streamError) {
-          DestinationCatalogGenerator.MapperError.MISSING_MAPPER ->
-            metricClient.count(
-              OssMetricsRegistry.MISSING_MAPPER,
-              1,
-              MetricAttribute(
-                MetricTags.CONNECTION_ID,
-                connectionId.toString(),
-              ),
-            )
-
-          DestinationCatalogGenerator.MapperError.INVALID_MAPPER_CONFIG ->
-            metricClient.count(
-              OssMetricsRegistry.INVALID_MAPPER_CONFIG,
-              1,
-              MetricAttribute(
-                MetricTags.CONNECTION_ID,
-                connectionId.toString(),
-              ),
-            )
-        }
+        metricClient.count(
+          OssMetricsRegistry.MAPPER_ERROR,
+          1,
+          MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+          MetricAttribute(MetricTags.FAILURE_TYPE, streamError.type.name),
+        )
       }
     }
   }

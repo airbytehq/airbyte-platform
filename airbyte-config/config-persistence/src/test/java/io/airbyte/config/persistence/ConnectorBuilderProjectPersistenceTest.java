@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -66,6 +66,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   private static final String A_DESCRIPTION = "a description";
   private static final Long ACTIVE_MANIFEST_VERSION = 305L;
   private static final JsonNode A_MANIFEST;
+  private static final String A_COMPONENTS_FILE_CONTENT = "a = 1";
   private static final JsonNode ANOTHER_MANIFEST;
 
   static {
@@ -178,8 +179,15 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     // actually set draft to null for first project
     project1.setManifestDraft(null);
     project1.setHasDraft(false);
-    connectorBuilderService.writeBuilderProjectDraft(project1.getBuilderProjectId(), project1.getWorkspaceId(), project1.getName(), null,
-        project1.getBaseActorDefinitionVersionId(), project1.getContributionPullRequestUrl(), project1.getContributionActorDefinitionId());
+    connectorBuilderService.writeBuilderProjectDraft(
+        project1.getBuilderProjectId(),
+        project1.getWorkspaceId(),
+        project1.getName(),
+        null,
+        null,
+        project1.getBaseActorDefinitionVersionId(),
+        project1.getContributionPullRequestUrl(),
+        project1.getContributionActorDefinitionId());
 
     // set draft to null because it won't be returned as part of listing call
     project2.setManifestDraft(null);
@@ -197,14 +205,15 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project1.setName("Updated name");
     project1.setManifestDraft(new ObjectMapper().readTree("{}"));
     connectorBuilderService.writeBuilderProjectDraft(project1.getBuilderProjectId(), project1.getWorkspaceId(), project1.getName(),
-        project1.getManifestDraft(), project1.getBaseActorDefinitionVersionId(), project1.getContributionPullRequestUrl(),
+        project1.getManifestDraft(), project1.getComponentsFileContent(),
+        project1.getBaseActorDefinitionVersionId(), project1.getContributionPullRequestUrl(),
         project1.getContributionActorDefinitionId());
     assertEquals(project1, connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
   }
 
   @Test
   void whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() throws Exception {
-    connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null);
+    connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null);
     workspaceService.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
     sourceService.writeCustomConnectorMetadata(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
@@ -213,7 +222,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE);
 
     connectorBuilderService.updateBuilderProjectAndActorDefinition(
-        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, null, null, null, A_SOURCE_DEFINITION_ID);
+        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, null, null, null, null, A_SOURCE_DEFINITION_ID);
 
     final ConnectorBuilderProject updatedConnectorBuilder = connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, true);
     assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.getName());
@@ -223,7 +232,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() throws Exception {
-    connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null);
+    connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null);
     workspaceService.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
     sourceService.writeCustomConnectorMetadata(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
@@ -232,9 +241,29 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE);
 
     connectorBuilderService.updateBuilderProjectAndActorDefinition(
-        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, null, null, null, A_SOURCE_DEFINITION_ID);
+        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, null, null, null, null, A_SOURCE_DEFINITION_ID);
 
     assertEquals(A_PROJECT_NAME, sourceService.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).getName());
+  }
+
+  @Test
+  void testUpdateWithComponentsFile() throws Exception {
+    connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null);
+    workspaceService.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
+    sourceService.writeCustomConnectorMetadata(MockData.customSourceDefinition()
+        .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withName(A_PROJECT_NAME)
+        .withPublic(false),
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE);
+
+    connectorBuilderService.updateBuilderProjectAndActorDefinition(
+        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_COMPONENTS_FILE_CONTENT, null, null, null,
+        A_SOURCE_DEFINITION_ID);
+
+    final ConnectorBuilderProject updatedConnectorBuilder = connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, true);
+    assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.getName());
+    assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.getManifestDraft());
+    assertEquals(A_COMPONENTS_FILE_CONTENT, updatedConnectorBuilder.getComponentsFileContent());
   }
 
   @Test
@@ -266,6 +295,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void givenNoMatchingActiveDeclarativeManifestWhenGetVersionedConnectorBuilderProjectThenThrowException() throws IOException {
     connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, ANY_UUID, A_PROJECT_NAME, new ObjectMapper().readTree("{}"), null, null,
+        null,
         null);
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderService.getVersionedConnectorBuilderProject(A_BUILDER_PROJECT_ID, 1L));
   }
@@ -273,6 +303,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void whenGetVersionedConnectorBuilderProjectThenReturnVersionedProject() throws ConfigNotFoundException, IOException {
     connectorBuilderService.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, ANY_UUID, A_PROJECT_NAME, new ObjectMapper().readTree("{}"), null, null,
+        null,
         null);
     connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
     connectorBuilderService.insertActiveDeclarativeManifest(anyDeclarativeManifest()
@@ -347,7 +378,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withBaseActorDefinitionVersionId(forkedADVId);
 
     connectorBuilderService.writeBuilderProjectDraft(forkedProject.getBuilderProjectId(), forkedProject.getWorkspaceId(), forkedProject.getName(),
-        forkedProject.getManifestDraft(), forkedProject.getBaseActorDefinitionVersionId(), forkedProject.getContributionPullRequestUrl(),
+        forkedProject.getManifestDraft(), project1.getComponentsFileContent(), forkedProject.getBaseActorDefinitionVersionId(),
+        forkedProject.getContributionPullRequestUrl(),
         forkedProject.getContributionActorDefinitionId());
 
     final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(forkedProject.getBuilderProjectId(), false);
@@ -364,7 +396,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project1.setContributionActorDefinitionId(contributionActorDefinitionId);
 
     connectorBuilderService.writeBuilderProjectDraft(project1.getBuilderProjectId(), project1.getWorkspaceId(), project1.getName(),
-        project1.getManifestDraft(), project1.getBaseActorDefinitionVersionId(), project1.getContributionPullRequestUrl(),
+        project1.getManifestDraft(), project1.getComponentsFileContent(), project1.getBaseActorDefinitionVersionId(),
+        project1.getContributionPullRequestUrl(),
         project1.getContributionActorDefinitionId());
 
     final ConnectorBuilderProject updatedProject = connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true);
@@ -410,7 +443,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withHasDraft(true)
         .withWorkspaceId(workspace);
     connectorBuilderService.writeBuilderProjectDraft(project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(),
-        project.getManifestDraft(), project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(),
+        project.getManifestDraft(), project.getComponentsFileContent(), project.getBaseActorDefinitionVersionId(),
+        project.getContributionPullRequestUrl(),
         project.getContributionActorDefinitionId());
     if (deleted) {
       connectorBuilderService.deleteBuilderProject(project.getBuilderProjectId());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -8,25 +8,31 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.HashMap;
+import java.lang.invoke.MethodHandles;
+import java.util.Map;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fetches feature flags to be used in temporal workflows.
  */
-@Slf4j
 @Singleton
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
-  private final AirbyteApiClient airbyteApiClient;
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  public FeatureFlagFetchActivityImpl(final AirbyteApiClient airbyteApiClient) {
+  private final AirbyteApiClient airbyteApiClient;
+  private final FeatureFlagClient featureFlagClient;
+
+  public FeatureFlagFetchActivityImpl(final AirbyteApiClient airbyteApiClient, final FeatureFlagClient featureFlagClient) {
     this.airbyteApiClient = airbyteApiClient;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -54,7 +60,7 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
     // No feature flags are currently in use.
     // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    return new FeatureFlagFetchOutput(new HashMap<>());
+    return new FeatureFlagFetchOutput(Map.of());
   }
 
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.model.generated.PermissionCheckRead
@@ -48,7 +52,7 @@ class ApiAuthorizationHelperTest {
     val scope = Scope.WORKSPACE
     val permissionTypes = setOf(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR)
     assertDoesNotThrow {
-      apiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
+      apiAuthorizationHelper.checkWorkspacesPermissions(ids, scope, userId, permissionTypes)
     }
   }
 
@@ -62,12 +66,12 @@ class ApiAuthorizationHelperTest {
       if (scope == Scope.WORKSPACES) {
         // Allow empty ids for WORKSPACES scope specifically
         assertDoesNotThrow {
-          apiAuthorizationHelper.checkWorkspacePermissions(emptyList(), scope, userId, permissionTypes)
+          apiAuthorizationHelper.checkWorkspacesPermissions(emptyList(), scope, userId, permissionTypes)
         }
       } else {
         // Disallow empty ids for other scopes
         assertThrows<ForbiddenProblem> {
-          apiAuthorizationHelper.checkWorkspacePermissions(emptyList(), scope, userId, permissionTypes)
+          apiAuthorizationHelper.checkWorkspacesPermissions(emptyList(), scope, userId, permissionTypes)
         }
       }
     }
@@ -84,7 +88,7 @@ class ApiAuthorizationHelperTest {
     every { authenticationHeaderResolver.resolveWorkspace(any()) } returns null
 
     assertThrows<ForbiddenProblem> {
-      apiAuthorizationHelper.checkWorkspacePermissions(ids, Scope.WORKSPACE, userId, permissionTypes)
+      apiAuthorizationHelper.checkWorkspacesPermissions(ids, Scope.WORKSPACE, userId, permissionTypes)
     }
   }
 
@@ -104,7 +108,7 @@ class ApiAuthorizationHelperTest {
       )
 
     assertDoesNotThrow {
-      apiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
+      apiAuthorizationHelper.checkWorkspacesPermissions(ids, scope, userId, permissionTypes)
     }
 
     // if no permission types pass, we fail the overall check
@@ -115,7 +119,7 @@ class ApiAuthorizationHelperTest {
       )
 
     assertThrows<ForbiddenProblem> {
-      apiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
+      apiAuthorizationHelper.checkWorkspacesPermissions(ids, scope, userId, permissionTypes)
     }
   }
 

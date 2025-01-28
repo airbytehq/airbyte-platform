@@ -1,5 +1,13 @@
 import cloneDeep from "lodash/cloneDeep";
-import { useWatch, FieldValues, FieldPath, FieldPathValue, Control } from "react-hook-form";
+import {
+  useWatch,
+  FieldValues,
+  FieldPath,
+  FieldPathValue,
+  Control,
+  useFieldArray,
+  UseFieldArrayReturn,
+} from "react-hook-form";
 
 import { BuilderState, useBuilderWatch } from "./types";
 
@@ -86,4 +94,27 @@ export const useBuilderWatchWithPreview = <TPath extends FieldPath<BuilderState>
   }
 
   return { fieldValue: originalValue, isPreview: false };
+};
+
+export const useBuilderWatchArrayWithPreview = <TPath extends FieldPath<BuilderState>>(
+  path: TPath,
+  options?: { exact: boolean }
+): UseWatchWithPreviewOutput & Omit<UseFieldArrayReturn<FieldValues, TPath, "id">, "fields"> => {
+  const previewPath = getPreviewPath(path);
+  const { fields: originalValue, ...rest } = useFieldArray({ name: path });
+  const previewValue = useBuilderWatch((previewPath as TPath) || path, options);
+
+  if (previewPath && previewValue) {
+    return {
+      // make compatible with format of useFieldArray
+      fieldValue: previewValue.map((field: string[], index: number) => ({
+        ...Object.entries(field).map(([key, value]) => ({ [key]: value })),
+        id: index,
+      })),
+      isPreview: true,
+      ...rest,
+    };
+  }
+
+  return { fieldValue: originalValue, isPreview: false, ...rest };
 };

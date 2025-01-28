@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -463,6 +463,21 @@ public class Jsons {
   }
 
   /**
+   * Get the {@link JsonNode} at a location in a {@link JsonNode} object. Empty object node if no
+   * value at the specified location or the value at the specified location is null.
+   *
+   * @param json object to navigate
+   * @param keys keys to follow to a value
+   * @return value at location specified by keys wrapped in an optional. if no value there, empty
+   *         node.
+   */
+  public static JsonNode getNodeOrEmptyObject(final JsonNode json, final String... keys) {
+    final JsonNode defaultValue = emptyObject();
+    final Optional<JsonNode> valueOptional = getOptional(json, Arrays.asList(keys));
+    return valueOptional.filter(node -> !node.isNull()).orElse(defaultValue);
+  }
+
+  /**
    * Get the {@link String} at a location in a {@link JsonNode} object. Returns null, if no value at
    * the specified location.
    *
@@ -611,6 +626,26 @@ public class Jsons {
   }
 
   /**
+   * Convert a {@link JsonNode} as a string-to-integer map.
+   *
+   * @param json to convert
+   * @return json as string-to-integer map
+   */
+  public static Map<String, Integer> deserializeToIntegerMap(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
+   * Convert a {@link JsonNode} as a list of string.
+   *
+   * @param json to convert
+   * @return json as list of string
+   */
+  public static List<String> deserializeToStringList(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
    * By the Jackson DefaultPrettyPrinter prints objects with an extra space as follows: {"name" :
    * "airbyte"}. We prefer {"name": "airbyte"}.
    */
@@ -658,6 +693,30 @@ public class Jsons {
     }
 
     return mainNode;
+  }
+
+  /**
+   * Converts a JsonNode containing a list of strings into a single string with each element separated
+   * by the specified separator.
+   *
+   * @param node the JsonNode containing the list of strings to be joined
+   * @param separator the string to be used as the separator between each element
+   * @return a single string with each element from the list separated by the specified separator
+   */
+  public static String stringListToJoinedString(final JsonNode node, final String separator) {
+    return String.join(separator, Jsons.deserializeToStringList(node));
+  }
+
+  /**
+   * Sets a value in a JSON node for a given key.
+   *
+   * @param <T> the type of the object to set in the JSON node
+   * @param mainNode the main JSON node where the key-value pair will be set
+   * @param key the key for which the value will be set
+   * @param object the value to set for the given key
+   */
+  public static <T> void setNode(final JsonNode mainNode, final String key, final T object) {
+    ((ObjectNode) mainNode).set(key, jsonNode(object));
   }
 
   /**

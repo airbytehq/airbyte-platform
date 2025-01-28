@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar.config
 
 import io.airbyte.commons.storage.DocumentType
@@ -13,7 +17,7 @@ import jakarta.inject.Singleton
 class ApplicationFactory {
   @Singleton
   @Named("outputDocumentStore")
-  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT)
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 
   @Singleton
   fun metricClient(): MetricClient = NotImplementedMetricClient()

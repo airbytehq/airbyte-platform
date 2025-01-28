@@ -6,13 +6,9 @@ import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
 import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
-import { ResourceType, UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
+import { ResourceType, UnifiedUserModel } from "./util";
 
-const useCreateOrUpdateRole = (
-  user: UnifiedWorkspaceUserModel,
-  resourceType: ResourceType,
-  permissionType: PermissionType
-) => {
+const useCreateOrUpdateRole = (user: UnifiedUserModel, resourceType: ResourceType, permissionType: PermissionType) => {
   const { mutateAsync: createPermission } = useCreatePermission();
   const { mutateAsync: updatePermission } = useUpdatePermissions();
   const { workspaceId, organizationId } = useCurrentWorkspace();
@@ -41,7 +37,7 @@ const useCreateOrUpdateRole = (
 };
 
 export const disallowedRoles = (
-  user: UnifiedWorkspaceUserModel | null,
+  user: UnifiedUserModel | null,
   targetResourceType: ResourceType,
   isCurrentUser: boolean
 ): PermissionType[] => {
@@ -49,10 +45,12 @@ export const disallowedRoles = (
     return [
       "organization_admin",
       "organization_editor",
+      "organization_runner",
       "organization_reader",
       "organization_member",
       "workspace_admin",
       "workspace_editor",
+      "workspace_runner",
       "workspace_reader",
     ];
   }
@@ -71,21 +69,29 @@ export const disallowedRoles = (
     return [];
   }
 
-  if (organizationRole === "organization_editor") {
+  if (organizationRole === "organization_runner") {
     if (!workspaceRole) {
-      return ["workspace_editor", "workspace_reader"];
+      return ["workspace_runner", "workspace_reader"];
     }
     return ["workspace_reader"];
   }
+
+  if (organizationRole === "organization_editor") {
+    if (!workspaceRole) {
+      return ["workspace_editor", "workspace_runner", "workspace_reader"];
+    }
+    return ["workspace_runner", "workspace_reader"];
+  }
+
   if (organizationRole === "organization_admin") {
-    return ["workspace_admin", "workspace_editor", "workspace_reader"];
+    return ["workspace_admin", "workspace_editor", "workspace_runner", "workspace_reader"];
   }
 
   return [];
 };
 
 interface RoleMenuItemProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   permissionType: PermissionType;
   resourceType: ResourceType;
   onClose: () => void;

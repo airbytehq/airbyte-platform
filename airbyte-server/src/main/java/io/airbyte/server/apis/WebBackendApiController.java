@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -21,9 +21,15 @@ import io.airbyte.api.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
+import io.airbyte.api.model.generated.WebBackendCronExpressionDescription;
+import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
+import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody;
+import io.airbyte.api.model.generated.WebBackendValidateMappersResponse;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
 import io.airbyte.commons.server.authorization.Scope;
@@ -31,7 +37,10 @@ import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.metrics.lib.TracingHelper;
+import io.airbyte.server.handlers.WebBackendCronExpressionHandler;
+import io.airbyte.server.handlers.WebBackendMappersHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -47,16 +56,25 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendConnectionsHandler webBackendConnectionsHandler;
   private final WebBackendGeographiesHandler webBackendGeographiesHandler;
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
+  private final WebBackendCronExpressionHandler webBackendCronExpressionHandler;
+  private final WebBackendMappersHandler webBackendMappersHandler;
   private final ApiAuthorizationHelper apiAuthorizationHelper;
+  private final CurrentUserService currentUserService;
 
   public WebBackendApiController(final WebBackendConnectionsHandler webBackendConnectionsHandler,
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
                                  final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
-                                 final ApiAuthorizationHelper apiAuthorizationHelper) {
+                                 final WebBackendCronExpressionHandler webBackendCronExpressionHandler,
+                                 final WebBackendMappersHandler webBackendMappersHandler,
+                                 final ApiAuthorizationHelper apiAuthorizationHelper,
+                                 final CurrentUserService currentUserService) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
+    this.webBackendCronExpressionHandler = webBackendCronExpressionHandler;
+    this.webBackendMappersHandler = webBackendMappersHandler;
     this.apiAuthorizationHelper = apiAuthorizationHelper;
+    this.currentUserService = currentUserService;
   }
 
   @Post("/state/get_type")
@@ -82,6 +100,7 @@ public class WebBackendApiController implements WebBackendApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WebBackendConnectionRead webBackendCreateConnection(@Body final WebBackendConnectionCreate webBackendConnectionCreate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addSourceDestination(webBackendConnectionCreate.getSourceId(), webBackendConnectionCreate.getDestinationId());
@@ -99,9 +118,10 @@ public class WebBackendApiController implements WebBackendApi {
       if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
-        apiAuthorizationHelper.checkWorkspacePermissions(
+        apiAuthorizationHelper.checkWorkspacesPermissions(
             webBackendConnectionRequestBody.getConnectionId().toString(),
             Scope.CONNECTION,
+            currentUserService.getCurrentUser().getUserId(),
             Set.of(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR));
       }
       return webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody);
@@ -143,11 +163,29 @@ public class WebBackendApiController implements WebBackendApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WebBackendConnectionRead webBackendUpdateConnection(@Body final WebBackendConnectionUpdate webBackendConnectionUpdate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());
       return webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate);
     });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/connections/mappers/validate")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WebBackendValidateMappersResponse webBackendValidateMappers(@Body final WebBackendValidateMappersRequestBody webBackendValidateMappersRequestBody) {
+    return ApiHelper.execute(() -> webBackendMappersHandler.validateMappers(webBackendValidateMappersRequestBody));
+  }
+
+  @Post("/describe_cron_expression")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WebBackendCronExpressionDescription webBackendDescribeCronExpression(@Body final WebBackendDescribeCronExpressionRequestBody body) {
+    return ApiHelper.execute(() -> webBackendCronExpressionHandler.describeCronExpression(body));
   }
 
 }

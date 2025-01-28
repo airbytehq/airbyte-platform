@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -12,6 +12,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
@@ -84,53 +86,50 @@ class SlackNotificationClientTest {
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage("")
-        .jobId(JOB_ID)
-        .isSuccess(true)
-        .startedAt(Instant.MIN)
-        .finishedAt(Instant.MAX)
-        .build();
-    assertThrows(IOException.class,
-        () -> client.notifyJobFailure(summary, null));
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        true,
+        Instant.MIN,
+        Instant.MAX,
+        0, 0, 0, 0, 0, 0,
+        "");
+    assertFalse(client.notifyJobFailure(summary, null));
   }
 
   @Test
   void testEmptyWebhookUrl() throws IOException, InterruptedException {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration());
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage("Job timed out")
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
   @Test
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage(JOB_DESCRIPTION)
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobFailure(summary, null));
@@ -139,16 +138,16 @@ class SlackNotificationClientTest {
   @Test
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
-    final SyncSummary summary = SyncSummary.builder()
-        .connection(ConnectionInfo.builder()
-            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .source(SourceInfo.builder()
-            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destination(DestinationInfo.builder()
-            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
-        .errorMessage(JOB_DESCRIPTION)
-        .jobId(JOB_ID)
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(null, null, null),
+        new ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        new SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        new DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null, null,
+        0, 0, 0, 0, 0, 0,
+        JOB_DESCRIPTION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobSuccess(summary, null));
@@ -171,13 +170,17 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    final SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
-        .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
-        .errorMessage("job description.")
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, CONNECTION_NAME, "http://connection"),
+        new SourceInfo(null, SOURCE_TEST, null),
+        new DestinationInfo(null, DESTINATION_TEST, null),
+        0,
+        false,
+        null,
+        null,
+        0, 0, 0, 0, 0, 0,
+        "job description.");
     assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
@@ -198,13 +201,18 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    final SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
-        .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
-        .errorMessage("job description.")
-        .build();
+    final SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, CONNECTION_NAME, "http://connection"),
+        new SourceInfo(null, SOURCE_TEST, null),
+        new DestinationInfo(null, DESTINATION_TEST, null),
+        0L,
+        false,
+        null,
+        null,
+        0, 0, 0, 0, 0, 0,
+        "job description.");
+
     assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }
 
@@ -228,15 +236,75 @@ class SlackNotificationClientTest {
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
     final UUID workpaceId = UUID.randomUUID();
-    final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .connectionInfo(ConnectionInfo.builder().name(connectionName).id(connectionId).url(connectionUrl).build())
-        .workspace(WorkspaceInfo.builder().name(workspaceName).id(workpaceId).url(workspaceUrl).build())
-        .catalogDiff(diff)
-        .isBreakingChange(isBreaking)
-        .sourceInfo(SourceInfo.builder().name(sourceName).id(sourceId).url(sourceUrl).build()).build();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
     assertTrue(
         client.notifySchemaPropagated(notification, recipient));
 
+  }
+
+  @Test
+  void testNotifySchemaDiffToApply() {
+    final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final CatalogDiff diff = new CatalogDiff();
+    final String workspaceName = "";
+    final String workspaceUrl = "http://airbyte.io/workspaces/123";
+    final String connectionName = "PSQL ->> BigQuery";
+    final String sourceName = "";
+    final String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
+    final boolean isBreaking = false;
+    final String connectionUrl = "http://airbyte.io/your_connection";
+    final String recipient = "";
+
+    final String expectedNotificationMessage = "Airbyte detected schema changes for '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>'.";
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    final UUID workpaceId = UUID.randomUUID();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
+
+    assertTrue(client.notifySchemaDiffToApply(notification, recipient));
+  }
+
+  @Test
+  void testNotifySchemaDiffToApplyWhenPropagationDisabled() {
+    final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final CatalogDiff diff = new CatalogDiff();
+    final String workspaceName = "";
+    final String workspaceUrl = "http://airbyte.io/workspaces/123";
+    final String connectionName = "PSQL ->> BigQuery";
+    final String sourceName = "";
+    final String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
+    final boolean isBreaking = false;
+    final String connectionUrl = "http://airbyte.io/your_connection";
+    final String recipient = "";
+
+    final String expectedNotificationMessage = "Airbyte detected schema changes for '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>'.";
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    final UUID workpaceId = UUID.randomUUID();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
+
+    assertTrue(client.notifySchemaDiffToApplyWhenPropagationDisabled(notification, recipient));
   }
 
   @Test
@@ -248,7 +316,7 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("invoices")));
 
     final String expected = """
-                             • Streams (+2/-0)
+                             • Streams (+2/-0/~0)
                                ＋ invoices
                                ＋ ns.foo
                             """;
@@ -264,10 +332,57 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
 
     final String expected = """
-                             • Streams (+0/-2)
+                             • Streams (+0/-2/~0)
                                － deprecated
                                － schema1.also_removed
                             """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
+
+  }
+
+  @Test
+  void buildSummaryUpdatedPkTest() {
+    final CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .newPrimaryKey(List.of(List.of("new_pk")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
+
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .oldPrimaryKey(List.of(List.of("also_old_pk")))
+                            .newPrimaryKey(List.of(List.of("new_pk"), List.of("this_one_is_compound")))))))
+        .streamDescriptor(new StreamDescriptor().name("another_stream_with_new_pk")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .oldPrimaryKey(List.of(List.of("this_pk_is_removed")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_pk_removed")));
+
+    final String expected = """
+                             • Streams (+0/-0/~3)
+                               ~ another_stream_with_new_pk
+                                 • Primary key changed (also_old_pk -> [new_pk, this_one_is_compound])
+                               ~ stream_with_added_pk
+                                 • new_pk added as primary key
+                               ~ stream_with_pk_removed
+                                 • this_pk_is_removed removed as primary key
+                            """;
+
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
 
   }
@@ -311,6 +426,15 @@ class SlackNotificationClientTest {
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
     diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .updateStream(new StreamTransformUpdateStream()
+            .streamAttributeTransforms(List.of(
+                new StreamAttributeTransform()
+                    .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                    .updatePrimaryKey(
+                        new StreamAttributePrimaryKeyUpdate()
+                            .newPrimaryKey(List.of(List.of("new_pk")))))))
+        .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
         .updateStream(new StreamTransformUpdateStream().fieldTransforms(List.of(
             new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
@@ -321,10 +445,12 @@ class SlackNotificationClientTest {
                 .fieldName(List.of("cow"))))));
 
     final String expected = """
-                             • Streams (+1/-2)
+                             • Streams (+1/-2/~1)
                                ＋ ns.foo
                                － deprecated
                                － schema1.also_removed
+                               ~ stream_with_added_pk
+                                 • new_pk added as primary key
                              • Fields (+2/~1/-0)
                                • main.users
                                  ＋ added_too

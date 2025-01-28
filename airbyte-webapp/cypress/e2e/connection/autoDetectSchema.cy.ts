@@ -3,6 +3,9 @@ import {
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
 } from "@cy/commands/connection";
+import { StreamRowPageObject } from "@cy/pages/connection/StreamRowPageObject";
+import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
+import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
 import {
   WebBackendConnectionRead,
   DestinationRead,
@@ -33,9 +36,10 @@ import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import * as settingsPage from "pages/connection/connectionSettingsPageObject";
-import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
-describe("Connection - Auto-detect schema changes", () => {
+// Note: this test is tagged as @sync-catalog to help even out the tests across four parallel github workflows, but it
+// is not really related to the sync catalog functionality.
+describe("Connection - Auto-detect schema changes", { tags: "@sync-catalog" }, () => {
   let source: SourceRead;
   let destination: DestinationRead;
   let connection: WebBackendConnectionRead;
@@ -67,6 +71,9 @@ describe("Connection - Auto-detect schema changes", () => {
   });
 
   after(() => {
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
+
     if (destination) {
       requestDeleteDestination({ destinationId: destination.destinationId });
     }
@@ -174,9 +181,9 @@ describe("Connection - Auto-detect schema changes", () => {
       replicationPage.checkSchemaChangesDetectedCleared();
 
       // Fix the conflict
-      streamsTable.searchStream("users");
-      const row = streamsTable.getRow("public", "users");
-      row.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
+      streamsTable.filterByStreamOrFieldName("users");
+      const usersStreamRow = new StreamRowPageObject("public", "users");
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
       replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
@@ -214,7 +221,7 @@ describe("Connection - Auto-detect schema changes", () => {
   it("shows no diff after refresh if there have been no changes", () => {
     connectionPage.visit(connection, "replication");
 
-    replicationPage.clickRefreshSourceSchemaButton();
+    streamsTable.clickRefreshSourceSchemaButton();
 
     replicationPage.checkNoDiffToast();
     catalogDiffModal.shouldNotExist();

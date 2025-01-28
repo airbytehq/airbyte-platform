@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -52,6 +52,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,8 +64,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -76,10 +75,13 @@ import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 @Singleton
 public class SourceServiceJooqImpl implements SourceService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final ExceptionWrappingDatabase database;
   private final FeatureFlagClient featureFlagClient;
@@ -89,6 +91,7 @@ public class SourceServiceJooqImpl implements SourceService {
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
+  // TODO: This has too many dependencies.
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
@@ -147,6 +150,8 @@ public class SourceServiceJooqImpl implements SourceService {
   @Override
   public StandardSourceDefinition getSourceDefinitionFromConnection(final UUID connectionId) {
     try {
+      // TODO: This should be refactored to use the repository. Services should not depend on other
+      // services.
       final StandardSync sync = connectionService.getStandardSync(connectionId);
       return getSourceDefinitionFromSource(sync.getSourceId());
     } catch (final Exception e) {
@@ -520,7 +525,7 @@ public class SourceServiceJooqImpl implements SourceService {
         scopeId,
         scopeType,
         joinType,
-        ArrayUtils.addAll(conditions,
+        ConditionsHelper.addAll(conditions,
             ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
             ACTOR_DEFINITION.PUBLIC.eq(false)));
 

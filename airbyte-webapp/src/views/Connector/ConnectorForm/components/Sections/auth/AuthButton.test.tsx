@@ -2,7 +2,7 @@ import { screen, render } from "@testing-library/react";
 
 import { TestWrapper } from "test-utils/testutils";
 
-import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { useFormOauthAdapter } from "views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
@@ -30,7 +30,7 @@ jest.mock("views/Connector/ConnectorForm/connectorFormContext");
 const mockUseConnectorForm = useConnectorForm as unknown as jest.Mock<Partial<typeof useConnectorForm>>;
 const baseUseConnectorFormValues: Partial<ReturnType<typeof useConnectorForm>> = {
   selectedConnectorDefinition: { sourceDefinitionId: "abcde", name: "Acme" } as ConnectorDefinition,
-  selectedConnectorDefinitionSpecification: {} as ConnectorDefinitionSpecification,
+  selectedConnectorDefinitionSpecification: {} as ConnectorDefinitionSpecificationRead,
 };
 
 jest.mock("views/Connector/ConnectorForm/useAuthentication");
@@ -63,7 +63,7 @@ describe("auth button", () => {
       <TestWrapper>
         <AuthButton
           selectedConnectorDefinitionSpecification={
-            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecification
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
           }
         />
       </TestWrapper>
@@ -98,7 +98,7 @@ describe("auth button", () => {
       <TestWrapper>
         <AuthButton
           selectedConnectorDefinitionSpecification={
-            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecification
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
           }
         />
       </TestWrapper>
@@ -111,7 +111,7 @@ describe("auth button", () => {
 
   it("renders an error if there are any auth fields with empty values", () => {
     // auth errors
-    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: { field: "form.empty.error" } });
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: { field: "required" } });
 
     mockUseConnectorForm.mockImplementationOnce(() => {
       const { selectedConnectorDefinition } = baseUseConnectorFormValues;
@@ -131,7 +131,7 @@ describe("auth button", () => {
       <TestWrapper>
         <AuthButton
           selectedConnectorDefinitionSpecification={
-            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecification
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
           }
         />
       </TestWrapper>

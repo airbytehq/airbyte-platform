@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.publicApi.server.generated.models.SourceDefinitionRead.SourceType
@@ -13,7 +17,8 @@ class PaginationMapperTest {
   @Test
   fun `test that it outputs a correct URL`() {
     val paginationMapper =
-      PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+      PaginationMapper
+        .getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
         .queryParam("string", "string")
         .queryParam("int", 1)
         .queryParam("enum", SourceType.API.name.lowercase())
@@ -47,14 +52,14 @@ class PaginationMapperTest {
 
   @Test
   fun `test that it can generate prev URLs`() {
-    var prevPageBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+    val prevPageBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
     PaginationMapper.getPreviousUrl(4, 8, prevPageBuilder)
     assertEquals(
       "$publicApiHost/v1/sources?limit=4&offset=4",
       prevPageBuilder.build().toString(),
     )
 
-    var noPrevPageBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+    val noPrevPageBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
     PaginationMapper.getPreviousUrl(2, 0, noPrevPageBuilder)
     assertEquals(
       "$publicApiHost/v1/sources",

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -13,12 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
-import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit;
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.Flag;
-import io.airbyte.featureflag.UseAsyncReplicate;
-import io.airbyte.featureflag.Workspace;
-import io.airbyte.featureflag.tests.TestFlagsSetter;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -80,22 +74,6 @@ class WorkloadBasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testSyncWithAsyncReplicationActivity() throws Exception {
-    final UUID workspaceId = testResources.getWorkspaceId();
-
-    testResources.getTestHarness().createWorkspaceWithId(workspaceId);
-
-    try (var ignored = withFlag(UseAsyncReplicate.INSTANCE, new Workspace(workspaceId), true)) {
-      testResources.runSmallSyncForAWorkspaceId(workspaceId);
-    }
-  }
-
-  @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
   void testDestinationCheckConnectionWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
@@ -109,55 +87,25 @@ class WorkloadBasicAcceptanceTests {
     assertEquals(Status.SUCCEEDED, checkOperationStatus);
   }
 
-  @Test
   @EnabledIfEnvironmentVariable(named = KUBE,
                                 matches = TRUE)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testDiscoverWithKubeCopy() throws Exception {
-    // Create workspace with static ID for test which is used in the flags.yaml to perform an override
-    // in order to exercise the workload path.
-    testResources.getTestHarness().createWorkspaceWithId(DISCOVER_WORKSPACE_ID);
-
-    final UUID sourceId = testResources.getTestHarness().createPostgresSource(DISCOVER_WORKSPACE_ID).getSourceId();
-
-    final AirbyteCatalog actual;
-    try (var ignored = withFlag(ConnectorSidecarFetchesInputFromInit.INSTANCE, new Workspace(DISCOVER_WORKSPACE_ID), Boolean.TRUE)) {
-      actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
-    }
-
-    testResources.getTestHarness().compareCatalog(actual);
-  }
-
   @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testDiscoverWithoutKubeCopy() throws Exception {
+  void testDiscover() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
+
     final UUID workspaceId = UUID.randomUUID();
     testResources.getTestHarness().createWorkspaceWithId(workspaceId);
 
+    final AirbyteCatalog actual;
     final UUID sourceId = testResources.getTestHarness().createPostgresSource(workspaceId).getSourceId();
 
-    final AirbyteCatalog actual;
-    try (var ignored = withRule(ConnectorSidecarFetchesInputFromInit.INSTANCE, new Workspace(workspaceId), false)) {
-      actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
-    }
+    actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
 
     testResources.getTestHarness().compareCatalog(actual);
-  }
-
-  private <T> TestFlagsSetter.FlagOverride<T> withFlag(final Flag<T> flag, final Context context, final T value) {
-    return testResources.getTestHarness().getTestFlagsSetter().withFlag(flag, value, context);
-  }
-
-  private <T> TestFlagsSetter.FlagRuleOverride<T> withRule(final Flag<T> flag, final Context context, final T value) {
-    return testResources.getTestHarness().getTestFlagsSetter().withRule(flag, context, value);
   }
 
 }

@@ -2,8 +2,8 @@ import classNames from "classnames";
 import isString from "lodash/isString";
 import uniqueId from "lodash/uniqueId";
 import React, { HTMLInputTypeAttribute, ReactNode, useState } from "react";
-import { FieldError, Path, get, useFormState } from "react-hook-form";
-import { useIntl } from "react-intl";
+import { Path, get, useFormState } from "react-hook-form";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
 import { InputProps } from "components/ui/Input";
@@ -155,6 +155,8 @@ export const FormControl = <T extends FormValues>({
     throw new Error(`No matching form input found for type: ${props.fieldType}`);
   }
 
+  const displayFooter = !!error || !!footer;
+
   return (
     <div className={classNames(styles.control, { [styles["control--inline"]]: inline }, containerControlClassName)}>
       {label && (
@@ -167,7 +169,12 @@ export const FormControl = <T extends FormValues>({
         />
       )}
       <div className={styles.control__field}>{renderControl()}</div>
-      {(error || footer) && <FormControlFooter error={error} footer={footer} />}
+      {displayFooter && (
+        <FormControlFooter>
+          <FormControlErrorMessage<FormValues> name={props.name} />
+          {!error && footer && <FormControlFooterInfo>{footer}</FormControlFooterInfo>}
+        </FormControlFooter>
+      )}
     </div>
   );
 };
@@ -189,7 +196,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelT
         {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
         {optional && (
           <Text className={styles.control__optional} as="span">
-            Optional
+            <FormattedMessage id="form.optional" />
           </Text>
         )}
       </Text>
@@ -199,25 +206,47 @@ export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelT
   );
 };
 
-interface ControlFooterProps {
-  error?: FieldError;
-  footer?: string;
+export const FormControlFooter: React.FC<React.PropsWithChildren> = ({ children }) => {
+  return <div className={styles.control__footer}>{children}</div>;
+};
+
+export const FormControlFooterInfo: React.FC<React.PropsWithChildren> = ({ children }) => {
+  return (
+    <Text color="grey400" size="xs" className={styles.control__footerText}>
+      {children}
+    </Text>
+  );
+};
+
+export const FormControlFooterError: React.FC<React.PropsWithChildren> = ({ children }) => {
+  return (
+    <Text color="red" size="xs" className={styles.control__footerText}>
+      {children}
+    </Text>
+  );
+};
+
+interface FormControlErrorProps<TFormValues> {
+  // An override for the message. If it isn't provided, the error from the RHF schema validation will be shown.
+  message?: React.ReactNode;
+  name: Path<TFormValues>;
 }
 
-export const FormControlFooter: React.FC<ControlFooterProps> = ({ error, footer }) => {
+export const FormControlErrorMessage = <TFormValues extends FormValues>({
+  message,
+  name,
+}: FormControlErrorProps<TFormValues>) => {
   const { formatMessage } = useIntl();
-
-  // It's possible that an error has no message, but in that case there's no point in rendering anything if there's no footer
-  if (error && !error.message && !footer) {
+  const { errors } = useFormState<TFormValues>({ name });
+  const error = get(errors, name);
+  if (!error) {
     return null;
   }
 
-  // only render the footer if there is no error message to render
   return (
-    <div className={styles.control__footerWrapper}>
-      <p className={classNames(styles.control__footerMessage, { [styles.control__errorMessage]: !!error })}>
-        {error ? (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })) : footer}
-      </p>
-    </div>
+    <Text color="red" size="xs" className={styles.control__footerText}>
+      {!message && (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message }))}
+      {message && message}
+    </Text>
   );
 };

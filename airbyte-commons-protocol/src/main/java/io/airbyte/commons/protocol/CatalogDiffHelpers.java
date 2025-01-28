@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.protocol;
@@ -7,11 +7,11 @@ package io.airbyte.commons.protocol;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
-import io.airbyte.commons.protocol.transform_models.FieldTransform;
-import io.airbyte.commons.protocol.transform_models.StreamAttributeTransform;
-import io.airbyte.commons.protocol.transform_models.StreamTransform;
-import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
-import io.airbyte.commons.protocol.transform_models.UpdateStreamTransform;
+import io.airbyte.commons.protocol.transformmodels.FieldTransform;
+import io.airbyte.commons.protocol.transformmodels.StreamAttributeTransform;
+import io.airbyte.commons.protocol.transformmodels.StreamTransform;
+import io.airbyte.commons.protocol.transformmodels.UpdateFieldSchemaTransform;
+import io.airbyte.commons.protocol.transformmodels.UpdateStreamTransform;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationSyncMode;
@@ -32,7 +32,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import org.apache.commons.lang3.tuple.Pair;
+import kotlin.Pair;
 
 /**
  * Helper class to compute catalog and stream diffs.
@@ -51,7 +51,7 @@ public class CatalogDiffHelpers {
   protected static Set<String> getAllFieldNames(final JsonNode jsonSchema) {
     return getFullyQualifiedFieldNamesWithTypes(jsonSchema)
         .stream()
-        .map(Pair::getLeft)
+        .map(Pair::getFirst)
         // only need field name, not fully qualified name
         .map(CatalogDiffHelpers::last)
         .flatMap(Optional::stream)
@@ -90,13 +90,13 @@ public class CatalogDiffHelpers {
       final List<String> fieldName = basicPath.stream()
           .map(fieldOrList -> fieldOrList.isList() ? ITEMS_KEY : fieldOrList.getFieldName())
           .toList();
-      return Pair.of(fieldName, node);
+      return new Pair<>(fieldName, node);
     })
         .stream()
         // first node is the original object.
         .skip(1)
-        .filter(fieldWithSchema -> filterChildrenOfFoneOneOf(fieldWithSchema.getLeft(),
-            fieldWithSchema.getRight(), fieldNamesThatAreOneOfs))
+        .filter(fieldWithSchema -> filterChildrenOfFoneOneOf(fieldWithSchema.getFirst(),
+            fieldWithSchema.getSecond(), fieldNamesThatAreOneOfs))
         .toList();
   }
 
@@ -254,10 +254,10 @@ public class CatalogDiffHelpers {
   @VisibleForTesting
   static void collectInHashMap(final Map<List<String>, JsonNode> accumulator,
                                final Pair<List<String>, JsonNode> value) {
-    if (accumulator.containsKey(value.getKey())) {
-      accumulator.put(value.getKey(), DUPLICATED_SCHEMA);
+    if (accumulator.containsKey(value.getFirst())) {
+      accumulator.put(value.getFirst(), DUPLICATED_SCHEMA);
     } else {
-      accumulator.put(value.getKey(), value.getValue());
+      accumulator.put(value.getFirst(), value.getSecond());
     }
   }
 

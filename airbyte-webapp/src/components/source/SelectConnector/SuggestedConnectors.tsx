@@ -5,7 +5,6 @@ import { ConnectorButton } from "components/source/SelectConnector/ConnectorButt
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
@@ -73,9 +72,9 @@ export const SuggestedConnectorsUnmemoized: React.FC<SuggestedConnectorsProps> =
       >
         <Icon type="cross" />
       </Button>
-      <Heading as="h2" size="xs">
+      <Text size="lg" bold>
         <FormattedMessage id={titleKey} />
-      </Heading>
+      </Text>
       <div className={styles.suggestedConnectors__grid}>
         {definitions.map((definition) => (
           <ConnectorButton

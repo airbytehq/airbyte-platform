@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.templates
@@ -26,6 +30,7 @@ class ContributionTemplatesTest {
 
   val newConnectorContributionInfo =
     BuilderContributionInfo(
+      isEdit = false,
       connectorName = "Test Connector",
       connectorImageName = "test",
       actorDefinitionId = "test-uuid",
@@ -72,7 +77,7 @@ class ContributionTemplatesTest {
       assert(docs.contains("| ${stream["name"]} |"))
     }
 
-    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpecification["properties"] as Map<String, Any>
 
     for (prop in properties) {
@@ -86,7 +91,7 @@ class ContributionTemplatesTest {
     val contributionTemplates = ContributionTemplates()
     val jacksonYaml = jacksonSerialize(serialzedYamlContent)
     val manifestParser = ManifestParser(jacksonYaml)
-    val prDescription = contributionTemplates.renderNewContributionPullRequestDescription(newConnectorContributionInfo)
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(newConnectorContributionInfo)
 
     assert(prDescription.contains(newConnectorContributionInfo.connectorName))
     assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
@@ -97,13 +102,24 @@ class ContributionTemplatesTest {
       assert(prDescription.contains("| ${stream["name"]} |"))
     }
 
-    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
+    val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpecification["properties"] as Map<String, Any>
 
     for (prop in properties) {
       // Assert that the rendered PR description contains the spec name
       assert(prDescription.contains("| `${prop.key}` |"))
     }
+  }
+
+  @Test
+  fun `test edit PR description`() {
+    val editConnectorContributionInfo = newConnectorContributionInfo.copy(isEdit = true)
+    val contributionTemplates = ContributionTemplates()
+    val prDescription = contributionTemplates.renderContributionPullRequestDescription(editConnectorContributionInfo)
+
+    assert(prDescription.contains(editConnectorContributionInfo.connectorName))
+    assert(prDescription.contains(editConnectorContributionInfo.connectorImageName))
+    assert(prDescription.contains(editConnectorContributionInfo.description))
   }
 
   @Test
@@ -178,6 +194,64 @@ class ContributionTemplatesTest {
   }
 
   @Test
+  fun `test getAllowedHosts`() {
+    val contributionTemplates = ContributionTemplates()
+
+    val streams =
+      listOf(
+        mapOf(
+          "name" to "stream1",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://api1.example.com/v1/",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream2",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "http://api2.example.com/v2/{{param}}",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream3",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://api1.example.com/v3/",
+                ),
+            ),
+        ),
+        mapOf(
+          "name" to "stream5",
+          "retriever" to
+            mapOf(
+              "requester" to
+                mapOf(
+                  "url_base" to "https://www.another-api.com/v1/",
+                ),
+            ),
+        ),
+      )
+
+    val expectedHosts =
+      listOf(
+        "api1.example.com",
+        "api2.example.com",
+        "another-api.com",
+      )
+
+    assertEquals(expectedHosts, contributionTemplates.getAllowedHosts(streams))
+  }
+
+  @Test
   fun `test toTemplateStreams`() {
     val contributionTemplates = ContributionTemplates()
     val streams =
@@ -240,7 +314,7 @@ class ContributionTemplatesTest {
     |data:
     |  allowedHosts:
     |    hosts:
-    |      - "*"
+    |      - "api.whatahost.com"
     |  registryOverrides:
     |    oss:
     |      enabled: true

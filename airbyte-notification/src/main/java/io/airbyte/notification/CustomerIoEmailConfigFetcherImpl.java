@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -9,10 +9,12 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fetch the configuration to send a notification using customerIo.
@@ -20,8 +22,9 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 @Requires(property = "airbyte.notification.customerio.apikey",
           notEquals = "")
-@Slf4j
 public class CustomerIoEmailConfigFetcherImpl implements CustomerIoEmailConfigFetcher {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
 

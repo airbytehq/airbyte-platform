@@ -19,7 +19,7 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 import { convertToBuilderFormValuesSync } from "../../convertManifestToBuilderForm";
 import { BuilderFormValues, useBuilderWatch } from "../../types";
 
-export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator";
+export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
 
 export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
   const update = updates.manifest_update;
@@ -48,6 +48,7 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             authenticator: update?.auth ?? undefined,
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
+            request_headers: update?.request_headers ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
@@ -84,6 +85,7 @@ export interface BuilderAssistProjectMetadataParams {
 }
 export interface BuilderAssistInputStreamParams {
   stream_name: string;
+  stream_response?: object;
 }
 type BuilderAssistUseProject = BuilderAssistCoreParams & BuilderAssistProjectMetadataParams;
 type BuilderAssistUseProjectStream = BuilderAssistUseProject & BuilderAssistInputStreamParams;
@@ -104,6 +106,7 @@ export interface ManifestUpdate {
   stream_http_method: HttpRequesterHttpMethod | null;
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
+  request_headers: Record<string, string> | null;
 }
 
 export interface BuilderAssistBaseResponse {
@@ -215,6 +218,13 @@ export const useBuilderAssistStreamResponse = (input: BuilderAssistInputStreamPa
   ]);
 };
 
+export const useBuilderAssistFindRequestOptions = (input: BuilderAssistInputStreamParams) => {
+  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
+  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_request_parameters", hasRequiredParams, params, [
+    "url_base",
+  ]);
+};
+
 export interface BuilderAssistFindStreamsParams {
   enabled: boolean;
 }
@@ -306,4 +316,36 @@ export const parseAssistErrorToFormErrors = (assistError: Error | null): AssistE
 
   const validationErrors = details?.validation_errors;
   return validationErrors?.map(safeCastAssistValidationError) ?? [];
+};
+
+const safeJsonParse = (jsonString?: string): object | undefined => {
+  if (!jsonString) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Surpressed Error parsing JSON string:", error);
+    return undefined;
+  }
+};
+
+/**
+ * Compute the stream response value expected by the assist API from the stream response body and header.
+ */
+export const computeStreamResponse = (
+  streamResponseBodyJsonString: string,
+  streamResponseHeaderJsonString: string = "{}"
+): object | undefined => {
+  const streamResponseBody = safeJsonParse(streamResponseBodyJsonString);
+  if (streamResponseBody === undefined) {
+    return undefined;
+  }
+
+  const stream_response = {
+    header_schema: safeJsonParse(streamResponseHeaderJsonString),
+    body_schema: streamResponseBody,
+  };
+  return stream_response;
 };

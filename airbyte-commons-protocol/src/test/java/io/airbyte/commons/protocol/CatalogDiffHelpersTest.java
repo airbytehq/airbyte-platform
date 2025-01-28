@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.protocol;
@@ -8,12 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.io.Resources;
-import io.airbyte.commons.protocol.transform_models.FieldTransform;
-import io.airbyte.commons.protocol.transform_models.StreamAttributeTransform;
-import io.airbyte.commons.protocol.transform_models.StreamTransform;
-import io.airbyte.commons.protocol.transform_models.StreamTransformType;
-import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
-import io.airbyte.commons.protocol.transform_models.UpdateStreamTransform;
+import io.airbyte.commons.protocol.transformmodels.FieldTransform;
+import io.airbyte.commons.protocol.transformmodels.StreamAttributeTransform;
+import io.airbyte.commons.protocol.transformmodels.StreamTransform;
+import io.airbyte.commons.protocol.transformmodels.StreamTransformType;
+import io.airbyte.commons.protocol.transformmodels.UpdateFieldSchemaTransform;
+import io.airbyte.commons.protocol.transformmodels.UpdateStreamTransform;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;

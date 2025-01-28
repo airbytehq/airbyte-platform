@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.config;
@@ -41,6 +41,7 @@ public class TemporalBeanFactory {
    * WorkflowClient shouldn't be used directly, use WorkflowClientWrapped instead.
    */
   @Singleton
+  @Named("workerWorkflowClient")
   WorkflowClient workflowClient(
                                 final TemporalUtils temporalUtils,
                                 final WorkflowServiceStubs temporalService,
@@ -49,7 +50,8 @@ public class TemporalBeanFactory {
   }
 
   @Singleton
-  public WorkflowClientWrapped workflowClientWrapped(final WorkflowClient workflowClient, final MetricClient metricClient) {
+  public WorkflowClientWrapped workflowClientWrapped(@Named("workerWorkflowClient") final WorkflowClient workflowClient,
+                                                     final MetricClient metricClient) {
     return new WorkflowClientWrapped(workflowClient, metricClient);
   }
 

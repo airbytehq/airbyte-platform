@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.featureflag
 
 /**
@@ -81,10 +85,9 @@ open class EnvVar
     /**
      * Returns true if, and only if, the environment-variable is defined and evaluates to "true".  Otherwise, returns false.
      */
-    internal open fun enabled(ctx: Context): Boolean {
-      return fetcher(key)
+    internal open fun enabled(ctx: Context): Boolean =
+      fetcher(key)
         ?.takeIf { it.isNotEmpty() }
-        ?.let { it.toBoolean() }
+        ?.toBoolean()
         ?: default
-    }
   }

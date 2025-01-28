@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.config
@@ -45,9 +45,7 @@ class StatsDRegistryConfigurer :
     }
   }
 
-  override fun getType(): Class<StatsdMeterRegistry> {
-    return StatsdMeterRegistry::class.java
-  }
+  override fun getType(): Class<StatsdMeterRegistry> = StatsdMeterRegistry::class.java
 
   /**
    * Safely adds the value associated with the provided environment variable if it exists and is not

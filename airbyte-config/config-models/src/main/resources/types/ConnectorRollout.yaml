@@ -12,11 +12,7 @@ required:
   - initial_rollout_pct
   - final_target_rollout_pct
   - has_breaking_changes
-  - rollout_strategy
   - max_step_wait_time_mins
-  - created_at
-  - updated_at
-  - expires_at
 additionalProperties: true
 properties:
   id:
@@ -70,16 +66,16 @@ properties:
     type: string
     format: uuid
     description: UUID of the user who last updated the rollout (for manual rollout updates)
-  createdAt:
+  created_at:
     type: integer
     format: int64
-  updatedAt:
+  updated_at:
     type: integer
     format: int64
-  completedAt:
+  completed_at:
     type: integer
     format: int64
-  expiresAt:
+  expires_at:
     type: integer
     format: int64
   error_msg:
@@ -88,3 +84,6 @@ properties:
   failed_reason:
     type: string
     description: Failure reason, for rollouts that failed
+  paused_reason:
+    type: string
+    description: Reason the rollout was paused

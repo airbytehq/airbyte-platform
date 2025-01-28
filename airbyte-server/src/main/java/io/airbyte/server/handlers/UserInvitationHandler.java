@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -28,6 +28,7 @@ import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.InvitationDuplicateException;
+import io.airbyte.data.services.InvitationPermissionOverlapException;
 import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
@@ -39,18 +40,21 @@ import io.airbyte.server.handlers.api_domain_mapping.UserInvitationMapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
-@Slf4j
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
 public class UserInvitationHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   static final String ACCEPT_INVITE_PATH = "/accept-invite?inviteCode=";
   static final int INVITE_EXPIRATION_DAYS = 7;
@@ -127,7 +131,7 @@ public class UserInvitationHandler {
         response = new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
         trackUserInvited(req, currentUser);
         return response;
-      } catch (final InvitationDuplicateException e) {
+      } catch (final InvitationDuplicateException | InvitationPermissionOverlapException e) {
         throw new ConflictException(e.getMessage());
       }
     }
@@ -160,6 +164,7 @@ public class UserInvitationHandler {
                                            final String workspaceName,
                                            final PermissionType permissionType) {
     trackingClient.track(workspaceId,
+        ScopeType.WORKSPACE,
         USER_INVITED,
         ImmutableMap.<String, Object>builder()
             .put("email", email)
@@ -261,7 +266,7 @@ public class UserInvitationHandler {
    * a User inside the relevant organization.
    */
   private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final AuthenticatedUser currentUser)
-      throws InvitationDuplicateException {
+      throws InvitationDuplicateException, InvitationPermissionOverlapException {
     final UserInvitation model = mapper.toDomain(req);
 
     model.setInviterUserId(currentUser.getUserId());
@@ -311,7 +316,7 @@ public class UserInvitationHandler {
   public UserInvitationRead accept(final InviteCodeRequestBody req, final AuthenticatedUser currentUser) {
     final UserInvitation invitation = service.getUserInvitationByInviteCode(req.getInviteCode());
 
-    if (!invitation.getInvitedEmail().equals(currentUser.getEmail())) {
+    if (!invitation.getInvitedEmail().equalsIgnoreCase(currentUser.getEmail())) {
       throw new OperationNotAllowedException("Invited email does not match current user email.");
     }
 

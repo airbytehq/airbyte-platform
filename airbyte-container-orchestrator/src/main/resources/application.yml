@@ -10,8 +10,6 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
-  env:
-    cloud-deduction: true
   server:
     port: 9000 # If this value is modified, update the SERVER_PORT constant in OrchestratorConstants.kt
   executors:
@@ -34,13 +32,15 @@ micronaut:
     enabled: false
 
 airbyte:
-  application: ${WORKER_APPLICATION:replication-orchestrator}
+  workload-id: ${WORKLOAD_ID:}
+  connection-id: ${CONNECTION_ID:}
   job-id: ${JOB_ID:}
   attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+  staging-dir: ${AIRBYTE_STAGING_DIRECTORY}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -62,12 +62,11 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      local:
-        root: ${LOCAL_ROOT:}
       minio:
         access-key: ${AWS_ACCESS_KEY_ID:}
         endpoint: ${MINIO_ENDPOINT:}
@@ -76,8 +75,6 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-  container:
-    rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -104,6 +101,7 @@ airbyte:
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
+  use-file-transfer: ${USE_FILE_TRANSFER:false}
   worker:
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
@@ -145,3 +143,14 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+
+logger:
+  levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

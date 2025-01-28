@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -17,11 +17,10 @@ object UserReadMapper {
    * @param organizationUserRead Output of an organizationUser get from config api
    * @return UserResponse User response object
    */
-  fun from(organizationUserRead: OrganizationUserRead): UserResponse {
-    return UserResponse(
+  fun from(organizationUserRead: OrganizationUserRead): UserResponse =
+    UserResponse(
       id = organizationUserRead.userId,
       name = organizationUserRead.name,
       email = organizationUserRead.email,
     )
-  }
 }

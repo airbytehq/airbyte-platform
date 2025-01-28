@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -11,7 +11,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.InternalOperationResult;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
@@ -25,7 +25,7 @@ import org.openapitools.client.infrastructure.ClientException;
  * AutoDisableConnectionActivityImpl.
  */
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionActivity {
 
   private final AirbyteApiClient airbyteApiClient;

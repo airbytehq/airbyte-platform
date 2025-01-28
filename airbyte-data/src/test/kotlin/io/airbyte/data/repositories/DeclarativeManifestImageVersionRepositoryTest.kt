@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
@@ -38,7 +42,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
   @Test
   fun `test update active version`() {
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
-    var initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
+    val initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
     val newActiveVersion =
       DeclarativeManifestImageVersion(

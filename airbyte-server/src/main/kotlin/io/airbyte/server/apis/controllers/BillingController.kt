@@ -1,11 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.BillingApi
+import io.airbyte.api.model.generated.CancelSubscriptionRead
 import io.airbyte.api.model.generated.CustomerPortalRead
 import io.airbyte.api.model.generated.CustomerPortalRequestBody
 import io.airbyte.api.model.generated.ListInvoicesRead
-import io.airbyte.api.model.generated.OrganizationBalanceRead
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.model.generated.OrganizationSubscriptionInfoRead
 import io.airbyte.api.model.generated.OrganizationTrialStatusRead
 import io.airbyte.api.model.generated.PaymentInformationRead
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
@@ -24,43 +30,53 @@ open class BillingController : BillingApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getCustomerPortalLink(
     @Body customerPortalRequestBody: CustomerPortalRequestBody,
-  ): CustomerPortalRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): CustomerPortalRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/list_invoices")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listPastInvoices(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): ListInvoicesRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): ListInvoicesRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/payment_information")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getPaymentInformation(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): PaymentInformationRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): PaymentInformationRead = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
-  @Post("/organization_balance")
+  @Post("/subscription_info")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getOrganizationBalance(
+  override fun getSubscriptionInfo(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationBalanceRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): OrganizationSubscriptionInfoRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/handle_webhook")
+  @ExecuteOn(AirbyteTaskExecutors.WEBHOOK)
+  override fun handleWebhook(
+    @Body event: JsonNode,
+  ): Unit = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ViewOrganizationTrialStatus)
   @Post("/trial_status")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationTrialStatus(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationTrialStatusRead {
-    throw ApiNotImplementedInOssProblem()
-  }
+  ): OrganizationTrialStatusRead = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/cancel_subscription")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun cancelSubscription(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): CancelSubscriptionRead = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/unschedule_cancel_subscription")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun unscheduleCancelSubscription(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): Unit = throw ApiNotImplementedInOssProblem()
 }

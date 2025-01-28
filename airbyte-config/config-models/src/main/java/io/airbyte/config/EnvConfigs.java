@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -13,13 +13,11 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,55 +96,10 @@ public class EnvConfigs implements Configs {
     return getEnsureEnv(EnvVar.DATABASE_URL);
   }
 
-  /**
-   * Returns worker pod tolerations parsed from its own environment variable. The value of the env is
-   * a string that represents one or more tolerations.
-   * <ul>
-   * <li>Tolerations are separated by a `;`
-   * <li>Each toleration contains k=v pairs mentioning some/all of key, effect, operator and value and
-   * separated by `,`
-   * </ul>
-   * <p>
-   * For example:- The following represents two tolerations, one checking existence and another
-   * matching a value
-   * <p>
-   * key=airbyte-server,operator=Exists,effect=NoSchedule;key=airbyte-server,operator=Equals,value=true,effect=NoSchedule
-   *
-   * @return list of WorkerKubeToleration parsed from env
-   */
   @Override
   public List<TolerationPOJO> getJobKubeTolerations() {
     final String tolerationsStr = getEnvOrDefault(EnvVar.JOB_KUBE_TOLERATIONS, "");
-
-    final Stream<String> tolerations = Strings.isNullOrEmpty(tolerationsStr) ? Stream.of()
-        : Splitter.on(";")
-            .splitToStream(tolerationsStr)
-            .filter(tolerationStr -> !Strings.isNullOrEmpty(tolerationStr));
-
-    return tolerations
-        .map(this::parseToleration)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList());
-  }
-
-  private TolerationPOJO parseToleration(final String tolerationStr) {
-    final Map<String, String> tolerationMap = Splitter.on(",")
-        .splitToStream(tolerationStr)
-        .map(s -> s.split("="))
-        .collect(Collectors.toMap(s -> s[0], s -> s[1]));
-
-    if (tolerationMap.containsKey("key") && tolerationMap.containsKey("effect") && tolerationMap.containsKey("operator")) {
-      return new TolerationPOJO(
-          tolerationMap.get("key"),
-          tolerationMap.get("effect"),
-          tolerationMap.get("value"),
-          tolerationMap.get("operator"));
-    } else {
-      LOGGER.warn(
-          "Ignoring toleration {}, missing one of key,effect or operator",
-          tolerationStr);
-      return null;
-    }
+    return TolerationPOJO.getJobKubeTolerations(tolerationsStr);
   }
 
   /**

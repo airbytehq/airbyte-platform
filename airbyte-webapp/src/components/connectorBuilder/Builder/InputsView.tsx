@@ -39,7 +39,10 @@ export const InputsView: React.FC = () => {
     })
   );
 
-  const inputsWithIds = useMemo(() => inputs.map((input) => ({ input, id: input.key })), [inputs]);
+  const inputsWithIds = useMemo(
+    () => inputs.filter((input) => !input.definition.airbyte_hidden).map((input) => ({ input, id: input.key })),
+    [inputs]
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -116,7 +119,7 @@ function formInputToInputInEditing({ key, definition, required, isLocked }: Buil
     required,
     isLocked,
     isNew: false,
-    showDefaultValueField: Boolean(definition.default),
+    showDefaultValueField: definition.default !== undefined,
     type: getType(definition),
   };
 }

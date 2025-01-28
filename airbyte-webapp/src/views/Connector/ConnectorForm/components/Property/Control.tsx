@@ -4,7 +4,7 @@ import { useController, useFormContext, useWatch } from "react-hook-form";
 
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
-import { Multiselect } from "components/ui/Multiselect";
+import { MultiSelectTags } from "components/ui/MultiSelectTags";
 import { TagInput } from "components/ui/TagInput/TagInput";
 import { TextArea } from "components/ui/TextArea";
 
@@ -62,13 +62,12 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         ? (property.enum as string[] | number[])
         : undefined;
     return (
-      <Multiselect
-        name={name}
-        data={data}
-        onChange={(dataItems) => field.onChange(dataItems)}
-        value={fieldValue}
-        disabled={disabled}
-        readOnly={property.readOnly}
+      <MultiSelectTags
+        options={data?.map((item) => ({ label: String(item), value: item })) ?? []}
+        onSelectValues={(selectedValues) => field.onChange(selectedValues)}
+        selectedValues={fieldValue}
+        testId={name}
+        disabled={disabled || property.readOnly}
       />
     );
   }
@@ -91,6 +90,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         readOnly={property.readOnly}
         onFocus={() => setFocusedField?.(name)}
         onBlur={() => field.onBlur()}
+        yearMonth={property.pattern === "^[0-9]{4}-[0-9]{2}$"}
       />
     );
   }

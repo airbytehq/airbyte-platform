@@ -1,4 +1,3 @@
-
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.pnpm.task.PnpmTask
 import groovy.json.JsonSlurper
@@ -7,6 +6,7 @@ import java.io.FileReader
 plugins {
     id("base")
     id("io.airbyte.gradle.docker")
+    id("io.airbyte.gradle.kube-reload")
     alias(libs.plugins.node.gradle)
 }
 
@@ -60,6 +60,11 @@ airbyte {
     docker {
         imageName = "webapp"
     }
+
+    kubeReload {
+        deployment = "ab-webapp"
+        container = "airbyte-webapp-container"
+    }
 }
 
 tasks.named("pnpmInstall") {
@@ -91,6 +96,11 @@ tasks.register<PnpmTask>("pnpmBuild") {
     // todo (cgardens) - this isn't great because this version is used for cloud as well (even though it's pulled from the oss project).
     environment.put("VERSION", (ext["ossRootProject"] as Project).ext["webapp_version"] as String)
 
+    // Pass the WEBAPP_ENV_PATH environment variable to the Vite build process
+ System.getenv("WEBAPP_ENV_PATH")?.also {
+        environment.put("WEBAPP_ENV_PATH", it)
+        inputs.file(it)
+    }
     args = listOf("build")
 
     // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task, since it changes for which env we're building the webapp
@@ -249,7 +259,6 @@ tasks.named("build") {
 
 tasks.named("dockerCopyDistribution") {
     dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
-
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment

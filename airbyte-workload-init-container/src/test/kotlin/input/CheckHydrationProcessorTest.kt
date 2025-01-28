@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.initContainer.system.FileClient
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
@@ -35,6 +41,9 @@ class CheckHydrationProcessorTest {
   @MockK
   lateinit var fileClient: FileClient
 
+  @MockK(relaxed = true)
+  lateinit var metricClient: MetricClient
+
   private lateinit var processor: CheckHydrationProcessor
 
   @BeforeEach
@@ -45,6 +54,7 @@ class CheckHydrationProcessorTest {
         deserializer,
         serializer,
         fileClient,
+        metricClient,
       )
   }
 
@@ -53,9 +63,12 @@ class CheckHydrationProcessorTest {
     val input = Fixtures.workload
 
     val unhydrated = StandardCheckConnectionInput()
-    val parsed = CheckConnectionInput()
-    parsed.checkConnectionInput = unhydrated
-    parsed.launcherConfig = IntegrationLauncherConfig()
+    val parsed =
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig(),
+        checkConnectionInput = unhydrated,
+        launcherConfig = IntegrationLauncherConfig(),
+      )
 
     val connectionConfiguration = Jsons.jsonNode(mapOf("key-1" to "value-1"))
     val hydrated = StandardCheckConnectionInput()

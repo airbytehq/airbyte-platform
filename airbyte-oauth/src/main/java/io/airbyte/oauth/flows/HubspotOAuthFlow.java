@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows;
@@ -89,7 +89,8 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
         "crm.objects.owners.read",
         "crm.schemas.companies.read",
         "crm.schemas.custom.read",
-        "crm.schemas.deals.read");
+        "crm.schemas.deals.read",
+        "crm.objects.leads.read");
   }
 
   private String getRequiredScopes() {

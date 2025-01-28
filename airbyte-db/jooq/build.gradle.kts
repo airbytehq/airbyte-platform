@@ -14,14 +14,13 @@ dependencies {
   implementation(project(":oss:airbyte-db:db-lib"))
 
   // jOOQ code generation)
-  implementation(libs.jooq.codegen)
-  implementation(libs.platform.testcontainers.postgresql)
+  jooqGenerator(libs.platform.testcontainers.postgresql)
 
   // These are required because gradle might be using lower version of Jna from other
   // library transitive dependency. Can be removed if we can figure out which library is the cause.
   // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
-  implementation(libs.jna)
-  implementation(libs.jna.platform)
+  jooqGenerator(libs.jna)
+  jooqGenerator(libs.jna.platform)
 
   // The jOOQ code generator(only has access to classes added to the jooqGenerator configuration
   jooqGenerator(project(":oss:airbyte-db:db-lib")) {
@@ -94,10 +93,11 @@ sourceSets["main"].java {
   )
 }
 
-
 sourceSets["main"].java {
-  srcDirs("${project.layout.buildDirectory.get()}/generated/configsDatabase/src/main/java",
-    "${project.layout.buildDirectory.get()}/generated/jobsDatabase/src/main/java")
+  srcDirs(
+    "${project.layout.buildDirectory.get()}/generated/configsDatabase/src/main/java",
+    "${project.layout.buildDirectory.get()}/generated/jobsDatabase/src/main/java",
+  )
 }
 
 tasks.named<JooqGenerate>("generateConfigsDatabaseJooq") {

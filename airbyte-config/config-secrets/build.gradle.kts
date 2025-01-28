@@ -12,7 +12,6 @@ dependencies {
   api(libs.bundles.micronaut.kotlin)
   api(libs.kotlin.logging)
   api(libs.slf4j.api)
-  api(libs.bundles.log4j)
   api(libs.micronaut.jackson.databind)
   api(libs.google.cloud.storage)
   api(libs.micronaut.jooq)
@@ -43,7 +42,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }

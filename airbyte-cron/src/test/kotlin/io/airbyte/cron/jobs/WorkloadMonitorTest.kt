@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs
@@ -54,7 +54,7 @@ class WorkloadMonitorTest {
         nonSyncWorkloadTimeout = nonSyncTimeout,
         syncWorkloadTimeout = syncTimeout,
         metricClient = metricClient,
-        timeProvider = Optional.of({ _: ZoneId -> currentTime }),
+        timeProvider = Optional.of { _: ZoneId -> currentTime },
       )
   }
 
@@ -260,10 +260,9 @@ class WorkloadMonitorTest {
     }
   }
 
-  fun getWorkload(id: String): Workload {
-    return mockkClass(Workload::class).also {
+  fun getWorkload(id: String): Workload =
+    mockkClass(Workload::class).also {
       every { it.id } returns id
       every { it.type } returns WorkloadType.SYNC
     }
-  }
 }

@@ -1,16 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
 import org.jooq.DSLContext;
 import org.jooq.Query;
 
-@Getter
 class StateUpdateBatch {
 
   private final List<Query> updatedStreamStates = new ArrayList<>();
@@ -21,6 +19,18 @@ class StateUpdateBatch {
     ctx.batch(updatedStreamStates).execute();
     ctx.batch(createdStreamStates).execute();
     ctx.batch(deletedStreamStates).execute();
+  }
+
+  public List<Query> getDeletedStreamStates() {
+    return deletedStreamStates;
+  }
+
+  public List<Query> getCreatedStreamStates() {
+    return createdStreamStates;
+  }
+
+  public List<Query> getUpdatedStreamStates() {
+    return updatedStreamStates;
   }
 
 }

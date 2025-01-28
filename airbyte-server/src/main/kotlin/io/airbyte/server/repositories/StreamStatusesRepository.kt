@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.repositories
@@ -52,7 +52,9 @@ ss.metadata
 """
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
+abstract class StreamStatusesRepository :
+  PageableRepository<StreamStatus, UUID>,
+  JpaSpecificationExecutor<StreamStatus> {
   /**
    * Returns stream statuses filtered by the provided params.
    */
@@ -135,7 +137,7 @@ abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>
            INNER JOIN (
                SELECT id, created_at, updated_at
                FROM jobs
-               WHERE config_type = 'sync' AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
+               WHERE config_type in ('sync', 'refresh') AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
                ORDER BY created_at DESC
                LIMIT :lastXJobs
              ) AS last_x_jobs ON j.id = last_x_jobs.id
@@ -177,21 +179,18 @@ abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>
      * Jooq holds onto the names of the columns in snake_case, so we have to convert to lower camelCase
      * for the JpaSpecificationExecutor to do predicate filtering.
      */
-    fun formatJooqColumnName(jooqColumn: TableField<*, *>): String {
-      return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, jooqColumn.name)
-    }
+    fun formatJooqColumnName(jooqColumn: TableField<*, *>): String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, jooqColumn.name)
 
     fun <U> columnEquals(
       columnName: String,
       value: U,
-    ): PredicateSpecification<StreamStatus> {
-      return PredicateSpecification { root: Root<StreamStatus>, criteriaBuilder: CriteriaBuilder ->
+    ): PredicateSpecification<StreamStatus> =
+      PredicateSpecification { root: Root<StreamStatus>, criteriaBuilder: CriteriaBuilder ->
         criteriaBuilder.equal(
           root.get<StreamStatus>(columnName),
           value,
         )
       }
-    }
   }
 
   /**

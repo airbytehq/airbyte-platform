@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.ConfigOriginType
@@ -28,6 +32,12 @@ interface ScopedConfigurationService {
     scopeType: ConfigScopeType,
     scopeId: UUID,
   ): Optional<ScopedConfiguration>
+
+  fun getScopedConfiguration(
+    key: String,
+    scopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
 
   /**
    * Get a scoped configuration by key, resource and scope.
@@ -63,6 +73,17 @@ interface ScopedConfigurationService {
     configKey: ScopedConfigurationKey,
     scopes: Map<ConfigScopeType, UUID>,
     resourceType: ConfigResourceType,
+  ): List<ScopedConfiguration>
+
+  /**
+   * Get a scoped configuration by key and scope map.
+   *
+   * This will resolve the configuration by evaluating the scopes in the priority order defined by the given key.
+   * Scopes included in the map must be defined as a supported scope in the key definition (see ScopedConfigurationKey).
+   */
+  fun getScopedConfigurations(
+    configKey: ScopedConfigurationKey,
+    scopes: Map<ConfigScopeType, UUID>,
   ): List<ScopedConfiguration>
 
   /**
@@ -145,4 +166,17 @@ interface ScopedConfigurationService {
    * Delete multiple configurations by their IDs.
    */
   fun deleteScopedConfigurations(configIds: List<UUID>)
+
+  /**
+   * Update the value for scoped configurations with given origin values for an origin type.
+   */
+  fun updateScopedConfigurationsOriginAndValuesForOriginInList(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    newOrigin: String,
+    newValue: String,
+  )
 }

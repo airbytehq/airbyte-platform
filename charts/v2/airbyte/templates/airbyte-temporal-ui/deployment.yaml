@@ -1,0 +1,126 @@
+{{- if .Values.temporalUi.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airbyte-temporal-ui
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.temporalUi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.temporalUi.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.temporalUi.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.temporalUi.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.temporalUi.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.temporalUi.podLabels}}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.temporalUi.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.temporalUi.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.nodeSelector "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if .Values.temporalUi.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.tolerations "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if .Values.temporalUi.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.affinity "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if .Values.temporalUi.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.temporalUi.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: airbyte-temporal-ui
+        image: {{ include "imageUrl" (list .Values.temporalUi.image $) }}
+        imagePullPolicy: {{ .Values.temporalUi.image.pullPolic }}
+        env:
+        # Values from env
+        {{- if or .Values.temporalUi.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.temporalUi.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.temporalUi.extraEnv }}
+        {{- toYaml .Values.temporalUi.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.temporalUi.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.temporalUi.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.temporalUi.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.temporalUi.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.temporalUi.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.temporalUi.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.temporalUi.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.temporalUi.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.temporalUi.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.temporalUi.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.temporalUi.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.temporalUi.readinessProbe.failureThreshold }}
+        {{- end }}
+
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        {{- if .Values.temporalUi.debug.enabled }}
+        - name: debug 
+          containerPort: {{ .Values.temporalUi.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        {{- if .Values.temporalUi.resources }}
+        resources: {{- toYaml .Values.temporalUi.resources | nindent 8 }}
+        {{- end }}
+        {{- if .Values.temporalUi.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.temporalUi.containerSecurityContext | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.temporalUi.extraVolumeMount }}
+        {{ toYaml .Values.temporalUi.extraVolumeMounts | nindent 8  }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+        {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.temporalUi.extraContainers }}
+        {{ toYaml .Values.temporalUi.extraContainers | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 8 }}
+        {{- end }}
+        securityContext: {{- toYaml .Values.temporalUi.podSecurityContext | nindent 8 }}
+        volumes:
+        {{- if .Values.temporalUi.extraVolumes }}
+    {{ toYaml .Values.temporalUi.extraVolumes | nindent 8 }}
+        {{- end }}
+{{- end }}

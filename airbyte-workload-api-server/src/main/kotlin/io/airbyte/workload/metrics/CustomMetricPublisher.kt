@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.metrics
@@ -33,8 +33,7 @@ class CustomMetricPublisher(
   }
 
   companion object {
-    fun toTags(vararg attributes: MetricAttribute): List<Tag> {
-      return Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
-    }
+    fun toTags(vararg attributes: MetricAttribute): List<Tag> =
+      Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
   }
 }

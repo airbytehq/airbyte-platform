@@ -23,7 +23,7 @@ interface FormProps<T extends FormValues> {
    */
   onSubmit?: FormSubmissionHandler<T>;
   onSuccess?: (values: T) => void;
-  onError?: (e: Error, values: T) => void;
+  onError?: (e: Error, values: T, methods: UseFormReturn<T>) => void;
   schema: SchemaOf<T>;
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
@@ -88,7 +88,7 @@ export const Form = <T extends FormValues>({
         }
       })
       .catch((e) => {
-        onError?.(e, values);
+        onError?.(e, values, methods);
       });
   };
 

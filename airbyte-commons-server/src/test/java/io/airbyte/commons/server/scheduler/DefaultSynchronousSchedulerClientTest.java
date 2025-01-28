@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
@@ -25,9 +25,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalResponse;
-import io.airbyte.commons.temporal.scheduling.RouterService;
+import io.airbyte.commons.temporal.TemporalTaskQueueUtils;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -75,8 +74,8 @@ class DefaultSynchronousSchedulerClientTest {
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
   private static final String UNCHECKED = "unchecked";
-  private static final String CHECK_TASK_QUEUE = "check";
-  private static final String DISCOVER_TASK_QUEUE = "discover";
+  private static final String CHECK_TASK_QUEUE = TemporalTaskQueueUtils.INSTANCE.getDEFAULT_CHECK_TASK_QUEUE();
+  private static final String DISCOVER_TASK_QUEUE = TemporalTaskQueueUtils.INSTANCE.getDEFAULT_DISCOVER_TASK_QUEUE();
   private static final JsonNode CONFIGURATION = Jsons.jsonNode(ImmutableMap.builder()
       .put("username", "airbyte")
       .put("password", "abc")
@@ -104,8 +103,6 @@ class DefaultSynchronousSchedulerClientTest {
   private JobTracker jobTracker;
   private JobErrorReporter jobErrorReporter;
   private OAuthConfigSupplier oAuthConfigSupplier;
-
-  private RouterService routerService;
   private ConfigInjector configInjector;
   private DefaultSynchronousSchedulerClient schedulerClient;
   private ContextBuilder contextBuilder;
@@ -116,20 +113,16 @@ class DefaultSynchronousSchedulerClientTest {
     jobTracker = mock(JobTracker.class);
     jobErrorReporter = mock(JobErrorReporter.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
-    routerService = mock(RouterService.class);
     configInjector = mock(ConfigInjector.class);
     contextBuilder = mock(ContextBuilder.class);
     schedulerClient =
-        new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, routerService, configInjector,
+        new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, configInjector,
             contextBuilder);
 
     when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
     when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
 
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
-
-    when(routerService.getTaskQueueForWorkspace(any(), eq(TemporalJobType.CHECK_CONNECTION))).thenReturn(CHECK_TASK_QUEUE);
-    when(routerService.getTaskQueueForWorkspace(any(), eq(TemporalJobType.DISCOVER_SCHEMA))).thenReturn(DISCOVER_TASK_QUEUE);
 
     when(contextBuilder.fromDestination(any())).thenReturn(new ActorContext());
     when(contextBuilder.fromSource(any())).thenReturn(new ActorContext());

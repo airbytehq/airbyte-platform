@@ -2,6 +2,7 @@ import * as yup from "yup";
 
 import {
   ConnectionEventType,
+  ConnectionScheduleDataBasicScheduleTimeUnit,
   ConnectionScheduleType,
   FailureOrigin,
   FailureReason,
@@ -12,6 +13,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   StreamAttributeTransformTransformType,
+  StreamMapperType,
   StreamTransformTransformType,
 } from "core/api/types/AirbyteClient";
 
@@ -28,17 +30,28 @@ import {
  */
 
 const connectionAutoDisabledReasons = [
-  "ONLY_FAILED_JOBS_RECENTLY",
-  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
+  "TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS",
   "SCHEMA_CHANGES_ARE_BREAKING",
   "DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES",
   "INVALID_CREDIT_BALANCE",
   "CONNECTOR_NOT_SUPPORTED",
   "WORKSPACE_IS_DELINQUENT",
+  "INVOICE_MARKED_UNCOLLECTIBLE",
+  "INVALID_PAYMENT_METHOD",
+  "UNSUBSCRIBED",
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",
+
+  // these two are no longer written for new events, but can exist in existing timelines.
+  // can be removed once all such events are expired/removed
+  "ONLY_FAILED_JOBS_RECENTLY",
+  "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
 ];
+
+const connectorChangeReasons = ["SYSTEM", "USER"];
+// TODO: ask BE team to use already defined types - ConnectorType
+const ConnectorType = ["SOURCE", "DESTINATION"];
 
 // property-specific schemas
 /**
@@ -129,6 +142,17 @@ const catalogDiffSchema = yup.object({
   transforms: yup.array().of(streamTransformsSchema).required(),
 });
 
+const connectorUpdateSchema = yup.object({
+  toVersion: yup.string().required(),
+  fromVersion: yup.string().required(),
+  connectorName: yup.string().required(),
+  connectorType: yup.string().oneOf(ConnectorType).required(),
+  // TODO: ask BE team to add this prop, untill then it is optional
+  changeReason: yup.string().oneOf(connectorChangeReasons).optional(),
+  // TODO: ask BE team how to handle this prop, untill then it is optional
+  triggeredBy: yup.string().oneOf(["BREAKING_CHANGE_MANUAL"]).optional(),
+});
+
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
 
 export const jobFailureReasonSchema = yup.object({
@@ -204,11 +228,30 @@ export const connectionDisabledEventSummarySchema = yup.object({
   disabledReason: yup.string().oneOf(connectionAutoDisabledReasons),
 });
 
+const ConnectionScheduleDataBasicScheduleSchema = yup.object().shape({
+  timeUnit: yup
+    .mixed<ConnectionScheduleDataBasicScheduleTimeUnit>()
+    .oneOf(["minutes", "hours", "days", "weeks", "months"])
+    .optional(),
+  units: yup.number().optional(),
+});
+
+const ConnectionScheduleDataCronSchema = yup.object().shape({
+  cronExpression: yup.string().optional(),
+  cronTimeZone: yup.string().optional(),
+});
+
+export const scheduleDataSchema = yup.object().shape({
+  basicSchedule: ConnectionScheduleDataBasicScheduleSchema.optional(),
+  cron: ConnectionScheduleDataCronSchema.optional(),
+});
+
 export const connectionSettingsUpdateEventSummaryPatchesShape = {
   scheduleType: yup.object({
     from: yup.string().oneOf(Object.values(ConnectionScheduleType)),
     to: yup.string().oneOf(Object.values(ConnectionScheduleType)),
   }),
+  scheduleData: yup.object().shape({ from: scheduleDataSchema, to: scheduleDataSchema }),
   name: yup.object().shape({ from: yup.string(), to: yup.string() }),
   namespaceDefinition: yup.object().shape({
     from: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
@@ -224,6 +267,7 @@ export const connectionSettingsUpdateEventSummaryPatchesShape = {
     from: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
     to: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
   }),
+
   backfillPreference: yup.object().shape({ from: yup.string(), to: yup.string() }),
 } as const;
 
@@ -240,7 +284,7 @@ export const connectionSettingsUpdateEventSummarySchema = yup.object({
       const { originalValue } = testContext as unknown as { originalValue: Record<string, unknown> };
       return Object.keys(originalValue).some(
         // resourceRequirements is a valid patch, and we want to continue logging it, but we do not want to surface it in the UI at this time.
-        (key) => (patchFields as string[]).includes(key) || key === "resourceRequirements"
+        (key) => (patchFields as string[]).includes(key)
       );
     })
     .required(),
@@ -249,6 +293,15 @@ export const connectionSettingsUpdateEventSummarySchema = yup.object({
 export const schemaUpdateSummarySchema = yup.object({
   catalogDiff: catalogDiffSchema.required(),
   updateReason: yup.mixed().oneOf(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
+});
+
+export const mappingEventSummarySchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  mapperType: yup
+    .mixed<StreamMapperType>()
+    .oneOf([...Object.values(StreamMapperType)])
+    .required(),
 });
 
 /**
@@ -339,3 +392,36 @@ export const schemaUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
   summary: schemaUpdateSummarySchema.required(),
 });
+
+export const connectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: connectorUpdateSchema.required(),
+});
+
+export const mappingEventSchema = generalEventSchema.shape({
+  // TODO: add mapping event types from AirbyteClient once they are defined
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
+  eventType: yup.mixed().oneOf(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]).required(),
+  summary: mappingEventSummarySchema.required(),
+});
+
+export interface ConnectionTimelineRunningEvent {
+  id: string;
+  eventType: string;
+  connectionId: string;
+  createdAt: number;
+  summary: {
+    streams: Array<{
+      streamName: string;
+      streamNamespace: string | undefined;
+      configType: JobConfigType;
+    }>;
+    configType: JobConfigType;
+    jobId: number;
+  };
+  user: {
+    email: string;
+    name: string;
+    id: string;
+  };
+}

@@ -10,15 +10,14 @@ import { useCurrentWorkspace } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { GuestBadge } from "./GuestBadge";
 import { RoleManagementMenu } from "./RoleManagementMenu";
-import { ResourceType, UnifiedWorkspaceUserModel, getWorkspaceAccessLevel } from "./useGetAccessManagementData";
 import { UserRoleText } from "./UserRoleText";
+import { ResourceType, UnifiedUserModel, getOrganizationAccessLevel, getWorkspaceAccessLevel } from "./util";
 
-const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "READER" | "EDITOR" }> = ({
-  highestPermissionType,
-}) => {
+const ViewOnlyRoleBox: React.FC<{ highestPermissionType: RbacRole }> = ({ highestPermissionType }) => {
   return (
     <Box pl="md" pr="sm">
       <FlexContainer gap="md" alignItems="center" justifyContent="flex-start">
@@ -29,25 +28,54 @@ const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "R
 };
 
 interface RoleManagementCellProps {
-  user: UnifiedWorkspaceUserModel;
+  user: UnifiedUserModel;
   resourceType: ResourceType;
 }
 
+export const PendingInvitationBadge: React.FC<{ scope: ResourceType }> = ({ scope }) => {
+  return (
+    <Tooltip
+      control={
+        <Box px="sm">
+          <Text italicized color="grey400">
+            <FormattedMessage id="userInvitations.pendingInvitation" />
+          </Text>
+        </Box>
+      }
+    >
+      <Text bold italicized inverseColor>
+        <FormattedMessage id="userInvitations.pendingInvitation.tooltipMain" />
+      </Text>
+      <Text italicized inverseColor>
+        <FormattedMessage
+          id="userInvitations.pendingInvitation.tooltipAdditionalInfo"
+          values={{
+            scope,
+          }}
+        />
+      </Text>
+    </Tooltip>
+  );
+};
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
+  const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
   const { workspaceId, organizationId } = useCurrentWorkspace();
-  const highestPermissionType = getWorkspaceAccessLevel(user);
+  const workspaceAccessLevel = getWorkspaceAccessLevel(user);
+  const organizationAccessLevel = getOrganizationAccessLevel(user);
   const currentUser = useCurrentUser();
-  const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
+
   const canEditPermissions = useIntent(
     resourceType === "workspace" ? "UpdateWorkspacePermissions" : "UpdateOrganizationPermissions",
     { workspaceId, organizationId }
   );
+
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", {
     organizationId,
   });
-  const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
-  const cannotDemoteUser = resourceType === "workspace" && orgPermissionType === "organization_admin";
-  const shouldHidePopover = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
+  const cannotDemoteUser =
+    resourceType === "workspace" && organizationAccessLevel === "ADMIN" && user.invitationStatus === undefined;
+
+  const showViewOnlyBox = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions
@@ -55,19 +83,22 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
       : user.id === currentUser.userId && canEditPermissions
       ? "settings.accessManagement.cannotEditOwnPermissions"
       : undefined;
-
   return (
     <FlexContainer gap="xs" alignItems="center">
-      {shouldHidePopover ? (
+      {showViewOnlyBox ? (
         tooltipContent ? (
-          <Tooltip control={<ViewOnlyRoleBox highestPermissionType={highestPermissionType} />}>
+          <Tooltip control={<ViewOnlyRoleBox highestPermissionType={workspaceAccessLevel} />}>
             <FormattedMessage id={tooltipContent} />
           </Tooltip>
         ) : (
-          <ViewOnlyRoleBox highestPermissionType={highestPermissionType} />
+          <ViewOnlyRoleBox highestPermissionType={workspaceAccessLevel} />
         )
       ) : (
-        <RoleManagementMenu user={user} highestPermissionType={highestPermissionType} resourceType={resourceType} />
+        <RoleManagementMenu
+          user={user}
+          highestPermissionType={resourceType === "workspace" ? workspaceAccessLevel : organizationAccessLevel}
+          resourceType={resourceType}
+        />
       )}
       {user.organizationPermission?.permissionType === "organization_admin" && resourceType === "workspace" && (
         <Badge variant="grey">
@@ -77,24 +108,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
       {canListOrganizationUsers && indicateGuestUsers && (
         <GuestBadge userId={user.id} organizationId={organizationId} />
       )}
-      {user.invitationStatus === "pending" && (
-        <Tooltip
-          control={
-            <Box px="sm">
-              <Text italicized color="grey400">
-                <FormattedMessage id="userInvitations.pendingInvitation" />
-              </Text>
-            </Box>
-          }
-        >
-          <Text bold italicized inverseColor>
-            <FormattedMessage id="userInvitations.pendingInvitation.tooltipMain" />
-          </Text>
-          <Text italicized inverseColor>
-            <FormattedMessage id="userInvitations.pendingInvitation.tooltipAdditionalInfo" />
-          </Text>
-        </Tooltip>
-      )}
+      {user.invitationStatus === "pending" && <PendingInvitationBadge scope={resourceType} />}
     </FlexContainer>
   );
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -16,7 +16,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.CheckInput;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -34,7 +34,7 @@ import org.openapitools.client.infrastructure.ClientException;
  * Generate input for a workflow.
  */
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 @SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.AvoidCatchingNPE"})
 public class GenerateInputActivityImpl implements GenerateInputActivity {
 

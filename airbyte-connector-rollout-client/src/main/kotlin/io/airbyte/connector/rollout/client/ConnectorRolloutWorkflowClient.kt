@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.client
 
 import io.airbyte.commons.temporal.factories.WorkflowClientFactory
@@ -12,9 +16,7 @@ import jakarta.inject.Singleton
 class WorkflowClientWrapper(
   private val workflowClient: WorkflowClient,
 ) {
-  fun getClient(): WorkflowClient {
-    return workflowClient
-  }
+  fun getClient(): WorkflowClient = workflowClient
 }
 
 @Factory
@@ -23,7 +25,7 @@ class ConnectorRolloutWorkflowClient {
   fun workflowClient(
     temporalWorkflowServiceFactory: ConnectorRolloutTemporalWorkflowServiceFactory,
     temporalSdkTimeouts: TemporalSdkTimeouts,
-    @Value("\${temporal.cloud.connectorRollout.namespace}") namespace: String?,
+    @Value("\${temporal.cloud.connector-rollout.namespace}") namespace: String?,
     @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
     dataConverter: DataConverter,
   ): WorkflowClientWrapper {

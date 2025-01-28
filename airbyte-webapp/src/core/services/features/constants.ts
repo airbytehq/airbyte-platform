@@ -4,7 +4,7 @@ export const defaultOssFeatures = [
   FeatureItem.AllowAutoDetectSchema,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
-  FeatureItem.AllowSyncSubOneHourCronExpressions,
+  FeatureItem.EnterpriseUpsell,
 ];
 
 export const defaultEnterpriseFeatures = [
@@ -17,17 +17,16 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
+  FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
-  FeatureItem.SyncCatalogV2,
 ];
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
-  FeatureItem.Billing,
+  FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.EmailNotifications,
@@ -36,6 +35,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
-  FeatureItem.SyncCatalogV2,
-  FeatureItem.FieldHashing, // also goverened by connection.hashingUI experiment
+  FeatureItem.FieldHashing, // also governed by connection.hashingUI experiment
 ];

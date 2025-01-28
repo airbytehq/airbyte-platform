@@ -89,7 +89,7 @@ type TimingName =
   | "SourceSettingsPage"
   | "StreamStatusPage"
   | "CreditUsage" // Proxy for when the billing page has loaded
-  | "CloudWorkspacesList" // Proxy for when the workspaces page has loaded
+  | "WorkspacesList" // Proxy for when the workspaces page has loaded
   | "ConnectionsTable"; // Proxy for when the connections page has loaded
 
 export const trackTiming = (name: TimingName) => {

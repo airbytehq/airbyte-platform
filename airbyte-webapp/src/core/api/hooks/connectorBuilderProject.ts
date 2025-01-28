@@ -82,10 +82,15 @@ export const useListBuilderProjects = () => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-      convertProjectDetailsReadToBuilderProject
-    )
+  return useSuspenseQuery(
+    connectorBuilderProjectsKeys.list(workspaceId),
+    async () =>
+      (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
+        convertProjectDetailsReadToBuilderProject
+      ),
+    {
+      refetchOnMount: "always",
+    }
   );
 };
 
@@ -348,6 +353,7 @@ export const usePublishBuilderProject = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
         },
@@ -390,6 +396,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
           setAsActiveManifest: useAsActiveVersion,
@@ -461,17 +468,21 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream,
+  testStream: DeclarativeStream | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
 
   return useQuery<StreamReadTransformedSlices>(
     connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
-    () =>
-      readConnectorBuilderProjectStream(params, requestOptions).then((streamRead) =>
-        transformSlices(streamRead, testStream)
-      ),
+    async () => {
+      if (!testStream) {
+        // this shouldn't happen, because read stream can only be triggered when a stream is selected
+        throw new Error("No test stream provided - this state should not be reached!");
+      }
+      const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
+      return transformSlices(streamRead, testStream);
+    },
     {
       refetchOnWindowFocus: false,
       enabled: false,

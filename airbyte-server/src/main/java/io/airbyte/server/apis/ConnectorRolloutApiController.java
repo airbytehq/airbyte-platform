@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -7,15 +7,20 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.ConnectorRolloutApi;
-import io.airbyte.api.model.generated.ConnectorRolloutCreateRequestBody;
-import io.airbyte.api.model.generated.ConnectorRolloutCreateResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfoResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfoResponseData;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeResponse;
+import io.airbyte.api.model.generated.ConnectorRolloutGetActorSyncInfoRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListByActorDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutListResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody;
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutRead;
 import io.airbyte.api.model.generated.ConnectorRolloutReadRequestBody;
@@ -24,7 +29,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutResponse;
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody;
 import io.airbyte.api.model.generated.ConnectorRolloutStartResponse;
-import io.airbyte.commons.auth.SecuredUser;
+import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody;
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -34,8 +39,9 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Controller("/api/v1/connector_rollout")
 @Context
@@ -49,25 +55,7 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
     this.connectorRolloutHandler = connectorRolloutHandler;
   }
 
-  @SuppressWarnings("LineLength")
-  @Post("/create")
-  @SecuredUser
-  @Secured({ADMIN})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Override
-  public ConnectorRolloutCreateResponse createConnectorRollout(@Body final ConnectorRolloutCreateRequestBody connectorRolloutCreateRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead createdConnectorRollout = connectorRolloutHandler.insertConnectorRollout(
-          connectorRolloutCreateRequestBody);
-
-      final ConnectorRolloutCreateResponse response = new ConnectorRolloutCreateResponse();
-      response.setData(createdConnectorRollout);
-      return response;
-    });
-  }
-
   @Post("/start")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -82,7 +70,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   }
 
   @Post("/rollout")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -98,7 +85,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/finalize")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -114,7 +100,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -129,11 +114,10 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list_all")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutListResponse getConnectorRolloutsListAll(@Valid Object body) {
+  public ConnectorRolloutListResponse getConnectorRolloutsListAll() {
     return ApiHelper.execute(() -> {
       final var connectorRollouts = connectorRolloutHandler.listConnectorRollouts();
       return new ConnectorRolloutListResponse().connectorRollouts(connectorRollouts);
@@ -142,7 +126,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/list_by_actor_definition_id")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -156,7 +139,6 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/get")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -170,8 +152,47 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
   }
 
   @SuppressWarnings("LineLength")
+  @Post("/get_actor_sync_info")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutActorSyncInfoResponse getConnectorRolloutActorSyncInfo(@Body final ConnectorRolloutGetActorSyncInfoRequestBody connectorRolloutGetActorSyncInfoRequestBody) {
+    return ApiHelper.execute(() -> {
+      final UUID connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.getId();
+      final Map<String, ConnectorRolloutActorSyncInfo> connectorRolloutSyncInfo =
+          connectorRolloutHandler.getActorSyncInfo(connectorRolloutId)
+              .entrySet()
+              .stream()
+              .collect(Collectors.toMap(
+                  entry -> entry.getKey().toString(),
+                  Map.Entry::getValue));
+      final ConnectorRolloutActorSelectionInfo actorSelectionInfo = connectorRolloutHandler.getPinnedActorInfo(connectorRolloutId);
+
+      final ConnectorRolloutActorSyncInfoResponseData responseData = new ConnectorRolloutActorSyncInfoResponseData();
+      responseData.actorSelectionInfo(actorSelectionInfo).syncs(connectorRolloutSyncInfo);
+
+      return new ConnectorRolloutActorSyncInfoResponse().data(responseData);
+    });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/update_state")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutResponse updateConnectorRolloutState(@Body final ConnectorRolloutUpdateStateRequestBody connectorRolloutUpdateStateRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead updatedConnectorRollout =
+          connectorRolloutHandler.updateState(connectorRolloutUpdateStateRequestBody);
+
+      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
+      response.setData(updatedConnectorRollout);
+      return response;
+    });
+  }
+
+  @SuppressWarnings("LineLength")
   @Post("/manual_start")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -187,34 +208,34 @@ public class ConnectorRolloutApiController implements ConnectorRolloutApi {
 
   @SuppressWarnings("LineLength")
   @Post("/manual_rollout")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead updatedConnectorRollout =
-          connectorRolloutHandler.manualDoConnectorRolloutWorkflowUpdate(connectorRolloutManualRolloutRequestBody);
-
-      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
-      response.setData(updatedConnectorRollout);
-      return response;
-    });
+  public ConnectorRolloutManualRolloutResponse manualDoConnectorRollout(@Body final ConnectorRolloutManualRolloutRequestBody connectorRolloutManualRolloutRequestBody) {
+    return ApiHelper.execute(() -> connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutManualRolloutRequestBody));
   }
 
   @SuppressWarnings("LineLength")
   @Post("/manual_finalize")
-  @SecuredUser
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectorRolloutFinalizeResponse manualFinalizeConnectorRollout(@Body final ConnectorRolloutManualFinalizeRequestBody connectorRolloutFinalizeRequestBody) {
-    return ApiHelper.execute(() -> {
-      final ConnectorRolloutRead finalizedConnectorRollout =
-          connectorRolloutHandler.manualFinalizeConnectorRolloutWorkflowUpdate(connectorRolloutFinalizeRequestBody);
+  public ConnectorRolloutManualFinalizeResponse manualFinalizeConnectorRollout(@Body final ConnectorRolloutManualFinalizeRequestBody connectorRolloutFinalizeRequestBody) {
+    return ApiHelper.execute(() -> connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeRequestBody));
+  }
 
-      final ConnectorRolloutFinalizeResponse response = new ConnectorRolloutFinalizeResponse();
-      response.setData(finalizedConnectorRollout);
+  @SuppressWarnings("LineLength")
+  @Post("/manual_pause")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectorRolloutResponse manualPauseConnectorRollout(@Body final ConnectorRolloutUpdateStateRequestBody connectorRolloutPauseRequestBody) {
+    return ApiHelper.execute(() -> {
+      final ConnectorRolloutRead updatedConnectorRollout =
+          connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutPauseRequestBody);
+
+      final ConnectorRolloutResponse response = new ConnectorRolloutResponse();
+      response.setData(updatedConnectorRollout);
       return response;
     });
   }

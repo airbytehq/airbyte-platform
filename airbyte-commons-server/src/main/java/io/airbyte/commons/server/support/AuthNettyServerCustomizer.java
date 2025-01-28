@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -13,7 +13,6 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Custom Netty customizer that registers the {@link AuthorizationServerHandler} with the Netty
@@ -24,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
  * determine authorization.
  */
 @Singleton
-@Slf4j
 public class AuthNettyServerCustomizer implements BeanCreatedEventListener<Registry> {
 
   private final AuthorizationServerHandler authorizationServerHandler;

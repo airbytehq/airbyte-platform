@@ -2,7 +2,7 @@ micronaut:
   application:
     name: airbyte-workload-launcher
   env:
-    cloud-deduction: true
+    additional-envs: ${MICRONAUT_ENVIRONMENTS:}
   server:
     port: 8016
     netty:
@@ -18,8 +18,23 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
-
+  caches:
+    network-policy-label-cache:
+      expire-after-write: 10m
+      maximum-size: 100_000
+  executors:
+    kube-client:
+      type: cached
+      n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      core-pool-size: 0
 airbyte:
+  pod-sweeper:
+    # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
+    # meaning running pods are preserved indefinitely.
+    runningTtl: ${RUNNING_TTL_MINUTES:""}
+    succeededTtl: ${SUCCEEDED_TTL_MINUTES:10}
+    unsuccessfulTtl: ${UNSUCCESSFUL_TTL_MINUTES:120}
+    rate: PT2M
   connector:
     source:
       credentials:
@@ -53,6 +68,9 @@ airbyte:
         delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
+  logging:
+    log-level: ${LOG_LEVEL:}
+    s3-path-style-access: ${S3_PATH_STYLE_ACCESS:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -74,6 +92,7 @@ airbyte:
       high-priority-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    network-policy-introspection: false
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -118,12 +137,7 @@ airbyte:
         client-secret-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
-    data-plane-creds:
-      secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
-      secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
-    secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
-    secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
   role: ${AIRBYTE_ROLE:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:
@@ -133,9 +147,7 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
-        images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
-          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
+        connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -152,6 +164,17 @@ airbyte:
           container:
             image: ${CONNECTOR_SIDECAR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        volumes:
+          data-plane-creds:
+            mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
+            secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
+          secret:
+            mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
+            secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
+          staging:
+            mount-path: ${AIRBYTE_STAGING_PATH:/staging/files}
+          local:
+            enabled: ${JOB_KUBE_LOCAL_VOLUME_ENABLED:false}
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
@@ -191,6 +214,10 @@ airbyte:
         cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
+    file-transfer:
+      resources:
+        ephemeral-storage-limit: ${FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT:5G}
+        ephemeral-storage-request: ${FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST:5G}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
@@ -225,12 +252,11 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      local:
-        root: ${LOCAL_ROOT:}
       minio:
         access-key: ${AWS_ACCESS_KEY_ID:}
         endpoint: ${MINIO_ENDPOINT:}
@@ -247,6 +273,8 @@ datadog:
     host: ${DD_AGENT_HOST:}
     port: ${DD_DOGSTATSD_PORT:}
   orchestrator.disabled.integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
+  env: ${DD_ENV:}
+  version: ${DD_VERSION:}
 google.application.credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
 endpoints:
@@ -298,6 +326,12 @@ temporal:
 
 logger:
   levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
 

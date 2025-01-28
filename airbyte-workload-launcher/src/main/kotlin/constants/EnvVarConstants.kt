@@ -1,6 +1,8 @@
-package io.airbyte.workload.launcher.constants
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
 
-import io.airbyte.workers.workload.WorkloadConstants
+package io.airbyte.workload.launcher.constants
 
 /**
  * Env var names and other string constants used to set env vars for the containers we launch.
@@ -26,8 +28,6 @@ object EnvVarConstants {
   const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
   const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
   const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
-  const val WORKER_V2_MICRONAUT_ENV = WorkloadConstants.WORKER_V2_MICRONAUT_ENV
-  const val LOCAL_SECRETS_MICRONAUT_ENV = "local-secrets"
   const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
   const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"
   const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"
@@ -49,6 +49,10 @@ object EnvVarConstants {
   const val AIRBYTE_VERSION_ENV_VAR = "AIRBYTE_VERSION"
   const val AIRBYTE_ROLE_ENV_VAR = "AIRBYTE_ROLE"
   const val DEPLOYMENT_MODE_ENV_VAR = "DEPLOYMENT_MODE"
+  const val AIRBYTE_STAGING_DIRECTORY = "AIRBYTE_STAGING_DIRECTORY"
+  const val CONNECTOR_STORAGE_LIMIT_BYTES = "CONNECTOR_STORAGE_LIMIT_BYTES"
+  const val USE_FILE_TRANSFER = "USE_FILE_TRANSFER"
+  const val USE_RUNTIME_SECRET_PERSISTENCE = "USE_RUNTIME_SECRET_PERSISTENCE"
 
   // secrets
   const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"

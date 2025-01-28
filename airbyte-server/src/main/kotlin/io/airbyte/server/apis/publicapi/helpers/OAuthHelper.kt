@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -17,9 +17,7 @@ object OAuthHelper {
   private const val HTTPS = "https"
   private val log = LoggerFactory.getLogger(OAuthHelper.javaClass)
 
-  fun buildTempOAuthStateKey(state: String): String {
-    return "$TEMP_OAUTH_STATE_KEY.$state"
-  }
+  fun buildTempOAuthStateKey(state: String): String = "$TEMP_OAUTH_STATE_KEY.$state"
 
   /**
    * Helper function to validate that a redirect URL is valid and if not, return the appropriate

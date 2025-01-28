@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Organization
@@ -15,6 +19,7 @@ internal class OrganizationPaymentConfigRepositoryTest : AbstractConfigRepositor
   @AfterEach
   fun tearDown() {
     organizationPaymentConfigRepository.deleteAll()
+    workspaceRepository.deleteAll()
     organizationRepository.deleteAll()
   }
 
@@ -48,5 +53,27 @@ internal class OrganizationPaymentConfigRepositoryTest : AbstractConfigRepositor
     assertNull(persistedPaymentConfig.usageCategoryOverride)
     assertNotNull(persistedPaymentConfig.createdAt)
     assertNotNull(persistedPaymentConfig.updatedAt)
+  }
+
+  @Test
+  fun `findByPaymentProviderId`() {
+    val organization =
+      Organization(
+        name = "Airbyte Inc.",
+        email = "contact@airbyte.io",
+      )
+    val persistedOrg = organizationRepository.save(organization)
+
+    val paymentConfig =
+      OrganizationPaymentConfig(
+        organizationId = persistedOrg.id!!,
+        paymentProviderId = "stripe123",
+      )
+
+    organizationPaymentConfigRepository.save(paymentConfig)
+
+    val foundPaymentConfig = organizationPaymentConfigRepository.findByPaymentProviderId("stripe123")
+    assertNotNull(foundPaymentConfig)
+    assertEquals(persistedOrg.id, foundPaymentConfig!!.organizationId)
   }
 }

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
@@ -61,12 +62,11 @@ open class ScopedConfigurationHandler
     open fun getValueName(
       configKey: String,
       value: String,
-    ): String? {
-      return when (configKey) {
+    ): String? =
+      when (configKey) {
         ConnectorVersionKey.key -> actorDefinitionService.getActorDefinitionVersion(UUID.fromString(value)).dockerImageTag
         else -> null
       }
-    }
 
     private fun resolveActorDefinitionName(actorDefinitionId: UUID): String {
       // Since we don't have a central "Actor Definition" service, we need to check first for source, then destination.
@@ -90,34 +90,32 @@ open class ScopedConfigurationHandler
     open fun getResourceName(
       resourceType: ConfigResourceType,
       resourceId: UUID,
-    ): String {
-      return when (resourceType) {
+    ): String =
+      when (resourceType) {
         ConfigResourceType.ACTOR_DEFINITION -> resolveActorDefinitionName(resourceId)
+        else -> resourceType.name
       }
-    }
 
     @Cacheable("config-origin-name")
     open fun getOriginName(
       originType: ConfigOriginType,
       origin: String,
-    ): String? {
-      return when (originType) {
+    ): String? =
+      when (originType) {
         ConfigOriginType.USER -> userPersistence.getUser(UUID.fromString(origin)).get().email
         else -> null
       }
-    }
 
     @Cacheable("config-scope-name")
     open fun getScopeName(
       scopeType: ConfigScopeType,
       scopeId: UUID,
-    ): String {
-      return when (scopeType) {
+    ): String =
+      when (scopeType) {
         ConfigScopeType.ORGANIZATION -> organizationService.getOrganization(scopeId).get().name
         ConfigScopeType.WORKSPACE -> workspaceService.getStandardWorkspaceNoSecrets(scopeId, true).name
         ConfigScopeType.ACTOR -> resolveActorName(scopeId)
       }
-    }
 
     @VisibleForTesting
     fun assertCreateRelatedRecordsExist(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody) {
@@ -139,8 +137,8 @@ open class ScopedConfigurationHandler
     }
 
     @VisibleForTesting
-    fun buildScopedConfigurationRead(scopedConfiguration: ScopedConfiguration): ScopedConfigurationRead {
-      return ScopedConfigurationRead()
+    fun buildScopedConfigurationRead(scopedConfiguration: ScopedConfiguration): ScopedConfigurationRead =
+      ScopedConfigurationRead()
         .id(scopedConfiguration.id.toString())
         .configKey(scopedConfiguration.key)
         .value(scopedConfiguration.value)
@@ -159,11 +157,10 @@ open class ScopedConfigurationHandler
         .updatedAt(scopedConfiguration.updatedAt?.let { unixTimestampToOffsetDateTime(it) })
         .createdAt(scopedConfiguration.createdAt?.let { unixTimestampToOffsetDateTime(it) })
         .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(it) })
-    }
 
     @VisibleForTesting
-    fun buildScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfiguration {
-      return ScopedConfiguration()
+    fun buildScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfiguration =
+      ScopedConfiguration()
         .withId(uuidGenerator.get())
         .withValue(scopedConfigurationCreate.value)
         .withKey(scopedConfigurationCreate.configKey)
@@ -176,14 +173,14 @@ open class ScopedConfigurationHandler
         .withOrigin(scopedConfigurationCreate.origin)
         .withOriginType(ConfigOriginType.fromValue(scopedConfigurationCreate.originType))
         .withExpiresAt(scopedConfigurationCreate.expiresAt?.toString())
-    }
 
     fun listScopedConfigurations(configKey: String): List<ScopedConfigurationRead> {
       val scopedConfigurations: List<ScopedConfiguration> = scopedConfigurationService.listScopedConfigurations(configKey)
-      return scopedConfigurations.stream().map {
-          scopedConfiguration: ScopedConfiguration ->
-        buildScopedConfigurationRead(scopedConfiguration)
-      }.collect(Collectors.toList())
+      return scopedConfigurations
+        .stream()
+        .map { scopedConfiguration: ScopedConfiguration ->
+          buildScopedConfigurationRead(scopedConfiguration)
+        }.collect(Collectors.toList())
     }
 
     fun insertScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfigurationRead {

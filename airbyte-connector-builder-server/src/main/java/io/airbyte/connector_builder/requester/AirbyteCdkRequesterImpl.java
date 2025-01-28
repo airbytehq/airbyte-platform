@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.requester;
@@ -17,6 +17,7 @@ import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
+import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -93,7 +94,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   private StreamRead recordToResponse(final AirbyteRecordMessage record) {
     final StreamRead response = new StreamRead();
     final JsonNode data = record.getData();
-    final List<Object> logList = convertToList(data.get("logs"), new TypeReference<>() {});
+    final List<StreamReadLogsInner> logList = convertToList(data.get("logs"), new TypeReference<>() {});
     final List<StreamReadSlicesInner> sliceList = convertToList(data.get("slices"), new TypeReference<>() {});
     response.setLogs(logList);
     response.setSlices(sliceList);

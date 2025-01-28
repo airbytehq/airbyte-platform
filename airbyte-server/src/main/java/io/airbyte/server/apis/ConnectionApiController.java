@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -12,7 +12,6 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
-import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
@@ -39,16 +38,19 @@ import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUpdateWithReason;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
-import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobReadResponse;
 import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogRequestBody;
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
-import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.server.errors.BadRequestException;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
+import io.airbyte.commons.auth.generated.Intent;
+import io.airbyte.commons.auth.permissions.RequiresIntent;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
@@ -56,8 +58,7 @@ import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
-import io.airbyte.commons.temporal.TemporalJobType;
-import io.airbyte.commons.temporal.scheduling.RouterService;
+import io.airbyte.commons.server.services.ConnectionService;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
@@ -70,41 +71,40 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@Slf4j
 public class ConnectionApiController implements ConnectionApi {
 
   private final ConnectionsHandler connectionsHandler;
   private final OperationsHandler operationsHandler;
   private final SchedulerHandler schedulerHandler;
-  private final RouterService routerService;
   private final StreamStatusesHandler streamStatusesHandler;
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final JobHistoryHandler jobHistoryHandler;
+  private final ConnectionService connectionService;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
-                                 final RouterService routerService,
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
                                  final StreamRefreshesHandler streamRefreshesHandler,
-                                 final JobHistoryHandler jobHistoryHandler) {
+                                 final JobHistoryHandler jobHistoryHandler,
+                                 final ConnectionService connectionService) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
-    this.routerService = routerService;
     this.streamStatusesHandler = streamStatusesHandler;
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.jobHistoryHandler = jobHistoryHandler;
+    this.connectionService = connectionService;
   }
 
   @Override
@@ -112,14 +112,17 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
+    return ApiHelper.execute(() -> {
+      final boolean wasDisabled = connectionService.warnOrDisableForConsecutiveFailures(connectionIdRequestBody.getConnectionId(), Instant.now());
+      return new InternalOperationResult().succeeded(wasDisabled);
+    });
   }
 
   @Override
   @Post(uri = "/backfill_events")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void backfillConnectionEvents(ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
+  public void backfillConnectionEvents(@Body final ConnectionEventsBackfillRequestBody connectionEventsBackfillRequestBody) {
     ApiHelper.execute(() -> {
       connectionsHandler.backfillConnectionEvents(connectionEventsBackfillRequestBody);
       return null;
@@ -130,6 +133,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/create")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead createConnection(@Body final ConnectionCreate connectionCreate) {
     return ApiHelper.execute(() -> connectionsHandler.createConnection(connectionCreate));
   }
@@ -138,6 +142,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/update")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
   }
@@ -146,6 +151,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/update_with_reason")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public ConnectionRead updateConnectionWithReason(@Body final ConnectionUpdateWithReason connectionUpdateWithReason) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdateWithReason.getConnectionUpdate(),
         connectionUpdateWithReason.getUpdateReason(), connectionUpdateWithReason.getAutoUpdate()));
@@ -170,14 +176,15 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Post(uri = "/refresh")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @Override
-  public BooleanRead refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
-    return ApiHelper.execute(() -> new BooleanRead().value(streamRefreshesHandler.createRefreshesForConnection(
+  public JobReadResponse refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
+    final JobRead job = ApiHelper.execute(() -> streamRefreshesHandler.createRefreshesForConnection(
         connectionStreamRefreshRequestBody.getConnectionId(),
         connectionStreamRefreshRequestBody.getRefreshMode(),
-        connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>())));
+        connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>()));
+    return new JobReadResponse().job(job);
   }
 
   @Override
@@ -291,6 +298,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Status(HttpStatus.NO_CONTENT)
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     ApiHelper.execute(() -> {
       operationsHandler.deleteOperationsForConnection(connectionIdRequestBody);
@@ -301,8 +309,8 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/sync")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   public JobInfoRead syncConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.syncConnection(connectionIdRequestBody));
   }
@@ -353,24 +361,6 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalogForConnection(@Body final PostprocessDiscoveredCatalogRequestBody req) {
     return ApiHelper.execute(() -> connectionsHandler.postprocessDiscoveredCatalog(req.getConnectionId(), req.getCatalogId()));
-  }
-
-  @Override
-  @Post(uri = "/get_task_queue_name")
-  @Secured({ADMIN})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  public TaskQueueNameRead getTaskQueueName(@Body final GetTaskQueueNameRequest request) {
-    final TemporalJobType jobType;
-    try {
-      jobType = TemporalJobType.valueOf(request.getTemporalJobType());
-    } catch (final IllegalArgumentException e) {
-      throw new BadRequestException("Unrecognized temporalJobType", e);
-    }
-
-    return ApiHelper.execute(() -> {
-      final var string = routerService.getTaskQueue(request.getConnectionId(), jobType);
-      return new TaskQueueNameRead().taskQueueName(string);
-    });
   }
 
 }

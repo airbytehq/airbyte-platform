@@ -15,7 +15,7 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
-import { useCreateWorkspace, useListWorkspacesInfinite } from "core/api";
+import { useListWorkspacesInfinite } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
@@ -44,7 +44,6 @@ export const WorkspacesPage: React.FC = () => {
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
-  const { mutateAsync: createWorkspace } = useCreateWorkspace();
   const { logout } = useAuthService();
 
   /**
@@ -101,7 +100,7 @@ export const WorkspacesPage: React.FC = () => {
               <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
             </Box>
             <Box pb="lg">
-              <WorkspacesCreateControl createWorkspace={createWorkspace} />
+              <WorkspacesCreateControl />
             </Box>
             <WorkspacesList
               workspaces={workspaces}

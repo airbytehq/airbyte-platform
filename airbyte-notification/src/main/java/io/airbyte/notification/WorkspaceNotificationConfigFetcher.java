@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -10,15 +10,18 @@ import io.airbyte.api.client.model.generated.NotificationItem;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fetching notification settings from workspace.
  */
 @Singleton
-@Slf4j
 public class WorkspaceNotificationConfigFetcher {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
 

@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import java.util.Map;
+import io.airbyte.featureflag.TestClient;
 import java.util.UUID;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,16 +28,14 @@ class FeatureFlagFetchActivityTest {
     mWorkspaceApi = mock(WorkspaceApi.class);
     mAirbyteApiClient = mock(AirbyteApiClient.class);
     when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
-    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(mAirbyteApiClient);
+    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(mAirbyteApiClient, new TestClient());
   }
 
   @Test
   void testGetFeatureFlags() {
     final FeatureFlagFetchActivity.FeatureFlagFetchInput input = new FeatureFlagFetchActivity.FeatureFlagFetchInput(CONNECTION_ID);
 
-    final FeatureFlagFetchActivity.FeatureFlagFetchOutput output = featureFlagFetchActivity.getFeatureFlags(input);
-    Assertions.assertEquals(output.getFeatureFlags(), Map.of());
-
+    assertDoesNotThrow(() -> featureFlagFetchActivity.getFeatureFlags(input));
   }
 
 }

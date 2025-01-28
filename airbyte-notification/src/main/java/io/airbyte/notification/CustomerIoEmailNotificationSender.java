@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -11,7 +11,7 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -19,17 +19,20 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.http.HttpHeaders;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Send a notification using customerIo.
  */
-@Slf4j
 @Singleton
 @Requires(property = "airbyte.notification.customerio.apikey",
           notEquals = "")
 @Replaces(FakeCustomerIoEmailNotificationSender.class)
 @SuppressWarnings({"PMD.ExceptionAsFlowControl", "PMD.ConfusingArgumentToVarargsMethod"})
 public class CustomerIoEmailNotificationSender implements NotificationSender<CustomerIoEmailConfig> {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 

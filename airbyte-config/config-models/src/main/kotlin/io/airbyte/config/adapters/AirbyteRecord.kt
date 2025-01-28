@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.adapters
 
 import io.airbyte.config.StreamDescriptor
@@ -22,6 +26,11 @@ interface AirbyteRecord {
 
   fun remove(fieldName: String)
 
+  fun rename(
+    oldFieldName: String,
+    newFieldName: String,
+  )
+
   fun <T : Any> set(
     fieldName: String,
     value: T,
@@ -32,6 +41,10 @@ interface AirbyteRecord {
     change: Change,
     reason: Reason,
   )
+
+  fun setInclude(value: Boolean)
+
+  fun shouldInclude(): Boolean
 }
 
 interface Value {

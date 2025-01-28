@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.api.client.config
@@ -44,8 +44,8 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.workload-api.jitter-factor:.25}") jitterFactor: Double,
     meterRegistry: MeterRegistry?,
-  ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(
+  ): RetryPolicy<Response> =
+    generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
@@ -53,7 +53,6 @@ class WorkloadApiClientSupportFactory {
       metricPrefix = "workload-api-client",
       clientRetryExceptions = clientRetryExceptions,
     )
-  }
 
   @Singleton
   @Named("workloadApiOkHttpClient")

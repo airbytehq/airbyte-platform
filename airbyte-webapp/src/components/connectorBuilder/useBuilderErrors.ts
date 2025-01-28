@@ -8,11 +8,16 @@ import {
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderFormValues, BuilderState } from "./types";
+import {
+  BuilderFormValues,
+  BuilderState,
+  DeclarativeOAuthAuthenticatorType,
+  extractInterpolatedConfigKey,
+} from "./types";
 import { useBuilderValidationSchema } from "./useBuilderValidationSchema";
 
 export const useBuilderErrors = () => {
-  const { trigger, getValues } = useFormContext<BuilderState>();
+  const { getValues } = useFormContext<BuilderState>();
   const { errors } = useFormState<BuilderState>();
   const formValuesErrors: FieldErrors<BuilderFormValues> = errors.formValues ?? {};
   const { setScrollToField } = useConnectorBuilderFormManagementState();
@@ -54,73 +59,70 @@ export const useBuilderErrors = () => {
     [invalidViews]
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getFirstErrorPath = (value: any, schema: BaseSchema): string | undefined => {
-    try {
-      schema.validateSync(value);
-    } catch (e) {
-      return e.path;
-    }
-    return undefined;
-  };
-
   const validateAndTouch = useCallback(
     (callback?: () => void, limitToViews?: BuilderView[]) => {
-      trigger().then((isValid) => {
-        if (isValid) {
-          callback?.();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const getFirstErrorPath = (value: any, schema: BaseSchema): string | undefined => {
+        if (value?.authenticator?.type === DeclarativeOAuthAuthenticatorType) {
+          const testingValues = getValues("testingValues") ?? {};
+
+          const tokenType: "refresh" | "access" = !!value.authenticator.refresh_token_updater ? "refresh" : "access";
+          const tokenConfigKey = extractInterpolatedConfigKey(
+            tokenType === "refresh" ? value.authenticator.refresh_token : value.authenticator.access_token_value
+          );
+
+          if (!(tokenConfigKey in testingValues)) {
+            return "authenticator.declarative_oauth_flow";
+          }
+        }
+
+        try {
+          schema.validateSync(value);
+        } catch (e) {
+          return e.path;
+        }
+        return undefined;
+      };
+
+      if (limitToViews) {
+        for (const view of limitToViews) {
+          if (view === "global") {
+            // cast to any to avoid "Type instantiation is excessively deep and possibly infinite" error
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const firstErrorPath = getFirstErrorPath(getValues("formValues.global") as any, globalSchema);
+            if (firstErrorPath) {
+              setScrollToField(`formValues.global.${firstErrorPath}`);
+              setValue("view", view);
+              return;
+            }
+          }
+          if (typeof view === "number") {
+            const firstErrorPath = getFirstErrorPath(getValues(`formValues.streams.${view}`), streamSchema);
+            if (firstErrorPath) {
+              setScrollToField(`formValues.streams.${view}.${firstErrorPath}`);
+              setValue("view", view);
+              return;
+            }
+          }
+        }
+      } else {
+        const firstErrorPath = getFirstErrorPath(getValues("formValues"), builderFormValidationSchema);
+        if (!firstErrorPath) {
           return;
         }
-
-        if (limitToViews) {
-          for (const view of limitToViews) {
-            if (view === "global") {
-              // cast to any to avoid "Type instantiation is excessively deep and possibly infinite" error
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const firstErrorPath = getFirstErrorPath(getValues("formValues.global") as any, globalSchema);
-              if (firstErrorPath) {
-                setScrollToField(`formValues.global.${firstErrorPath}`);
-                setValue("view", view);
-                return;
-              }
-            }
-            if (typeof view === "number") {
-              const firstErrorPath = getFirstErrorPath(getValues(`formValues.streams.${view}`), streamSchema);
-              if (firstErrorPath) {
-                setScrollToField(`formValues.streams.${view}.${firstErrorPath}`);
-                setValue("view", view);
-                return;
-              }
-            }
-          }
-        } else {
-          const firstErrorPath = getFirstErrorPath(getValues("formValues"), builderFormValidationSchema);
-          if (!firstErrorPath) {
-            return;
-          }
-          const errorObject = {};
-          set(errorObject, firstErrorPath, "error");
-          const invalidBuilderViews = invalidViews(limitToViews, errorObject);
-          if (invalidBuilderViews.length > 0) {
-            setScrollToField(`formValues.${firstErrorPath}`);
-            setValue("view", invalidBuilderViews[0]);
-            return;
-          }
+        const errorObject = {};
+        set(errorObject, firstErrorPath, "error");
+        const invalidBuilderViews = invalidViews(limitToViews, errorObject);
+        if (invalidBuilderViews.length > 0) {
+          setScrollToField(`formValues.${firstErrorPath}`);
+          setValue("view", invalidBuilderViews[0]);
+          return;
         }
+      }
 
-        callback?.();
-      });
+      callback?.();
     },
-    [
-      builderFormValidationSchema,
-      getValues,
-      globalSchema,
-      invalidViews,
-      setScrollToField,
-      setValue,
-      streamSchema,
-      trigger,
-    ]
+    [builderFormValidationSchema, getValues, globalSchema, invalidViews, setScrollToField, setValue, streamSchema]
   );
 
   return { hasErrors, validateAndTouch };

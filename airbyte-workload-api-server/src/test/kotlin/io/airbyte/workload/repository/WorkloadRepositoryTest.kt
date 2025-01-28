@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.repository
 
 import io.airbyte.db.factory.DSLContextFactory
@@ -486,7 +490,6 @@ internal class WorkloadRepositoryTest {
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         mutexKey = mutexKey,
         type = type,
         deadline = deadline,

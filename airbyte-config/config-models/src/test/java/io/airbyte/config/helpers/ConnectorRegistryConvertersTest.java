@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -13,18 +13,23 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.BreakingChanges;
+import io.airbyte.config.ConnectorEnumRolloutState;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleasesDestination;
 import io.airbyte.config.ConnectorReleasesSource;
+import io.airbyte.config.ConnectorRollout;
+import io.airbyte.config.ReleaseCandidatesDestination;
+import io.airbyte.config.ReleaseCandidatesSource;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.RolloutConfiguration;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
@@ -53,12 +58,14 @@ class ConnectorRegistryConvertersTest {
 
   private static final String UPGRADE_DEADLINE = "2023-07-20";
 
+  private static final String DEADLINE_ACTION = "upgrade";
+
   private static final String DOCUMENTATION_URL = "https://example.com";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification().withConnectionSpecification(
       Jsons.jsonNode(ImmutableMap.of("key", "val"))).withProtocolVersion(PROTOCOL_VERSION);
   private static final AllowedHosts ALLOWED_HOSTS = new AllowedHosts().withHosts(List.of("host1", "host2"));
-  private static final ActorDefinitionResourceRequirements RESOURCE_REQUIREMENTS =
-      new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2"));
+  private static final ScopedResourceRequirements RESOURCE_REQUIREMENTS =
+      new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2"));
 
   private static final BreakingChangeScope breakingChangeScope = new BreakingChangeScope()
       .withScopeType(ScopeType.STREAM)
@@ -66,13 +73,15 @@ class ConnectorRegistryConvertersTest {
 
   private static final BreakingChanges sourceRegistryBreakingChanges = new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
       new VersionBreakingChange()
-          .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
+          .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withDeadlineAction(DEADLINE_ACTION)
+          .withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
               List.of(breakingChangeScope)));
 
   private static final BreakingChanges destinationBreakingChanges =
       new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
           new VersionBreakingChange()
-              .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
+              .withMessage(SAMPLE_MESSAGE).withUpgradeDeadline(UPGRADE_DEADLINE).withDeadlineAction(DEADLINE_ACTION)
+              .withMigrationDocumentationUrl(DOCUMENTATION_URL).withScopedImpact(
                   List.of(breakingChangeScope)));
 
   private static final BreakingChanges destinationRegistryBreakingChangesWithoutScopedImpact =
@@ -84,6 +93,7 @@ class ConnectorRegistryConvertersTest {
       .withVersion(new Version(PROTOCOL_VERSION))
       .withMigrationDocumentationUrl(DOCUMENTATION_URL)
       .withUpgradeDeadline(UPGRADE_DEADLINE)
+      .withDeadlineAction(DEADLINE_ACTION)
       .withMessage(SAMPLE_MESSAGE)
       .withScopedImpact(List.of(breakingChangeScope)));
 
@@ -186,7 +196,8 @@ class ConnectorRegistryConvertersTest {
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withReleases(new ConnectorReleasesDestination().withBreakingChanges(destinationBreakingChanges))
-        .withLanguage(LANGUAGE);
+        .withLanguage(LANGUAGE)
+        .withSupportsFileTransfer(true);
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
@@ -208,7 +219,8 @@ class ConnectorRegistryConvertersTest {
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
-        .withLanguage(LANGUAGE);
+        .withLanguage(LANGUAGE)
+        .withSupportsFileTransfer(true);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
@@ -290,6 +302,110 @@ class ConnectorRegistryConvertersTest {
         new ConnectorRegistryDestinationDefinition()
             .withReleases(new ConnectorReleasesDestination().withBreakingChanges(new BreakingChanges()));
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
+  }
+
+  @Test
+  void testToReleaseCandidateSourceDefinitions() {
+    ConnectorRegistrySourceDefinition registrySourceDef = new ConnectorRegistrySourceDefinition();
+    assertEquals(ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef), Collections.emptyList());
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition()
+        .withReleases(new ConnectorReleasesSource().withReleaseCandidates(new ReleaseCandidatesSource().withAdditionalProperty(
+            DOCKER_TAG,
+            new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY))));
+    List<ConnectorRegistrySourceDefinition> rcDefs = ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef);
+    assertEquals(rcDefs.size(), 1);
+    assertEquals(rcDefs.get(0).getDockerImageTag(), DOCKER_TAG);
+    assertEquals(rcDefs.get(0).getDockerRepository(), DOCKER_REPOSITORY);
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition()
+        .withReleases(new ConnectorReleasesSource().withReleaseCandidates(new ReleaseCandidatesSource().withAdditionalProperty(
+            DOCKER_TAG,
+            null)));
+    rcDefs = ConnectorRegistryConverters.toRcSourceDefinitions(registrySourceDef);
+    assertEquals(rcDefs.size(), 0);
+
+  }
+
+  @Test
+  void testToReleaseCandidateDestinationDefinitions() {
+    ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition();
+    assertEquals(ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef), Collections.emptyList());
+
+    registryDestinationDef = new ConnectorRegistryDestinationDefinition()
+        .withReleases(new ConnectorReleasesDestination().withReleaseCandidates(new ReleaseCandidatesDestination().withAdditionalProperty(
+            DOCKER_TAG,
+            new ConnectorRegistryDestinationDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY))));
+
+    List<ConnectorRegistryDestinationDefinition> rcDefs =
+        ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef);
+    assertEquals(rcDefs.size(), 1);
+    assertEquals(rcDefs.get(0).getDockerImageTag(), DOCKER_TAG);
+    assertEquals(rcDefs.get(0).getDockerRepository(), DOCKER_REPOSITORY);
+
+    registryDestinationDef = new ConnectorRegistryDestinationDefinition()
+        .withReleases(new ConnectorReleasesDestination().withReleaseCandidates(new ReleaseCandidatesDestination().withAdditionalProperty(
+            DOCKER_TAG,
+            null)));
+    rcDefs = ConnectorRegistryConverters.toRcDestinationDefinitions(registryDestinationDef);
+    assertEquals(rcDefs.size(), 0);
+
+  }
+
+  @Test
+  void testToConnectorRollout() {
+    UUID advId = UUID.randomUUID();
+    UUID initialAdvId = UUID.randomUUID();
+    UUID actorDefinitionId = UUID.randomUUID();
+    RolloutConfiguration rolloutConfiguration =
+        new RolloutConfiguration().withAdvanceDelayMinutes(1L).withInitialPercentage(10L).withMaxPercentage(100L);
+    ConnectorRegistrySourceDefinition rcDef =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdv = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+    ActorDefinitionVersion initialAdv = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId).withVersionId(initialAdvId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+
+    // Normal behavior
+
+    ConnectorRollout rollout = ConnectorRegistryConverters.toConnectorRollout(rcDef, rcAdv, initialAdv);
+
+    assertEquals(rollout.getActorDefinitionId(), actorDefinitionId);
+    assertEquals(rollout.getInitialRolloutPct(), rolloutConfiguration.getInitialPercentage());
+    assertEquals(rollout.getFinalTargetRolloutPct(), rolloutConfiguration.getMaxPercentage());
+    assertEquals(rollout.getMaxStepWaitTimeMins(), rolloutConfiguration.getAdvanceDelayMinutes());
+    assertEquals(rollout.getState(), ConnectorEnumRolloutState.INITIALIZED);
+
+    // With dockerImageTag mismatch
+    ConnectorRegistrySourceDefinition rcDefWithDockerImageTagMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag("1.0.0").withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvWithDockerImageTagMismatch = new ActorDefinitionVersion().withActorDefinitionId(actorDefinitionId)
+        .withVersionId(advId).withDockerImageTag("1.1.0").withDockerRepository(DOCKER_REPOSITORY);
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDockerImageTagMismatch, rcAdvWithDockerImageTagMismatch, initialAdv);
+    });
+
+    // With definition id mismatch
+    ConnectorRegistrySourceDefinition rcDefWithDefinitionIdTagMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY)
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvWithDefinitionIdMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository(DOCKER_REPOSITORY);
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefWithDefinitionIdTagMismatch, rcAdvWithDefinitionIdMismatch, initialAdv);
+    });
+
+    // With docker repository mismatch
+    ConnectorRegistrySourceDefinition rcDefDockerRepoMismatch =
+        new ConnectorRegistrySourceDefinition().withDockerImageTag(DOCKER_TAG).withDockerRepository("airbyte/source-faker")
+            .withSourceDefinitionId(actorDefinitionId).withReleases(new ConnectorReleasesSource().withRolloutConfiguration(rolloutConfiguration));
+    ActorDefinitionVersion rcAdvDockerRepoMismatch = new ActorDefinitionVersion().withActorDefinitionId(advId).withVersionId(advId)
+        .withDockerImageTag(DOCKER_TAG).withDockerRepository("airbyte/source-mismatch");
+    assertThrows(AssertionError.class, () -> {
+      ConnectorRegistryConverters.toConnectorRollout(rcDefDockerRepoMismatch, rcAdvDockerRepoMismatch, initialAdv);
+    });
   }
 
   @ParameterizedTest

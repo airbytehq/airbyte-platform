@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -17,6 +17,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
+import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -63,8 +64,8 @@ object SecretsHelpers {
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
-  ): SplitSecretConfig {
-    return internalSplitAndUpdateConfig(
+  ): SplitSecretConfig =
+    internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
       workspaceId,
       secretPersistence,
@@ -72,7 +73,6 @@ object SecretsHelpers {
       fullConfig,
       spec,
     )
-  }
 
   /**
    * Used to separate secrets out of some configuration. This will output a partial config that
@@ -92,8 +92,8 @@ object SecretsHelpers {
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
-  ): SplitSecretConfig {
-    return internalSplitAndUpdateConfig(
+  ): SplitSecretConfig =
+    internalSplitAndUpdateConfig(
       uuidSupplier,
       workspaceId,
       secretPersistence,
@@ -101,7 +101,6 @@ object SecretsHelpers {
       fullConfig,
       spec,
     )
-  }
 
   /**
    * Used to separate secrets out of a configuration and output a partial config that includes
@@ -125,8 +124,8 @@ object SecretsHelpers {
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
-  ): SplitSecretConfig {
-    return internalSplitAndUpdateConfig(
+  ): SplitSecretConfig =
+    internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
       workspaceId,
       secretReader,
@@ -134,7 +133,6 @@ object SecretsHelpers {
       newFullConfig,
       spec,
     )
-  }
 
   /**
    * Identical to [SecretsHelpers.splitAndUpdateConfig] with UUID supplier for testing.
@@ -147,9 +145,7 @@ object SecretsHelpers {
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
-  ): SplitSecretConfig {
-    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec)
-  }
+  ): SplitSecretConfig = internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec)
 
   /**
    * Replaces {"_secret": "full_coordinate"} objects in the partial config with the string secret
@@ -194,32 +190,32 @@ object SecretsHelpers {
    * return in an ascending alphabetical order.
    */
   @VisibleForTesting
-  fun getSortedSecretPaths(spec: JsonNode?): List<String> {
-    return JsonSchemas.collectPathsThatMeetCondition(
-      spec,
-    ) { node: JsonNode ->
-      node.fields().asSequence().toList()
-        .stream()
-        .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
-    }
-      .stream()
+  fun getSortedSecretPaths(spec: JsonNode?): List<String> =
+    JsonSchemas
+      .collectPathsThatMeetCondition(
+        spec,
+      ) { node: JsonNode ->
+        node
+          .fields()
+          .asSequence()
+          .toList()
+          .stream()
+          .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
+      }.stream()
       .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
         JsonPaths.mapJsonSchemaPathToJsonPath(
           jsonSchemaPath,
         )
-      }
-      .distinct()
+      }.distinct()
       .sorted()
       .toList()
-  }
 
-  fun getExistingCoordinateIfExists(json: JsonNode?): String? {
-    return if (json != null && json.has(COORDINATE_FIELD)) {
+  fun getExistingCoordinateIfExists(json: JsonNode?): String? =
+    if (json != null && json.has(COORDINATE_FIELD)) {
       json[COORDINATE_FIELD].asText()
     } else {
       null
     }
-  }
 
   /**
    * Internal method used to support both "split config" and "split and update config" operations.
@@ -274,9 +270,9 @@ object SecretsHelpers {
    * @param secretPersistence storage layer for secrets
    * @param coordinate reference to a secret in the persistence
    * @return a json string containing the secret value or a JSON
-   * @throws RuntimeException when a secret at that coordinate is not available in the persistence
+   * @throws SecretCoordinateException when a secret at that coordinate is not available in the persistence
    */
-  @Throws(RuntimeException::class)
+  @Throws(SecretCoordinateException::class)
   private fun getOrThrowSecretValue(
     secretPersistence: ReadOnlySecretPersistence,
     coordinate: SecretCoordinate,
@@ -285,7 +281,7 @@ object SecretsHelpers {
     if (secret.isNotBlank()) {
       return secret
     } else {
-      throw RuntimeException(
+      throw SecretCoordinateException(
         String.format(
           "That secret was not found in the store! Coordinate: %s",
           coordinate.fullCoordinate,
@@ -294,9 +290,7 @@ object SecretsHelpers {
     }
   }
 
-  private fun getCoordinateFromTextNode(node: JsonNode): SecretCoordinate {
-    return SecretCoordinate.fromFullCoordinate(node.asText())
-  }
+  private fun getCoordinateFromTextNode(node: JsonNode): SecretCoordinate = SecretCoordinate.fromFullCoordinate(node.asText())
 
   /**
    * Same as #getCoordinate but with a consistent base. For Production use.
@@ -306,15 +300,14 @@ object SecretsHelpers {
     workspaceId: UUID,
     uuidSupplier: Supplier<UUID>,
     oldSecretFullCoordinate: String?,
-  ): SecretCoordinate {
-    return getSecretCoordinate(
+  ): SecretCoordinate =
+    getSecretCoordinate(
       "airbyte_workspace_",
       secretReader,
       workspaceId,
       uuidSupplier,
       oldSecretFullCoordinate,
     )
-  }
 
   /**
    * Determines which coordinate base and version to use based off of an old version that may exist in
@@ -326,7 +319,7 @@ object SecretsHelpers {
    *
    * @param secretBasePrefix prefix for the secret base
    * @param secretReader secret persistence
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId workspace used for this config
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation.
    * @param oldSecretFullCoordinate a nullable full coordinate (base+version) retrieved from the
@@ -366,9 +359,7 @@ object SecretsHelpers {
     secretBasePrefix: String,
     secretBaseId: UUID,
     uuidSupplier: Supplier<UUID>,
-  ): String {
-    return "${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
-  }
+  ): String = "${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
 
   /**
    * Takes in the secret coordinate in form of a JSON and fetches the secret from the store.

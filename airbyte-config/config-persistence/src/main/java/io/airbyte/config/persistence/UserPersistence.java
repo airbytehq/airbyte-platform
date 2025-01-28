@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -32,17 +32,19 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider;
 import io.airbyte.db.instance.configs.jooq.generated.enums.Status;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * User Persistence.
@@ -50,9 +52,10 @@ import org.jooq.impl.DSL;
  * Perform all SQL queries and handle persisting User to the Config Database.
  *
  */
-@Slf4j
 @SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class UserPersistence {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static final String PRIMARY_KEY = "id";
 

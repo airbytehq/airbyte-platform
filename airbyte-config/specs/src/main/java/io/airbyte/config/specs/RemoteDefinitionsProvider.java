@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.specs;
@@ -22,11 +22,15 @@ import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.MediaType;
 import jakarta.inject.Singleton;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +38,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -55,6 +61,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   private final URI remoteRegistryBaseUrl;
   private final DeploymentMode deploymentMode;
   private static final int NOT_FOUND = 404;
+  private static final String CUSTOM_COMPONENTS_FILE_NAME = "components.py";
 
   private URI parsedRemoteRegistryBaseUrlOrDefault(final String remoteRegistryBaseUrl) {
     try {
@@ -180,6 +187,11 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     return String.format("metadata/%s/%s/manifest.yaml", connectorRepository, version);
   }
 
+  @VisibleForTesting
+  static String getComponentsZipPath(final String connectorRepository, final String version) {
+    return String.format("metadata/%s/%s/components.zip", connectorRepository, version);
+  }
+
   /**
    * Get remote connector registry.
    *
@@ -278,6 +290,70 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       throw new RuntimeException(
           String.format("Failed to fetch manifest file for %s:%s", connectorRepository, version), e);
     }
+  }
+
+  /**
+   * Retrieves the (optional) components.py content for the specified connector repo and version.
+   *
+   * @return Optional containing the connector manifest if it can be found, or empty otherwise.
+   */
+  public Optional<String> getConnectorCustomComponents(final String connectorRepository, final String version) {
+    final URL manifestUrl = getRemoteRegistryUrlForPath(getComponentsZipPath(connectorRepository, version));
+    final Request request = new Request.Builder()
+        .url(manifestUrl)
+        .header(ACCEPT, MediaType.APPLICATION_JSON)
+        .build();
+
+    try (final Response response = okHttpClient.newCall(request).execute()) {
+      if (response.code() == NOT_FOUND) {
+        return Optional.empty();
+      } else if (response.isSuccessful() && response.body() != null) {
+        return extractFileContentFromZip(response.body().bytes(), CUSTOM_COMPONENTS_FILE_NAME);
+      } else {
+        throw new IOException(formatStatusCodeException("getConnectorCustomComponents", response));
+      }
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          String.format("Failed to fetch custom components file for %s:%s", connectorRepository, version), e);
+    }
+  }
+
+  /**
+   * Extracts a specific file from a zip file byte array.
+   *
+   * @param zipBytes The byte array containing the zip file
+   * @param fileName The name of the file to extract
+   * @return Optional containing the file contents if found, empty otherwise
+   * @throws IOException if there is an error reading the zip file
+   */
+  private Optional<String> extractFileContentFromZip(final byte[] zipBytes, final String fileName) throws IOException {
+    try (final var zipStream = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+      return findAndExtractFile(zipStream, fileName);
+    }
+  }
+
+  /**
+   * Finds and extracts a specific file from a ZipInputStream.
+   */
+  private Optional<String> findAndExtractFile(final ZipInputStream zipStream, final String fileName) throws IOException {
+    ZipEntry entry;
+    while ((entry = zipStream.getNextEntry()) != null) {
+      if (entry.getName().equals(fileName)) {
+        return Optional.of(readStreamToString(zipStream));
+      }
+    }
+    // Log a warning if the file was not found
+    LOGGER.warn("File {} not found in zip stream", fileName);
+    return Optional.empty();
+  }
+
+  /**
+   * Reads a stream into a String using UTF-8 encoding.
+   */
+  private String readStreamToString(final InputStream inputStream) throws IOException {
+    final var outputStream = new ByteArrayOutputStream();
+    inputStream.transferTo(outputStream);
+    return outputStream.toString(StandardCharsets.UTF_8);
   }
 
   private String formatStatusCodeException(final String operationName, final Response response) {

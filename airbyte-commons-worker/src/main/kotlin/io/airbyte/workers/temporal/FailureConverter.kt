@@ -1,9 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal
 
 import io.airbyte.commons.temporal.utils.ActivityFailureClassifier
 import io.airbyte.config.ActorType
 import io.airbyte.config.FailureReason
-import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
 import kotlin.time.toKotlinDuration
@@ -26,7 +29,7 @@ class FailureConverter {
     val failureReason =
       FailureReason()
         .withFailureOrigin(if (actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION)
-        .withStacktrace(ExceptionUtils.getStackTrace(e))
+        .withStacktrace(e.stackTraceToString())
     val classifiedExc = ActivityFailureClassifier.classifyException(e)
     LoggerFactory.getLogger("test").error("exception classified as $classifiedExc")
     when (classifiedExc) {

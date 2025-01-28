@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker.activities
@@ -11,22 +11,24 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutListResponse
 import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
-import org.slf4j.LoggerFactory
 import java.io.IOException
 
-@Singleton
-class FindRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : FindRolloutActivity {
-  private val log = LoggerFactory.getLogger(FindRolloutActivityImpl::class.java)
+private val logger = KotlinLogging.logger {}
 
+@Singleton
+class FindRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : FindRolloutActivity {
   init {
-    log.info("Initialized FindRolloutActivityImpl")
+    logger.info { "Initialized FindRolloutActivityImpl" }
   }
 
   override fun findRollout(input: ConnectorRolloutActivityInputFind): List<ConnectorRolloutOutput> {
-    log.info("Finding rollout for ${input.dockerRepository}:${input.dockerImageTag}")
+    logger.info { "Finding rollout for ${input.dockerRepository}:${input.dockerImageTag}" }
 
     val client: ConnectorRolloutApi = airbyteApiClient.connectorRolloutApi
     val body =
@@ -37,14 +39,14 @@ class FindRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : 
 
     return try {
       val response: ConnectorRolloutListResponse = client.getConnectorRolloutsList(body)
-      log.info("ConnectorRolloutListResponse = ${response.connectorRollouts}")
+      logger.info { "ConnectorRolloutListResponse = ${response.connectorRollouts}" }
       response.connectorRollouts?.map {
         ConnectorRolloutActivityHelpers.mapToConnectorRollout(it)
       } ?: emptyList()
     } catch (e: IOException) {
       throw Activity.wrap(e)
     } catch (e: ClientException) {
-      throw Activity.wrap(e)
+      handleAirbyteApiClientException(e)
     }
   }
 }

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "airbyte.fullname" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.extraLabels }}
@@ -25,11 +25,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -41,13 +41,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.extraInitContainers }}
       initContainers:
@@ -55,9 +55,15 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-workload-launcher-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "workload-launcher.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
+        - name: RUNNING_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.running }}"
+        - name: SUCCEEDED_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.succeeded }}"
+        - name: UNSUCCESSFUL_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.unsuccessful }}"
         {{- if .Values.debug.enabled }}
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
@@ -131,11 +137,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKSPACE_ROOT
-        - name: LOCAL_ROOT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOCAL_ROOT
         - name: WEBAPP_URL
           valueFrom:
             configMapKeyRef:
@@ -190,27 +191,31 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
         {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
-        - name: JOB_KUBE_BUSYBOX_IMAGE
+        - name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
-        - name: JOB_KUBE_CURL_IMAGE
+              key: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+        - name: CONNECTOR_SIDECAR_IMAGE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_CURL_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
+              key: CONNECTOR_SIDECAR_IMAGE
+        - name: WORKLOAD_INIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_INIT_IMAGE
+        - name: CONTAINER_ORCHESTRATOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTAINER_ORCHESTRATOR_IMAGE
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
-        {{- end }}
         - name: JOB_MAIN_CONTAINER_CPU_REQUEST
           valueFrom:
             configMapKeyRef:
@@ -231,6 +236,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+        - name: JOB_KUBE_LOCAL_VOLUME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_LOCAL_VOLUME_ENABLED
         - name: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
           valueFrom:
             configMapKeyRef:
@@ -305,6 +315,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -495,6 +515,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
         {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
@@ -514,6 +538,11 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:

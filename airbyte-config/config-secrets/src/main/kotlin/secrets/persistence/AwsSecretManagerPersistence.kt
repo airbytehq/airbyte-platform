@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -38,7 +38,10 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^aws_secret_manager$")
 @Named("secretPersistence")
-class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val awsCache: AwsCache) : SecretPersistence {
+class AwsSecretManagerPersistence(
+  private val awsClient: AwsClient,
+  private val awsCache: AwsCache,
+) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     var secretString = ""
     try {
@@ -179,33 +182,46 @@ class AwsClient(
     // let the SDK's default credential provider take over.
     if (serializedConfig == null) {
       logger.debug { "fetching access key/secret key based AWS secret manager" }
-      AWSSecretsManagerClientBuilder.standard().withRegion(awsRegion).apply {
-        if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
-          withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-        }
-      }.build()
-    } else {
-      logger.debug { "fetching role based AWS secret manager" }
-      val stsClient =
-        AWSSecurityTokenServiceClientBuilder.standard().withRegion(awsRegion).apply {
+      AWSSecretsManagerClientBuilder
+        .standard()
+        .withRegion(awsRegion)
+        .apply {
           if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
             withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
           }
         }.build()
+    } else {
+      logger.debug { "fetching role based AWS secret manager" }
+      val stsClient =
+        AWSSecurityTokenServiceClientBuilder
+          .standard()
+          .withRegion(awsRegion)
+          .apply {
+            if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
+              withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+            }
+          }.build()
 
       val credentialsProvider =
-        STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
+        STSAssumeRoleSessionCredentialsProvider
+          .Builder(roleArn, "airbyte")
           .withStsClient(stsClient)
           .withExternalId(externalId)
           .build()
 
-      AWSSecretsManagerClientBuilder.standard().withCredentials(credentialsProvider).withRegion(awsRegion).build()
+      AWSSecretsManagerClientBuilder
+        .standard()
+        .withCredentials(credentialsProvider)
+        .withRegion(awsRegion)
+        .build()
     }
   }
 }
 
 @Singleton
-class AwsCache(private val awsClient: AwsClient) {
+class AwsCache(
+  private val awsClient: AwsClient,
+) {
   val cache: SecretCache by lazy {
     SecretCache(awsClient.client)
   }

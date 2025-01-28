@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -32,7 +32,6 @@ import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
@@ -54,6 +53,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType;
 import io.airbyte.config.SecretPersistenceCoordinate;
 import io.airbyte.config.SourceConnection;
@@ -204,9 +204,7 @@ public class DbConverter {
         .withOrganizationId(record.get(ORGANIZATION.ID))
         .withName(record.get(ORGANIZATION.NAME))
         .withUserId(record.get(ORGANIZATION.USER_ID))
-        .withEmail(record.get(ORGANIZATION.EMAIL))
-        .withPba(record.get(ORGANIZATION.PBA))
-        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+        .withEmail(record.get(ORGANIZATION.EMAIL));
   }
 
   /**
@@ -222,7 +220,8 @@ public class DbConverter {
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
-        .withName(record.get(ACTOR.NAME));
+        .withName(record.get(ACTOR.NAME))
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
   }
 
   /**
@@ -238,7 +237,8 @@ public class DbConverter {
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
-        .withName(record.get(ACTOR.NAME));
+        .withName(record.get(ACTOR.NAME))
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
   }
 
   /**
@@ -272,7 +272,7 @@ public class DbConverter {
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class))
         .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
@@ -300,7 +300,7 @@ public class DbConverter {
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**
@@ -429,6 +429,7 @@ public class DbConverter {
             : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()))
         .withBaseActorDefinitionVersionId(record.get(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID))
         .withContributionPullRequestUrl(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL))
+        .withComponentsFileContent(record.get(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT))
         .withContributionActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID));
   }
 
@@ -487,6 +488,7 @@ public class DbConverter {
         .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
         .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
         .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL))
+        .withDeadlineAction(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.DEADLINE_ACTION))
         .withScopedImpact(scopedImpact);
   }
 
@@ -524,7 +526,8 @@ public class DbConverter {
         .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
-        .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE));
+        .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
+        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

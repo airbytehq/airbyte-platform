@@ -1,0 +1,122 @@
+{{- if .Values.cron.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-cron
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.cron.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.cron.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.cron.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.cron.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.cron.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.cron.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.cron.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.cron.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.cron.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      automountServiceAccountToken: true
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.cron.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.cron.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+        - name: airbyte-cron
+          image: {{ include "imageUrl" (list .Values.cron.image $) }}
+          imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
+          env:
+
+          {{- include "airbyte.common.envs" . | nindent 10 }}
+          {{- include "airbyte.cron.envs" . | nindent 10 }}
+          {{- include "airbyte.database.envs" . | nindent 10 }}
+          {{- include "airbyte.database.migrations.envs" . | nindent 10 }}
+          {{- include "airbyte.featureFlags.envs" . | nindent 10 }}
+          {{- include "airbyte.metrics.envs" . | nindent 10 }}
+          {{- include "airbyte.micronaut.envs" . | nindent 10 }}
+          {{- include "airbyte.temporal.envs" . | nindent 10 }}
+          {{- include "airbyte.tracking.envs" . | nindent 10 }}
+          {{- include "airbyte.worker.envs" . | nindent 10 }}
+
+          {{- if (eq .Values.global.edition "enterprise") }}
+          {{- include "airbyte.enterprise.envs" . | nindent 10 }}
+          {{- end }}
+
+          # Values from secret
+          {{- if .Values.cron.secrets }}
+          {{- range $k, $v := .Values.cron.secrets }}
+          - name: {{ $k }}
+            valueFrom:
+              secretKeyRef:
+                name: cron-secrets
+                key: {{ $k }}
+          {{- end }}
+          {{- end }}
+
+          # Values from env
+          {{- if or .Values.cron.env_vars .Values.global.env_vars }}
+          {{- range $k, $v := mergeOverwrite .Values.cron.env_vars .Values.global.env_vars }}
+          - name: {{ $k }}
+            value: {{ $v | quote }}
+          {{- end }}
+          {{- end }}
+
+          # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+          {{- if .Values.cron.extraEnv }}
+          {{- toYaml .Values.cron.extraEnv | nindent 10 }}
+          {{- end }}
+
+          {{- if .Values.cron.containerSecurityContext }}
+          securityContext: {{- toYaml .Values.cron.containerSecurityContext | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.cron.resources }}
+          resources: {{- toYaml .Values.cron.resources | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.cron.extraVolumeMounts }}
+          volumeMounts: {{ toYaml .Values.cron.extraVolumeMounts | nindent 10 }}
+          {{- end }}
+
+        {{- if .Values.cron.extraContainers }}
+          {{ toYaml .Values.cron.extraContainers | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraContainers }}
+          {{ toYaml .Values.global.extraContainers | nindent 8 }}
+        {{- end }}
+      securityContext: {{- toYaml .Values.cron.podSecurityContext | nindent 10 }}
+      {{- if .Values.cron.extraVolumes }}
+      volumes: {{ toYaml .Values.cron.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- end }}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -18,7 +18,7 @@ import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
@@ -33,17 +33,20 @@ import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JobCreationAndStatusUpdateActivityImpl.
  */
-@Slf4j
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
@@ -65,7 +68,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public JobCreationOutput createNewJob(final JobCreationInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
-      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId()));
+      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId(), input.isScheduled()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {

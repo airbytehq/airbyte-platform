@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
+import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
-import io.airbyte.commons.logging.LogClientType as StorageType
 
 interface StorageConfig {
   /**
@@ -27,10 +27,11 @@ interface StorageConfig {
  */
 @Singleton
 data class StorageBucketConfig(
-  @Value("\${$STORAGE_BUCKET.log}") val log: String,
-  @Value("\${$STORAGE_BUCKET.state}") val state: String,
-  @Value("\${$STORAGE_BUCKET.workload-output}") val workloadOutput: String,
-  @Value("\${$STORAGE_BUCKET.activity-payload}") val activityPayload: String,
+  @Value("\${$STORAGE_BUCKET_LOG}") val log: String,
+  @Value("\${$STORAGE_BUCKET_STATE}") val state: String,
+  @Value("\${$STORAGE_BUCKET_WORKLOAD_OUTPUT}") val workloadOutput: String,
+  @Value("\${$STORAGE_BUCKET_ACTIVITY_PAYLOAD}") val activityPayload: String,
+  @Value("\${$STORAGE_BUCKET_AUDIT_LOGGING:}") val auditLogging: String?,
 )
 
 /**
@@ -50,6 +51,9 @@ data class AzureStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.AZURE.name)
       put(EnvVar.AZURE_STORAGE_CONNECTION_STRING, connectionString)
     }.mapKeys { it.key.name }
@@ -74,6 +78,9 @@ data class GcsStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.GCS.name)
       put(EnvVar.GOOGLE_APPLICATION_CREDENTIALS, applicationCredentials)
     }.mapKeys { it.key.name }
@@ -102,6 +109,9 @@ data class S3StorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.S3.name)
       accessKey?.let {
         put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
@@ -136,6 +146,9 @@ data class MinioStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.MINIO.name)
       put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
       put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
@@ -154,7 +167,7 @@ data class MinioStorageConfig(
 @Requires(property = STORAGE_TYPE, pattern = "(?i)^local$")
 class LocalStorageConfig(
   override val buckets: StorageBucketConfig,
-  @Value("\${$STORAGE_LOCAL.root:/tmp/local-storage}") val root: String,
+  @Parameter val root: String = STORAGE_MOUNT,
 ) : StorageConfig {
   override fun toEnvVarMap(): Map<String, String> =
     buildMap {
@@ -162,8 +175,10 @@ class LocalStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.LOCAL.name)
-      put(EnvVar.LOCAL_ROOT, root)
     }.mapKeys { it.key.name }
 }
 

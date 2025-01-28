@@ -105,7 +105,8 @@
       "public": true,
       "custom": false,
       "releaseStage": "alpha",
-      "supportLevel": "community"
+      "supportLevel": "community",
+      "supportsFileTransfer": true
     },
     {
       "destinationDefinitionId": "b4c5d105-31fd-4817-96b6-cb923bfc04cb",
@@ -219,7 +220,8 @@
             }
           }
         ]
-      }
+      },
+      "supportsFileTransfer": false
     },
     {
       "destinationDefinitionId": "22f6c74f-5699-40ff-833c-4a879ea40133",

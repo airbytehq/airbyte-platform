@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -11,8 +11,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.Version;
@@ -173,20 +178,22 @@ class CustomerioNotificationClientTest {
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     mockWebServer.enqueue(new MockResponse());
 
-    SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(RANDOM_INPUT).build())
-        .source(SourceInfo.builder().name(RANDOM_INPUT).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
-        .startedAt(Instant.ofEpochSecond(1000000))
-        .finishedAt(Instant.ofEpochSecond(2000000))
-        .isSuccess(false)
-        .bytesEmitted(123240L)
-        .bytesCommitted(9000L)
-        .recordsEmitted(780)
-        .recordsCommitted(600)
-        .errorMessage(RANDOM_INPUT)
-        .build();
+    SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, null, null),
+        new SourceInfo(null, RANDOM_INPUT, null),
+        new DestinationInfo(null, RANDOM_INPUT, null),
+        10L,
+        false,
+        Instant.ofEpochSecond(1000000),
+        Instant.ofEpochSecond(2000000),
+        123240L,
+        9000L,
+        780,
+        600,
+        0,
+        0,
+        RANDOM_INPUT);
     final boolean result =
         customerioNotificationClient.notifyConnectionDisabled(summary, WORKSPACE.getEmail());
 
@@ -207,19 +214,34 @@ class CustomerioNotificationClientTest {
     String sourceName = "facebook marketing";
     CatalogDiff diff = new CatalogDiff()
         .addTransformsItem(
+            new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
+                .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name("updatedStream"))
+                .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+                    FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true))))
+        .addTransformsItem(
             new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(new StreamDescriptor().name("foo")))
         .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-            .streamDescriptor(new StreamDescriptor().name("removed")));
+            .streamDescriptor(new StreamDescriptor().name("removed")))
+        .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+            .updateStream(new StreamTransformUpdateStream()
+                .streamAttributeTransforms(List.of(
+                    new StreamAttributeTransform()
+                        .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
+                        .updatePrimaryKey(
+                            new StreamAttributePrimaryKeyUpdate()
+                                .newPrimaryKey(List.of(List.of("new_pk")))))))
+            .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
     String recipient = "airbyte@airbyte.io";
     String transactionMessageId = "455";
-    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).build())
-        .connectionInfo(ConnectionInfo.builder().id(connectionId).name(connectionName).build())
-        .sourceInfo(SourceInfo.builder().id(sourceId).name(sourceName).build())
-        .catalogDiff(diff)
-        .build();
+    SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workspaceId, workspaceName, null),
+        new ConnectionInfo(connectionId, connectionName, null),
+        new SourceInfo(sourceId, sourceName, null),
+        false,
+        diff);
+
     ObjectNode node =
-        CustomerioNotificationClient.buildSchemaPropagationJson(notification, recipient, transactionMessageId);
+        CustomerioNotificationClient.buildSchemaChangeJson(notification, recipient, transactionMessageId);
 
     assertEquals(transactionMessageId, node.get("transactional_message_id").asText());
     assertEquals(recipient, node.get("to").asText());
@@ -227,8 +249,12 @@ class CustomerioNotificationClientTest {
     assertEquals(connectionName, node.get("message_data").get("connection_name").asText());
 
     assertTrue(node.get("message_data").get("changes").get("new_streams").isArray());
+    assertEquals(1, node.get("message_data").get("changes").get("new_streams").size());
     assertTrue(node.get("message_data").get("changes").get("deleted_streams").isArray());
+    assertEquals(1, node.get("message_data").get("changes").get("deleted_streams").size());
     assertTrue(node.get("message_data").get("changes").get("modified_streams").isObject());
+    assertEquals(1, node.get("message_data").get("changes").get("deleted_streams").size());
+    assertEquals(1, node.get("message_data").get("changes").get("modified_streams").get("updatedStream").get("deleted").size());
   }
 
   @Test
@@ -244,21 +270,22 @@ class CustomerioNotificationClientTest {
     Instant startedAt = Instant.ofEpochSecond(1000000);
     Instant finishedAt = Instant.ofEpochSecond(1070000);
 
-    SyncSummary syncSummary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).url("http://workspace").build())
-        .source(SourceInfo.builder().id(sourceId).name(sourceName).url("http://source").build())
-        .destination(DestinationInfo.builder().id(destinationId).name(destinationName).url("http://source").build())
-        .connection(ConnectionInfo.builder().id(connectionId).name(connectionName).url("http://connection").build())
-        .jobId(100L)
-        .isSuccess(false)
-        .errorMessage("Connection to the source failed")
-        .startedAt(startedAt)
-        .finishedAt(finishedAt)
-        .bytesEmitted(1000L)
-        .bytesCommitted(9000L)
-        .recordsEmitted(50)
-        .recordsCommitted(48)
-        .build();
+    SyncSummary syncSummary = new SyncSummary(
+        new WorkspaceInfo(workspaceId, workspaceName, "http://workspace"),
+        new ConnectionInfo(connectionId, connectionName, "http://connection"),
+        new SourceInfo(sourceId, sourceName, "http://source"),
+        new DestinationInfo(destinationId, destinationName, "http://source"),
+        100L,
+        false,
+        startedAt,
+        finishedAt,
+        1000L,
+        9000L,
+        50,
+        48,
+        0L,
+        0L,
+        "Connection to the source failed");
     String email = "joe@foobar.com";
     String transactionId = "201";
 
@@ -273,6 +300,7 @@ class CustomerioNotificationClientTest {
     JsonNode expected = mapper.readTree(jsonContent);
     ObjectNode node = CustomerioNotificationClient.buildSyncCompletedJson(syncSummary, email, transactionId);
     assertEquals(expected.get("message_data").get("bytesEmitted"), node.get("message_data").get("bytesEmitted"));
+    assertEquals(expected.size(), node.size());
     assertEquals(expected, node);
   }
 

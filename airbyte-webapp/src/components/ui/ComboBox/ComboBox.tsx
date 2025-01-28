@@ -1,5 +1,4 @@
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import React, { ReactNode, useMemo, useState } from "react";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
@@ -54,6 +53,8 @@ export interface ComboBoxProps extends BaseProps {
   allowCustomValue?: boolean;
   optionsConfig?: OptionsConfig;
   "data-testid"?: string;
+  placeholder?: string;
+  className?: string;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -202,6 +203,8 @@ export const ComboBox = ({
   filterOptions = true,
   allowCustomValue,
   "data-testid": testId,
+  placeholder,
+  className,
 }: ComboBoxProps) => {
   // Stores the value that the user types in to filter the options
   const [query, setQuery] = useState("");
@@ -248,44 +251,44 @@ export const ComboBox = ({
       immediate
       as="div"
       data-testid={testId}
+      className={className}
     >
-      <Float adaptiveWidth placement="bottom-start" as={React.Fragment}>
-        <ComboboxInput as={React.Fragment}>
-          <Input
-            {...fieldInputProps}
-            spellCheck={false}
-            value={currentInputValue}
-            error={error}
-            adornment={
-              adornment ?? (
-                <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
-                  <Icon type="caretDown" />
-                </ComboboxButton>
-              )
-            }
-            autoComplete="off"
-            onChange={(event) => {
-              const newQuery = event.target.value;
-              setQuery(newQuery);
+      <ComboboxInput as={React.Fragment}>
+        <Input
+          {...fieldInputProps}
+          spellCheck={false}
+          value={currentInputValue}
+          error={error}
+          adornment={
+            adornment ?? (
+              <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
+                <Icon type="caretDown" />
+              </ComboboxButton>
+            )
+          }
+          autoComplete="off"
+          onChange={(event) => {
+            const newQuery = event.target.value;
+            setQuery(newQuery);
 
-              const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
-              if (allowCustomValue) {
-                onChange(selectedOption?.value ?? newQuery);
-              } else if (selectedOption) {
-                onChange(selectedOption.value);
-              } else {
-                onChange("");
-              }
-            }}
-            onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
-            disabled={disabled}
-            data-testid={testId ? `${testId}--input` : undefined}
-          />
-        </ComboboxInput>
-        <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
-          <Options optionSections={displayOptionSections} {...optionsConfig} />
-        </ComboboxOptions>
-      </Float>
+            const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
+            if (allowCustomValue) {
+              onChange(selectedOption?.value ?? newQuery);
+            } else if (selectedOption) {
+              onChange(selectedOption.value);
+            } else {
+              onChange("");
+            }
+          }}
+          onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
+          disabled={disabled}
+          data-testid={testId ? `${testId}--input` : undefined}
+          placeholder={placeholder}
+        />
+      </ComboboxInput>
+      <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false} anchor="bottom start">
+        <Options optionSections={displayOptionSections} {...optionsConfig} />
+      </ComboboxOptions>
     </Combobox>
   );
 };

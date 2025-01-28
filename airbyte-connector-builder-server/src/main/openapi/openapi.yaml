@@ -227,7 +227,19 @@ components:
           description: The LOG AirbyteMessages that were emitted during the read of this slice
           items:
             type: object
-            # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteLogMessage"
+            required:
+              - message
+              - level
+            properties:
+              message:
+                type: string
+              level:
+                type: string
+                enum: ["INFO", "WARN", "ERROR", "FATAL"]
+              internal_message:
+                type: string
+              stacktrace:
+                type: string
         slices:
           type: array
           description: The stream slices returned from the read command. If no stream slicer is configured, this should contain a single item containing all of the results.

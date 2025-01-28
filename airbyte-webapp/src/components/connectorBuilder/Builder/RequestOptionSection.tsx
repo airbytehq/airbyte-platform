@@ -1,12 +1,13 @@
 import { useIntl } from "react-intl";
 
+import { AssistButton } from "./Assist/AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
 import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
 
-type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
+type RequestOptionSectionProps =
   | {
       inline: false;
       basePath: `formValues.streams.${number}.requestOptions`;
@@ -15,12 +16,10 @@ type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
   | {
       inline: true;
       basePath: "formValues.global.authenticator.login_requester.requestOptions";
-    }
-);
+    };
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
-
   const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
@@ -36,7 +35,6 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
           key="json_list"
           manifestPath="HttpRequester.properties.request_body_json"
           optional
-          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -52,7 +50,6 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
           key="form_list"
           manifestPath="HttpRequester.properties.request_body_data"
           optional
-          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -67,7 +64,6 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
           type="jsoneditor"
           path={concatPath(props.basePath, "requestBody.value")}
           manifestPath="HttpRequester.properties.request_body_json"
-          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -83,7 +79,6 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
           path={concatPath(props.basePath, "requestBody.value")}
           label={formatMessage({ id: "connectorBuilder.requestOptions.stringFreeform.value" })}
           manifestPath="HttpRequester.properties.request_body_data"
-          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -95,19 +90,16 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         path={concatPath(props.basePath, "requestParameters")}
         manifestPath="HttpRequester.properties.request_parameters"
         optional
-        omitInterpolationContext={props.omitInterpolationContext}
       />
       <KeyValueListField
         path={concatPath(props.basePath, "requestHeaders")}
         manifestPath="HttpRequester.properties.request_headers"
         optional
-        omitInterpolationContext={props.omitInterpolationContext}
       />
       <BuilderOneOf<BuilderRequestBody>
         path={concatPath(props.basePath, "requestBody")}
         label={formatMessage({ id: "connectorBuilder.requestOptions.requestBody" })}
         options={getBodyOptions()}
-        omitInterpolationContext={props.omitInterpolationContext}
       />
     </>
   );
@@ -121,6 +113,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         currentStreamIndex: props.currentStreamIndex,
         componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
+      labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
+      label="Request Options"
     >
       {content}
     </BuilderCard>

@@ -1,0 +1,179 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+@use "scss/mixins";
+
+$border-radius: variables.$border-radius-lg;
+$row-height: 40px;
+
+// ------- <table/> --------
+.table {
+  width: 100%;
+  border-spacing: 0;
+  border-radius: $border-radius;
+}
+
+// --------- <th/> ---------
+.th {
+  text-align: left;
+  height: $row-height;
+  padding: 0 variables.$spacing-lg;
+  white-space: nowrap;
+  background-color: colors.$grey-50;
+  border-top: variables.$border-thin solid colors.$grey-200;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}
+
+// --------- <tr/> ---------
+
+@mixin status-background-color($color, $hoverColor) {
+  background-color: $color;
+
+  &:hover {
+    background-color: $hoverColor;
+  }
+}
+
+.tr {
+  @include status-background-color(colors.$foreground, colors.$grey-30);
+
+  height: $row-height;
+
+  &.emptyPlaceholder {
+    height: $row-height * 2;
+
+    &:hover {
+      background-color: colors.$foreground;
+    }
+  }
+
+  &.removed {
+    @include status-background-color(colors.$red-30, colors.$red-40);
+  }
+
+  &.added {
+    @include status-background-color(colors.$green-30, colors.$green-50);
+  }
+
+  &.changed {
+    @include status-background-color(colors.$blue-30, colors.$blue-40);
+  }
+
+  &.disabled {
+    background-color: colors.$grey-50;
+  }
+
+  &.highlighted {
+    animation: highlight 2s forwards;
+  }
+
+  &:last-child > td:first-child {
+    border-bottom-left-radius: $border-radius;
+  }
+
+  &:last-child > td:last-child {
+    border-bottom-right-radius: $border-radius;
+  }
+
+  [data-showonhover="true"] {
+    visibility: hidden;
+  }
+
+  &:hover,
+  &:focus-within {
+    [data-showonhover] {
+      visibility: visible;
+    }
+  }
+
+  @keyframes highlight {
+    0%,
+    50% {
+      position: relative;
+      box-shadow: variables.$box-shadow-highlight colors.$blue-200;
+      z-index: 2;
+    }
+
+    99% {
+      z-index: 2;
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+      z-index: 0;
+    }
+  }
+}
+
+// --------- <td/> ---------
+.td {
+  padding: 0 variables.$spacing-lg;
+  word-wrap: break-word;
+  border-bottom: variables.$border-thin solid colors.$grey-50;
+}
+
+.streamOrFieldNameCell {
+  min-width: 200px;
+  max-width: 0;
+}
+
+.syncModeCell {
+  width: 20%;
+  min-width: 270px;
+}
+
+.pkCell,
+.cursorCell,
+.hashCell {
+  width: 10%;
+}
+
+.amountOfFieldsCell {
+  width: 5%;
+}
+
+// checkbox
+.indeterminate {
+  border-color: colors.$grey-400;
+  background-color: colors.$grey-400;
+}
+
+.searchInputContainer {
+  min-width: variables.$width-search-bar;
+}
+
+// Sticky elements
+$initial-top: calc(-1 * (variables.$spacing-xl + variables.$border-thin));
+$controls-container-fixed-height: 55px;
+$tabs-container-fixed-height: 40px;
+$table-header-fixed-height: 40px;
+
+.stickyElement,
+%stickyElement {
+  position: sticky;
+  z-index: z-indices.$tableStickyHeader;
+  background-color: colors.$foreground;
+}
+
+.stickyControlsContainer {
+  @extend %stickyElement;
+
+  top: $initial-top;
+  height: $controls-container-fixed-height;
+}
+
+.stickyTabsContainer {
+  @extend %stickyElement;
+
+  top: $initial-top + $controls-container-fixed-height;
+  height: $tabs-container-fixed-height;
+  padding-left: variables.$spacing-lg; // align with namespace header checkbox
+}
+
+.stickyTableHeader {
+  @extend %stickyElement;
+
+  top: $initial-top + $controls-container-fixed-height + $tabs-container-fixed-height;
+  height: $table-header-fixed-height;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -56,11 +56,11 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      jobId.toString(),
       Scope.JOB,
       userId,
-      PermissionType.WORKSPACE_EDITOR,
+      PermissionType.WORKSPACE_RUNNER,
     )
 
     val jobResponse: JobResponse? =
@@ -89,12 +89,23 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobCreateRequest.connectionId),
-      Scope.CONNECTION,
-      userId,
-      PermissionType.WORKSPACE_EDITOR,
-    )
+    // Only Editor and above should be able to run a Clear.
+    when (jobCreateRequest.jobType) {
+      JobTypeEnum.CLEAR ->
+        apiAuthorizationHelper.checkWorkspacePermission(
+          jobCreateRequest.connectionId,
+          Scope.CONNECTION,
+          userId,
+          PermissionType.WORKSPACE_EDITOR,
+        )
+      else ->
+        apiAuthorizationHelper.checkWorkspacePermission(
+          jobCreateRequest.connectionId,
+          Scope.CONNECTION,
+          userId,
+          PermissionType.WORKSPACE_RUNNER,
+        )
+    }
 
     val connectionResponse: ConnectionResponse =
       trackingHelper.callWithTracker(
@@ -198,8 +209,8 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobId.toString()),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      jobId.toString(),
       Scope.JOB,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -244,14 +255,14 @@ open class JobsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
-      apiAuthorizationHelper.checkWorkspacePermissions(
-        listOf(connectionId),
+      apiAuthorizationHelper.checkWorkspacePermission(
+        connectionId,
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
       )
     } else {
-      apiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacesPermission(
         workspaceIds?.map { it.toString() } ?: emptyList(),
         Scope.WORKSPACES,
         userId,

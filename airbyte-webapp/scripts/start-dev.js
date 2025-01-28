@@ -5,6 +5,16 @@ const path = require("node:path");
 const { default: select, Separator } = require("@inquirer/select");
 const chalk = require("chalk");
 const groupBy = require("lodash/groupBy");
+const optionator = require("optionator")({
+  options: [
+    {
+      option: "preview",
+      alias: "p",
+      type: "Boolean",
+      description: "Run the webapp in a production build using `vite preview`.",
+    },
+  ],
+});
 
 const environments = require("../environments.json");
 
@@ -64,15 +74,20 @@ async function preStart() {
 
 async function main() {
   try {
+    const options = optionator.parse(process.argv);
+
     const selectedEnv =
-      process.argv[2]?.replace(/^--/, "") ||
+      options._[0] ||
       (await select({
         message: "Select your backend environment to develop against:",
         choices,
         pageSize: 15,
       }));
-
-    console.log(`Selected environment: ${chalk.bold.cyan(selectedEnv)}`);
+    if (options.preview) {
+      console.log(`Running as preview against environment: ${chalk.bold.cyan(selectedEnv)}`);
+    } else {
+      console.log(`Selected environment: ${chalk.bold.cyan(selectedEnv)}`);
+    }
 
     const env = environments[selectedEnv];
     if (!env) {
@@ -80,22 +95,41 @@ async function main() {
     }
 
     console.log(
-      `\n💡 Run ${chalk.cyan(`pnpm start --${selectedEnv}`)} to run against this environment without a select prompt.`
+      `\n💡 Run ${chalk.cyan(
+        `pnpm start ${!!options.preview ? "--preview " : ""}${selectedEnv}`
+      )} to run against this environment without a select prompt.`
     );
 
     await preStart();
 
-    console.log("\n> pnpm vite\n");
-    await spawn("pnpm", ["vite"], {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        ...(env.cloudEnv ? { NODE_OPTIONS: "-r ./scripts/local-cloud-dev.js", CLOUD_ENV: env.cloudEnv } : {}),
-        ...(env.envFile
-          ? { NODE_OPTIONS: "-r dotenv/config", DOTENV_CONFIG_PATH: path.join(__dirname, "..", env.envFile) }
-          : {}),
-      },
-    });
+    if (options.preview) {
+      console.log(`\n> pnpm vite build && pnpm vite preview --port ${env.cloudEnv ? "3001" : "3000"}\n`);
+      await spawn("pnpm", ["vite", "build"], {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          ...(env.cloudEnv ? { NODE_OPTIONS: "-r ./scripts/local-cloud-dev.js", CLOUD_ENV: env.cloudEnv } : {}),
+          ...(env.envFile
+            ? { NODE_OPTIONS: "-r dotenv/config", DOTENV_CONFIG_PATH: path.join(__dirname, "..", env.envFile) }
+            : {}),
+        },
+      });
+      await spawn("pnpm", ["vite", "preview", "--port", `${env.cloudEnv ? "3001" : "3000"}`], {
+        stdio: "inherit",
+      });
+    } else {
+      console.log("\n> pnpm vite\n");
+      await spawn("pnpm", ["vite"], {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          ...(env.cloudEnv ? { NODE_OPTIONS: "-r ./scripts/local-cloud-dev.js", CLOUD_ENV: env.cloudEnv } : {}),
+          ...(env.envFile
+            ? { NODE_OPTIONS: "-r dotenv/config", DOTENV_CONFIG_PATH: path.join(__dirname, "..", env.envFile) }
+            : {}),
+        },
+      });
+    }
   } catch (e) {
     if (e.name !== "ExitPromptError") {
       throw e;

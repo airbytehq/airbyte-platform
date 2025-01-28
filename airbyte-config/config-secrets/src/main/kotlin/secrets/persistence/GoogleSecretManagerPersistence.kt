@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -84,7 +84,8 @@ class GoogleSecretManagerPersistence(
     const val LATEST = "latest"
 
     val replicationPolicy: Replication =
-      Replication.newBuilder()
+      Replication
+        .newBuilder()
         .setAutomatic(Replication.Automatic.newBuilder().build())
         .build()
   }
@@ -100,19 +101,46 @@ class GoogleSecretManagerPersistence(
 
         var expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "false"))
         expiry?.let {
-          val expireTime = com.google.protobuf.Timestamp.newBuilder().setSeconds(it.epochSecond).build()
+          val expireTime =
+            com.google.protobuf.Timestamp
+              .newBuilder()
+              .setSeconds(it.epochSecond)
+              .build()
           secretBuilder.setExpireTime(expireTime)
           expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "true"))
         }
 
         metricClient.count(OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, 1, *expTag.toTypedArray())
-        client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
-      }
 
-      val name = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
-      val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(payload)).build()
-      client.addSecretVersion(name, secretPayload)
+        logger.info { "GoogleSecretManagerPersistence createSecret coordinate=$coordinate expiry=$expiry" }
+
+        val secret = client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
+        try {
+          addSecretVersion(client, coordinate, payload)
+        } catch (e: Exception) {
+          client.deleteSecret(secret.name)
+          throw e
+        }
+      } else {
+        addSecretVersion(client, coordinate, payload)
+        logger.warn {
+          "Added a new version to a secret with existing versions name=${SecretName.of(
+            gcpProjectId,
+            coordinate.fullCoordinate,
+          )} coordinate=$coordinate"
+        }
+      }
     }
+  }
+
+  fun addSecretVersion(
+    client: SecretManagerServiceClient,
+    coordinate: SecretCoordinate,
+    payload: String,
+  ) {
+    val name = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+    val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(payload)).build()
+    client.addSecretVersion(name, secretPayload)
   }
 
   override fun delete(coordinate: SecretCoordinate) {
@@ -151,7 +179,8 @@ class GoogleSecretManagerServiceClient(
     val credentialsByteStream = ByteArrayInputStream(gcpCredentialsJson.toByteArray(StandardCharsets.UTF_8))
     val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
     val clientSettings =
-      SecretManagerServiceSettings.newBuilder()
+      SecretManagerServiceSettings
+        .newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
         .build()
     return SecretManagerServiceClient.create(clientSettings)

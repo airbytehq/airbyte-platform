@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.client
@@ -15,15 +15,18 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutManualRolloutReques
 import io.airbyte.api.client.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutReadRequestBody
 import io.airbyte.api.client.model.generated.ConnectorRolloutStateTerminal
+import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.configuration.picocli.PicocliRunner
 import jakarta.inject.Inject
-import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 val objectMapper =
   jacksonObjectMapper().apply {
@@ -85,8 +88,6 @@ class ConnectorRolloutCLI : Runnable {
   private var actorIds: List<UUID>? = null
 
   companion object {
-    private val log = LoggerFactory.getLogger(ConnectorRolloutCLI::class.java)
-
     @JvmStatic
     fun main(args: Array<String>) {
       PicocliRunner.run(ConnectorRolloutCLI::class.java, *args)
@@ -102,7 +103,7 @@ class ConnectorRolloutCLI : Runnable {
     val rolloutClient = airbyteApiClient.connectorRolloutApi
 
     val rolloutCommand = RolloutCommand.fromString(command)
-    log.info("CLI Running command: $rolloutCommand")
+    logger.info { "CLI Running command: $rolloutCommand" }
 
     when (rolloutCommand) {
       RolloutCommand.START -> {
@@ -111,6 +112,8 @@ class ConnectorRolloutCLI : Runnable {
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
+            UUID(0, 0),
+            ConnectorRolloutStrategy.MANUAL,
           )
         startWorkflow(rolloutClient, startInput)
       }
@@ -132,6 +135,7 @@ class ConnectorRolloutCLI : Runnable {
             dockerRepository,
             dockerImageTag,
             actorDefinitionId,
+            UUID(0, 0),
             rolloutId!!,
             actorIds!!,
           )
@@ -144,6 +148,7 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
+            UUID(0, 0),
             ConnectorRolloutStateTerminal.valueOf(ConnectorRolloutFinalState.SUCCEEDED.toString()),
             null,
             null,
@@ -157,6 +162,7 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
+            UUID(0, 0),
             ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
             null,
             null,
@@ -170,14 +176,15 @@ class ConnectorRolloutCLI : Runnable {
             dockerImageTag,
             actorDefinitionId,
             rolloutId!!,
-            ConnectorRolloutStateTerminal.CANCELED_ROLLED_BACK,
+            UUID(0, 0),
+            ConnectorRolloutStateTerminal.CANCELED,
             null,
             null,
           )
         finalizeRollout(rolloutClient, finalizeInput)
       }
       else -> {
-        log.info("CLI unknown command $command")
+        logger.info { "CLI unknown command $command" }
         CommandLine.usage(this, System.out)
       }
     }
@@ -187,6 +194,7 @@ class ConnectorRolloutCLI : Runnable {
     client: ConnectorRolloutApi,
     input: ConnectorRolloutManualStartRequestBody,
   ) {
+    logFormatted("CLI.startWorkflow using client", client)
     logFormatted("CLI.startWorkflow with input", input)
     logFormatted("CLI Rollout workflows status", client.manualStartConnectorRollout(input))
   }
@@ -227,6 +235,6 @@ class ConnectorRolloutCLI : Runnable {
     data: T,
   ) {
     val jsonOutput = objectMapper.writeValueAsString(data)
-    log.info("$message:\n$jsonOutput")
+    logger.info { "$message:\n$jsonOutput" }
   }
 }

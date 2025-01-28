@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.repositories;
@@ -460,7 +460,8 @@ class StreamStatusesRepositoryTest {
     jooqDslContext.execute(
         "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId1 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
     jooqDslContext.execute(
-        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId2 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId2 + ", '" + Fixtures.connectionId1
+            + "', 'succeeded', 'refresh')");
     jooqDslContext.execute(
         "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId3 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
     jooqDslContext.execute(

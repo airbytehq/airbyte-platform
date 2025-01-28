@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
+import * as yup from "yup";
 
 import { useCurrentWorkspace, useGetDestinationDefinitionSpecification } from "core/api";
 import {
@@ -22,8 +23,13 @@ import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
   SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
-import { createConnectionValidationSchema } from "./schema";
-import { updateStreamSyncMode } from "../syncCatalog/SyncCatalog/updateStreamSyncMode";
+import {
+  namespaceDefinitionSchema,
+  namespaceFormatSchema,
+  syncCatalogSchema,
+  useGetScheduleDataSchema,
+} from "./schema";
+import { updateStreamSyncMode } from "../SyncCatalogTable/utils";
 
 /**
  * react-hook-form form values type for the connection form
@@ -63,12 +69,29 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
  * useConnectionValidationSchema with additional arguments
  */
 export const useConnectionValidationSchema = () => {
-  const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-
+  const scheduleDataSchema = useGetScheduleDataSchema();
   return useMemo(
-    () => createConnectionValidationSchema(allowSubOneHourCronExpressions, allowAutoDetectSchema),
-    [allowAutoDetectSchema, allowSubOneHourCronExpressions]
+    () =>
+      yup
+        .object({
+          name: yup.string().required("form.empty.error"),
+          // scheduleType can't be 'undefined', make it required()
+          scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
+          scheduleData: scheduleDataSchema,
+          namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
+          namespaceFormat: namespaceFormatSchema,
+          prefix: yup.string().default(""),
+          nonBreakingChangesPreference: allowAutoDetectSchema
+            ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
+            : yup.mixed().notRequired(),
+          geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
+          syncCatalog: syncCatalogSchema,
+          notifySchemaChanges: yup.boolean().optional(),
+          backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
+        })
+        .noUnknown(),
+    [allowAutoDetectSchema, scheduleDataSchema]
   );
 };
 

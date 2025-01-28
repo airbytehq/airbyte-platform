@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -9,11 +9,9 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * ConfigFetchActivity.
@@ -33,24 +31,84 @@ public interface ConfigFetchActivity {
   /**
    * ScheduleRetrieverInput.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   class ScheduleRetrieverInput {
 
     private UUID connectionId;
+
+    public ScheduleRetrieverInput() {}
+
+    public ScheduleRetrieverInput(UUID connectionId) {
+      this.connectionId = connectionId;
+    }
+
+    public UUID getConnectionId() {
+      return connectionId;
+    }
+
+    public void setConnectionId(UUID connectionId) {
+      this.connectionId = connectionId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ScheduleRetrieverInput that = (ScheduleRetrieverInput) o;
+      return Objects.equals(connectionId, that.connectionId);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(connectionId);
+    }
+
+    @Override
+    public String toString() {
+      return "ScheduleRetrieverInput{connectionId=" + connectionId + '}';
+    }
 
   }
 
   /**
    * ScheduleRetrieverOutput.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   class ScheduleRetrieverOutput {
 
     private Duration timeToWait;
+
+    public ScheduleRetrieverOutput() {}
+
+    public ScheduleRetrieverOutput(Duration timeToWait) {
+      this.timeToWait = timeToWait;
+    }
+
+    public Duration getTimeToWait() {
+      return timeToWait;
+    }
+
+    public void setTimeToWait(Duration timeToWait) {
+      this.timeToWait = timeToWait;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ScheduleRetrieverOutput that = (ScheduleRetrieverOutput) o;
+      return Objects.equals(timeToWait, that.timeToWait);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(timeToWait);
+    }
+
+    @Override
+    public String toString() {
+      return "ScheduleRetrieverOutput{timeToWait=" + timeToWait + '}';
+    }
 
   }
 
@@ -65,14 +123,7 @@ public interface ConfigFetchActivity {
   /**
    * GetMaxAttemptOutput.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  class GetMaxAttemptOutput {
-
-    private int maxAttempt;
-
-  }
+  record GetMaxAttemptOutput(int maxAttempt) {}
 
   /**
    * Return the maximum number of attempt allowed for a connection.

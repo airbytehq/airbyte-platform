@@ -4,14 +4,14 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "airbyte.fullname" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
     {{- if .Values.podLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 4 }}
+    {{- include "airbyte.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 4 }}
     {{- end }}
   annotations:
     "helm.sh/hook": "post-install, post-upgrade"
@@ -29,36 +29,21 @@ spec:
       {{- end }}
       restartPolicy: Never
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 12 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 12 }}
       {{- end }}
       {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 12 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 12 }}
       {{- end }}
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 12 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 12 }}
       {{- end }}
       initContainers:
-        - name: keycloak-readiness-check
-          {{- if .Values.initContainers.keycloakReadinessCheck.image }}
-          image: {{ .Values.initContainers.keycloakReadinessCheck.image }}
-          {{- else }}
-          image: curlimages/curl:8.1.1
-          {{- end }}
-          command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
-          env:
-            - name: KEYCLOAK_INTERNAL_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-                  key: KEYCLOAK_INTERNAL_HOST
-          securityContext: 
-            {{- toYaml .Values.initContainerSecurityContext | nindent 14 }}
         {{- if .Values.extraInitContainers }}
         {{- toYaml .Values.extraInitContainers | nindent 8 }}
         {{- end }}
       containers:
         - name: airbyte-keycloak-setup-container
-          image: {{ printf "%s:%s" .Values.image.repository (include "keycloak-setup.imageTag" .) }}
+          image: {{ include "imageUrl" (list .Values.image $) }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
             - name: AIRBYTE_URL 

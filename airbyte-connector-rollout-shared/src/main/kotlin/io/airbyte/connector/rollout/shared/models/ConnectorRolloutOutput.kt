@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared.models
 
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import java.time.OffsetDateTime
@@ -11,7 +17,7 @@ data class ConnectorRolloutOutput(
   var actorDefinitionId: UUID? = null,
   var releaseCandidateVersionId: UUID? = null,
   var initialVersionId: UUID? = null,
-  var state: ConnectorEnumRolloutState? = null,
+  var state: ConnectorEnumRolloutState,
   var initialRolloutPct: Int? = null,
   var currentTargetRolloutPct: Int? = null,
   var finalTargetRolloutPct: Int? = null,
@@ -25,5 +31,7 @@ data class ConnectorRolloutOutput(
   var expiresAt: OffsetDateTime? = null,
   var errorMsg: String? = null,
   var failedReason: String? = null,
-  var actorIds: List<UUID>? = null,
+  var pausedReason: String? = null,
+  var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
+  var actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
 )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -7,12 +7,13 @@ package io.airbyte.analytics
 import com.segment.analytics.Analytics
 import com.segment.analytics.Callback
 import com.segment.analytics.Plugin
-import com.segment.analytics.messages.AliasMessage
 import com.segment.analytics.messages.IdentifyMessage
 import com.segment.analytics.messages.Message
 import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.config.Organization
+import io.airbyte.config.ScopeType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
@@ -29,12 +30,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.BiFunction
 import java.util.function.Function
 import java.util.function.Supplier
 
-const val AIRBYTE_ROLE_ENV_VAR = "AIRBYTE_ROLE"
-const val AIRBYTE_VERSION_ENV_VAR = "AIRBYTE_VERSION"
-const val DEPLOYMENT_MODE_ENV_VAR = "DEPLOYMENT_MODE"
 const val SEGMENT_WRITE_KEY_ENV_VAR = "SEGMENT_WRITE_KEY"
 const val TRACKING_STRATEGY_ENV_VAR = "TRACKING_STRATEGY"
 
@@ -60,20 +59,20 @@ private val logger = KotlinLogging.logger {}
  * Keep in mind that this interface is also relied on in Airbyte Cloud.
  */
 interface TrackingClient {
-  fun identify(workspaceId: UUID)
-
-  fun alias(
-    workspaceId: UUID,
-    previousCustomerId: String?,
+  fun identify(
+    scopeId: UUID,
+    scopeType: ScopeType,
   )
 
   fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
   )
 
   fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
     metadata: Map<String, Any?>,
   )
@@ -113,9 +112,12 @@ class SegmentTrackingClient(
   @Value("\${airbyte.role}") val airbyteRole: String,
   @Value("\${airbyte.installation-id}") val installationId: UUID? = null,
 ) : TrackingClient {
-  override fun identify(workspaceId: UUID) {
+  override fun identify(
+    scopeId: UUID,
+    scopeType: ScopeType,
+  ) {
     val deployment: Deployment = deploymentFetcher.get()
-    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
+    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(scopeId, scopeType)
     val identityMetadata: Map<String, Any?> =
       buildMap {
         // deployment
@@ -136,34 +138,29 @@ class SegmentTrackingClient(
 
     val joinKey: String = trackingIdentity.customerId.toString()
     segmentAnalyticsClient.analyticsClient.enqueue(
-      IdentifyMessage.builder() // user id is scoped by workspace. there is no cross-workspace tracking.
+      IdentifyMessage
+        .builder() // user id is scoped by workspace. there is no cross-workspace tracking.
         .userId(joinKey)
         .traits(identityMetadata),
     )
   }
 
-  override fun alias(
-    workspaceId: UUID,
-    previousCustomerId: String?,
-  ) {
-    val joinKey: String = trackingIdentityFetcher.apply(workspaceId).customerId.toString()
-    segmentAnalyticsClient.analyticsClient.enqueue(AliasMessage.builder(previousCustomerId).userId(joinKey))
-  }
-
   override fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
   ) {
-    track(workspaceId, action, emptyMap())
+    track(scopeId, scopeType, action, emptyMap())
   }
 
   override fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
     metadata: Map<String, Any?>,
   ) {
     val deployment: Deployment = deploymentFetcher.get()
-    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
+    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(scopeId, scopeType)
 
     val mapCopy: Map<String, Any?> =
       buildMap {
@@ -184,7 +181,8 @@ class SegmentTrackingClient(
 
     val joinKey: String = trackingIdentity.customerId.toString()
     segmentAnalyticsClient.analyticsClient.enqueue(
-      TrackMessage.builder(action)
+      TrackMessage
+        .builder(action)
         .userId(joinKey)
         .properties(mapCopy),
     )
@@ -275,9 +273,7 @@ class BlockingShutdownAnalyticsPlugin(
     )
   }
 
-  fun currentInflightMessageCount(): Long {
-    return inflightMessageCount.get()
-  }
+  fun currentInflightMessageCount(): Long = inflightMessageCount.get()
 
   fun waitForFlush() {
     // Wait 2 x the flush interval for the flush to occur before moving along to avoid
@@ -315,33 +311,29 @@ class LoggingTrackingClient(
   private val deploymentFetcher: DeploymentFetcher,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
 ) : TrackingClient {
-  override fun identify(workspaceId: UUID) {
-    logger.info { "identify. userId: ${trackingIdentityFetcher.apply(workspaceId).customerId}" }
-  }
-
-  override fun alias(
-    workspaceId: UUID,
-    previousCustomerId: String?,
+  override fun identify(
+    scopeId: UUID,
+    scopeType: ScopeType,
   ) {
-    logger.info {
-      "merge. userId: ${trackingIdentityFetcher.apply(workspaceId).customerId} previousUserId: $previousCustomerId"
-    }
+    logger.info { "identify. userId: ${trackingIdentityFetcher.apply(scopeId, scopeType).customerId}" }
   }
 
   override fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
   ) {
-    track(workspaceId, action, emptyMap())
+    track(scopeId, scopeType, action, emptyMap())
   }
 
   override fun track(
-    workspaceId: UUID,
+    scopeId: UUID,
+    scopeType: ScopeType,
     action: String?,
     metadata: Map<String, Any?>,
   ) {
     val deployment: Deployment = deploymentFetcher.get()
-    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
+    val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(scopeId, scopeType)
     val version: String = deployment.getDeploymentVersion()
     val userId: UUID = trackingIdentity.customerId
     logger.info { "track. version: $version, userId: $userId, action: $action, metadata: $metadata" }
@@ -364,23 +356,43 @@ open class DeploymentFetcher(
 @CacheConfig("analytics-tracking-identity")
 open class TrackingIdentityFetcher(
   @Named("workspaceFetcher") val workspaceFetcher: Function<UUID, WorkspaceRead>,
-) : Function<UUID, TrackingIdentity> {
+  @Named("organizationFetcher") val organizationFetcher: Function<UUID, Organization>,
+) : BiFunction<UUID, ScopeType, TrackingIdentity> {
   @Cacheable
-  override fun apply(workspaceId: UUID): TrackingIdentity {
-    val workspaceRead = workspaceFetcher.apply(workspaceId)
-    val email: String? = workspaceRead.anonymousDataCollection.takeIf { it == false }?.let { workspaceRead.email }
+  override fun apply(
+    scopeId: UUID,
+    scopeType: ScopeType,
+  ): TrackingIdentity {
+    when (scopeType) {
+      ScopeType.WORKSPACE -> {
+        val workspaceRead = workspaceFetcher.apply(scopeId)
+        val email: String? = workspaceRead.anonymousDataCollection.takeIf { it == false }?.let { workspaceRead.email }
 
-    return TrackingIdentity(
-      workspaceRead.customerId,
-      email,
-      workspaceRead.anonymousDataCollection,
-      workspaceRead.news,
-      workspaceRead.securityUpdates,
-    )
+        return TrackingIdentity(
+          workspaceRead.customerId,
+          email,
+          workspaceRead.anonymousDataCollection,
+          workspaceRead.news,
+          workspaceRead.securityUpdates,
+        )
+      }
+      ScopeType.ORGANIZATION -> {
+        val organization = organizationFetcher.apply(scopeId)
+        return TrackingIdentity(
+          organization.organizationId,
+          organization.email,
+          anonymousDataCollection = false,
+          news = false,
+          securityUpdates = false,
+        )
+      }
+    }
   }
 }
 
-class Deployment(private val deploymentMetadata: DeploymentMetadataRead) {
+class Deployment(
+  private val deploymentMetadata: DeploymentMetadataRead,
+) {
   fun getDeploymentMode(): String = deploymentMetadata.mode
 
   fun getDeploymentId(): UUID = deploymentMetadata.id

@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.micronaut;
 
-import static io.airbyte.data.services.impls.micronaut.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
+import static io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
+import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
 import jakarta.ws.rs.BadRequestException;
 import java.io.IOException;
@@ -27,7 +28,6 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +94,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   @Test
@@ -103,7 +103,7 @@ class ApplicationServiceMicronautImplTests {
         instanceAdminConfig,
         tokenGenerator);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   private JsonNode getTokenClaims(final String token) {

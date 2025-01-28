@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -6,7 +10,6 @@ import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -23,6 +26,7 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailedSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
+import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
@@ -78,7 +82,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "/",
-        geography = "US",
         mutexKey = null,
         type = WorkloadType.SYNC,
         autoId = UUID.randomUUID(),
@@ -112,7 +115,6 @@ class WorkloadHandlerImplTest {
       workloadLabels,
       "input payload",
       "/log/path",
-      "US",
       "mutex-this",
       io.airbyte.config.WorkloadType.SYNC,
       UUID.randomUUID(),
@@ -126,16 +128,15 @@ class WorkloadHandlerImplTest {
             it.dataplaneId == null &&
             it.status == WorkloadStatus.PENDING &&
             it.lastHeartbeatAt == null &&
-            it.workloadLabels!!.get(0).key == workloadLabel1.key &&
-            it.workloadLabels!!.get(0).value == workloadLabel1.value &&
-            it.workloadLabels!!.get(1).key == workloadLabel2.key &&
-            it.workloadLabels!!.get(1).value == workloadLabel2.value &&
+            it.workloadLabels!![0].key == workloadLabel1.key &&
+            it.workloadLabels!![0].value == workloadLabel1.value &&
+            it.workloadLabels!![1].key == workloadLabel2.key &&
+            it.workloadLabels!![1].value == workloadLabel2.value &&
             it.inputPayload == "input payload" &&
             it.logPath == "/log/path" &&
-            it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
-            it.deadline!!.equals(now.plusHours(2)) &&
+            it.deadline!! == now.plusHours(2) &&
             it.signalInput == "signal payload"
         },
       )
@@ -146,7 +147,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     }
   }
 
@@ -166,7 +167,7 @@ class WorkloadHandlerImplTest {
     }.answers {}
     every {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
-    }.throws(InvalidStatusTransitionException("$workloadIdWithFailedFail"))
+    }.throws(InvalidStatusTransitionException(workloadIdWithFailedFail))
     every { workloadRepository.save(any()) }.returns(newWorkload)
     every {
       workloadRepository.searchByMutexKeyAndStatusInList(
@@ -175,7 +176,7 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -197,7 +198,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "a payload",
         logPath = "/log/path",
-        geography = "US",
         mutexKey = "mutex-this",
         type = WorkloadType.DISCOVER,
       )
@@ -207,7 +207,6 @@ class WorkloadHandlerImplTest {
     assertEquals(WORKLOAD_ID, workloads[0].id)
     assertEquals("a payload", workloads[0].inputPayload)
     assertEquals("/log/path", workloads[0].logPath)
-    assertEquals("US", workloads[0].geography)
     assertEquals("mutex-this", workloads[0].mutexKey)
     assertEquals(io.airbyte.config.WorkloadType.DISCOVER, workloads[0].type)
   }
@@ -435,13 +434,12 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, 1, any(), any()) } returns Unit
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL.metricName, any(), any()) } returns Unit
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
     verify {
       metricClient.count(
-        OssMetricsRegistry.WORKLOADS_SIGNAL,
-        1,
+        OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
         MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
         MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
       )
@@ -739,7 +737,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), mockk<AirbyteApiClient>(), mockk<MetricClient>())
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), mockk<AirbyteApiClient>(), mockk<CustomMetricPublisher>())
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
@@ -748,7 +746,7 @@ class WorkloadHandlerImplTest {
 
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
-    val metricClient: MetricClient = mockk(relaxed = true)
+    val metricClient: CustomMetricPublisher = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
@@ -784,9 +782,9 @@ class WorkloadHandlerImplTest {
     fun verifyFailedSignal() {
       verify {
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL,
-          1,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          any(),
           MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
           any(),
         )
@@ -800,7 +798,6 @@ class WorkloadHandlerImplTest {
       workloadLabels: List<io.airbyte.workload.repository.domain.WorkloadLabel>? = listOf(),
       inputPayload: String = "",
       logPath: String = "/",
-      geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
@@ -813,7 +810,6 @@ class WorkloadHandlerImplTest {
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         mutexKey = mutexKey,
         type = type,
         createdAt = createdAt,

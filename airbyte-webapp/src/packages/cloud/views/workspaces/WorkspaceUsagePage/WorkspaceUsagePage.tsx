@@ -5,17 +5,16 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
+import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 
-import {
-  useCreditsContext,
-  WorkspaceCreditUsageContextProvider,
-} from "../../billing/BillingPage/components/CreditsUsageContext";
-import { CreditsUsageFilters } from "../../billing/BillingPage/components/CreditsUsageFilters";
-import { UsagePerConnectionTable } from "../../billing/BillingPage/components/UsagePerConnectionTable";
-import { UsagePerDayGraph } from "../../billing/BillingPage/components/UsagePerDayGraph";
+import { useCreditsContext, WorkspaceCreditUsageContextProvider } from "./components/CreditsUsageContext";
+import { CreditsUsageFilters } from "./components/CreditsUsageFilters";
+import { UsagePerConnectionTable } from "./components/UsagePerConnectionTable";
 
 export const WorkspaceUsagePage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_USAGE);
   return (
     <FlexContainer direction="column" gap="xl">
       <FlexContainer alignItems="center">

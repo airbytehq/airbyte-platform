@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.services
@@ -18,7 +22,10 @@ import org.yaml.snakeyaml.Yaml
 
 private val logger = KotlinLogging.logger {}
 
-class GithubContributionService(var connectorImageName: String, personalAccessToken: String?) {
+class GithubContributionService(
+  var connectorImageName: String,
+  personalAccessToken: String?,
+) {
   var githubService: GitHub? = null
   val repositoryName = "airbyte"
   val repoOwner = "airbytehq"
@@ -92,24 +99,19 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
   fun getBranchSha(
     branchName: String,
     targetRepository: GHRepository,
-  ): String {
-    return targetRepository.getRef("heads/$branchName").getObject().sha
-  }
+  ): String = targetRepository.getRef("heads/$branchName").getObject().sha
 
-  fun getDefaultBranchSha(targetRepository: GHRepository): String {
-    return getBranchSha(airbyteRepository.defaultBranch, targetRepository)
-  }
+  fun getDefaultBranchSha(targetRepository: GHRepository): String = getBranchSha(airbyteRepository.defaultBranch, targetRepository)
 
   fun safeReadFileContent(
     path: String,
     targetRepository: GHRepository,
-  ): GHContent? {
-    return try {
+  ): GHContent? =
+    try {
       targetRepository.getFileContent(path)
     } catch (e: GHFileNotFoundException) {
       null
     }
-  }
 
   fun checkFileExistsOnMain(path: String): Boolean {
     val fileInfo = safeReadFileContent(path, airbyteRepository)
@@ -118,9 +120,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   // PUBLIC METHODS
 
-  fun checkIfConnectorExistsOnMain(): Boolean {
-    return checkFileExistsOnMain(connectorMetadataPath)
-  }
+  fun checkIfConnectorExistsOnMain(): Boolean = checkFileExistsOnMain(connectorMetadataPath)
 
   // TODO: Cache the metadata
   fun readConnectorMetadata(): Map<String, Any>? {
@@ -143,9 +143,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return dataSection?.get(field) as? String
   }
 
-  fun constructConnectorFilePath(fileName: String): String {
-    return "$connectorDirectoryPath/$fileName"
-  }
+  fun constructConnectorFilePath(fileName: String): String = "$connectorDirectoryPath/$fileName"
 
   fun createBranch(
     branchName: String,
@@ -155,8 +153,8 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return targetRepository.createRef("refs/heads/$branchName", baseBranchSha)
   }
 
-  private inline fun <T> safeHandleBranchExceptions(block: () -> T): T? {
-    return try {
+  private inline fun <T> safeHandleBranchExceptions(block: () -> T): T? =
+    try {
       block()
     } catch (e: GHFileNotFoundException) {
       // Handle the case where the branch does not exist
@@ -171,33 +169,33 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
         throw e
       }
     }
-  }
 
   fun getBranchRef(
     branchName: String,
     targetRepository: GHRepository,
-  ): GHRef? {
-    return safeHandleBranchExceptions {
+  ): GHRef? =
+    safeHandleBranchExceptions {
       targetRepository.getRef("refs/heads/$branchName")
     }
-  }
 
   fun getBranch(
     branchName: String,
     targetRepository: GHRepository,
-  ): GHBranch? {
-    return safeHandleBranchExceptions {
+  ): GHBranch? =
+    safeHandleBranchExceptions {
       targetRepository.getBranch(branchName)
     }
-  }
 
   fun getExistingOpenPullRequest(): GHPullRequest? {
-    val contributionBranch = getBranch(contributionBranchName, forkedRepository)
-    if (contributionBranch == null) {
-      return null
-    }
+    val contributionBranch = getBranch(contributionBranchName, forkedRepository) ?: return null
 
-    val pullRequests = airbyteRepository.searchPullRequests().isOpen().head(contributionBranch).list().toList()
+    val pullRequests =
+      airbyteRepository
+        .searchPullRequests()
+        .isOpen()
+        .head(contributionBranch)
+        .list()
+        .toList()
     if (pullRequests.isEmpty()) {
       return null
     }
@@ -221,18 +219,15 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return createBranch(contributionBranchName, forkedRepository)
   }
 
-  fun getExistingFileSha(path: String): String? {
+  fun getExistingFileSha(path: String): String? =
     try {
-      return forkedRepository.getFileContent(path, contributionBranchName).sha
+      forkedRepository.getFileContent(path, contributionBranchName).sha
     } catch (e: GHFileNotFoundException) {
-      return null
+      null
     }
-  }
 
-  fun commitFiles(
-    message: String,
-    files: Map<String, String>,
-  ): GHCommit {
+  fun commitFiles(files: Map<String, String>): GHCommit {
+    val message = "Submission for $connectorImageName from Connector Builder"
     val branchSha = getBranchSha(contributionBranchName, forkedRepository)
     val treeBuilder = forkedRepository.createTree().baseTree(branchSha)
 
@@ -242,7 +237,8 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
     val tree = treeBuilder.create()
     val commit =
-      forkedRepository.createCommit()
+      forkedRepository
+        .createCommit()
         .message(message)
         .tree(tree.sha)
         .parent(branchSha)

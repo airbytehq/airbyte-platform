@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -9,6 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ConnectionScheduleData;
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule;
@@ -19,23 +22,50 @@ import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressi
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
+import io.airbyte.commons.server.helpers.CronExpressionHelper;
 import io.airbyte.config.BasicSchedule.TimeUnit;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
+import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
+import java.util.Collections;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ConnectionSchedulerHelperTest {
 
+  private ConnectionScheduleHelper connectionScheduleHelper;
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
+  private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
+
   private static final String EXPECTED_CRON_TIMEZONE = "UTC";
-  private static final String EXPECTED_CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String EXPECTED_CRON_EXPRESSION = "0 0 12 * * ?";
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
+
+  @BeforeEach
+  void setup() throws JsonValidationException, ConfigNotFoundException {
+    final WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
+    when(workspaceHelper.getWorkspaceForSourceId(any())).thenReturn(WORKSPACE_ID);
+    when(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID);
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    connectionScheduleHelper =
+        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
+  }
 
   @Test
-  void testPopulateSyncScheduleFromManualType() throws JsonValidationException {
+  void testPopulateSyncScheduleFromManualType() throws JsonValidationException, ConfigNotFoundException {
     final StandardSync actual = new StandardSync();
-    ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
+    connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.MANUAL, null);
     assertTrue(actual.getManual());
     assertEquals(ScheduleType.MANUAL, actual.getScheduleType());
@@ -44,9 +74,9 @@ class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  void testPopulateSyncScheduleFromBasicType() throws JsonValidationException {
+  void testPopulateSyncScheduleFromBasicType() throws JsonValidationException, ConfigNotFoundException {
     final StandardSync actual = new StandardSync();
-    ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
+    connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.BASIC, new ConnectionScheduleData()
             .basicSchedule(new ConnectionScheduleDataBasicSchedule()
                 .timeUnit(TimeUnitEnum.HOURS)
@@ -61,9 +91,9 @@ class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  void testPopulateSyncScheduleFromCron() throws JsonValidationException {
+  void testPopulateSyncScheduleFromCron() throws JsonValidationException, ConfigNotFoundException {
     final StandardSync actual = new StandardSync();
-    ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
+    connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron()
                 .cronTimeZone(EXPECTED_CRON_TIMEZONE)
@@ -77,31 +107,30 @@ class ConnectionSchedulerHelperTest {
   @Test
   void testScheduleValidation() {
     final StandardSync actual = new StandardSync();
-    assertThrows(JsonValidationException.class, () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
+    assertThrows(JsonValidationException.class, () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, null));
     assertThrows(JsonValidationException.class,
-        () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.BASIC, new ConnectionScheduleData()));
+        () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.BASIC, new ConnectionScheduleData()));
     assertThrows(CronValidationMissingCronProblem.class,
-        () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()));
+        () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()));
     assertThrows(CronValidationMissingComponentProblem.class,
-        () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
+        () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron())));
     assertThrows(CronValidationInvalidTimezoneProblem.class,
-        () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
+        () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron().cronExpression(EXPECTED_CRON_EXPRESSION).cronTimeZone("Etc/foo"))));
     assertThrows(CronValidationInvalidExpressionProblem.class,
-        () -> ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
+        () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual, ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron().cronExpression("bad cron").cronTimeZone(EXPECTED_CRON_TIMEZONE))));
   }
 
   @Test
-  void testAvailableCronTimeZonesStayTheSame() {
+  void testAvailableCronTimeZonesStayTheSame() throws ConfigNotFoundException {
     /*
      * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of
      * supported timezones is copied from
-     * oss/airbyte-webapp/src/components/connection/ConnectionForm/ScheduleFormField/
-     * availableCronTimeZones.json. If this test fails, then THAT file must be updated with the new
-     * timezones.
+     * oss/airbyte-webapp/src/core/utils/cron/availableCronTimeZones.json If this test fails, then THAT
+     * file must be updated with the new timezones.
      */
     final String[] timezoneStrings = {
       "Africa/Abidjan",
@@ -668,7 +697,7 @@ class ConnectionSchedulerHelperTest {
         // NOTE: this method call is the one that parses the given timezone string
         // and will throw an exception if it isn't supported. This method is called
         // on the API handler path.
-        ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
+        connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
             ConnectionScheduleType.CRON, new ConnectionScheduleData()
                 .cron(new ConnectionScheduleDataCron()
                     .cronTimeZone(expectedTimezone)

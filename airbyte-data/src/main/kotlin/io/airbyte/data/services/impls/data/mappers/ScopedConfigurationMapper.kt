@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.data.repositories.entities.ScopedConfiguration
@@ -12,68 +16,71 @@ typealias ModelConfigOriginType = io.airbyte.config.ConfigOriginType
 typealias EntityScopedConfiguration = ScopedConfiguration
 typealias ModelScopedConfiguration = io.airbyte.config.ScopedConfiguration
 
-fun EntityConfigScopeType.toConfigModel(): ModelConfigScopeType {
-  return when (this) {
+fun EntityConfigScopeType.toConfigModel(): ModelConfigScopeType =
+  when (this) {
     EntityConfigScopeType.organization -> ModelConfigScopeType.ORGANIZATION
     EntityConfigScopeType.workspace -> ModelConfigScopeType.WORKSPACE
     EntityConfigScopeType.actor -> ModelConfigScopeType.ACTOR
   }
-}
 
-fun ModelConfigScopeType.toEntity(): EntityConfigScopeType {
-  return when (this) {
+fun ModelConfigScopeType.toEntity(): EntityConfigScopeType =
+  when (this) {
     ModelConfigScopeType.ORGANIZATION -> EntityConfigScopeType.organization
     ModelConfigScopeType.WORKSPACE -> EntityConfigScopeType.workspace
     ModelConfigScopeType.ACTOR -> EntityConfigScopeType.actor
   }
-}
 
-fun EntityConfigResourceType.toConfigModel(): ModelConfigResourceType {
-  return when (this) {
+fun EntityConfigResourceType.toConfigModel(): ModelConfigResourceType =
+  when (this) {
     EntityConfigResourceType.actor_definition -> ModelConfigResourceType.ACTOR_DEFINITION
+    EntityConfigResourceType.user -> ModelConfigResourceType.USER
+    EntityConfigResourceType.workspace -> ModelConfigResourceType.WORKSPACE
+    EntityConfigResourceType.connection -> ModelConfigResourceType.USER
+    EntityConfigResourceType.source -> ModelConfigResourceType.SOURCE
+    EntityConfigResourceType.destination -> ModelConfigResourceType.DESTINATION
   }
-}
 
-fun ModelConfigResourceType.toEntity(): EntityConfigResourceType {
-  return when (this) {
+fun ModelConfigResourceType.toEntity(): EntityConfigResourceType =
+  when (this) {
     ModelConfigResourceType.ACTOR_DEFINITION -> EntityConfigResourceType.actor_definition
+    ModelConfigResourceType.USER -> EntityConfigResourceType.user
+    ModelConfigResourceType.WORKSPACE -> EntityConfigResourceType.workspace
+    ModelConfigResourceType.CONNECTION -> EntityConfigResourceType.connection
+    ModelConfigResourceType.SOURCE -> EntityConfigResourceType.source
+    ModelConfigResourceType.DESTINATION -> EntityConfigResourceType.destination
   }
-}
 
-fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType {
-  return when (this) {
+fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType =
+  when (this) {
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
     EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
-    EntityConfigOriginType.release_candidate -> ModelConfigOriginType.RELEASE_CANDIDATE
+    EntityConfigOriginType.connector_rollout -> ModelConfigOriginType.CONNECTOR_ROLLOUT
   }
-}
 
-fun ModelConfigOriginType.toEntity(): EntityConfigOriginType {
-  return when (this) {
+fun ModelConfigOriginType.toEntity(): EntityConfigOriginType =
+  when (this) {
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
     ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
-    ModelConfigOriginType.RELEASE_CANDIDATE -> EntityConfigOriginType.release_candidate
+    ModelConfigOriginType.CONNECTOR_ROLLOUT -> EntityConfigOriginType.connector_rollout
   }
-}
 
-fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration {
-  return ModelScopedConfiguration()
+fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration =
+  ModelScopedConfiguration()
     .withId(this.id)
     .withKey(this.key)
     .withValue(this.value)
     .withScopeType(this.scopeType.toConfigModel())
     .withScopeId(this.scopeId)
-    .withResourceType(this.resourceType.toConfigModel())
+    .withResourceType(this.resourceType?.toConfigModel())
     .withResourceId(this.resourceId)
     .withOriginType(this.originType.toConfigModel())
     .withOrigin(this.origin)
     .withDescription(this.description)
     .withReferenceUrl(this.referenceUrl)
     .withExpiresAt(this.expiresAt?.toString())
-}
 
-fun ModelScopedConfiguration.toEntity(): EntityScopedConfiguration {
-  return EntityScopedConfiguration(
+fun ModelScopedConfiguration.toEntity(): EntityScopedConfiguration =
+  EntityScopedConfiguration(
     id = this.id,
     key = this.key,
     value = this.value,
@@ -87,4 +94,3 @@ fun ModelScopedConfiguration.toEntity(): EntityScopedConfiguration {
     referenceUrl = this.referenceUrl,
     expiresAt = this.expiresAt?.let { Date.valueOf(it) },
   )
-}

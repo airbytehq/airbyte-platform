@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.Field
@@ -64,8 +68,11 @@ class SlimStream(
     newName: String,
     newType: FieldType? = null,
   ) {
-    if (_fields.any { it.name == newName }) {
-      throw IllegalStateException("Field $newName already exists in stream fields")
+    if (oldName != newName && _fields.any { it.name == newName }) {
+      throw MapperException(
+        type = DestinationCatalogGenerator.MapperErrorType.FIELD_ALREADY_EXISTS,
+        message = "Field $newName already exists in stream fields",
+      )
     }
 
     var match = 0
@@ -78,7 +85,7 @@ class SlimStream(
       }
     }
     if (match == 0) {
-      throw IllegalStateException("Field $oldName not found in stream fields")
+      throw MapperException(type = DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND, message = "Field $oldName not found in stream fields")
     }
 
     _cursor?.apply { renameInSimpleList(this, oldName, newName) }

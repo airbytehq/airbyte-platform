@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows;
@@ -57,7 +57,8 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oauthParamConfig)
+                                                  final JsonNode oauthParamConfig,
+                                                  final String state)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final HttpRequest request = HttpRequest.newBuilder()

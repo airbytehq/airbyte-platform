@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.apiTracking
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.problems.AbstractThrowableProblem
+import io.airbyte.config.ScopeType
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
@@ -17,7 +18,9 @@ import java.util.concurrent.Callable
  * Helper for segment tracking used by the public api server.
  */
 @Singleton
-class TrackingHelper(private val trackingClient: TrackingClient) {
+class TrackingHelper(
+  private val trackingClient: TrackingClient,
+) {
   private fun trackSuccess(
     endpointPath: String,
     httpOperation: String,
@@ -52,9 +55,9 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     endpointPath: String?,
     httpOperation: String?,
     userId: UUID?,
-    workspaceId: UUID,
+    workspaceId: UUID?,
   ) {
-    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.of(workspaceId))
+    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.ofNullable(workspaceId))
   }
 
   /**
@@ -102,14 +105,13 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     endpoint: String?,
     httpOperation: String?,
     userId: UUID,
-  ): T {
-    return try {
+  ): T =
+    try {
       function.call()
     } catch (e: Exception) {
       trackFailuresIfAny(endpoint, httpOperation, userId, e)
       throw e
     }
-  }
 
   fun track(
     userId: UUID,
@@ -130,6 +132,7 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     }
     trackingClient.track(
       userId,
+      ScopeType.WORKSPACE,
       AIRBYTE_API_CALL,
       payload.toMap(),
     )

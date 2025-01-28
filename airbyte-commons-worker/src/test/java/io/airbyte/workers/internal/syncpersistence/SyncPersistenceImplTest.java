@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.syncpersistence;
@@ -80,7 +80,7 @@ class SyncPersistenceImplTest {
     when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS)))
         .thenReturn(mock(ScheduledFuture.class));
 
-    syncStatsTracker = new ParallelStreamStatsTracker(mock(), mock());
+    syncStatsTracker = new ParallelStreamStatsTracker(mock(), mock(), false);
 
     // Setting syncPersistence
     stateApi = mock(StateApi.class);

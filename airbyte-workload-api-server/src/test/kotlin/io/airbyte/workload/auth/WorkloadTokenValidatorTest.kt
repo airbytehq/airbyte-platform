@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.auth
@@ -28,7 +28,8 @@ class WorkloadTokenValidatorTest {
         httpRequest,
       )
 
-    StepVerifier.create(responsePublisher)
+    StepVerifier
+      .create(responsePublisher)
       .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
       .verifyComplete()
   }
@@ -45,7 +46,8 @@ class WorkloadTokenValidatorTest {
         httpRequest,
       )
 
-    StepVerifier.create(responsePublisher)
+    StepVerifier
+      .create(responsePublisher)
       .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
       .verifyComplete()
   }
@@ -63,7 +65,8 @@ class WorkloadTokenValidatorTest {
         httpRequest,
       )
 
-    StepVerifier.create(responsePublisher)
+    StepVerifier
+      .create(responsePublisher)
       .expectErrorMatches { t: Throwable -> matchUnsuccessfulResponse(t) }
       .verify()
   }
@@ -87,17 +90,15 @@ class WorkloadTokenValidatorTest {
         httpRequest,
       )
 
-    StepVerifier.create(responsePublisher)
+    StepVerifier
+      .create(responsePublisher)
       .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
       .verifyComplete()
   }
 
-  private fun matchSuccessfulResponse(authentication: Authentication): Boolean {
-    return authentication.name == WorkloadTokenValidator.WORKLOAD_API_USER
-  }
+  private fun matchSuccessfulResponse(authentication: Authentication): Boolean = authentication.name == WorkloadTokenValidator.WORKLOAD_API_USER
 
-  private fun matchUnsuccessfulResponse(t: Throwable): Boolean {
-    return t::class == AuthenticationException::class &&
-      t.message == "${AuthenticationFailed(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH).message.get()}"
-  }
+  private fun matchUnsuccessfulResponse(t: Throwable): Boolean =
+    t::class == AuthenticationException::class &&
+      t.message == AuthenticationFailed(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH).message.get()
 }

@@ -1,0 +1,156 @@
+{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.connectorRolloutOptIn true)}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airbyte-connector-rollout-worker
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.connectorRolloutWorker.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.connectorRolloutWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.connectorRolloutWorker.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.connectorRolloutWorker.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.connectorRolloutWorker.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.connectorRolloutWorker.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      automountServiceAccountToken: true
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.connectorRolloutWorker.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorRolloutWorker.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorRolloutWorker.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.connectorRolloutWorker.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.connectorRolloutWorker.extraInitContainers | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-connector-rollout-worker-container
+        image: {{ include "imageUrl" (list .Values.connectorRolloutWorker.image $) }}
+        imagePullPolicy: "{{ .Values.connectorRolloutWorker.image.pullPolicy }}"
+        env:
+        {{- if .Values.connectorRolloutWorker.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorRolloutWorker.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end }}
+
+        {{- if (eq .Values.global.deploymentMode "oss") }}
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- end }}
+
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.tracking.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
+
+        # Values from secret
+        {{- if .Values.connectorRolloutWorker.secrets }}
+        {{- range $k, $v := .Values.connectorRolloutWorker.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: connector-rollout-worker-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.connectorRolloutWorker.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.connectorRolloutWorker.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.connectorRolloutWorker.extraEnv }}
+        {{- toYaml .Values.connectorRolloutWorker.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.connectorRolloutWorker.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: heartbeat
+          initialDelaySeconds: {{ .Values.connectorRolloutWorker.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.connectorRolloutWorker.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.connectorRolloutWorker.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.connectorRolloutWorker.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.connectorRolloutWorker.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.connectorRolloutWorker.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: heartbeat
+          initialDelaySeconds: {{ .Values.connectorRolloutWorker.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.connectorRolloutWorker.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.connectorRolloutWorker.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.connectorRolloutWorker.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.connectorRolloutWorker.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        {{- if .Values.connectorRolloutWorker.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.connectorRolloutWorker.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        - name: heartbeat
+          containerPort: 8016 # for heartbeat server
+
+        {{- if .Values.connectorRolloutWorker.resources }}
+        resources: {{- toYaml .Values.connectorRolloutWorker.resources | nindent 8 }}
+        {{- end }}
+        {{- if .Values.connectorRolloutWorker.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.connectorRolloutWorker.containerSecurityContext | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.connectorRolloutWorker.extraVolumeMounts }}
+        {{ toYaml .Values.connectorRolloutWorker.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+        {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.connectorRolloutWorker.extraContainers }}
+      {{ toYaml .Values.connectorRolloutWorker.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.connectorRolloutWorker.podSecurityContext | nindent 6 }}
+      volumes:
+      {{- if .Values.connectorRolloutWorker.extraVolumes }}
+  {{ toYaml .Values.connectorRolloutWorker.extraVolumes | nindent 4 }}
+  {{- end }}
+{{- end }}

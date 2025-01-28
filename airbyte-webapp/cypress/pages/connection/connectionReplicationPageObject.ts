@@ -2,9 +2,7 @@ import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 import { submitButtonClick } from "commands/common";
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
-import { getTestId } from "utils/selectors";
 
-const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
 const resetModalResetRadio = "[data-testid='radio-button-tile-shouldRefresh-saveWithoutRefresh']";
 const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
@@ -12,10 +10,6 @@ const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
-const cancelButton = getTestId("cancel-edit-button", "button");
-const saveButton = getTestId("save-edit-button", "button");
-export const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
-export const nextButtonOrLink = getTestId("next-creation-page");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
@@ -75,18 +69,4 @@ export const checkNoDiffToast = () => {
 export const clickSchemaChangesReviewButton = () => {
   cy.get(schemaChangesReviewButton).click();
   cy.get(schemaChangesReviewButton).should("not.exist");
-};
-
-export const resetModalSaveBtnClick = () => cy.get(resetModalSaveButton).click();
-
-export const clickCancelEditButton = () => {
-  cy.get(cancelButton).click({ force: true });
-};
-
-export const getSaveButton = () => {
-  return cy.get(saveButton);
-};
-
-export const clickRefreshSourceSchemaButton = () => {
-  cy.get(refreshSourceSchemaBtn).click({ force: true });
 };

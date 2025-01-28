@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -61,6 +61,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -236,6 +238,7 @@ class UserInvitationHandlerTest {
         // verify we sent an invitation tracking event
         verify(trackingClient, times(1)).track(
             eq(WORKSPACE_ID),
+            eq(ScopeType.WORKSPACE),
             eq(USER_INVITED),
             anyMap());
       }
@@ -322,13 +325,15 @@ class UserInvitationHandlerTest {
     private static final String INVITE_CODE = "invite-code";
     private static final InviteCodeRequestBody INVITE_CODE_REQUEST_BODY = new InviteCodeRequestBody().inviteCode(INVITE_CODE);
     private static final String CURRENT_USER_EMAIL = "current@airbyte.io";
+    private static final String CURRENT_USER_EMAIL_CASING = "cUrRenT@Airbyte.Io";
     private static final AuthenticatedUser CURRENT_USER = new AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail(CURRENT_USER_EMAIL);
 
-    @Test
-    void testEmailMatches() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {CURRENT_USER_EMAIL, CURRENT_USER_EMAIL_CASING})
+    void testEmailMatches(final String invitedEmail) throws Exception {
       final UserInvitation invitation = new UserInvitation()
           .withInviteCode(INVITE_CODE)
-          .withInvitedEmail(CURRENT_USER_EMAIL);
+          .withInvitedEmail(invitedEmail);
 
       final UserInvitationRead invitationRead = mock(UserInvitationRead.class);
 

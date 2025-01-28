@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.string.Strings
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -28,6 +30,9 @@ import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
+import kotlin.jvm.optionals.getOrDefault
+
+private const val AUTO_UPGRADE = "auto_upgrade"
 
 /**
  * Updates the support state of actor definition versions according to breaking changes.
@@ -46,7 +51,11 @@ class SupportStateUpdater(
     private val log = LoggerFactory.getLogger(SupportStateUpdater::class.java)
   }
 
-  data class SupportStateUpdate(val unsupportedVersionIds: List<UUID>, val deprecatedVersionIds: List<UUID>, val supportedVersionIds: List<UUID>) {
+  data class SupportStateUpdate(
+    val unsupportedVersionIds: List<UUID>,
+    val deprecatedVersionIds: List<UUID>,
+    val supportedVersionIds: List<UUID>,
+  ) {
     companion object {
       /**
        * Returns a new SupportStateUpdate that is the result of merging two given SupportStateUpdates.
@@ -58,16 +67,21 @@ class SupportStateUpdater(
       fun merge(
         a: SupportStateUpdate,
         b: SupportStateUpdate,
-      ): SupportStateUpdate {
-        return SupportStateUpdate(
-          Stream.of(a.unsupportedVersionIds, b.unsupportedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+      ): SupportStateUpdate =
+        SupportStateUpdate(
+          Stream
+            .of(a.unsupportedVersionIds, b.unsupportedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
-          Stream.of(a.deprecatedVersionIds, b.deprecatedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+          Stream
+            .of(a.deprecatedVersionIds, b.deprecatedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
-          Stream.of(a.supportedVersionIds, b.supportedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+          Stream
+            .of(a.supportedVersionIds, b.supportedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
         )
-      }
     }
   }
 
@@ -103,16 +117,24 @@ class SupportStateUpdater(
     // Latest stale breaking change is the most recent breaking change for which the upgrade deadline
     // has passed (as of the reference date).
     val latestStaleBreakingChange =
-      applicableBreakingChanges.stream()
+      applicableBreakingChanges
+        .stream()
         .filter { breakingChange: ActorDefinitionBreakingChange -> LocalDate.parse(breakingChange.upgradeDeadline).isBefore(referenceDate) }
         .max(Comparator.comparing { obj: ActorDefinitionBreakingChange -> obj.upgradeDeadline })
 
     // Latest future breaking change is the most recent breaking change for which the upgrade deadline
     // is still upcoming (as of the reference date).
     val latestFutureBreakingChange =
-      applicableBreakingChanges.stream()
+      applicableBreakingChanges
+        .stream()
         .filter { breakingChange: ActorDefinitionBreakingChange -> LocalDate.parse(breakingChange.upgradeDeadline).isAfter(referenceDate) }
         .max(Comparator.comparing { obj: ActorDefinitionBreakingChange -> obj.upgradeDeadline })
+    log.info(
+      "CurrentDefaultVersion: {}, LatestStableBreakingChange: {}, LatestFutureBreakingChange: {}",
+      currentDefaultVersion?.toString(),
+      latestStaleBreakingChange.map { it.version }.getOrDefault("<None>"),
+      latestFutureBreakingChange.map { it.version }.getOrDefault("<None>"),
+    )
 
     val versionIdsToUpdateByState =
       mapOf(
@@ -157,9 +179,11 @@ class SupportStateUpdater(
     val allBreakingChanges = actorDefinitionService.listBreakingChanges()
     val breakingChangesMap = allBreakingChanges.groupBy { it.actorDefinitionId }
     var comboSupportStateUpdate = SupportStateUpdate(listOf(), listOf(), listOf())
-    val notificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
+    val syncDeprecatedNotificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
+    val syncUpcomingAutoUpgradeNotificationData: MutableList<BreakingChangeNotificationData> = ArrayList()
 
     for (sourceDefinition in sourceDefinitions) {
+      log.info("Processing source definition {} {}", sourceDefinition.sourceDefinitionId, sourceDefinition.name)
       val actorDefinitionVersions =
         actorDefinitionService.listActorDefinitionVersionsForDefinition(sourceDefinition.sourceDefinitionId)
       val currentDefaultVersion = getVersionTag(actorDefinitionVersions, sourceDefinition.defaultVersionId)
@@ -168,6 +192,24 @@ class SupportStateUpdater(
         getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions)
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate)
 
+      log.info(
+        "Supported versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.supportedVersionIds, ","),
+      )
+      log.info(
+        "Deprecated versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.deprecatedVersionIds, ","),
+      )
+      log.info(
+        "Unsupported versions for {} {}: {}",
+        sourceDefinition.sourceDefinitionId,
+        sourceDefinition.name,
+        Strings.join(supportStateUpdate.unsupportedVersionIds, ","),
+      )
       if (shouldNotifyBreakingChanges() && supportStateUpdate.deprecatedVersionIds.isNotEmpty()) {
         val latestBreakingChange =
           BreakingChangesHelper.getLastApplicableBreakingChange(
@@ -175,14 +217,18 @@ class SupportStateUpdater(
             sourceDefinition.defaultVersionId,
             breakingChangesForDef,
           )
-        notificationData.add(
+        val notificationData =
           buildSourceNotificationData(
             sourceDefinition,
             latestBreakingChange,
             actorDefinitionVersions,
             supportStateUpdate,
-          ),
-        )
+          )
+        if (AUTO_UPGRADE == latestBreakingChange.deadlineAction) {
+          syncUpcomingAutoUpgradeNotificationData.add(notificationData)
+        } else {
+          syncDeprecatedNotificationData.add(notificationData)
+        }
       }
     }
 
@@ -204,19 +250,24 @@ class SupportStateUpdater(
             destinationDefinition.defaultVersionId,
             breakingChangesForDef,
           )
-        notificationData.add(
+        val notificationData =
           buildDestinationNotificationData(
             destinationDefinition,
             latestBreakingChange,
             actorDefinitionVersions,
             supportStateUpdate,
-          ),
-        )
+          )
+        if (AUTO_UPGRADE == latestBreakingChange.deadlineAction) {
+          syncUpcomingAutoUpgradeNotificationData.add(notificationData)
+        } else {
+          syncDeprecatedNotificationData.add(notificationData)
+        }
       }
     }
 
     executeSupportStateUpdate(comboSupportStateUpdate)
-    breakingChangeNotificationHelper.notifyDeprecatedSyncs(notificationData)
+    breakingChangeNotificationHelper.notifyDeprecatedSyncs(syncDeprecatedNotificationData)
+    breakingChangeNotificationHelper.notifyUpcomingUpgradeSyncs(syncUpcomingAutoUpgradeNotificationData)
     log.info("Finished updating support states for all definitions")
   }
 
@@ -235,7 +286,7 @@ class SupportStateUpdater(
         sourceDefinition.sourceDefinitionId,
         newlyDeprecatedVersionIds,
       )
-    val workspaceIds = workspaceSyncIds.map { (workspaceId, _) -> workspaceId }
+    val workspaceIds = workspaceSyncIds.map { it.workspaceId }
     return BreakingChangeNotificationData(
       ActorType.SOURCE,
       sourceDefinition.name,
@@ -259,7 +310,7 @@ class SupportStateUpdater(
         destinationDefinition.destinationDefinitionId,
         newlyDeprecatedVersionIds,
       )
-    val workspaceIds = workspaceSyncIds.map { it.first }
+    val workspaceIds = workspaceSyncIds.map { it.workspaceId }
     return BreakingChangeNotificationData(
       ActorType.DESTINATION,
       destinationDefinition.name,
@@ -335,13 +386,13 @@ class SupportStateUpdater(
   private fun getVersionTag(
     actorDefinitionVersions: List<ActorDefinitionVersion>,
     versionId: UUID,
-  ): Version {
-    return actorDefinitionVersions.stream()
+  ): Version =
+    actorDefinitionVersions
+      .stream()
       .filter { actorDefinitionVersion: ActorDefinitionVersion -> actorDefinitionVersion.versionId == versionId }
       .findFirst()
       .map { actorDefinitionVersion: ActorDefinitionVersion -> Version(actorDefinitionVersion.dockerImageTag) }
       .orElseThrow()
-  }
 
   private fun shouldNotifyBreakingChanges(): Boolean {
     // we only want to notify about these on Cloud
@@ -361,9 +412,15 @@ class SupportStateUpdater(
     supportStateUpdate: SupportStateUpdate,
   ): List<UUID> {
     val previouslySupportedVersionIds =
-      versionsBeforeUpdate.stream().filter { v: ActorDefinitionVersion -> v.supportState == ActorDefinitionVersion.SupportState.SUPPORTED }
-        .map { obj: ActorDefinitionVersion -> obj.versionId }.toList()
-    return supportStateUpdate.deprecatedVersionIds.stream().filter { o: UUID -> previouslySupportedVersionIds.contains(o) }.toList()
+      versionsBeforeUpdate
+        .stream()
+        .filter { v: ActorDefinitionVersion -> v.supportState == ActorDefinitionVersion.SupportState.SUPPORTED }
+        .map { obj: ActorDefinitionVersion -> obj.versionId }
+        .toList()
+    return supportStateUpdate.deprecatedVersionIds
+      .stream()
+      .filter { o: UUID -> previouslySupportedVersionIds.contains(o) }
+      .toList()
   }
 
   /**

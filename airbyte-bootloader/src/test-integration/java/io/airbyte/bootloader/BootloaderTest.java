@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -16,6 +16,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs.SeedDefinitionsProviderType;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.BreakingChangeNotificationHelper;
@@ -27,23 +28,20 @@ import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.persistence.BreakingChangesHelper;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.ConnectorRolloutService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.factory.DSLContextFactory;
@@ -64,7 +62,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
-import lombok.val;
 import org.flywaydb.core.Flyway;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.AfterEach;
@@ -89,6 +86,7 @@ class BootloaderTest {
   private FeatureFlagClient featureFlagClient;
   private static final String DEFAULT_REALM = "airbyte";
   private static final String DOCKER = "docker";
+  private static final SeedDefinitionsProviderType SEED_PROVIDER_TYPE = SeedDefinitionsProviderType.LOCAL;
   private static final String PROTOCOL_VERSION_001 = "0.0.1";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
   private static final String VERSION_0330_ALPHA = "0.33.0-alpha";
@@ -101,8 +99,8 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.64.4.001";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.64.7.002";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "1.1.1.001";
+  private static final String CURRENT_JOBS_MIGRATION_VERSION = "1.1.0.001";
 
   @BeforeEach
   void setup() {
@@ -132,109 +130,101 @@ class BootloaderTest {
 
   @Test
   void testBootloaderAppBlankDb() throws Exception {
-    val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
+    var currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
     // The protocol version range should contain our default protocol version since many definitions we
     // load don't provide a protocol version.
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val runMigrationOnStartup = true;
+    var airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
+    var runMigrationOnStartup = true;
 
-    val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
-    val jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
 
-    val configsFlyway = createConfigsFlyway(configsDataSource);
-    val jobsFlyway = createJobsFlyway(jobsDataSource);
+    var configsFlyway = createConfigsFlyway(configsDataSource);
+    var jobsFlyway = createJobsFlyway(jobsDataSource);
 
-    val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
-    val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
+    var configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
+    var jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    val connectionService = new ConnectionServiceJooqImpl(configDatabase);
-    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+    var connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
+    var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
-    val destinationService = new DestinationServiceJooqImpl(configDatabase,
+        scopedConfigurationService,
+        connectionTimelineService);
+    var destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater);
-    val sourceService = new SourceServiceJooqImpl(configDatabase,
+    var sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater);
-    val workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+    var workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService);
-    val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
-        connectionService,
-        connectorBuilderService,
-        destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
-        new OperationServiceJooqImpl(configDatabase),
-        sourceService,
-        workspaceService);
-    val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
+    var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
-    val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
+    var configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
     final DefinitionsProvider definitionsProvider = new LocalDefinitionsProvider();
-    val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
+    var jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
-    val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-    val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
-    val breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
-    val supportStateUpdater =
+    var jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
+    var jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    var organizationPersistence = new OrganizationPersistence(jobDatabase);
+    var protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
+    var breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(workspaceService, featureFlagClient);
+    var breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
+    var supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangeHelper,
             breakingChangeNotificationHelper, featureFlagClient);
-    val metricClient = new NotImplementedMetricClient();
-    val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
-    val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    var metricClient = new NotImplementedMetricClient();
+    var actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
+    var airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    var connectorRolloutService = mock(ConnectorRolloutService.class);
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
-    val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
+    var applyDefinitionsHelper =
+        new ApplyDefinitionsHelper(definitionsProvider, SEED_PROVIDER_TYPE, jobsPersistence, actorDefinitionService, sourceService,
+            destinationService,
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
-    val declarativeSourceUpdater =
+    var declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
-            actorDefinitionService, airbyteCompatibleConnectorsValidator);
-    val authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
-    val postLoadExecutor =
+            actorDefinitionService, airbyteCompatibleConnectorsValidator, featureFlagClient);
+    var authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
+    var postLoadExecutor =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
-    val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+    var bootloader =
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
             jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
 
-    val jobsMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
+    var jobsMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     assertEquals(CURRENT_JOBS_MIGRATION_VERSION, jobsMigrator.getLatestMigration().getVersion().getVersion());
 
-    val configsMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
+    var configsMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
     assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
 
     assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get());
@@ -250,91 +240,83 @@ class BootloaderTest {
   @SuppressWarnings("VariableDeclarationUsageDistance")
   @Test
   void testRequiredVersionUpgradePredicate() throws Exception {
-    val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val runMigrationOnStartup = true;
+    var currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
+    var airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
+    var runMigrationOnStartup = true;
 
-    val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
-    val jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
 
-    val configsFlyway = createConfigsFlyway(configsDataSource);
-    val jobsFlyway = createJobsFlyway(jobsDataSource);
+    var configsFlyway = createConfigsFlyway(configsDataSource);
+    var jobsFlyway = createJobsFlyway(jobsDataSource);
 
-    val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
-    val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val connectionService = new ConnectionServiceJooqImpl(configDatabase);
-    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+    var configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
+    var jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
+    var connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
+    var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
-    val sourceService = new SourceServiceJooqImpl(configDatabase,
+        scopedConfigurationService,
+        connectionTimelineService);
+    var sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
         actorDefinitionVersionUpdater);
-    val destinationService = new DestinationServiceJooqImpl(configDatabase,
+    var destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
         actorDefinitionVersionUpdater);
-    val workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+    var workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
-    val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
-        connectionService,
-        connectorBuilderService,
-        destinationService,
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
-        new OperationServiceJooqImpl(configDatabase),
-        sourceService,
-        workspaceService);
-    val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
+    var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
-    val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
+    var configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
     final DefinitionsProvider definitionsProvider = new LocalDefinitionsProvider();
-    val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
+    var jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
-    val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-    val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
-    val breakingChangesHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
-    val supportStateUpdater =
+    var jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
+    var jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    var organizationPersistence = new OrganizationPersistence(jobDatabase);
+    var breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(workspaceService, featureFlagClient);
+    var breakingChangesHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
+    var supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangesHelper,
             breakingChangeNotificationHelper, featureFlagClient);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val metricClient = new NotImplementedMetricClient();
-    val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
-    val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
-    val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
+    var protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
+    var metricClient = new NotImplementedMetricClient();
+    var actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
+    var airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    var connectorRolloutService = mock(ConnectorRolloutService.class);
+    var applyDefinitionsHelper =
+        new ApplyDefinitionsHelper(definitionsProvider, SEED_PROVIDER_TYPE, jobsPersistence, actorDefinitionService, sourceService,
+            destinationService,
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator, connectorRolloutService);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
-    val declarativeSourceUpdater =
+    var declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
-            actorDefinitionService, airbyteCompatibleConnectorsValidator);
-    val authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
-    val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
+            actorDefinitionService, airbyteCompatibleConnectorsValidator, featureFlagClient);
+    var authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
+    var postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
-    val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+    var bootloader =
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
             jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
 
@@ -388,69 +370,66 @@ class BootloaderTest {
   @Test
   void testPostLoadExecutionExecutes() throws Exception {
     final var testTriggered = new AtomicBoolean();
-    val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val runMigrationOnStartup = true;
+    var currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
+    var airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
+    var runMigrationOnStartup = true;
 
-    val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
-    val jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
+    var jobsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
 
-    val configsFlyway = createConfigsFlyway(configsDataSource);
-    val jobsFlyway = createJobsFlyway(jobsDataSource);
+    var configsFlyway = createConfigsFlyway(configsDataSource);
+    var jobsFlyway = createJobsFlyway(jobsDataSource);
 
-    val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
-    val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val connectionService = new ConnectionServiceJooqImpl(configDatabase);
-    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val scopedConfigurationService = mock(ScopedConfigurationService.class);
-    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+    var configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
+    var jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
+    var connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    var scopedConfigurationService = mock(ScopedConfigurationService.class);
+    var connectionTimelineService = mock(ConnectionTimelineEventService.class);
+    var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         actorDefinitionService,
-        scopedConfigurationService);
-    val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
+        scopedConfigurationService,
+        connectionTimelineService);
+
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    var workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
+    var sourceService = new SourceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class),
         connectionService,
-        connectorBuilderService,
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
-        new OperationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)));
-    val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
+        actorDefinitionVersionUpdater);
+    var destinationService = new DestinationServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class),
+        connectionService,
+        actorDefinitionVersionUpdater);
+    var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
-    val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
+    var configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
     final DefinitionsProvider definitionsProvider = new LocalDefinitionsProvider();
-    val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
+    var jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    var jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
-    val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-    val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val postLoadExecutor = new PostLoadExecutor() {
+    var jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
+    var jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    var organizationPersistence = new OrganizationPersistence(jobDatabase);
+    var protocolVersionChecker =
+        new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
+            destinationService);
+    var postLoadExecutor = new PostLoadExecutor() {
 
       @Override
       public void execute() {
@@ -458,8 +437,8 @@ class BootloaderTest {
       }
 
     };
-    val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
+    var bootloader =
+        new Bootloader(false, workspaceService, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
             jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();

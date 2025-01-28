@@ -27,7 +27,10 @@ import { useBuilderWatch } from "../types";
 
 const EMPTY_SCHEMA = {};
 
-function useTestingValuesErrors(testingValues: ConnectorBuilderProjectTestingValues | undefined, spec?: Spec): number {
+export function useTestingValuesErrors(
+  testingValues: ConnectorBuilderProjectTestingValues | undefined,
+  spec?: Spec
+): number {
   const { formatMessage } = useIntl();
 
   return useMemo(() => {
@@ -63,7 +66,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
     );
   }
 
-  const hasStreams = jsonManifest.streams?.length > 0;
+  const hasStreams = jsonManifest.streams && jsonManifest.streams.length > 0;
 
   return (
     <div className={styles.container}>

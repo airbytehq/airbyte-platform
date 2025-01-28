@@ -1,4 +1,3 @@
-{{- if eq .Values.global.deploymentMode "oss"  }}
 {{- $airbyteYmlDict := (default "" .Values.global.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
@@ -90,26 +89,30 @@ data:
   JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
   {{- end }}
 
-  {{- if $.Values.global.jobs.kube.images.busybox }}
-  JOB_KUBE_BUSYBOX_IMAGE: {{ $.Values.global.jobs.kube.images.busybox | quote }}
-  {{- end }}
+  {{ $workloadLauncher := (index .Values "workload-launcher") }}
+  CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
+  WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
+  CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
 
-  {{- if $.Values.global.jobs.kube.images.curl }}
-  JOB_KUBE_CURL_IMAGE: {{ $.Values.global.jobs.kube.images.curl | quote }}
-  {{- end }}
-
+  JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ $.Values.global.image.registry | quote }}
   JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_MEMORY_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).memory | default "" | quote }}
   JOB_MAIN_CONTAINER_MEMORY_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).memory | default "" | quote }}
 
+  {{- $imagePullSecrets := (list) }}
+  {{- range $.Values.global.imagePullSecrets -}}{{- $imagePullSecrets = append $imagePullSecrets .name -}}{{- end }}
   {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
-  JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ $.Values.global.jobs.kube.main_container_image_pull_secret }}
+  {{- $imagePullSecrets = append $imagePullSecrets $.Values.global.jobs.kube.main_container_image_pull_secret }}
   {{- end }}
+
+  JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ join "," ($imagePullSecrets | uniq) | quote }}
+
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
-  LOCAL_ROOT: /tmp/airbyte_local
+
+  JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ .Values.global.jobs.local.volume.enabled | quote }}
+
   LOG_LEVEL: {{ default "INFO" (((.Values.global).logging).level) }}
-  LOG4J_CONFIGURATION_FILE: {{ include "airbyte.logging.log4jConfig" . | quote }}
   MICROMETER_METRICS_ENABLED: "false"
   MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
@@ -143,9 +146,9 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  CONTAINER_ORCHESTRATOR_IMAGE: {{ (index .Values "workload-launcher" "containerOrchestrator" "image") | quote }}
-  WORKLOAD_INIT_IMAGE: {{ (index .Values "workload-launcher" "workloadInit" "image") | quote }}
-  CONNECTOR_SIDECAR_IMAGE: {{ (index .Values "workload-launcher" "connectorSidecar" "image") | quote }}
+  FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT: 5G
+  FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST: 5G
+
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
@@ -158,4 +161,3 @@ data:
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""
   ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v0/connector_stubs.json" }}
-{{- end }}

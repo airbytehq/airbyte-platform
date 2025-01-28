@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.inteceptors
 
 import io.airbyte.metrics.annotations.Instrument
@@ -34,9 +38,7 @@ open class InstrumentExample {
     duration = "WORKLOAD_MONITOR_DURATION",
     tags = [Tag(key = MetricTags.CRON_TYPE, value = "2")],
   )
-  open fun failToDoSomething(with: String) {
-    throw RuntimeException("oops")
-  }
+  open fun failToDoSomething(with: String): Unit = throw RuntimeException("oops")
 }
 
 class InstrumentInterceptorTest {

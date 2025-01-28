@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator;
@@ -9,23 +9,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
+import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ApplicationTest {
 
-  private String application;
-  private JobOrchestrator<?> jobOrchestrator;
+  private ReplicationJobOrchestrator jobOrchestrator;
 
   @BeforeEach
   void setup() {
-    jobOrchestrator = mock(JobOrchestrator.class);
+    jobOrchestrator = mock(ReplicationJobOrchestrator.class);
   }
 
   @Test
   void testHappyPath() throws Exception {
-    final var app = new Application(application, jobOrchestrator);
+    final var app = new Application(jobOrchestrator);
     final var code = app.run();
 
     assertEquals(0, code);
@@ -35,7 +34,7 @@ class ApplicationTest {
   @Test
   void testJobFailedWritesFailedStatus() throws Exception {
     when(jobOrchestrator.runJob()).thenThrow(new Exception());
-    final var app = new Application(application, jobOrchestrator);
+    final var app = new Application(jobOrchestrator);
     final var code = app.run();
 
     assertEquals(1, code);

@@ -44,6 +44,8 @@ create table "public"."jobs" (
   "started_at" timestamp(6) with time zone,
   "created_at" timestamp(6) with time zone,
   "updated_at" timestamp(6) with time zone,
+  "metadata" jsonb,
+  "is_scheduled" boolean default true,
   constraint "jobs_pkey" primary key ("id")
 );
 create table "public"."normalization_summaries" (

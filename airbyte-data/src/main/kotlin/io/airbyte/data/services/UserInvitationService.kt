@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.ScopeType
@@ -55,10 +59,21 @@ interface UserInvitationService {
  * Exception thrown when an operation on an invitation cannot be performed because it has an
  * unexpected status. For instance, trying to accept an invitation that is not pending.
  */
-class InvitationStatusUnexpectedException(message: String) : Exception(message)
+class InvitationStatusUnexpectedException(
+  message: String,
+) : Exception(message)
 
 /**
  * Exception thrown when trying to create a duplicate invitation, ie creating new invitation with
  * the same email and scope as an existing pending invitation.
  */
-class InvitationDuplicateException(message: String) : Exception(message)
+class InvitationDuplicateException(
+  message: String,
+) : Exception(message)
+
+/**
+ * Exception thrown when trying to create an invitation for a scope where the user already has permission for that scope.
+ */
+class InvitationPermissionOverlapException(
+  message: String,
+) : Exception(message)

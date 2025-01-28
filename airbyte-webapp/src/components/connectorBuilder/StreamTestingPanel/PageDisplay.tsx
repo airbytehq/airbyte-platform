@@ -84,7 +84,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {
             key: "response",
             title: <FormattedMessage id="connectorBuilder.responseTab" />,
-            content: <Pre>{formattedResponse}</Pre>,
+            content: <Pre wrapText>{formattedResponse}</Pre>,
           },
         ]
       : []),

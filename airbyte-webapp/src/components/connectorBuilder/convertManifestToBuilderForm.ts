@@ -6,6 +6,7 @@ import isEmpty from "lodash/isEmpty";
 import isEqual from "lodash/isEqual";
 import isObject from "lodash/isObject";
 import isString from "lodash/isString";
+import omit from "lodash/omit";
 import pick from "lodash/pick";
 import { match } from "ts-pattern";
 
@@ -38,14 +39,25 @@ import {
   PrimaryKey,
   DatetimeBasedCursor,
   DefaultErrorHandler,
+  JsonDecoderType,
+  JsonlDecoderType,
+  XmlDecoderType,
+  IterableDecoderType,
+  SimpleRetrieverDecoder,
+  GzipJsonDecoderType,
+  OAuthConfigSpecificationOauthConnectorInputSpecification,
+  CheckDynamicStreamType,
 } from "core/api/types/ConnectorManifest";
 
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
+  BuilderFormOAuthAuthenticator,
+  BuilderFormDeclarativeOAuthAuthenticator,
   BuilderFormInput,
   BuilderFormValues,
   BuilderIncrementalSync,
@@ -57,6 +69,7 @@ import {
   BuilderRequestBody,
   BuilderStream,
   BuilderTransformation,
+  DeclarativeOAuthAuthenticatorType,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   extractInterpolatedConfigKey,
@@ -82,6 +95,9 @@ import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
+  if (resolvedManifest.check.type === CheckDynamicStreamType.CheckDynamicStream) {
+    throw new ManifestCompatibilityError(undefined, `${CheckDynamicStreamType.CheckDynamicStream} is not supported`);
+  }
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
   builderFormValues.description = resolvedManifest.description;
 
@@ -156,6 +172,7 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "refresh_token",
   "token_refresh_endpoint",
   "access_token_name",
+  "access_token_value",
   "expires_in_name",
   "grant_type",
   "refresh_request_body",
@@ -164,6 +181,13 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "token_expiry_date_format",
   "refresh_token_updater",
   "inject_into",
+  "client_id_name",
+  "client_secret_name",
+  "grant_type_name",
+  "profile_assertion",
+  "refresh_request_headers",
+  "refresh_token_name",
+  "use_profile_assertion",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -206,6 +230,7 @@ const manifestStreamToBuilder = (
     partition_router,
     record_selector,
     requester,
+    decoder,
     ...unknownRetrieverFields
   } = retriever;
   assertType<HttpRequester>(requester, "HttpRequester", stream.name);
@@ -254,6 +279,7 @@ const manifestStreamToBuilder = (
     name: streamName,
     urlPath: path,
     httpMethod: http_method === "POST" ? "POST" : "GET",
+    decoder: manifestDecoderToBuilder(decoder, streamName),
     requestOptions: {
       requestParameters: Object.entries(request_parameters ?? {}),
       requestHeaders: Object.entries(request_headers ?? {}),
@@ -374,6 +400,36 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
     value: formatJson(requester.request_body_json),
   };
 }
+
+const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+  const supportedDecoderTypes: Array<string | undefined> = [
+    undefined,
+    JsonDecoderType.JsonDecoder,
+    JsonlDecoderType.JsonlDecoder,
+    XmlDecoderType.XmlDecoder,
+    IterableDecoderType.IterableDecoder,
+    GzipJsonDecoderType.GzipJsonDecoder,
+  ];
+  const decoderType = decoder?.type;
+  if (!supportedDecoderTypes.includes(decoderType)) {
+    throw new ManifestCompatibilityError(streamName, "decoder is not supported");
+  }
+
+  switch (decoderType) {
+    case JsonDecoderType.JsonDecoder:
+      return "JSON";
+    case XmlDecoderType.XmlDecoder:
+      return "XML";
+    case JsonlDecoderType.JsonlDecoder:
+      return "JSON Lines";
+    case IterableDecoderType.IterableDecoder:
+      return "Iterable";
+    case GzipJsonDecoderType.GzipJsonDecoder:
+      return "gzip JSON";
+    default:
+      return "JSON";
+  }
+};
 
 export function manifestRecordSelectorToBuilder(
   recordSelector: RecordSelector,
@@ -1036,6 +1092,18 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
   return supportedAuthTypes.includes(authenticator.type);
 }
 
+const isSpecDeclarativeOAuth = (
+  spec: Spec | undefined
+): spec is Spec & {
+  advanced_auth: {
+    oauth_config_specification: {
+      oauth_connector_input_specification: OAuthConfigSpecificationOauthConnectorInputSpecification;
+    };
+  };
+} => {
+  return !!spec?.advanced_auth?.oauth_config_specification?.oauth_connector_input_specification;
+};
+
 export function manifestAuthenticatorToBuilder(
   authenticator: HttpRequesterAuthenticator | undefined,
   spec: Spec | undefined
@@ -1104,6 +1172,7 @@ export function manifestAuthenticatorToBuilder(
         [
           "type",
           "access_token_name",
+          "access_token_value",
           "client_id",
           "client_secret",
           "expires_in_name",
@@ -1119,6 +1188,8 @@ export function manifestAuthenticatorToBuilder(
         authenticator.type
       );
 
+      const isDeclarativeOAuth = isSpecDeclarativeOAuth(spec);
+
       if (Object.values(oauth.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0) {
         throw new ManifestCompatibilityError(
           undefined,
@@ -1132,8 +1203,11 @@ export function manifestAuthenticatorToBuilder(
         );
       }
 
-      let builderAuthenticator: BuilderFormAuthenticator = {
+      let builderAuthenticator: BuilderFormOAuthAuthenticator & {
+        declarative?: BuilderFormDeclarativeOAuthAuthenticator["declarative"];
+      } = {
         ...oauth,
+        type: isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : OAUTH_AUTHENTICATOR,
         refresh_request_body: Object.entries(oauth.refresh_request_body ?? {}),
         grant_type: oauth.grant_type ?? "refresh_token",
         refresh_token_updater: undefined,
@@ -1141,7 +1215,44 @@ export function manifestAuthenticatorToBuilder(
         client_secret: interpolateConfigKey(extractAndValidateAuthKey(["client_secret"], oauth, spec)),
       };
 
-      if (!oauth.grant_type || oauth.grant_type === "refresh_token") {
+      if (isDeclarativeOAuth) {
+        if (!spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output) {
+          throw new ManifestCompatibilityError(undefined, "OAuthAuthenticator.extract_output is missing");
+        }
+
+        builderAuthenticator.declarative = {
+          ...(omit(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification,
+            "extract_output",
+            "access_token_params",
+            "access_token_headers",
+            "state"
+          ) as BuilderFormDeclarativeOAuthAuthenticator["declarative"]),
+          access_token_key:
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output[0],
+
+          access_token_params: Object.entries(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_params ?? {}
+          ),
+          access_token_headers: Object.entries(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_headers ?? {}
+          ),
+
+          state: spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state
+            ? JSON.stringify(
+                spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state,
+                null,
+                2
+              )
+            : undefined,
+        };
+      }
+
+      const authenticatorDefinesRefreshToken =
+        !isDeclarativeOAuth /* Legacy OAuth flow */ ||
+        !!authenticator.refresh_token_updater; /* declarative w/refresh_token */
+
+      if (authenticatorDefinesRefreshToken && (!oauth.grant_type || oauth.grant_type === "refresh_token")) {
         const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], oauth, spec);
         builderAuthenticator = {
           ...builderAuthenticator,
@@ -1160,29 +1271,33 @@ export function manifestAuthenticatorToBuilder(
             `${authenticator.type}.refresh_token_updater`
           );
 
-          if (!isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
+          if (!isDeclarativeOAuth && !isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
             throw new ManifestCompatibilityError(
               undefined,
               "OAuthAuthenticator.refresh_token_updater.refresh_token_config_path needs to match the config path used for refresh_token"
             );
           }
+
           const {
             access_token_config_path,
             token_expiry_date_config_path,
             refresh_token_config_path,
             ...refresh_token_updater
           } = refreshTokenUpdater;
+
           builderAuthenticator = {
             ...builderAuthenticator,
-            refresh_token_updater: {
-              ...refresh_token_updater,
-              access_token: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
-              ),
-              token_expiry_date: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
-              ),
-            },
+            refresh_token_updater: isDeclarativeOAuth
+              ? { ...refresh_token_updater, access_token: "", token_expiry_date: "" }
+              : {
+                  ...refresh_token_updater,
+                  access_token: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
+                  ),
+                  token_expiry_date: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
+                  ),
+                },
           };
         }
       }
@@ -1193,7 +1308,7 @@ export function manifestAuthenticatorToBuilder(
     case SESSION_TOKEN_AUTHENTICATOR: {
       const sessionTokenAuth = filterKnownFields(
         authenticator,
-        ["type", "expiration_duration", "login_requester", "request_authentication", "session_token_path"],
+        ["type", "expiration_duration", "login_requester", "request_authentication", "session_token_path", "decoder"],
         authenticator.type
       );
       if (sessionTokenAuth.request_authentication.type === SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR) {
@@ -1217,6 +1332,16 @@ export function manifestAuthenticatorToBuilder(
           undefined,
           `SessionTokenAuthenticator request_authentication must have one of the following types: ${SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR}, ${SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR}`
         );
+      }
+
+      const decoderType = sessionTokenAuth.decoder?.type;
+      const supportedDecoders: Array<string | undefined> = [
+        undefined,
+        JsonDecoderType.JsonDecoder,
+        XmlDecoderType.XmlDecoder,
+      ];
+      if (!supportedDecoders.includes(decoderType)) {
+        throw new ManifestCompatibilityError(undefined, "SessionTokenAuthenticator decoder is not supported");
       }
 
       const manifestLoginRequester = filterKnownFields(
@@ -1270,6 +1395,7 @@ export function manifestAuthenticatorToBuilder(
           },
           errorHandler: manifestErrorHandlerToBuilder(manifestLoginRequester.error_handler),
         },
+        decoder: decoderType ? (decoderType === XmlDecoderType.XmlDecoder ? "XML" : "JSON") : "JSON",
       };
     }
   }
@@ -1375,10 +1501,16 @@ const extractAndValidateAuthKey = (
   manifestSpec: Spec | undefined,
   streamName?: string
 ) => {
+  const isDeclarativeOAuth = isSpecDeclarativeOAuth(manifestSpec);
   return extractAndValidateSpecKey(
     path,
     get(authenticator, path),
-    get(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type], path),
+    get(
+      LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[
+        isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : authenticator.type
+      ],
+      path
+    ),
     authenticator.type,
     manifestSpec,
     streamName

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -602,9 +602,11 @@ class PermissionHandlerTest {
           PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
+          PermissionType.WORKSPACE_RUNNER,
           PermissionType.WORKSPACE_READER,
           PermissionType.ORGANIZATION_ADMIN,
           PermissionType.ORGANIZATION_EDITOR,
+          PermissionType.ORGANIZATION_RUNNER,
           PermissionType.ORGANIZATION_READER,
           PermissionType.ORGANIZATION_MEMBER);
 

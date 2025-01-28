@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init.config
 
+import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider
 import io.airbyte.config.init.DeclarativeSourceUpdater
@@ -11,6 +13,7 @@ import io.airbyte.config.specs.LocalDefinitionsProvider
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
@@ -32,15 +35,28 @@ class SeedBeanFactory {
   @Singleton
   @Named("seedDefinitionsProvider")
   fun seedDefinitionsProvider(
-    @Value("\${airbyte.connector-registry.seed-provider}") seedProvider: String,
+    seedProvider: SeedDefinitionsProviderType,
     remoteDefinitionsProvider: RemoteDefinitionsProvider,
-  ): DefinitionsProvider {
+  ): DefinitionsProvider =
+    when (seedProvider) {
+      SeedDefinitionsProviderType.LOCAL -> {
+        LOGGER.info("Using local definitions provider for seeding")
+        LocalDefinitionsProvider()
+      }
+      SeedDefinitionsProviderType.REMOTE -> {
+        LOGGER.info("Using remote definitions provider for seeding")
+        remoteDefinitionsProvider
+      }
+    }
+
+  @Singleton
+  fun seedDefinitionsProviderType(
+    @Value("\${airbyte.connector-registry.seed-provider}") seedProvider: String,
+  ): SeedDefinitionsProviderType {
     if (StringUtils.isEmpty(seedProvider) || LOCAL_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
-      LOGGER.info("Using local definitions provider for seeding")
-      return LocalDefinitionsProvider()
+      return SeedDefinitionsProviderType.LOCAL
     } else if (REMOTE_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
-      LOGGER.info("Using remote definitions provider for seeding")
-      return remoteDefinitionsProvider
+      return SeedDefinitionsProviderType.REMOTE
     }
 
     throw IllegalArgumentException("Invalid seed provider: $seedProvider")
@@ -53,14 +69,15 @@ class SeedBeanFactory {
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
-  ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(
+    featureFlagClient: FeatureFlagClient,
+  ): DeclarativeSourceUpdater =
+    DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
+      featureFlagClient,
     )
-  }
 
   @Singleton
   @Named("localDeclarativeSourceUpdater")
@@ -69,20 +86,19 @@ class SeedBeanFactory {
     declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
-  ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(
+    featureFlagClient: FeatureFlagClient,
+  ): DeclarativeSourceUpdater =
+    DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
+      featureFlagClient,
     )
-  }
 
   @Singleton
   @Named("dockerHubOkHttpClient")
-  fun okHttpClient(): OkHttpClient {
-    return OkHttpClient()
-  }
+  fun okHttpClient(): OkHttpClient = OkHttpClient()
 
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(SeedBeanFactory::class.java)

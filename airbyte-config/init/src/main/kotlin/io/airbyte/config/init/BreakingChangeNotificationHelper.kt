@@ -1,13 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.config.Notification
-import io.airbyte.config.persistence.ConfigRepository
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
 import io.airbyte.featureflag.Workspace
@@ -40,25 +41,27 @@ class BreakingChangeNotificationHelper {
   internal enum class BreakingChangeNotificationType {
     WARNING,
     DISABLED,
+    UPGRADED,
+    UPCOMING_UPGRADE,
   }
 
-  private val configRepository: ConfigRepository
+  private val workspaceService: WorkspaceService
   private val notificationClient: NotificationClient
   private val featureFlagClient: FeatureFlagClient
 
-  constructor(configRepository: ConfigRepository, featureFlagClient: FeatureFlagClient) {
-    this.configRepository = configRepository
+  constructor(workspaceService: WorkspaceService, featureFlagClient: FeatureFlagClient) {
+    this.workspaceService = workspaceService
     this.featureFlagClient = featureFlagClient
     this.notificationClient = CustomerioNotificationClient()
   }
 
   @VisibleForTesting
   internal constructor(
-    configRepository: ConfigRepository,
+    workspaceService: WorkspaceService,
     featureFlagClient: FeatureFlagClient,
     notificationClient: NotificationClient,
   ) {
-    this.configRepository = configRepository
+    this.workspaceService = workspaceService
     this.featureFlagClient = featureFlagClient
     this.notificationClient = notificationClient
   }
@@ -105,6 +108,41 @@ class BreakingChangeNotificationHelper {
     }
   }
 
+  fun notifyUpcomingUpgradeSyncs(notifications: List<BreakingChangeNotificationData>) {
+    for ((actorType, connectorName, workspaceIds, breakingChange) in notifications) {
+      try {
+        notifyBreakingChange(
+          workspaceIds,
+          breakingChange,
+          connectorName,
+          actorType,
+          BreakingChangeNotificationType.UPCOMING_UPGRADE,
+        )
+      } catch (e: Exception) {
+        log.error("Failed to notify upcoming upgrade sync for {} {}", actorType, connectorName, e)
+      }
+    }
+  }
+
+  /**
+   * Notify users of an actor that was automatically upgraded because of a breaking change
+   */
+  fun notifyAutoUpgradedActor(notifications: List<BreakingChangeNotificationData>) {
+    for ((actorType, connectorName, workspaceIds, breakingChange) in notifications) {
+      try {
+        notifyBreakingChange(
+          workspaceIds,
+          breakingChange,
+          connectorName,
+          actorType,
+          BreakingChangeNotificationType.UPGRADED,
+        )
+      } catch (e: Exception) {
+        log.error("Failed to notify auto-upgraded sync for {} {}", actorType, connectorName, e)
+      }
+    }
+  }
+
   @Throws(IOException::class)
   private fun notifyBreakingChange(
     workspaceIds: List<UUID>,
@@ -113,7 +151,7 @@ class BreakingChangeNotificationHelper {
     actorType: ActorType,
     notificationType: BreakingChangeNotificationType,
   ) {
-    val workspaces = configRepository.listStandardWorkspacesWithIds(workspaceIds, false)
+    val workspaces = workspaceService.listStandardWorkspacesWithIds(workspaceIds, false)
     val receiverEmails: MutableList<String> = ArrayList()
 
     for (workspace in workspaces) {
@@ -167,6 +205,22 @@ class BreakingChangeNotificationHelper {
           receiverEmails.size,
         )
         notificationClient.notifyBreakingChangeSyncsDisabled(receiverEmails, connectorName, actorType, breakingChange)
+      } else if (notificationType == BreakingChangeNotificationType.UPGRADED) {
+        log.info(
+          "Sending breaking change sync upgraded for {} {} to {} emails",
+          actorType,
+          connectorName,
+          receiverEmails.size,
+        )
+        notificationClient.notifyBreakingChangeSyncsUpgraded(receiverEmails, connectorName, actorType, breakingChange)
+      } else if (notificationType == BreakingChangeNotificationType.UPCOMING_UPGRADE) {
+        log.info(
+          "Sending breaking change sync upcoming upgrade for {} {} to {} emails",
+          actorType,
+          connectorName,
+          receiverEmails.size,
+        )
+        notificationClient.notifyBreakingUpcomingAutoUpgrade(receiverEmails, connectorName, actorType, breakingChange)
       }
     } catch (e: Exception) {
       log.error("Failed to send breaking change notification to customer.io", e)

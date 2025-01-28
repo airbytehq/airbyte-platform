@@ -1,4 +1,22 @@
 intents:
+  CreateOrEditConnection:
+    name: Create or edit connection
+    description: Create a connection between a source and a destination
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
+  CreateOrEditConnector:
+    name: Create or edit connector
+    description: Create a source or destination connector, or change the settings of an existing connector
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
   UploadCustomConnector:
     name: Create custom docker connector
     description: Upload a custom docker connector to be used in the workspace
@@ -14,9 +32,43 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ViewOrganizationTrialStatus:
+    name: View organization trial status
+    description: Ability to see the trial status of an organization
+    roles:
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ViewOrganizationUsage:
+    name: View organization usage
+    description: Ability to view usage across the whole organization
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ManageOrganizationBilling:
     name: Manage organization billing
     description: View and edit billing information for the organization
     roles:
       - ORGANIZATION_ADMIN
+      - ADMIN
+  ManageOrganizationPaymentConfigs:
+    name: Manage organization payment configs
+    description: Ability to directly interact with organization payment configs
+    # This intent can only be used for instance admin at the moment, since the API it's used on are not all using
+    # POST request bodies, thus our authentication logic might not find the organizationId in the request.
+    roles:
+      - ADMIN
+
+  RunAndCancelConnectionSyncAndRefresh:
+    name: Run and cancel connection sync and refresh
+    description: Allow user to run/cancel syncs and refreshes
+    roles:
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_RUNNER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
       - ADMIN

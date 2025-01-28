@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -17,13 +17,14 @@ object DestinationReadMapper {
    * @param destinationRead Output of a destination create/get from config api
    * @return DestinationResponse Response object with destination details
    */
-  fun from(destinationRead: DestinationRead): DestinationResponse {
-    return DestinationResponse(
+  fun from(destinationRead: DestinationRead): DestinationResponse =
+    DestinationResponse(
       destinationId = destinationRead.destinationId.toString(),
       name = destinationRead.name,
       destinationType = DEFINITION_ID_TO_DESTINATION_NAME.getOrDefault(destinationRead.destinationDefinitionId, ""),
       workspaceId = destinationRead.workspaceId.toString(),
       configuration = destinationRead.connectionConfiguration,
+      definitionId = destinationRead.destinationDefinitionId.toString(),
+      createdAt = destinationRead.createdAt,
     )
-  }
 }

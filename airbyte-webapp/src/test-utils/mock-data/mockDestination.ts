@@ -24,6 +24,7 @@ export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {
   isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",
+  supportsFileTransfer: false,
 };
 
 export const mockDestinationDefinitionSpecification: DestinationDefinitionSpecificationRead = {

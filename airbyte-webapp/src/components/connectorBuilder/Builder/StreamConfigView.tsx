@@ -11,6 +11,13 @@ import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
+import {
+  GzipJsonDecoderType,
+  IterableDecoderType,
+  JsonDecoderType,
+  JsonlDecoderType,
+  XmlDecoderType,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
@@ -23,7 +30,6 @@ import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
@@ -37,7 +43,7 @@ import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { BUILDER_DECODER_TYPES, BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
@@ -78,8 +84,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       {selectedTab === "configuration" ? (
         <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
           <BuilderCard>
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
@@ -90,6 +96,21 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               path={streamFieldPath("httpMethod")}
               options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
+            />
+            <BuilderField
+              type="enum"
+              label={formatMessage({ id: "connectorBuilder.decoder.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
+              path={streamFieldPath("decoder")}
+              options={[...BUILDER_DECODER_TYPES]}
+              manifestPath="SimpleRetriever.properties.decoder"
+              manifestOptionPaths={[
+                JsonDecoderType.JsonDecoder,
+                XmlDecoderType.XmlDecoder,
+                JsonlDecoderType.JsonlDecoder,
+                IterableDecoderType.IterableDecoder,
+                GzipJsonDecoderType.GzipJsonDecoder,
+              ]}
             />
             <BuilderField
               type="array"
@@ -195,7 +216,7 @@ const StreamControls = ({
         onAddStream={(addedStreamNum) => {
           setValue("view", addedStreamNum);
         }}
-        initialValues={streams[streamNum]}
+        streamToDuplicate={streams[streamNum]}
         button={
           <button className={styles.controlButton} type="button" disabled={permission === "readOnly"}>
             <Icon type="copy" />
@@ -310,7 +331,6 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
-            automaticLayout
             onChange={(val: string | undefined) => {
               setValue(path, val, {
                 shouldValidate: true,

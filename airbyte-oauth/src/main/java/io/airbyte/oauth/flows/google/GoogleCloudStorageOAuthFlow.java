@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows.google;
@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 public class GoogleCloudStorageOAuthFlow extends GoogleOAuthFlow {
 
   @VisibleForTesting
-  static final String SCOPE_URL = "https://www.googleapis.com/auth/cloud-platform.read-only";
+  static final String SCOPE_URL = "https://www.googleapis.com/auth/devstorage.read_only";
 
   public GoogleCloudStorageOAuthFlow(final HttpClient httpClient) {
     super(httpClient);

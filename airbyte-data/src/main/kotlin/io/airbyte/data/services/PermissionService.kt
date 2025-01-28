@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.Permission
@@ -7,6 +11,11 @@ import java.util.UUID
  * A service that manages permissions.
  */
 interface PermissionService {
+  /**
+   * Get a permission by its unique id.
+   */
+  fun getPermission(permissionId: UUID): Permission
+
   /**
    * Get all permissions
    */
@@ -45,9 +54,13 @@ interface PermissionService {
 /**
  * Exception thrown when an operation on a permission cannot be performed because it is redundant.
  */
-class PermissionRedundantException(message: String) : Exception(message)
+class PermissionRedundantException(
+  message: String,
+) : Exception(message)
 
 /**
  * Exception thrown when attempting an operation on a permission that would result in an organization without any org-admin.
  */
-class RemoveLastOrgAdminPermissionException(message: String) : Exception(message)
+class RemoveLastOrgAdminPermissionException(
+  message: String,
+) : Exception(message)

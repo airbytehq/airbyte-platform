@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -44,7 +44,16 @@ public interface ConnectionService {
 
   List<StandardSync> listConnectionsBySource(UUID sourceId, boolean includeDeleted) throws IOException;
 
-  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId, String actorTypeValue, boolean includeDeleted)
+  List<StandardSync> listConnectionsByDestination(UUID destinationId, boolean includeDeleted) throws IOException;
+
+  List<StandardSync> listConnectionsBySources(List<UUID> sourceIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
+  List<StandardSync> listConnectionsByDestinations(List<UUID> destinationIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
+  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId,
+                                                               String actorTypeValue,
+                                                               boolean includeDeleted,
+                                                               boolean includeInactive)
       throws IOException;
 
   List<StreamDescriptor> getAllStreamsForConnection(UUID connectionId) throws ConfigNotFoundException, IOException;
@@ -59,8 +68,10 @@ public interface ConnectionService {
 
   Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException;
 
-  void disableConnectionsById(final List<UUID> connectionIds) throws IOException;
+  Set<UUID> disableConnectionsById(final List<UUID> connectionIds) throws IOException;
 
   List<UUID> listConnectionIdsForWorkspace(UUID workspaceId) throws IOException;
+
+  List<UUID> listConnectionIdsForOrganization(UUID organizationId) throws IOException;
 
 }

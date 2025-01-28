@@ -1,0 +1,20 @@
+@use "scss/variables";
+
+.listboxOptions {
+  min-width: 140px;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: variables.$box-shadow-menu;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: auto;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &--fullWidth {
+    /** --button-width is a variable exposed by headless-ui */
+    width: var(--button-width);
+  }
+}

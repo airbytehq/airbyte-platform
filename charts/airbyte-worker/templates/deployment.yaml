@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "airbyte.fullname" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.extraLabels }}
@@ -23,11 +23,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -39,13 +39,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.extraInitContainers }}
       initContainers:
@@ -53,7 +53,7 @@ spec:
       {{- end }}
       containers:
       - name: airbyte-worker-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "worker.imageTag" .) }}
+        image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if .Values.debug.enabled }}
@@ -115,11 +115,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKSPACE_ROOT
-        - name: LOCAL_ROOT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: LOCAL_ROOT
         - name: WEBAPP_URL
           valueFrom:
             configMapKeyRef:
@@ -168,20 +163,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_KUBE_TOLERATIONS
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.busybox }}
-        - name: JOB_KUBE_BUSYBOX_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_BUSYBOX_IMAGE
-        {{- end }}
-        {{- if $.Values.global.jobs.kube.images.curl }}
-        - name: JOB_KUBE_CURL_IMAGE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: JOB_KUBE_CURL_IMAGE
         {{- end }}
         {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
         - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
@@ -468,6 +449,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
         {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
@@ -487,6 +472,11 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:

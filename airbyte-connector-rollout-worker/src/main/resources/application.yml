@@ -5,8 +5,12 @@ micronaut:
     - io.airbyte.connector.rollout.worker
   inject:
     visibility: all # Enable verbose logging for bean injection
-  env:
-    cloud-deduction: true
+  server:
+    port: 8016
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
@@ -18,6 +22,17 @@ micronaut:
         port: ${STATSD_PORT:8125}
   security:
     enabled: true
+    filter:
+      enabled: false
+    oauth2:
+      clients:
+        keycloak:
+          client-id: ${KEYCLOAK_CLIENT_ID:}
+          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+          client-credentials:
+            enabled: true
+          openid:
+            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -36,9 +51,6 @@ airbyte:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
-  local:
-    docker-mount: ${LOCAL_DOCKER_MOUNT:}
-    root: ${LOCAL_ROOT}
   role: ${AIRBYTE_ROLE:}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
@@ -47,9 +59,10 @@ airbyte:
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
-  workspace:
-    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
-    root: ${WORKSPACE_ROOT}
+  connector_rollouts:
+    github_workflow:
+      dispatch_url: "https://api.github.com/repos/airbytehq/airbyte/actions/workflows/finalize_rollout.yml/dispatches"
+      github_token: ${CONNECTOR_ROLLOUT_GITHUB_AIRBYTE_PAT:}
 
 temporal:
   cloud:
@@ -78,7 +91,44 @@ jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
 
-logging:
-  level:
-    root: INFO
-    io.airbyte: DEBUG
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: false
+
+logger:
+  levels:
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

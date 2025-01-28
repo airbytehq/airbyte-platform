@@ -22,7 +22,6 @@
   "STORAGE_BUCKET_WORKLOAD_OUTPUT": "storage",
   "STORAGE_TYPE": "GCS",
   "S3_PATH_STYLE_ACCESS": " ",
-  "LOCAL_ROOT": "/tmp/airbyte_local",
   "WORKSPACE_DOCKER_MOUNT": "workspace",
   "JOB_MAIN_CONTAINER_CPU_REQUEST": "1",
   "AIRBYTE_VERSION": "dev-hashhash-env"

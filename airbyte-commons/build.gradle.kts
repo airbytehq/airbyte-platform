@@ -7,9 +7,7 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-  annotationProcessor(libs.log4j.core)
+  api(libs.bundles.micronaut.annotation)
 
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
@@ -17,7 +15,6 @@ dependencies {
   implementation(libs.commons.io)
   implementation(libs.bundles.apache)
   implementation(libs.google.cloud.storage)
-  implementation(libs.bundles.log4j)
   implementation(libs.airbyte.protocol)
 
   // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
@@ -28,6 +25,7 @@ dependencies {
   testImplementation(libs.junit.pioneer)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+  testRuntimeOnly(libs.bundles.logback)
 }
 
 airbyte {
@@ -36,12 +34,13 @@ airbyte {
   }
 }
 
-val downloadSpecSecretMask = tasks.register<Download>("downloadSpecSecretMask") {
-  src("https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml")
-  dest(File(projectDir, "src/main/resources/seed/specs_secrets_mask.yaml"))
-  overwrite(true)
-  onlyIfModified(true)
-}
+val downloadSpecSecretMask =
+  tasks.register<Download>("downloadSpecSecretMask") {
+    src("https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml")
+    dest(File(projectDir, "src/main/resources/seed/specs_secrets_mask.yaml"))
+    overwrite(true)
+    onlyIfModified(true)
+  }
 
 tasks.named("processResources") {
   dependsOn(downloadSpecSecretMask)
@@ -52,6 +51,6 @@ tasks.named<Test>("test") {
     mapOf(
       "Z_TESTING_PURPOSES_ONLY_1" to "value-defined",
       "Z_TESTING_PURPOSES_ONLY_2" to "  ",
-    )
+    ),
   )
 }

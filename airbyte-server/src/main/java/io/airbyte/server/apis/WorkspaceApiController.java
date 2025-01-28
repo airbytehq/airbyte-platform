@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -39,6 +39,8 @@ import io.airbyte.api.model.generated.WorkspaceUsageRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem;
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -72,6 +74,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/create")
   @Secured({AUTHENTICATED_USER})
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WorkspaceRead createWorkspace(@Body final WorkspaceCreate workspaceCreate) {
     return ApiHelper.execute(() -> {
       // Verify that the user has permission to create a workspace in an organization,
@@ -117,6 +120,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
   @Override
   @Status(HttpStatus.NO_CONTENT)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     ApiHelper.execute(() -> {
       workspacesHandler.deleteWorkspace(workspaceIdRequestBody);
@@ -184,6 +188,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WorkspaceRead updateWorkspace(@Body final WorkspaceUpdate workspaceUpdate) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspace(workspaceUpdate));
   }
@@ -203,6 +208,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WorkspaceRead updateWorkspaceName(@Body final WorkspaceUpdateName workspaceUpdateName) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspaceName(workspaceUpdateName));
   }
@@ -211,6 +217,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public WorkspaceRead updateWorkspaceOrganization(@Body final WorkspaceUpdateOrganization workspaceUpdateOrganization) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization));
   }

@@ -1,27 +1,31 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.connector.rollout.shared.Constants
+import io.airbyte.connector.rollout.worker.activities.CleanupActivityImpl
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivityImpl
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivityImpl
+import io.airbyte.connector.rollout.worker.activities.PauseRolloutActivityImpl
+import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivityImpl
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
+import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivityImpl
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.temporal.client.WorkflowClient
 import io.temporal.worker.Worker
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
+
+private val logger = KotlinLogging.logger {}
 
 @Factory
 class ConnectorRolloutWorkerFactory {
-  private val log = LoggerFactory.getLogger(ConnectorRolloutWorkerFactory::class.java)
-
   @Singleton
   @Named("connectorRolloutWorkerFactory")
   fun connectorRolloutWorkerFactory(
@@ -31,8 +35,12 @@ class ConnectorRolloutWorkerFactory {
     findRolloutActivityImpl: FindRolloutActivityImpl,
     updateRolloutActivityImpl: DoRolloutActivityImpl,
     finalizeRolloutActivityImpl: FinalizeRolloutActivityImpl,
+    promoteOrRollbackActivityImpl: PromoteOrRollbackActivityImpl,
+    verifyDefaultVersionActivityImpl: VerifyDefaultVersionActivityImpl,
+    cleanupActivityImpl: CleanupActivityImpl,
+    pauseRolloutActivityImpl: PauseRolloutActivityImpl,
   ): WorkerFactory {
-    log.info("ConnectorRolloutWorkerFactory registering workflow")
+    logger.info { "ConnectorRolloutWorkerFactory registering workflow" }
     val workerFactory = WorkerFactory.newInstance(workflowClient)
     val worker: Worker = workerFactory.newWorker(Constants.TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
@@ -42,6 +50,10 @@ class ConnectorRolloutWorkerFactory {
       findRolloutActivityImpl,
       updateRolloutActivityImpl,
       finalizeRolloutActivityImpl,
+      promoteOrRollbackActivityImpl,
+      verifyDefaultVersionActivityImpl,
+      cleanupActivityImpl,
+      pauseRolloutActivityImpl,
     )
     return workerFactory
   }

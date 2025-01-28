@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.constants
@@ -13,6 +13,7 @@ const val APPLICATIONS_PATH = "$ROOT_PATH/v1/applications"
 const val APPLICATIONS_PATH_WITH_ID = "$ROOT_PATH/v1/applications/{applicationId}"
 const val CONNECTIONS_PATH = "$ROOT_PATH/v1/connections"
 const val CONNECTIONS_WITH_ID_PATH = "$CONNECTIONS_PATH/{connectionId}"
+const val CONNECTOR_DEFINITIONS_PATH = "$ROOT_PATH/v1/connector_definitions"
 const val STREAMS_PATH = "$ROOT_PATH/v1/streams"
 const val JOBS_PATH = "$ROOT_PATH/v1/jobs"
 const val JOBS_WITH_ID_PATH = "$JOBS_PATH/{jobId}"

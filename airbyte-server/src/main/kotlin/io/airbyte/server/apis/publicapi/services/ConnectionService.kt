@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -87,12 +87,12 @@ class ConnectionServiceImpl(
       ConnectionCreateMapper.from(connectionCreateRequest, catalogId, configuredCatalog)
 
     val result: Result<ConnectionRead> =
-      kotlin.runCatching { connectionHandler.createConnection(connectionCreateOss) }
+      kotlin
+        .runCatching { connectionHandler.createConnection(connectionCreateOss) }
         .onFailure {
           log.error("Error while creating connection: ", it)
           throw ConfigClientErrorHandler.handleCreateConnectionError(it, connectionCreateRequest)
-        }
-        .onSuccess { log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + it) }
+        }.onSuccess { log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + it) }
 
     return try {
       ConnectionReadMapper.from(
@@ -110,12 +110,13 @@ class ConnectionServiceImpl(
    */
   override fun deleteConnection(connectionId: UUID) {
     val result =
-      kotlin.runCatching {
-        connectionHandler.deleteConnection(connectionId)
-      }.onFailure {
-        log.error("Error while deleting connection: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          connectionHandler.deleteConnection(connectionId)
+        }.onFailure {
+          log.error("Error while deleting connection: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result.getOrNull())
   }
 
@@ -124,12 +125,13 @@ class ConnectionServiceImpl(
    */
   override fun getConnection(connectionId: UUID): ConnectionResponse {
     val result =
-      kotlin.runCatching {
-        connectionHandler.getConnection(connectionId)
-      }.onFailure {
-        log.error("Error while getting connection: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          connectionHandler.getConnection(connectionId)
+        }.onFailure {
+          log.error("Error while getting connection: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
     val connectionRead = result.getOrNull()!!
@@ -164,7 +166,8 @@ class ConnectionServiceImpl(
     // this is kept as a string to easily parse the error response to determine if a source or a
     // destination id is invalid
     val result =
-      kotlin.runCatching { connectionHandler.updateConnection(connectionUpdate, null, false) }
+      kotlin
+        .runCatching { connectionHandler.updateConnection(connectionUpdate, null, false) }
         .onFailure {
           log.error("Error while updating connection: ", it)
           ConfigClientErrorHandler.handleError(it)
@@ -203,12 +206,13 @@ class ConnectionServiceImpl(
         .pagination(pagination)
 
     val result =
-      kotlin.runCatching {
-        connectionHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody)
-      }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          connectionHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody)
+        }.onFailure {
+          log.error("Error while listing connections for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val connectionReadList = result.getOrNull()!!
 

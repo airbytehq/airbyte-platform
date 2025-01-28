@@ -3,10 +3,9 @@ import get from "lodash/get";
 import { FieldError, useFormContext } from "react-hook-form";
 
 import { SourceDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
-import { FeatureItem, FeatureService } from "core/services/features";
 
 import { useConnectorForm } from "./connectorFormContext";
-import { useAuthentication as useAuthenticationHook } from "./useAuthentication";
+import { useAuthentication } from "./useAuthentication";
 import { noPredicateAdvancedAuth, predicateInsideConditional } from "./useAuthentication.mocks";
 import { makeConnectionConfigurationPath } from "./utils";
 
@@ -42,49 +41,29 @@ const mockContext = ({ connector, values, submitCount, fieldMeta = {} }: MockPar
   });
 };
 
-const useAuthentication = (withOauthFeature = true) => {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { result } = renderHook(() => useAuthenticationHook(), {
-    wrapper: ({ children }: React.PropsWithChildren) => (
-      <FeatureService features={withOauthFeature ? [FeatureItem.AllowOAuthConnector] : []}>{children}</FeatureService>
-    ),
-  });
-  return result.current;
-};
-
 describe("useAuthentication", () => {
   it("should return empty results for non OAuth connectors", () => {
     mockContext({ connector: {}, values: {} });
-    const result = useAuthentication();
-    expect(result.hiddenAuthFieldErrors).toEqual({});
-    expect(result.shouldShowAuthButton("field")).toBe(false);
-    expect(result.isHiddenAuthField("field")).toBe(false);
-  });
-
-  it("should not handle auth specifically if OAuth feature is disabled", () => {
-    mockContext({
-      connector: { advancedAuth: predicateInsideConditional },
-      values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
-    });
-    const result = useAuthentication(false);
-    expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "access_token"]))).toBe(false);
-    expect(result.shouldShowAuthButton(makeConnectionConfigurationPath(["credentials", "auth_type"]))).toBe(false);
+    const { result } = renderHook(() => useAuthentication());
+    expect(result.current.hiddenAuthFieldErrors).toEqual({});
+    expect(result.current.shouldShowAuthButton("field")).toBe(false);
+    expect(result.current.isHiddenAuthField("field")).toBe(false);
   });
 
   describe("for advancedAuth connectors", () => {
     describe("without a predicateKey", () => {
       it("should calculate hiddenAuthFields correctly", () => {
         mockContext({ connector: { advancedAuth: noPredicateAdvancedAuth }, values: {} });
-        const result = useAuthentication();
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["access_token"]))).toBe(true);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["client_id"]))).toBe(false);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["client_secret"]))).toBe(false);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["access_token"]))).toBe(true);
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["client_id"]))).toBe(false);
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["client_secret"]))).toBe(false);
       });
 
       it("should show the auth button on the root level", () => {
         mockContext({ connector: { advancedAuth: noPredicateAdvancedAuth }, values: {} });
-        const result = useAuthentication();
-        expect(result.shouldShowAuthButton(makeConnectionConfigurationPath())).toBe(true);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.shouldShowAuthButton(makeConnectionConfigurationPath())).toBe(true);
       });
 
       it("should not return authErrors before submitting", () => {
@@ -92,11 +71,11 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
+          fieldMeta: { [accessTokenField]: { error: { type: "required", message: "Field is required" } } },
           submitCount: 0,
         });
-        const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({});
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.hiddenAuthFieldErrors).toEqual({});
       });
 
       it("should return existing authErrors if submitted once", () => {
@@ -104,11 +83,11 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
+          fieldMeta: { [accessTokenField]: { error: { type: "required", message: "Field is empty" } } },
           submitCount: 1,
         });
-        const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({ [accessTokenField]: "form.empty.error" });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.hiddenAuthFieldErrors).toEqual({ [accessTokenField]: "required" });
       });
     });
 
@@ -118,10 +97,16 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
         });
-        const result = useAuthentication();
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "access_token"]))).toBe(true);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_id"]))).toBe(true);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_secret"]))).toBe(true);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "access_token"]))).toBe(
+          true
+        );
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_id"]))).toBe(
+          true
+        );
+        expect(
+          result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_secret"]))
+        ).toBe(true);
       });
 
       it("should not hide auth fields when predicate value is a mismatch", () => {
@@ -129,10 +114,16 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "token" } } },
         });
-        const result = useAuthentication();
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "access_token"]))).toBe(false);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_id"]))).toBe(false);
-        expect(result.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_secret"]))).toBe(false);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "access_token"]))).toBe(
+          false
+        );
+        expect(result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_id"]))).toBe(
+          false
+        );
+        expect(
+          result.current.isHiddenAuthField(makeConnectionConfigurationPath(["credentials", "client_secret"]))
+        ).toBe(false);
       });
 
       it("should show the auth button inside the conditional if right option is selected", () => {
@@ -140,8 +131,10 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
         });
-        const result = useAuthentication();
-        expect(result.shouldShowAuthButton(makeConnectionConfigurationPath(["credentials", "auth_type"]))).toBe(true);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.shouldShowAuthButton(makeConnectionConfigurationPath(["credentials", "auth_type"]))).toBe(
+          true
+        );
       });
 
       it("shouldn't show the auth button if the wrong conditional option is selected", () => {
@@ -149,8 +142,10 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "token" } } },
         });
-        const result = useAuthentication();
-        expect(result.shouldShowAuthButton(makeConnectionConfigurationPath(["credentials", "auth_type"]))).toBe(false);
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.shouldShowAuthButton(makeConnectionConfigurationPath(["credentials", "auth_type"]))).toBe(
+          false
+        );
       });
 
       it("should not return authErrors before submitting", () => {
@@ -160,13 +155,13 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 0,
         });
-        const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({});
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.hiddenAuthFieldErrors).toEqual({});
       });
 
       it("should return authErrors when conditional has correct option selected", () => {
@@ -176,15 +171,15 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 1,
         });
-        const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({
-          [accessTokenField]: "form.empty.error",
-          [clientIdField]: "another.error",
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.hiddenAuthFieldErrors).toEqual({
+          [accessTokenField]: "required",
+          [clientIdField]: "validate",
         });
       });
 
@@ -195,13 +190,13 @@ describe("useAuthentication", () => {
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "token" } } },
           fieldMeta: {
-            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
-            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+            [accessTokenField]: { error: { type: "required", message: "Field is empty" } },
+            [clientIdField]: { error: { type: "validate", message: "Another validation error" } },
           },
           submitCount: 1,
         });
-        const result = useAuthentication();
-        expect(result.hiddenAuthFieldErrors).toEqual({});
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.hiddenAuthFieldErrors).toEqual({});
       });
     });
   });

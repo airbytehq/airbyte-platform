@@ -20,11 +20,6 @@ Returns the storage provider secret name
 {{- if .Values.global.storage.secretName }}
   {{- printf "%s" .Values.global.storage.secretName }}
 {{- else if .Values.global.storage.storageSecretName }}
-  {{/*
-  NOTE: `storageSecretName` is the legacy name of this key, but we want to standardize on all configs
-  providing the name of the secret as `secretName`, under the respective section of `values.yaml`.
-  We continue to support this here for backwards compatibility.
-  */}}
   {{- printf "%s" .Values.global.storage.storageSecretName }}
 {{- else -}}
   {{/* GCS has its own default secret we create */}}
@@ -213,14 +208,6 @@ Returns storage config environment variables.
 {{- include "airbyte.storage.azure.envs" . }}
 {{- end }}
 
-{{/* LOCAl */}}
-{{- if eq $storageProvider "local" }}
-- name: LOCAL_ROOT
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: LOCAL_ROOT
-{{- end }}
 {{- end }}
 
 {{/*

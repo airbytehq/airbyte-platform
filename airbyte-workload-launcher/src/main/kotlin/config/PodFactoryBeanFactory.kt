@@ -1,6 +1,9 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
-import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.FileConstants
@@ -10,6 +13,7 @@ import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.SPEC_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
+import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -25,8 +29,6 @@ class PodFactoryBeanFactory {
   @Named("checkPodFactory")
   fun checkPodFactory(
     featureFlagClient: FeatureFlagClient,
-    @Named("checkConnectorReqs") connectorReqs: ResourceRequirements,
-    @Named("sidecarReqs") sidecarReqs: ResourceRequirements,
     @Named("checkPodTolerations") tolerations: List<Toleration>,
     @Named("checkImagePullSecrets") imagePullSecrets: List<LocalObjectReference>,
     @Named("checkEnvVars") connectorEnvVars: List<EnvVar>,
@@ -36,12 +38,11 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+    resourceRequirementsFactory: ResourceRequirementsFactory,
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       CHECK_OPERATION_NAME,
       featureFlagClient,
-      connectorReqs,
-      sidecarReqs,
       tolerations,
       imagePullSecrets,
       connectorEnvVars,
@@ -54,15 +55,13 @@ class PodFactoryBeanFactory {
         "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
       workloadSecurityContextProvider,
+      resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("discoverPodFactory")
   fun discoverPodFactory(
     featureFlagClient: FeatureFlagClient,
-    @Named("discoverConnectorReqs") connectorReqs: ResourceRequirements,
-    @Named("sidecarReqs") sidecarReqs: ResourceRequirements,
     @Named("discoverPodTolerations") tolerations: List<Toleration>,
     @Named("discoverImagePullSecrets") imagePullSecrets: List<LocalObjectReference>,
     @Named("discoverEnvVars") connectorEnvVars: List<EnvVar>,
@@ -72,12 +71,11 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+    resourceRequirementsFactory: ResourceRequirementsFactory,
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
       featureFlagClient,
-      connectorReqs,
-      sidecarReqs,
       tolerations,
       imagePullSecrets,
       connectorEnvVars,
@@ -90,15 +88,13 @@ class PodFactoryBeanFactory {
         "config" to "${FileConstants.CONFIG_DIR}/${FileConstants.CONNECTION_CONFIGURATION_FILE}",
       ),
       workloadSecurityContextProvider,
+      resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("specPodFactory")
   fun specPodFactory(
     featureFlagClient: FeatureFlagClient,
-    @Named("specConnectorReqs") connectorReqs: ResourceRequirements,
-    @Named("sidecarReqs") sidecarReqs: ResourceRequirements,
     @Named("specPodTolerations") tolerations: List<Toleration>,
     @Named("specImagePullSecrets") imagePullSecrets: List<LocalObjectReference>,
     @Named("specEnvVars") connectorEnvVars: List<EnvVar>,
@@ -108,12 +104,11 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+    resourceRequirementsFactory: ResourceRequirementsFactory,
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       SPEC_OPERATION_NAME,
       featureFlagClient,
-      connectorReqs,
-      sidecarReqs,
       tolerations,
       imagePullSecrets,
       connectorEnvVars,
@@ -124,6 +119,6 @@ class PodFactoryBeanFactory {
       initContainerFactory,
       mapOf(),
       workloadSecurityContextProvider,
+      resourceRequirementsFactory,
     )
-  }
 }

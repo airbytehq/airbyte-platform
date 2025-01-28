@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.logging.LogClientManager;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
 import jakarta.inject.Named;
@@ -44,10 +44,7 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
 
     try {
       final var msg = input.getMessage();
-      try (final var mdcScope = new MdcScope.Builder()
-          .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-          .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-          .build()) {
+      try (final var mdcScope = new MdcScope.Builder().setExtraMdcEntries(LogSource.PLATFORM.toMdc()).build()) {
 
         switch (input.getLevel()) {
           case ERROR -> logger.error(msg);

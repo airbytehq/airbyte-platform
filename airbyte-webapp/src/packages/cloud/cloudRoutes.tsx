@@ -3,10 +3,11 @@ import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-
 import { useEffectOnce } from "react-use";
 
 import LoadingPage from "components/LoadingPage";
+import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
-import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
+import { usePrefetchWorkspaceData } from "core/api/cloud";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
@@ -26,29 +27,27 @@ import {
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
+import { WorkspaceMembersPage } from "pages/SettingsPage/Workspace/WorkspaceMembersPage";
 
 import { AcceptInvitation } from "./AcceptInvitation";
-import { useShowBillingPageV2 } from "./area/billing/utils/useShowBillingPage";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { OrganizationBillingPage } from "./views/billing/OrganizationBillingPage";
 import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
 import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
-import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
-import { WorkspaceUsagePage } from "./views/workspaces/WorkspaceUsagePage";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
-const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
+const WorkspacesPage = React.lazy(() => import("pages/workspaces"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
-const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
-const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
+const OrganizationBillingPage = React.lazy(() => import("packages/cloud/views/billing/OrganizationBillingPage"));
+const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/billing/OrganizationUsagePage"));
+const WorkspaceUsagePage = React.lazy(() => import("packages/cloud/views/workspaces/WorkspaceUsagePage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
 
@@ -65,7 +64,7 @@ const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
-const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
+const DefaultView = React.lazy(() => import("pages/DefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
 const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/AdvancedSettingsPage"));
 
@@ -73,7 +72,7 @@ const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
-  const showBillingPageV2 = useShowBillingPageV2();
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -87,7 +86,6 @@ const MainRoutes: React.FC = () => {
   useAnalyticsRegisterValues(analyticsContext);
 
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   return (
     <DefaultErrorBoundary>
@@ -105,6 +103,7 @@ const MainRoutes: React.FC = () => {
           <Route index element={<AllSourcesPage />} />
           <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
           <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
+          <Route path={SourcePaths.EnterpriseSource} element={<EnterpriseSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
             <Route index element={<SourceSettingsPage />} />
             <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />
@@ -115,30 +114,29 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
           <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
-          {supportsDataResidency && (
-            <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />
-          )}
+          <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
-          {showBillingPageV2 && <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />}
+          <Route path={CloudSettingsRoutePaths.Usage} element={<WorkspaceUsagePage />} />
           {canViewOrgSettings && (
             <>
               <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
               <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
             </>
           )}
-          {canManageOrganizationBilling && showBillingPageV2 && (
+          {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+          )}
+          {canViewOrganizationUsage && (
+            <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
-        {!showBillingPageV2 && <Route path={CloudRoutes.Billing} element={<BillingPage />} />}
-        <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
@@ -155,25 +153,25 @@ const CloudMainViewRoutes = () => {
 
   return (
     <Routes>
-      <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
+      <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
-          <CloudWorkspaceDataPrefetcher>
+          <WorkspaceDataPrefetcher>
             <CloudMainView>
               <MainRoutes />
             </CloudMainView>
-          </CloudWorkspaceDataPrefetcher>
+          </WorkspaceDataPrefetcher>
         }
       />
-      <Route path="*" element={<CloudDefaultView />} />
+      <Route path="*" element={<DefaultView />} />
     </Routes>
   );
 };
 
-const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  usePrefetchCloudWorkspaceData();
+const WorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
+  usePrefetchWorkspaceData();
   return <>{children}</>;
 };
 

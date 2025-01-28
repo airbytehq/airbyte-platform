@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync
 
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.LogClientManager
-import io.airbyte.commons.logging.LoggingHelper
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.OperatorWebhookInput
@@ -38,13 +38,14 @@ class InvokeOperationsActivityImpl(
     jobRunConfig: JobRunConfig,
   ): WebhookOperationSummary {
     val webhookOperationSummary = WebhookOperationSummary()
-    MdcScope.Builder()
-      .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
-      .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-      .build().use { _ ->
+    MdcScope
+      .Builder()
+      .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
+      .build()
+      .use { _ ->
         try {
           logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId))
-          LineGobbler.startSection(SECTION_NAME)
+          logger.info { LineGobbler.formatStartSection(SECTION_NAME) }
 
           if (CollectionUtils.isNotEmpty(operations)) {
             logger.info { "Invoking ${operations.size} post-replication operation(s)..." }
@@ -78,7 +79,7 @@ class InvokeOperationsActivityImpl(
             logger.info { "No post-replication operation(s) to perform." }
           }
         } finally {
-          LineGobbler.endSection(SECTION_NAME)
+          logger.info { LineGobbler.formatEndSection(SECTION_NAME) }
           logClientManager.setJobMdc(null)
         }
       }

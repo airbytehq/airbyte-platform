@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.connector.rollout.client
 
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig
@@ -12,34 +13,26 @@ import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
-import lombok.extern.slf4j.Slf4j
 import java.time.Duration
-import java.util.Objects
 
-@Slf4j
 @Singleton
 class ConnectorRolloutTemporalWorkflowServiceFactory(
   @Property(name = "temporal.cloud.client.cert") temporalCloudClientCert: String?,
   @Property(name = "temporal.cloud.client.key") temporalCloudClientKey: String?,
   @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
-  @Value("\${temporal.cloud.host}") temporalCloudHost: String?,
-  @Value("\${temporal.cloud.connectorRollout.namespace}") temporalCloudNamespace: String?,
+  @Value("\${temporal.cloud.connector-rollout.host}") temporalCloudHost: String?,
+  @Value("\${temporal.cloud.connector-rollout.namespace}") temporalCloudNamespace: String?,
   @Value("\${temporal.host}") temporalHost: String?,
 ) {
-  private val temporalCloudConfig: TemporalCloudConfig
-  private val temporalCloudEnabled: Boolean
-  private val workflowServiceStubsFactory: WorkflowServiceStubsFactory
+  private val temporalCloudConfig: TemporalCloudConfig =
+    TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace)
 
-  init {
-    this.temporalCloudEnabled = Objects.requireNonNullElse(temporalCloudEnabled, false)
-    temporalCloudConfig = TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace)
-    workflowServiceStubsFactory =
-      WorkflowServiceStubsFactory(
-        temporalCloudConfig,
-        TemporalSelfHostedConfig(temporalHost, if (this.temporalCloudEnabled) temporalCloudNamespace else Constants.DEFAULT_NAMESPACE),
-        this.temporalCloudEnabled,
-      )
-  }
+  private val workflowServiceStubsFactory: WorkflowServiceStubsFactory =
+    WorkflowServiceStubsFactory(
+      temporalCloudConfig,
+      TemporalSelfHostedConfig(temporalHost, if (temporalCloudEnabled) temporalCloudNamespace else Constants.DEFAULT_NAMESPACE),
+      temporalCloudEnabled,
+    )
 
   /**
    * Create WorkflowServiceStubs without making a connection to the Temporal server.

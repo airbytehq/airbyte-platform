@@ -4,10 +4,11 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -15,12 +16,14 @@ dependencies {
   implementation(libs.bundles.temporal)
   implementation(libs.bundles.apache)
   implementation(libs.failsafe)
+  implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-notification"))
@@ -33,6 +36,9 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+
   testImplementation(libs.temporal.testing)
   // Needed to be able to mock final class
   testImplementation(libs.mockito.inline)
@@ -41,4 +47,8 @@ dependencies {
   testImplementation(libs.assertj.core)
 
   testImplementation(libs.junit.pioneer)
+}
+
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

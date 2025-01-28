@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -12,9 +12,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 class MemorySecretPersistence : SecretPersistence {
   private val secretMap: MutableMap<SecretCoordinate, String> = mutableMapOf()
 
-  override fun read(coordinate: SecretCoordinate): String {
-    return secretMap[coordinate] ?: ""
-  }
+  override fun read(coordinate: SecretCoordinate): String = secretMap[coordinate] ?: ""
 
   override fun write(
     coordinate: SecretCoordinate,

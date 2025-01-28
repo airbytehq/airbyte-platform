@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -23,17 +23,20 @@ import io.temporal.workflow.Functions.Proc;
 import io.temporal.workflow.Functions.Proc1;
 import io.temporal.workflow.Functions.TemporalFunctionalInterfaceMarker;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility functions for connection manager workflows.
  */
 @Singleton
-@Slf4j
 public class ConnectionManagerUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final WorkflowClientWrapped workflowClientWrapped;
   private final MetricClient metricClient;

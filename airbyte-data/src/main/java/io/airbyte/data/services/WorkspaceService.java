@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -41,7 +41,7 @@ public interface WorkspaceService {
 
   void writeStandardWorkspaceNoSecrets(StandardWorkspace workspace) throws JsonValidationException, IOException;
 
-  void setFeedback(UUID workspaceId) throws IOException;
+  void setFeedback(UUID workspaceId) throws IOException, ConfigNotFoundException;
 
   boolean workspaceCanUseDefinition(UUID actorDefinitionId, UUID workspaceId) throws IOException;
 

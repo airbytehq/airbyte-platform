@@ -16,19 +16,17 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
-import { useShowBillingPageV2 } from "packages/cloud/area/billing/utils/useShowBillingPage";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
 export const CloudSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
-  const showBillingPageV2 = useShowBillingPageV2();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
 
   return (
     <SettingsLayout>
@@ -61,17 +59,15 @@ export const CloudSettingsPage: React.FC = () => {
         </SettingsNavigationBlock>
         <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
           <SettingsLink
-            iconType="community"
+            iconType="gear"
             name={formatMessage({ id: "settings.general" })}
             to={CloudSettingsRoutePaths.Workspace}
           />
-          {supportsDataResidency && (
-            <SettingsLink
-              iconType="globe"
-              name={formatMessage({ id: "settings.dataResidency" })}
-              to={CloudSettingsRoutePaths.DataResidency}
-            />
-          )}
+          <SettingsLink
+            iconType="community"
+            name={formatMessage({ id: "settings.members" })}
+            to={CloudSettingsRoutePaths.WorkspaceMembers}
+          />
           <SettingsLink
             iconType="source"
             name={formatMessage({ id: "tables.sources" })}
@@ -95,13 +91,11 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
 
-          {showBillingPageV2 && (
-            <SettingsLink
-              iconType="chart"
-              name={formatMessage({ id: "settings.usage" })}
-              to={CloudSettingsRoutePaths.Usage}
-            />
-          )}
+          <SettingsLink
+            iconType="chart"
+            name={formatMessage({ id: "settings.usage" })}
+            to={CloudSettingsRoutePaths.Usage}
+          />
         </SettingsNavigationBlock>
         {canViewOrgSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
@@ -115,11 +109,18 @@ export const CloudSettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.members" })}
               to={CloudSettingsRoutePaths.OrganizationMembers}
             />
-            {showBillingPageV2 && canManageOrganizationBilling && (
+            {canManageOrganizationBilling && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}
                 to={CloudSettingsRoutePaths.Billing}
+              />
+            )}
+            {canViewOrganizationUsage && (
+              <SettingsLink
+                iconType="chart"
+                name={formatMessage({ id: "settings.usage" })}
+                to={CloudSettingsRoutePaths.OrganizationUsage}
               />
             )}
           </SettingsNavigationBlock>

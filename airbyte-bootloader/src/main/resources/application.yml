@@ -4,10 +4,17 @@ micronaut:
   caches:
     platform-compatibility-provider:
       expire-after-write: 15s
-  env:
-    cloud-deduction: true
   server:
     port: 9002
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
 
 airbyte:
   bootloader:
@@ -147,5 +154,11 @@ jooq:
 
 logger:
   levels:
-# Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+    com.zaxxer.hikari: ERROR
+    com.zaxxer.hikari.pool: ERROR
+    io.grpc: INFO
+    io.fabric8.kubernetes.client: INFO
+    io.netty: INFO
+    io.temporal: INFO
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

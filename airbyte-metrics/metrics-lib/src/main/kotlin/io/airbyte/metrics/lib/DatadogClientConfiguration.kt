@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.lib
 
 import io.airbyte.commons.envvar.EnvVar
@@ -14,5 +18,9 @@ data class DatadogClientConfiguration(
 
 private fun constantTags(): List<String> {
   val tags = EnvVar.DD_CONSTANT_TAGS.fetch() ?: ""
-  return tags.split(",").map { it.trim() }.filter { it.isNotBlank() }.toList()
+  return tags
+    .split(",")
+    .map { it.trim() }
+    .filter { it.isNotBlank() }
+    .toList()
 }

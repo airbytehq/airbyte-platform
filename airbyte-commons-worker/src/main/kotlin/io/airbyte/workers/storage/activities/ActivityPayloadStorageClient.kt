@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
@@ -26,9 +30,7 @@ class ActivityPayloadStorageClient(
    *
    * @return the unmarshalled object on a hit and null on a miss.
    */
-  inline fun <reified T : Any> readJSON(uri: ActivityPayloadURI): T? {
-    return readJSON(uri, T::class.java)
-  }
+  inline fun <reified T : Any> readJSON(uri: ActivityPayloadURI): T? = readJSON(uri, T::class.java)
 
   /**
    * It reads the object from the location described by the given [uri] and unmarshals it from JSON to [target] class.
@@ -42,7 +44,8 @@ class ActivityPayloadStorageClient(
   ): T? {
     metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE, 1)
 
-    return storageClientRaw.read(uri.id)
+    return storageClientRaw
+      .read(uri.id)
       ?.let { jsonSerde.deserialize(it, target) }
   }
 

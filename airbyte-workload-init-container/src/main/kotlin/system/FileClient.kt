@@ -1,9 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.initContainer.system
 
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
@@ -22,7 +25,9 @@ import java.util.EnumSet
  * Wrapper around the Files API for encapsulation and testing purposes.
  */
 @Singleton
-class FileClient {
+class FileClient(
+  private val metricClient: MetricClient,
+) {
   /**
    * Writes the contents in UTF 8 to the designated filename in the config directory.
    */
@@ -31,22 +36,32 @@ class FileClient {
     fileContents: String,
     baseDir: String = FileConstants.CONFIG_DIR,
   ) {
-    Files.writeString(
-      Path.of(baseDir).resolve(fileName),
-      fileContents,
-      StandardCharsets.UTF_8,
-    )
+    try {
+      Files.writeString(
+        Path.of(baseDir).resolve(fileName),
+        fileContents,
+        StandardCharsets.UTF_8,
+      )
+    } catch (e: Exception) {
+      metricClient.count(OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, 1, MetricAttribute("step", "input-file"))
+      throw e
+    }
   }
 
   fun makeNamedPipes(
     sourceDir: String = SOURCE_DIR,
     destDir: String = DEST_DIR,
   ) {
-    makeNamedPipe("$sourceDir/$STDOUT_PIPE_FILE")
-    makeNamedPipe("$sourceDir/$STDERR_PIPE_FILE")
-    makeNamedPipe("$destDir/$STDOUT_PIPE_FILE")
-    makeNamedPipe("$destDir/$STDERR_PIPE_FILE")
-    makeNamedPipe("$destDir/$STDIN_PIPE_FILE")
+    try {
+      makeNamedPipe("$sourceDir/$STDOUT_PIPE_FILE")
+      makeNamedPipe("$sourceDir/$STDERR_PIPE_FILE")
+      makeNamedPipe("$destDir/$STDOUT_PIPE_FILE")
+      makeNamedPipe("$destDir/$STDERR_PIPE_FILE")
+      makeNamedPipe("$destDir/$STDIN_PIPE_FILE")
+    } catch (e: Exception) {
+      metricClient.count(OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, 1, MetricAttribute("step", "pipes"))
+      throw e
+    }
   }
 
   private fun makeNamedPipe(path: String) {

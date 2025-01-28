@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -39,10 +39,10 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
@@ -50,15 +50,19 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -89,7 +93,7 @@ class DestinationDefinitionsHandlerTest {
   private static final String DEFAULT_PROTOCOL_VERSION = "0.2.0";
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-presto/latest/icon.svg";
 
-  private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
 
   private StandardDestinationDefinition destinationDefinition;
   private StandardDestinationDefinition destinationDefinitionWithOptionals;
@@ -108,11 +112,16 @@ class DestinationDefinitionsHandlerTest {
   private FeatureFlagClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
+  private DestinationService destinationService;
+  private WorkspaceService workspaceService;
+  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() {
-    configRepository = mock(ConfigRepository.class);
+    destinationService = mock(DestinationService.class);
+    workspaceService = mock(WorkspaceService.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
     uuidSupplier = mock(Supplier.class);
     destinationDefinition = generateDestinationDefinition();
     destinationDefinitionWithOptionals = generateDestinationDefinitionWithOptionals();
@@ -128,7 +137,7 @@ class DestinationDefinitionsHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
-        configRepository,
+        actorDefinitionService,
         uuidSupplier,
         actorDefinitionHandlerHelper,
         remoteDefinitionsProvider,
@@ -136,7 +145,10 @@ class DestinationDefinitionsHandlerTest {
         supportStateUpdater,
         featureFlagClient,
         actorDefinitionVersionHelper,
-        airbyteCompatibleConnectorsValidator);
+        airbyteCompatibleConnectorsValidator,
+        destinationService,
+        workspaceService,
+        apiPojoConverters);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -147,7 +159,7 @@ class DestinationDefinitionsHandlerTest {
         .withIcon("http.svg")
         .withIconUrl(ICON_URL)
         .withTombstone(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
 
   private ActorDefinitionVersion generateVersionFromDestinationDefinition(final StandardDestinationDefinition destinationDefinition) {
@@ -205,9 +217,9 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listDestinationDefinition should return the right list")
   void testListDestinations() throws IOException, URISyntaxException {
-    when(configRepository.listStandardDestinationDefinitions(false))
+    when(destinationService.listStandardDestinationDefinitions(false))
         .thenReturn(List.of(destinationDefinition, destinationDefinitionWithOptionals));
-    when(configRepository.getActorDefinitionVersions(
+    when(actorDefinitionService.getActorDefinitionVersions(
         List.of(destinationDefinition.getDefaultVersionId(),
             destinationDefinitionWithOptionals.getDefaultVersionId())))
                 .thenReturn(List.of(destinationDefinitionVersion,
@@ -224,7 +236,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -242,9 +254,9 @@ class DestinationDefinitionsHandlerTest {
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithOptionals.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithOptionals.getReleaseDate()))
         .cdkVersion(destinationDefinitionVersionWithOptionals.getCdkVersion())
-        .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
+        .lastPublished(apiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
         .metrics(destinationDefinitionWithOptionals.getMetrics())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithOptionals.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -259,9 +271,9 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
-  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
+  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
-    when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
+    when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
     when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
@@ -276,7 +288,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -300,7 +312,7 @@ class DestinationDefinitionsHandlerTest {
         new Multi(List.of(new DestinationDefinition(hiddenDestinationDefinition.getDestinationDefinitionId()), new Workspace(workspaceId)))))
             .thenReturn(true);
 
-    when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, hiddenDestinationDefinition));
+    when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, hiddenDestinationDefinition));
     when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
@@ -319,9 +331,9 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("listPrivateDestinationDefinitions should return the right list")
   void testListPrivateDestinationDefinitions() throws IOException, URISyntaxException {
 
-    when(configRepository.listGrantableDestinationDefinitions(workspaceId, false)).thenReturn(
+    when(destinationService.listGrantableDestinationDefinitions(workspaceId, false)).thenReturn(
         List.of(Map.entry(destinationDefinition, false)));
-    when(configRepository.getActorDefinitionVersions(
+    when(actorDefinitionService.getActorDefinitionVersions(
         List.of(destinationDefinition.getDefaultVersionId())))
             .thenReturn(List.of(destinationDefinitionVersion));
 
@@ -336,7 +348,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -356,10 +368,11 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinition should return the right destination")
-  void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+  void testGetDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
@@ -373,7 +386,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -391,7 +404,7 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should throw an exception for a missing grant")
   void testGetDefinitionWithoutGrantForWorkspace() throws IOException {
-    when(configRepository.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(false);
+    when(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(false);
 
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId = new DestinationDefinitionIdWithWorkspaceId()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -404,7 +417,7 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForScope should throw an exception for a missing grant")
   void testGetDefinitionWithoutGrantForScope() throws IOException {
-    when(configRepository.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId,
+    when(actorDefinitionService.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId,
         ScopeType.WORKSPACE.value())).thenReturn(false);
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
         .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -413,7 +426,7 @@ class DestinationDefinitionsHandlerTest {
     assertThrows(IdNotFoundKnownException.class,
         () -> destinationDefinitionsHandler.getDestinationDefinitionForScope(actorDefinitionIdWithScopeForWorkspace));
 
-    when(configRepository.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), organizationId,
+    when(actorDefinitionService.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), organizationId,
         ScopeType.ORGANIZATION.value())).thenReturn(false);
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForOrganization = new ActorDefinitionIdWithScope()
         .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -425,11 +438,12 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should return the destination definition if the grant exists")
-  void testGetDefinitionWithGrantForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(true);
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+  void testGetDefinitionWithGrantForWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(true);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
@@ -443,7 +457,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -461,14 +475,15 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForScope should return the destination definition if the grant exists")
-  void testGetDefinitionWithGrantForScope() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId,
+  void testGetDefinitionWithGrantForScope()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(actorDefinitionService.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId,
         ScopeType.WORKSPACE.value())).thenReturn(true);
-    when(configRepository.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), organizationId,
+    when(actorDefinitionService.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), organizationId,
         ScopeType.ORGANIZATION.value())).thenReturn(true);
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
@@ -482,7 +497,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -521,7 +536,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -546,7 +561,7 @@ class DestinationDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -558,7 +573,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository).writeCustomConnectorMetadata(
+    verify(destinationService).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
@@ -584,7 +599,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -611,7 +626,7 @@ class DestinationDefinitionsHandlerTest {
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -624,7 +639,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreateForWorkspace.getWorkspaceId());
-    verify(configRepository).writeCustomConnectorMetadata(
+    verify(destinationService).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
@@ -650,7 +665,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         null);
-    verify(configRepository).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
+    verify(destinationService).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
         destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
@@ -669,7 +684,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(newDestinationDefinition.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
@@ -686,7 +701,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository, never()).writeCustomConnectorMetadata(any(StandardDestinationDefinition.class), any(), any(), any());
+    verify(destinationService, never()).writeCustomConnectorMetadata(any(StandardDestinationDefinition.class), any(), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -694,7 +709,7 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
   void testUpdateDestination()
-      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
 
@@ -709,11 +724,11 @@ class DestinationDefinitionsHandlerTest {
     final StandardDestinationDefinition persistedUpdatedDestination =
         Jsons.clone(updatedDestination).withDefaultVersionId(updatedDestinationDefVersion.getVersionId());
 
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition) // Call at the beginning of the method
         .thenReturn(persistedUpdatedDestination); // Call after we've persisted
 
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
@@ -738,7 +753,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -748,7 +763,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
-    verify(configRepository).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
+    verify(destinationService).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
     verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
@@ -791,8 +806,8 @@ class DestinationDefinitionsHandlerTest {
       JsonValidationException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
         .getDestinationDefinition(
@@ -811,7 +826,7 @@ class DestinationDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
+    verify(destinationService, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -823,8 +838,8 @@ class DestinationDefinitionsHandlerTest {
       JsonValidationException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), eq("12.4.0")))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, ""));
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
         .getDestinationDefinition(
@@ -836,19 +851,20 @@ class DestinationDefinitionsHandlerTest {
     assertThrows(BadRequestProblem.class, () -> destinationDefinitionsHandler.updateDestinationDefinition(
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
             .dockerImageTag(newDockerImageTag)));
-    verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
+    verify(destinationService, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any(), any());
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
   @DisplayName("deleteDestinationDefinition should correctly delete a sourceDefinition")
-  void testDeleteDestinationDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testDeleteDestinationDefinition()
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
         new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
     final StandardDestinationDefinition updatedDestinationDefinition = Jsons.clone(this.destinationDefinition).withTombstone(true);
     final DestinationRead newDestinationDefinition = new DestinationRead();
 
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionIdRequestBody))
         .thenReturn(new DestinationReadList().destinations(Collections.singletonList(newDestinationDefinition)));
@@ -858,15 +874,16 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
 
     verify(destinationHandler).deleteDestination(newDestinationDefinition);
-    verify(configRepository).updateStandardDestinationDefinition(updatedDestinationDefinition);
+    verify(destinationService).updateStandardDestinationDefinition(updatedDestinationDefinition);
   }
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspace should correctly create a workspace grant")
-  void testGrantDestinationDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+  void testGrantDestinationDefinitionToWorkspace()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
@@ -880,7 +897,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -895,15 +912,17 @@ class DestinationDefinitionsHandlerTest {
                 .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
 
     assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead);
-    verify(configRepository).writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId,
+        ScopeType.WORKSPACE);
   }
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspaceOrOrganization should correctly create an organization grant")
-  void testGrantDestinationDefinitionToOrganization() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+  void testGrantDestinationDefinitionToOrganization()
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+    when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
@@ -917,7 +936,7 @@ class DestinationDefinitionsHandlerTest {
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()))
@@ -932,7 +951,7 @@ class DestinationDefinitionsHandlerTest {
                 .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
 
     assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead);
-    verify(configRepository).writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), organizationId,
+    verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), organizationId,
         ScopeType.ORGANIZATION);
   }
 
@@ -942,13 +961,13 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionsHandler.revokeDestinationDefinition(
         new ActorDefinitionIdWithScope().actorDefinitionId(destinationDefinition.getDestinationDefinitionId()).scopeId(workspaceId)
             .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
-    verify(configRepository).deleteActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId,
+    verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId,
         ScopeType.WORKSPACE);
 
     destinationDefinitionsHandler.revokeDestinationDefinition(
         new ActorDefinitionIdWithScope().actorDefinitionId(destinationDefinition.getDestinationDefinitionId()).scopeId(organizationId)
             .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
-    verify(configRepository).deleteActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), organizationId,
+    verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), organizationId,
         ScopeType.ORGANIZATION);
   }
 
@@ -975,7 +994,7 @@ class DestinationDefinitionsHandlerTest {
           .withAbInternal(new AbInternal().withSl(100L))
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
-          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+          .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
           .withLanguage("java");
       when(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
 

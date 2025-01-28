@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general.performance;
@@ -65,7 +65,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
@@ -189,7 +188,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, analyticsMessageTracker,
-            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
+            "workload-id", airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
             recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class));
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 

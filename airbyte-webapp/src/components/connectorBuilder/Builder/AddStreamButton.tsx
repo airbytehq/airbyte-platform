@@ -27,18 +27,17 @@ import {
 } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamResponse {
   streamName: string;
-  newStreamValues?: BuilderStream;
+  newStreamValues: BuilderStream;
 }
 
 interface AddStreamButtonProps {
   onAddStream: (addedStreamNum: number) => void;
   button?: React.ReactElement;
-  initialValues?: Partial<BuilderStream>;
+  streamToDuplicate?: Partial<BuilderStream>;
   "data-testid"?: string;
   modalTitle?: string;
   disabled?: boolean;
@@ -47,7 +46,7 @@ interface AddStreamButtonProps {
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   onAddStream,
   button,
-  initialValues,
+  streamToDuplicate,
   "data-testid": testId,
   modalTitle,
   disabled,
@@ -61,7 +60,6 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
 
   const { setValue } = useFormContext();
   const numStreams = streams.length;
-  const isDuplicate = !!initialValues;
 
   const buttonClickHandler = () => {
     setIsOpen(true);
@@ -73,8 +71,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     const id = uuid();
     setValue("formValues.streams", [
       ...streams,
-      merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
-        ...initialValues,
+      {
         ...values.newStreamValues,
         name: values.streamName,
         schema: DEFAULT_SCHEMA,
@@ -83,15 +80,15 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           // indicates that this stream was added by the Builder and needs to be tested
           streamHash: null,
         },
-      }),
+      },
     ]);
     setIsOpen(false);
     onAddStream(numStreams);
-    if (isDuplicate) {
+    if (streamToDuplicate) {
       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_COPY, {
         actionDescription: "Existing stream copied into a new stream",
-        existing_stream_id: initialValues.id,
-        existing_stream_name: initialValues.name,
+        existing_stream_id: streamToDuplicate.id,
+        existing_stream_name: streamToDuplicate.name,
         new_stream_id: id,
         new_stream_name: values.streamName,
         new_stream_url_path: values.newStreamValues?.urlPath,
@@ -132,9 +129,8 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           modalTitle={modalTitle}
           onSubmit={handleSubmit}
           onCancel={() => setIsOpen(false)}
-          isDuplicate={isDuplicate}
+          streamToDuplicate={streamToDuplicate}
           streams={streams}
-          initialUrlPath={initialValues?.urlPath}
         />
       )}
     </>
@@ -160,19 +156,17 @@ const AddStreamModal = ({
   modalTitle,
   onSubmit,
   onCancel,
-  isDuplicate,
+  streamToDuplicate,
   streams,
-  initialUrlPath,
 }: {
   modalTitle?: string;
   onSubmit: (values: AddStreamResponse) => void;
   onCancel: () => void;
-  isDuplicate: boolean;
+  streamToDuplicate?: Partial<BuilderStream>;
   streams: BuilderStream[];
-  initialUrlPath?: string;
 }) => {
   const { assistEnabled } = useConnectorBuilderFormState();
-  const shouldAssist = assistEnabled && !isDuplicate;
+  const shouldAssist = assistEnabled && !streamToDuplicate;
 
   // TODO refactor to useMutation, as this is a bit of a hack
   const [assistFormValues, setAssistFormValues] = useState<AddStreamFormValues | null>(null);
@@ -185,17 +179,17 @@ const AddStreamModal = ({
 
       onSubmit({
         streamName: values.streamName,
-        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, otherStreamValues, {
+        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, streamToDuplicate, otherStreamValues, {
           urlPath: values.urlPath,
         }),
       });
     },
-    [streams, onSubmit]
+    [streams, onSubmit, streamToDuplicate]
   );
 
   const submitAction = useCallback(
     (values: AddStreamFormValues) => {
-      // use AI Assist if the user isn't copying from another and AI is on
+      // use AI Assistant if the user isn't copying from another and AI is on
       const shouldAssistValues = shouldAssist && !values.copyOtherStream;
       if (shouldAssistValues) {
         setAssistFormValues(values);
@@ -236,9 +230,9 @@ const AddStreamModal = ({
         <AddStreamForm
           onSubmit={submitAction}
           onCancel={cancelAction}
-          isDuplicate={isDuplicate}
+          isDuplicate={!!streamToDuplicate}
           streams={streams}
-          initialUrlPath={initialUrlPath}
+          initialUrlPath={streamToDuplicate?.urlPath}
           shouldAssist={shouldAssist}
         />
       )}
@@ -320,11 +314,12 @@ const AddStreamForm = ({
             />
           )}
           {showUrlPath && (
-            <BuilderFieldWithInputs
+            <BuilderField
               path="urlPath"
-              type="string"
+              type="jinja"
               label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
               tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+              bubbleUpUndoRedo={false}
             />
           )}
           {/* Only allow to copy from another stream within the modal if there aren't initial values set already and there are other streams */}

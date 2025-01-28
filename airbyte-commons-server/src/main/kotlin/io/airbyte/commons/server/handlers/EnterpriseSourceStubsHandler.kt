@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -24,15 +25,17 @@ open class EnterpriseSourceStubsHandler(
 ) {
   private val logger = LoggerFactory.getLogger(this::class.java)
   private val okHttpClient: OkHttpClient =
-    OkHttpClient.Builder()
+    OkHttpClient
+      .Builder()
       .callTimeout(Duration.ofMillis(remoteTimeoutMs))
       .build()
 
   @Throws(IOException::class)
-  fun listEnterpriseSourceStubs(): EnterpriseSourceStubsReadList {
-    return try {
+  fun listEnterpriseSourceStubs(): EnterpriseSourceStubsReadList =
+    try {
       val request =
-        Request.Builder()
+        Request
+          .Builder()
           .url(enterpriseSourceStubsUrl)
           .build()
 
@@ -59,5 +62,4 @@ open class EnterpriseSourceStubsHandler(
       logger.error("Unexpected error fetching enterprise sources", error)
       throw IOException("Encountered an unexpected error fetching enterprise sources", error)
     }
-  }
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -5,7 +9,6 @@ import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.Workload
@@ -13,12 +16,14 @@ import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
+import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
+import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
 
 private val logger = KotlinLogging.logger {}
 
@@ -29,21 +34,19 @@ private val logger = KotlinLogging.logger {}
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
   private val airbyteApi: AirbyteApiClient,
-  private val metricClient: MetricClient,
+  private val metricClient: CustomMetricPublisher,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
       listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
   }
 
-  override fun getWorkload(workloadId: String): ApiWorkload {
-    return getDomainWorkload(workloadId).toApi()
-  }
+  override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
 
-  private fun getDomainWorkload(workloadId: String): DomainWorkload {
-    return workloadRepository.findById(workloadId)
+  private fun getDomainWorkload(workloadId: String): DomainWorkload =
+    workloadRepository
+      .findById(workloadId)
       .orElseThrow { NotFoundException("Could not find workload with id: $workloadId") }
-  }
 
   override fun getWorkloads(
     dataplaneId: List<String>?,
@@ -60,16 +63,13 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
-  override fun workloadAlreadyExists(workloadId: String): Boolean {
-    return workloadRepository.existsById(workloadId)
-  }
+  override fun workloadAlreadyExists(workloadId: String): Boolean = workloadRepository.existsById(workloadId)
 
   override fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
-    geography: String,
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,
@@ -91,7 +91,6 @@ class WorkloadHandlerImpl(
         workloadLabels = labels?.map { it.toDomain() },
         inputPayload = input,
         logPath = logPath,
-        geography = geography,
         mutexKey = mutexKey,
         type = type.toDomain(),
         autoId = autoId,
@@ -165,7 +164,7 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -190,7 +189,7 @@ class WorkloadHandlerImpl(
           reason,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -209,7 +208,7 @@ class WorkloadHandlerImpl(
           WorkloadStatus.SUCCESS,
           null,
         )
-        sendSignal(workload.signalInput)
+        sendSignal(workload.type, workload.signalInput)
       }
       WorkloadStatus.SUCCESS ->
         logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
@@ -323,7 +322,10 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
-  private fun sendSignal(signalPayload: String?) {
+  private fun sendSignal(
+    workloadType: DomainWorkloadType,
+    signalPayload: String?,
+  ) {
     val signalInput =
       if (signalPayload == null) {
         null
@@ -333,8 +335,7 @@ class WorkloadHandlerImpl(
         } catch (e: Exception) {
           logger.error(e) { "Failed to deserialize signal payload: $signalPayload" }
           metricClient.count(
-            OssMetricsRegistry.WORKLOADS_SIGNAL,
-            1,
+            OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
             MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
             MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
           )
@@ -350,17 +351,17 @@ class WorkloadHandlerImpl(
           ),
         )
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL,
-          1,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
           MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
         )
       } catch (e: Exception) {
         logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL,
-          1,
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, signalInput.workflowType),
+          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
+          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
           MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
           MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
         )

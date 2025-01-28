@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -13,15 +17,14 @@ import java.net.URI
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_ANONYMOUS)
-open class DefaultController() : PublicRootApi {
+open class DefaultController : PublicRootApi {
   @Value("\${airbyte.internal.documentation.host}")
   var documentationHost: String? = null
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun getDocumentation(): Response {
-    return Response
+  override fun getDocumentation(): Response =
+    Response
       .status(302)
       .location(documentationHost?.let { URI.create(it) })
       .build()
-  }
 }

@@ -21,6 +21,8 @@ airbyte:
     root: /tmp
   shutdown:
     delay_ms: 0
+  internal-api:
+    base-path: https://localhost:8001/api/v1
 
 datasources:
   workload:

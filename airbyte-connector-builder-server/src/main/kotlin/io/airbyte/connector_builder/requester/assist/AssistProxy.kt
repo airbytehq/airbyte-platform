@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.requester.assist
@@ -15,7 +16,9 @@ import java.io.InputStreamReader
 
 private val logger = KotlinLogging.logger {}
 
-class AssistProxy(private val proxyConfig: AssistConfiguration) {
+class AssistProxy(
+  private val proxyConfig: AssistConfiguration,
+) {
   fun post(
     path: String,
     jsonBody: JsonNode?,
@@ -55,7 +58,7 @@ class AssistProxy(private val proxyConfig: AssistConfiguration) {
           }
         }
     } catch (e: IOException) {
-      throw ConnectorBuilderException("AI Assist processing error", e)
+      throw ConnectorBuilderException("AI Assistant processing error", e)
     } finally {
       connection.disconnect()
     }

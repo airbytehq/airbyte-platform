@@ -6,8 +6,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -32,14 +30,12 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.reactor.core)
-  implementation(libs.slugify)
   implementation(libs.temporal.sdk)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
   implementation(libs.swagger.annotations)
   implementation(libs.google.cloud.storage)
   implementation(libs.cron.utils)
-  implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.kubernetes.client)
@@ -48,13 +44,14 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:public-api"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-audit-logging"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
-  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-server"))
@@ -66,27 +63,34 @@ dependencies {
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(project(":oss:airbyte-notification"))
   implementation(project(":oss:airbyte-oauth"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
+  runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
+  runtimeOnly(libs.bundles.logback)
 
   // Required for local database secret hydration)
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.micronaut.jaxrs.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(project(":oss:airbyte-test-utils"))
@@ -96,6 +100,7 @@ dependencies {
   testImplementation(libs.mockito.inline)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.bundles.kotest)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
@@ -105,11 +110,12 @@ dependencies {
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
-val copySeed = tasks.register<Copy>("copySeed") {
-  from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
-  into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
-  dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
-}
+val copySeed =
+  tasks.register<Copy>("copySeed") {
+    from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
+    into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
+    dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
+  }
 
 // need to make sure that the files are in the resource directory before copying.)
 // tests require the seed to exist.)
@@ -176,9 +182,8 @@ tasks.named<Test>("test") {
   )
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// By default, Gradle runs all annotation processors and disables annotation processing by javac, however.  Once lombok has
-// been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

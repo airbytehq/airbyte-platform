@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -7,9 +7,11 @@ package io.airbyte.metrics.lib;
 import com.google.common.annotations.VisibleForTesting;
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
 import com.timgroup.statsd.StatsDClient;
+import java.lang.invoke.MethodHandles;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Light wrapper around the DogsStatsD client to make using the client slightly more ergonomic.
@@ -26,8 +28,9 @@ import lombok.extern.slf4j.Slf4j;
  * the {@code key} and {@code value} property of each {@link MetricAttribute} with a
  * {@link #TAG_DELIMITER} delimiter.
  */
-@Slf4j
 public class DogStatsDMetricClient implements MetricClient {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String TAG_DELIMITER = ":";
 

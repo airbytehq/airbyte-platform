@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -143,17 +147,101 @@ internal class ConnectorRolloutServiceDataImplTest {
     }
   }
 
+  @Test
+  fun `should throw exception if rollout already exists for actor definition id and version id`() {
+    val rollout = createMockConnectorRollout(UUID.randomUUID())
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        rollout.actorDefinitionId,
+        rollout.releaseCandidateVersionId,
+      )
+    } returns listOf(rollout)
+
+    val exception =
+      assertThrows<RuntimeException> {
+        connectorRolloutService.insertConnectorRollout(rollout.toConfigModel())
+      }
+
+    assertEquals(
+      "A rollout in state initialized already exists " +
+        "for actor definition id ${rollout.actorDefinitionId} " +
+        "and version id ${rollout.releaseCandidateVersionId}",
+      exception.message,
+    )
+
+    verify(exactly = 0) { connectorRolloutRepository.save(any()) }
+  }
+
+  @Test
+  fun `should throw exception if incomplete rollout exists for actor definition id`() {
+    val actorDefinitionId = UUID.randomUUID()
+
+    val newRollout = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, UUID.randomUUID())
+    val existingRollout = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, UUID.randomUUID(), ConnectorRolloutStateType.in_progress)
+
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        newRollout.actorDefinitionId,
+        newRollout.releaseCandidateVersionId,
+      )
+    } returns emptyList()
+
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(
+        newRollout.actorDefinitionId,
+      )
+    } returns listOf(existingRollout)
+
+    val exception =
+      assertThrows<RuntimeException> {
+        connectorRolloutService.insertConnectorRollout(newRollout.toConfigModel())
+      }
+
+    assertEquals(
+      "A connector rollout is incomplete (current state: ${existingRollout.state.name}) " +
+        "for this actor definition id ${existingRollout.actorDefinitionId} " +
+        "on version ${existingRollout.releaseCandidateVersionId} ",
+      exception.message,
+    )
+
+    verify(exactly = 0) { connectorRolloutRepository.save(any()) }
+  }
+
+  @Test
+  fun `should save connector rollout if no existing rollout conflicts`() {
+    val newRollout = createMockConnectorRollout(UUID.randomUUID())
+
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        newRollout.actorDefinitionId,
+        newRollout.releaseCandidateVersionId,
+      )
+    } returns emptyList()
+
+    every {
+      connectorRolloutRepository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(newRollout.actorDefinitionId)
+    } returns emptyList()
+
+    every { connectorRolloutRepository.save(any()) } returns newRollout
+
+    val result = connectorRolloutService.insertConnectorRollout(newRollout.toConfigModel())
+
+    verify { connectorRolloutRepository.save(any()) }
+    assertEquals(newRollout.toConfigModel(), result)
+  }
+
   private fun createMockConnectorRollout(
     id: UUID,
     actorDefinitionId: UUID = UUID.randomUUID(),
     releaseCandidateVersionId: UUID = UUID.randomUUID(),
-  ): EntityConnectorRollout {
-    return EntityConnectorRollout(
+    state: ConnectorRolloutStateType = ConnectorRolloutStateType.initialized,
+  ): EntityConnectorRollout =
+    EntityConnectorRollout(
       id = id,
       actorDefinitionId = actorDefinitionId,
       releaseCandidateVersionId = releaseCandidateVersionId,
       initialVersionId = UUID.randomUUID(),
-      state = ConnectorRolloutStateType.initialized,
+      state = state,
       initialRolloutPct = 10,
       finalTargetRolloutPct = 100,
       hasBreakingChanges = false,
@@ -163,5 +251,4 @@ internal class ConnectorRolloutServiceDataImplTest {
       updatedAt = OffsetDateTime.now(),
       expiresAt = OffsetDateTime.now().plusDays(1),
     )
-  }
 }

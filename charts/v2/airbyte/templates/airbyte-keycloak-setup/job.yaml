@@ -1,0 +1,129 @@
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if eq .Values.global.deploymentMode "oss" }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-setup
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.keycloakSetup.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.keycloakSetup.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.keycloakSetup.podLabels}}
+    {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.podLabels "context" $) | nindent 4 }}
+    {{- end }}
+  annotations:
+    "helm.sh/hook": "post-install, post-upgrade"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+spec:
+  completions: 1
+  template:
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+          {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      {{- if .Values.keycloakSetup.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.nodeSelector "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if .Values.keycloakSetup.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.tolerations "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if .Values.keycloakSetup.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloakSetup.affinity "context" $) | nindent 6 }}
+      {{- end }}
+      initContainers:
+        {{- if .Values.keycloakSetup.extraInitContainers }}
+        {{- toYaml .Values.keycloakSetup.extraInitContainers | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: airbyte-keycloak-setup-container
+          image: {{ include "imageUrl" (list .Values.keycloakSetup.image $) }}
+          imagePullPolicy: "{{ .Values.keycloakSetup.image.pullPolicy }}"
+          env:
+            {{- if .Values.keycloakSetup.debug.enabled }}
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.keycloakSetup.debug.remoteDebugPort }},server=y,suspend=y"
+            {{- end}}
+
+            {{- include "airbyte.common.envs" . | nindent 12 }}
+            {{- include "airbyte.database.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.client.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
+
+            {{- if (eq .Values.global.edition "enterprise") }}
+            {{- include "airbyte.enterprise.envs" . | nindent 12 }}
+            {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 12 }}
+            {{- end}}
+
+            # Values from secret
+            {{- if .Values.keycloakSetup.secrets }}
+            {{- range $k, $v := .Values.keycloakSetup.secrets }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: {{ $k }}
+            {{- end }}
+            {{- end }}
+
+            # Values from env
+            {{- if .Values.keycloakSetup.env_vars }}
+            {{- range $k, $v := mergeOverwrite .Values.keycloakSetup.env_vars .Values.global.env_vars }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- end }}
+
+            # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+            {{- if .Values.keycloakSetup.extraEnv }}
+            {{- toYaml .Values.keycloakSetup.extraEnv | nindent 12 }}
+            {{- end }}
+
+          {{- if .Values.keycloakSetup.debug.enabled }}
+          ports:
+          - name: debug
+            containerPort: {{ .Values.keycloakSetup.debug.remoteDebugPort }}
+            protocol: TCP
+          {{- end}}
+
+          {{- if .Values.keycloakSetup.resources }}
+          resources: {{- toYaml .Values.keycloakSetup.resources | nindent 10 }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.global.airbyteYml }}
+            - name: airbyte-yml-volume
+              mountPath: /app/configs/airbyte.yml
+              subPath: fileContents
+              readOnly: true
+            {{- end }}
+          {{- if .Values.keycloakSetup.extraVolumeMount }}
+          {{- toYaml .Values.keycloakSetup.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+          {{- if .Values.keycloakSetup.containerSecurityContext }}
+          securityContext: {{- toYaml .Values.keycloakSetup.containerSecurityContext | nindent 12 }}
+          {{- end }}
+        {{- if .Values.keycloakSetup.extraContainers }}
+        {{ toYaml .Values.keycloakSetup.extraContainers | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 8 }}
+        {{- end }}
+      securityContext: {{- toYaml .Values.keycloakSetup.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if .Values.global.airbyteYml }}
+        - name: airbyte-yml-volume
+          secret:
+            secretName: {{ .Release.Name }}-airbyte-yml
+        {{- end }}
+        {{- if .Values.keycloakSetup.extraVolumes }}
+        {{- toYaml .Values.keycloakSetup.extraVolumes | nindent 8 }}
+        {{- end }}
+{{- end }}
+{{- end }}

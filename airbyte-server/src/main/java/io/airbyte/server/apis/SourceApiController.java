@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -28,6 +28,8 @@ import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.annotation.AuditLogging;
+import io.airbyte.commons.annotation.AuditLoggingProvider;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -90,6 +92,7 @@ public class SourceApiController implements SourceApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public SourceRead createSource(@Body final SourceCreate sourceCreate) {
     return ApiHelper.execute(() -> sourceHandler.createSourceWithOptionalSecret(sourceCreate));
   }
@@ -99,6 +102,7 @@ public class SourceApiController implements SourceApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void deleteSource(@Body final SourceIdRequestBody sourceIdRequestBody) {
     ApiHelper.execute(() -> {
       sourceHandler.deleteSource(sourceIdRequestBody);
@@ -156,6 +160,7 @@ public class SourceApiController implements SourceApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public SourceRead updateSource(@Body final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));
   }
@@ -165,6 +170,7 @@ public class SourceApiController implements SourceApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public void upgradeSourceVersion(@Body final SourceIdRequestBody sourceIdRequestBody) {
     ApiHelper.execute(() -> {
       sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
@@ -176,6 +182,7 @@ public class SourceApiController implements SourceApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
   public SourceRead partialUpdateSource(@Body final PartialSourceUpdate partialSourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate));
   }

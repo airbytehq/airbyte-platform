@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.Field
@@ -55,16 +59,26 @@ class SlimStreamTest {
 
   @Test
   fun `renaming a field fails if it leads to a field name collision`() {
-    assertThrows<IllegalStateException> {
-      slimStream.redefineField(FIELD1_NAME, FIELD2_NAME)
-    }
+    val e =
+      assertThrows<MapperException> {
+        slimStream.redefineField(FIELD1_NAME, FIELD2_NAME)
+      }
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.FIELD_ALREADY_EXISTS, e.type)
+  }
+
+  @Test
+  fun `renaming a field should allow no-op rename since the type may change`() {
+    slimStream.redefineField(FIELD1_NAME, FIELD1_NAME)
+    assertEquals(1, slimStream.fields.count { it.name == FIELD1_NAME })
   }
 
   @Test
   fun `renaming a field fails if the field doesn't exist`() {
-    assertThrows<IllegalStateException> {
-      slimStream.redefineField("does not exist", "anything")
-    }
+    val e =
+      assertThrows<MapperException> {
+        slimStream.redefineField("does not exist", "anything")
+      }
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND, e.type)
   }
 
   @Test

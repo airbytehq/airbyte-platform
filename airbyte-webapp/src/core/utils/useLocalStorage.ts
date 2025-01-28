@@ -25,6 +25,7 @@ interface AirbyteLocalStorage {
   "airbyte_extended-attempts-stats": boolean;
   "airbyte_connection-additional-details": boolean;
   "airbyte_ai-assist-projects": Record<string, AssistLocalStorageProject>;
+  "airbyte_last-sso-company-identifier": string;
 }
 
 /*

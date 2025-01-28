@@ -1,0 +1,28 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  a {
+    text-decoration: none;
+  }
+}
+
+.header {
+  &--nonSortable {
+    margin-left: variables.$spacing-sm;
+  }
+}
+
+.deleted {
+  color: colors.$grey-300;
+}
+
+.cellText {
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usageTotals {
+  min-width: 8ch;
+}

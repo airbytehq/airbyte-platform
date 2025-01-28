@@ -6,7 +6,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ScopeType } from "core/api/types/AirbyteClient";
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
+
 import { ExistingUserIndicator } from "./ExistingUserIndicator";
+import { PendingInvitationBadge } from "./RoleManagementCell";
 import styles from "./ViewOnlyUserRow.module.scss";
 
 interface ViewOnlyUserRowProps {
@@ -14,7 +18,9 @@ interface ViewOnlyUserRowProps {
   email: string;
   isCurrentUser: boolean;
   isOrgAdmin: boolean;
-  highestPermissionType?: "ADMIN" | "EDITOR" | "READER" | "MEMBER";
+  highestPermissionType?: RbacRole;
+  scope: ScopeType;
+  isPending: boolean;
 }
 export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
   name,
@@ -22,6 +28,8 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
   isCurrentUser,
   isOrgAdmin,
   highestPermissionType,
+  scope,
+  isPending,
 }) => {
   return (
     <Box py="md" className={styles.existingUserRow}>
@@ -29,7 +37,7 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
         <FlexContainer direction="column" gap="none" justifyContent="center">
           <Text>
             {name}
-            {isCurrentUser && (
+            {isCurrentUser && name && (
               <Box as="span" px="sm">
                 <Badge variant="grey">
                   <FormattedMessage id="settings.accessManagement.youHint" />
@@ -39,23 +47,33 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
           </Text>
           <Text color="grey400" italicized>
             {email}
+            {isCurrentUser && !name && (
+              <Box as="span" px="sm">
+                <Badge variant="grey">
+                  <FormattedMessage id="settings.accessManagement.youHint" />
+                </Badge>
+              </Box>
+            )}
           </Text>
         </FlexContainer>
-        {isOrgAdmin && (
-          <Tooltip
-            control={
-              <Badge variant="grey">
-                <FormattedMessage id="role.organizationAdmin" />
-              </Badge>
-            }
-            placement="top-start"
-          >
-            <FormattedMessage id="userInvitations.create.modal.organizationAdminTooltip" />
-          </Tooltip>
-        )}
-        {!isOrgAdmin && !!highestPermissionType && (
-          <ExistingUserIndicator highestPermissionType={highestPermissionType} />
-        )}
+        <FlexContainer alignItems="center">
+          {isOrgAdmin && scope !== ScopeType.organization && (
+            <Tooltip
+              control={
+                <Badge variant="grey">
+                  <FormattedMessage id="role.organizationAdmin" />
+                </Badge>
+              }
+              placement="top-start"
+            >
+              <FormattedMessage id="userInvitations.create.modal.organizationAdminTooltip" />
+            </Tooltip>
+          )}
+          {(!isOrgAdmin || scope !== ScopeType.workspace) && !!highestPermissionType && (
+            <ExistingUserIndicator highestPermissionType={highestPermissionType} scope={scope} />
+          )}
+          {isPending && <PendingInvitationBadge scope={scope} />}
+        </FlexContainer>
       </FlexContainer>
     </Box>
   );

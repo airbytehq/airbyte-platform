@@ -1,4 +1,3 @@
-import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jsonschema2pojo.SourceType
 
 plugins {
@@ -8,8 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -55,30 +52,6 @@ jsonSchema2Pojo {
   serializable = true
 }
 
-tasks.named<Test>("test") {
-  useJUnitPlatform {
-    excludeTags("log4j2-config", "logger-client")
-  }
-}
-
 tasks.named("compileKotlin") {
   dependsOn(tasks.named("generateJsonSchema2Pojo"))
-}
-
-tasks.register<Test>("log4j2IntegrationTest") {
-  useJUnitPlatform {
-    includeTags("log4j2-config")
-  }
-  testLogging {
-    events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
-}
-
-tasks.register<Test>("logClientsIntegrationTest") {
-  useJUnitPlatform {
-    includeTags("logger-client")
-  }
-  testLogging {
-    events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
 }

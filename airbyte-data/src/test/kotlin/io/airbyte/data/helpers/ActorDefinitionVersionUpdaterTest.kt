@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.helpers
 
 import io.airbyte.commons.version.Version
@@ -9,20 +13,25 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
+import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.MockData
 import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
+import io.airbyte.data.services.shared.ConnectorUpdate
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseBreakingChangeScopes
 import io.airbyte.featureflag.Workspace
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -46,12 +55,14 @@ internal class ActorDefinitionVersionUpdaterTest {
   private val actorDefinitionService = mockk<ActorDefinitionService>(relaxed = true)
   private val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
   private val featureFlagClient = mockk<TestClient>()
+  private val connectionTimelineEventService = mockk<ConnectionTimelineEventService>()
   private val actorDefinitionVersionUpdater =
     ActorDefinitionVersionUpdater(
       featureFlagClient,
       connectionService,
       actorDefinitionService,
       scopedConfigurationService,
+      connectionTimelineEventService,
     )
 
   companion object {
@@ -70,7 +81,8 @@ internal class ActorDefinitionVersionUpdaterTest {
         .withDockerImageTag("2.0.0")
 
     val STREAM_SCOPED_BREAKING_CHANGE: ActorDefinitionBreakingChange =
-      MockData.actorDefinitionBreakingChange(NEW_VERSION.dockerImageTag)
+      MockData
+        .actorDefinitionBreakingChange(NEW_VERSION.dockerImageTag)
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withScopedImpact(
           listOf(
@@ -79,8 +91,8 @@ internal class ActorDefinitionVersionUpdaterTest {
         )
 
     @JvmStatic
-    fun getBreakingChangesForUpgradeMethodSource(): Stream<Arguments> {
-      return Stream.of(
+    fun getBreakingChangesForUpgradeMethodSource(): Stream<Arguments> =
+      Stream.of(
         // Version increases
         Arguments.of("0.0.1", "2.0.0", listOf("1.0.0", "2.0.0")),
         Arguments.of("1.0.0", "1.0.1", listOf<String>()),
@@ -102,18 +114,16 @@ internal class ActorDefinitionVersionUpdaterTest {
         Arguments.of("2.0.1", "1.0.1", listOf<String>()),
         Arguments.of("2.0.0", "2.0.0", listOf<String>()),
       )
-    }
 
     @JvmStatic
-    fun getBreakingChangesAfterVersionMethodSource(): List<Arguments> {
-      return listOf(
+    fun getBreakingChangesAfterVersionMethodSource(): List<Arguments> =
+      listOf(
         Arguments.of("0.1.0", listOf("1.0.0", "2.0.0", "3.0.0")),
         Arguments { arrayOf("1.0.0", listOf("2.0.0", "3.0.0")) },
         Arguments { arrayOf("2.0.0", listOf("3.0.0")) },
         Arguments { arrayOf("3.0.0", listOf<String>()) },
         Arguments { arrayOf("4.0.0", listOf<String>()) },
       )
-    }
   }
 
   @BeforeEach
@@ -266,7 +276,9 @@ internal class ActorDefinitionVersionUpdaterTest {
     val breakingChangesForUpgrade =
       actorDefinitionVersionUpdater.getBreakingChangesForUpgrade(initialImageTag, upgradeImageTag, breakingChangesForDef)
     val actualBreakingChangeVersionsForUpgrade =
-      breakingChangesForUpgrade.stream().map { obj: ActorDefinitionBreakingChange -> obj.version }
+      breakingChangesForUpgrade
+        .stream()
+        .map { obj: ActorDefinitionBreakingChange -> obj.version }
         .toList()
     assertEquals(expectedBreakingChangeVersionsForUpgrade.size, actualBreakingChangeVersionsForUpgrade.size)
     assertTrue(actualBreakingChangeVersionsForUpgrade.containsAll(expectedBreakingChangeVersionsForUpgrade))
@@ -292,6 +304,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       ScopedConfiguration()
         .withId(UUID.randomUUID())
         .withOriginType(ConfigOriginType.BREAKING_CHANGE)
+        .withValue(UUID.randomUUID().toString())
 
     every {
       scopedConfigurationService.getScopedConfiguration(
@@ -303,7 +316,20 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.of(breakingChangePinConfig)
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+    val oldVersionTag = "some-old-version"
+    val newVersionTag = "new-version"
+    every {
+      actorDefinitionService.getActorDefinitionVersion(UUID.fromString(breakingChangePinConfig.value))
+    } returns ActorDefinitionVersion().withDockerImageTag(oldVersionTag)
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
+    } returns Optional.of(ActorDefinitionVersion().withDockerImageTag(newVersionTag))
+
+    val connectionId = UUID.randomUUID()
+    every {
+      connectionService.listConnectionsBySource(actorId, true)
+    } returns listOf(StandardSync().withConnectionId(connectionId))
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "SourceMySql")
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(
@@ -315,6 +341,17 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
 
       scopedConfigurationService.deleteScopedConfiguration(breakingChangePinConfig.id)
+      connectionTimelineEventService.writeEvent(
+        connectionId,
+        ConnectorUpdate(
+          oldVersionTag,
+          newVersionTag,
+          ConnectorUpdate.ConnectorType.SOURCE,
+          "SourceMySql",
+          ConnectorUpdate.UpdateType.BREAKING_CHANGE_MANUAL.name,
+        ),
+        null,
+      )
     }
   }
 
@@ -339,7 +376,7 @@ internal class ActorDefinitionVersionUpdaterTest {
     } returns Optional.of(manualPinConfig)
 
     assertThrows<RuntimeException> {
-      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "")
     }
 
     verifyAll {
@@ -368,7 +405,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.empty()
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE, "")
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(
@@ -493,7 +530,7 @@ internal class ActorDefinitionVersionUpdaterTest {
   }
 
   @Test
-  fun testGetUpgradeCandidates() {
+  fun `testGetUpgradeCandidates`() {
     val pinnedActorId = UUID.randomUUID()
     val pinnedActorId2 = UUID.randomUUID()
     val unpinnedActorId = UUID.randomUUID()
@@ -575,7 +612,7 @@ internal class ActorDefinitionVersionUpdaterTest {
     } returns actors
 
     val allEligible = actors + listOf(ActorWorkspaceOrganizationIds(eligibleButNotPinnedActorId, UUID.randomUUID(), UUID.randomUUID()))
-    var scopeMaps = allEligible.map { idsToConfigScopeMap(it) }
+    val scopeMaps = allEligible.map { idsToConfigScopeMap(it) }
 
     // Setup: no actors are pinned for the release candidate
     every {
@@ -692,7 +729,7 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigResourceType.ACTOR_DEFINITION,
         ACTOR_DEFINITION_ID,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(releaseCandidateVersionId.toString()),
       )
     } returns scopedConfigurationsToDelete
@@ -705,7 +742,7 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigResourceType.ACTOR_DEFINITION,
         ACTOR_DEFINITION_ID,
         ConfigScopeType.ACTOR,
-        ConfigOriginType.RELEASE_CANDIDATE,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
         listOf(releaseCandidateVersionId.toString()),
       )
 
@@ -725,6 +762,45 @@ internal class ActorDefinitionVersionUpdaterTest {
     }
   }
 
+  @Test
+  fun testMigrateReleaseCandidatePins() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1", "origin2")
+    val newOrigin = "origin3"
+    val newReleaseCandidateVersionId = UUID.randomUUID()
+
+    every {
+      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+        newOrigin,
+        newReleaseCandidateVersionId.toString(),
+      )
+    } just Runs
+
+    actorDefinitionVersionUpdater.migrateReleaseCandidatePins(
+      actorDefinitionId,
+      origins,
+      newOrigin,
+      newReleaseCandidateVersionId,
+    )
+
+    verify {
+      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+        newOrigin,
+        newReleaseCandidateVersionId.toString(),
+      )
+    }
+  }
+
   @ParameterizedTest
   @MethodSource("getBreakingChangesAfterVersionMethodSource")
   fun testGetBreakingChangesAfterVersion(
@@ -739,10 +815,12 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
 
     val actualBreakingChanges =
-      actorDefinitionVersionUpdater.getBreakingChangesAfterVersion(
-        versionTag,
-        breakingChanges,
-      ).map { it.version.serialize() }.toList()
+      actorDefinitionVersionUpdater
+        .getBreakingChangesAfterVersion(
+          versionTag,
+          breakingChanges,
+        ).map { it.version.serialize() }
+        .toList()
 
     assertEquals(expectedBreakingChanges, actualBreakingChanges)
   }
@@ -811,8 +889,8 @@ internal class ActorDefinitionVersionUpdaterTest {
   private fun buildBreakingChangeScopedConfig(
     actorId: UUID,
     breakingChange: ActorDefinitionBreakingChange,
-  ): ScopedConfiguration {
-    return ScopedConfiguration()
+  ): ScopedConfiguration =
+    ScopedConfiguration()
       .withKey(ConnectorVersionKey.key)
       .withValue(DEFAULT_VERSION.versionId.toString())
       .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
@@ -821,26 +899,24 @@ internal class ActorDefinitionVersionUpdaterTest {
       .withScopeId(actorId)
       .withOriginType(ConfigOriginType.BREAKING_CHANGE)
       .withOrigin(breakingChange.version.serialize())
-  }
 
   private fun buildReleaseCandidateScopedConfig(
     actorId: UUID,
     defaultVersionId: UUID,
     releaseCandidateVersionId: UUID,
-  ): ScopedConfiguration {
-    return ScopedConfiguration()
+  ): ScopedConfiguration =
+    ScopedConfiguration()
       .withKey(ConnectorVersionKey.key)
-      .withValue(defaultVersionId.toString())
+      .withValue(releaseCandidateVersionId.toString())
       .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
       .withResourceId(ACTOR_DEFINITION_ID)
       .withScopeType(ConfigScopeType.ACTOR)
       .withScopeId(actorId)
-      .withOriginType(ConfigOriginType.RELEASE_CANDIDATE)
-      .withOrigin(releaseCandidateVersionId.toString())
-  }
+      .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+      .withOrigin(defaultVersionId.toString())
 
-  private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId {
-    return ConfigScopeMapWithId(
+  private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId =
+    ConfigScopeMapWithId(
       awoIds.actorId,
       mapOf(
         ConfigScopeType.ACTOR to awoIds.actorId,
@@ -848,5 +924,4 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigScopeType.ORGANIZATION to awoIds.organizationId,
       ),
     )
-  }
 }

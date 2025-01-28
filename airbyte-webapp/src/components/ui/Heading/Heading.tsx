@@ -3,7 +3,7 @@ import React, { HTMLAttributes } from "react";
 
 import styles from "./Heading.module.scss";
 
-type HeadingSize = "xs" | "sm" | "md" | "lg" | "xl";
+type HeadingSize = "sm" | "md" | "lg" | "xl";
 type HeadingColor = "darkBlue" | "blue";
 type HeadingElementType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
@@ -13,32 +13,22 @@ type HeadingProps = HTMLAttributes<HTMLHeadingElement> & {
   as: HeadingElementType;
   size?: HeadingSize;
   color?: HeadingColor;
-  inverseColor?: boolean;
 };
 
 const sizes: Record<HeadingSize, string> = {
-  xs: styles.xs,
-  sm: styles.sm,
-  md: styles.md,
-  lg: styles.lg,
-  xl: styles.xl,
+  sm: styles["heading--sm"],
+  md: styles["heading--md"],
+  lg: styles["heading--lg"],
+  xl: styles["heading--xl"],
 };
 
 const colors: Record<HeadingColor, string> = {
-  darkBlue: styles.darkBlue,
-  blue: styles.blue,
+  darkBlue: styles["heading--darkBlue"],
+  blue: styles["heading--blue"],
 };
 
-const getHeadingClassNames = ({
-  size,
-  color,
-  centered,
-  inverseColor,
-}: Required<Pick<HeadingProps, "size" | "color" | "centered" | "inverseColor">>) =>
-  classNames(styles.heading, sizes[size], colors[color], {
-    [styles.centered]: centered,
-    [styles.inverse]: inverseColor,
-  });
+const getHeadingClassNames = ({ size, color }: Required<Pick<HeadingProps, "size" | "color" | "centered">>) =>
+  classNames(styles.heading, sizes[size], colors[color]);
 
 export const Heading: React.FC<React.PropsWithChildren<HeadingProps>> = React.memo(
   ({
@@ -48,10 +38,9 @@ export const Heading: React.FC<React.PropsWithChildren<HeadingProps>> = React.me
     className: classNameProp,
     size = "md",
     color = "darkBlue",
-    inverseColor = false,
     ...remainingProps
   }) => {
-    const className = classNames(getHeadingClassNames({ centered, size, color, inverseColor }), classNameProp);
+    const className = classNames(getHeadingClassNames({ centered, size, color }), classNameProp);
 
     return React.createElement(as, {
       ...remainingProps,

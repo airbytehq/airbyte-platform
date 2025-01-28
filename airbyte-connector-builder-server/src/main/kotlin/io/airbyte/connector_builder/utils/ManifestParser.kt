@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.utils
@@ -18,7 +22,9 @@ const val REF_VALUE = "#/"
  *
  * https://github.com/airbytehq/airbyte/blob/master/airbyte-cdk/python/airbyte_cdk/sources/declarative/parsers/manifest_reference_resolver.py
  */
-class ManifestParser(rawManifestYaml: String) {
+class ManifestParser(
+  rawManifestYaml: String,
+) {
   var manifestMap: Map<String, Any> = processManifestYaml(rawManifestYaml)
 
   val streams: List<Map<String, Any>>
@@ -49,13 +55,13 @@ class ManifestParser(rawManifestYaml: String) {
 
   /**
    * Removes escape quote characters from the serialized string
-   * e.g. \\" -> "
+   * e.g. \\" -> '
    *
    * Note: This is due to the way the yaml in the FE library serializes escaped strings
    */
   private fun unEscapeQuotes(serializedString: String): String {
     // Handle escaped quotes in the string
-    // \\" -> "
+    // \\" -> '
     return serializedString.replace("\\\\\"", "\"")
   }
 
@@ -65,29 +71,25 @@ class ManifestParser(rawManifestYaml: String) {
     return deserializedYaml
   }
 
-  private fun processManifestMap(manifest: Map<String, Any>): Map<String, Any> {
-    return evaluateNode(manifest, manifest, mutableSetOf()) as Map<String, Any>
-  }
+  private fun processManifestMap(manifest: Map<String, Any>): Map<String, Any> = evaluateNode(manifest, manifest, mutableSetOf()) as Map<String, Any>
 
-  private fun loadYaml(yaml: String): Map<String, Any> {
-    return try {
+  private fun loadYaml(yaml: String): Map<String, Any> =
+    try {
       Yaml().load(yaml) as Map<String, Any>
     } catch (e: Exception) {
       throw ManifestParserException("Manifest provided is not valid yaml. error: ${e.message}", e)
     }
-  }
 
   private fun evaluateNode(
     node: Any?,
     manifest: Map<String, Any>,
     visited: MutableSet<String>,
-  ): Any? {
-    return when (node) {
+  ): Any? =
+    when (node) {
       is Map<*, *> -> evaluateMapNode(node as Map<String, Any>, manifest, visited)
       is List<*> -> node.map { evaluateNode(it, manifest, visited) }
       else -> node
     }
-  }
 
   private fun evaluateMapNode(
     mapNode: Map<String, Any>,

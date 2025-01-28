@@ -1,18 +1,21 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.utils;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeException;
 import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
@@ -43,6 +46,7 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobDebugInfoRead;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
@@ -53,6 +57,7 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.client.model.generated.LogFormatType;
 import io.airbyte.api.client.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.client.model.generated.OperationCreate;
@@ -100,6 +105,8 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.tests.TestFlagsSetter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -121,6 +128,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
+import junit.framework.AssertionFailedError;
 import org.jooq.Record;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
@@ -309,6 +317,7 @@ public class AcceptanceTestHarness {
         true,
         true,
         null,
+        List.of(),
         List.of(),
         List.of(),
         null,
@@ -1257,7 +1266,7 @@ public class AcceptanceTestHarness {
 
   public WorkspaceRead updateWorkspaceWebhookConfigs(final UUID workspaceId, final List<WebhookConfigWrite> webhookConfigs) throws Exception {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getWorkspaceApi()
-        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, webhookConfigs)));
+        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, null, webhookConfigs)));
   }
 
   public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId) throws IOException {
@@ -1378,6 +1387,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
             stream.getConfig().getHashedFields(),
+            stream.getConfig().getMappers(),
             stream.getConfig().getMinimumGenerationId(),
             stream.getConfig().getGenerationId(),
             stream.getConfig().getSyncId())))
@@ -1410,6 +1420,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null);
   }
 
@@ -1419,6 +1430,54 @@ public class AcceptanceTestHarness {
 
   private static String generateRandomCloudSqlDatabaseName() {
     return CLOUD_SQL_DATABASE_PREFIX + UUID.randomUUID();
+  }
+
+  public <T> TestFlagsSetter.FlagOverride<T> withFlag(final Flag<T> flag, final Context context, final T value) {
+    return testFlagsSetter.withFlag(flag, value, context);
+  }
+
+  /**
+   * Validates that job logs exist, are in the correct format and contain entries from various
+   * participants. This method loops because not all participants may have reported by the time that a
+   * job is marked as done.
+   *
+   * @param jobId The ID of the job associated with the job logs.
+   * @param attemptNumber The attempt number of the job associated with the job logs.
+   */
+  public void validateLogs(final long jobId, final int attemptNumber) {
+    final RetryPolicy<?> retryPolicy = RetryPolicy.builder()
+        .handle(Exception.class, AssertionFailedError.class, org.opentest4j.AssertionFailedError.class)
+        .withDelay(Duration.ofSeconds(5))
+        .withMaxRetries(50)
+        .build();
+    try {
+      Failsafe.with(retryPolicy).run(() -> {
+        // Assert that job logs exist
+        final var attempt = getApiClient().getAttemptApi().getAttemptForJob(
+            new GetAttemptStatsRequestBody(jobId, attemptNumber));
+        // Structured logs should exist
+        assertEquals(LogFormatType.STRUCTURED, attempt.getLogType());
+        assertFalse(attempt.getLogs().getEvents().isEmpty());
+        assertTrue(attempt.getLogs().getLogLines().isEmpty());
+        // Assert that certain log lines are present in job logs to verify that all components can
+        // contribute
+        final List<String> logLines = List.of(
+            "APPLY Stage: CLAIM", // workload launcher
+            "----- START REPLICATION -----" // container orchestrator
+        );
+        validateLogLines(logLines, attempt);
+      });
+    } catch (final FailsafeException e) {
+      fail("Failed to validate logs: retries exceeded waiting for logs.", e);
+    }
+  }
+
+  public void validateLogLines(final List<String> logLines, final AttemptInfoRead attempt) {
+    logLines.forEach(logLine -> {
+      if (attempt.getLogs().getEvents().stream().noneMatch(e -> e.getMessage().startsWith(logLine))) {
+        fail("Job logs do not contain any lines that start with '" + logLine + "'.");
+      }
+    });
   }
 
 }

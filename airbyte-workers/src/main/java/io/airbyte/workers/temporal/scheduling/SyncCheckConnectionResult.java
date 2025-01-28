@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling;
@@ -12,14 +12,17 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.temporal.sync.SyncOutputProvider;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SyncCheckConnectionFailure.
  */
-@Slf4j
 public class SyncCheckConnectionResult {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final Long jobId;
   private final Integer attemptId;

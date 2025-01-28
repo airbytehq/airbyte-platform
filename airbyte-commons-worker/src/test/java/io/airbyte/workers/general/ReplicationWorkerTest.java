@@ -1,18 +1,16 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
-import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_WORKSPACE_MDC_KEY;
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_JOB_LOG_PATH_MDC_KEY;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -42,10 +40,8 @@ import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRespon
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.logging.LocalLogMdcHelper;
-import io.airbyte.commons.logging.LogMdcHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.FailureReason;
@@ -53,7 +49,6 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
@@ -106,11 +101,10 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -127,7 +121,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -218,8 +211,8 @@ abstract class ReplicationWorkerTest {
 
     jobRoot = Files.createDirectories(Files.createTempDirectory("test").resolve(WORKSPACE_ROOT));
 
-    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
-    replicationInput = syncPair.getValue();
+    final var syncPair = TestConfigHelpers.createReplicationConfig();
+    replicationInput = syncPair.getSecond();
 
     sourceConfig = WorkerUtils.syncToWorkerSourceConfig(replicationInput);
     destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(replicationInput);
@@ -261,6 +254,7 @@ abstract class ReplicationWorkerTest {
         Jsons.jsonNode(Map.of()),
         "name",
         "source-name",
+        1L,
         null,
         null,
         null,
@@ -273,6 +267,7 @@ abstract class ReplicationWorkerTest {
         Jsons.jsonNode(Map.of()),
         "name",
         "destination-name",
+        1L,
         null,
         null,
         null,
@@ -288,6 +283,7 @@ abstract class ReplicationWorkerTest {
     var resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse(UUID.randomUUID(),
         "dockerRepository",
         "dockerImageTag",
+        false,
         false);
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(resolveActorDefinitionVersionResponse);
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
@@ -310,6 +306,9 @@ abstract class ReplicationWorkerTest {
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
+
+    MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, jobRoot.toString());
+    LogSource.PLATFORM.toMdc().forEach(MDC::put);
   }
 
   @AfterEach
@@ -679,37 +678,6 @@ abstract class ReplicationWorkerTest {
    */
   abstract void verifyTestLoggingInThreads(final String logs);
 
-  @Test
-  void testLoggingInThreads() throws IOException, WorkerException {
-    // set up the mdc so that actually log to a file, so that we can verify that file logging captures
-    // threads.
-    final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    final LogMdcHelper logMdcHelper = new LocalLogMdcHelper();
-    MDC.put(logMdcHelper.getJobLogPathMdcKey(), Path.of(jobRoot.toString(), DEFAULT_LOG_FILENAME).toString());
-
-    final var worker = getDefaultReplicationWorker();
-
-    worker.run(replicationInput, jobRoot);
-
-    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
-    final String logs = IOs.readFile(logPath);
-    verifyTestLoggingInThreads(logs);
-  }
-
-  @Test
-  void testLogMaskRegex() throws IOException {
-    final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
-    MDC.put(DEFAULT_WORKSPACE_MDC_KEY, jobRoot.toString());
-
-    LOGGER.info(
-        "500 Server Error: Internal Server Error for url: https://api.hubapi.com/crm/v3/objects/contact?limit=100&archived=false&hapikey=secret-key_1&after=5315621");
-
-    final Path logPath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
-    final String logs = IOs.readFile(logPath);
-    assertTrue(logs.contains("apikey"));
-    assertFalse(logs.contains("secret-key_1"));
-  }
-
   @SuppressWarnings({"BusyWait"})
   @Test
   void testCancellation() throws InterruptedException {
@@ -742,6 +710,8 @@ abstract class ReplicationWorkerTest {
   @Test
   void testPopulatesOutputOnSuccess() throws WorkerException {
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalBytesFilteredOut()).thenReturn(0L);
+    when(syncStatsTracker.getTotalRecordsFilteredOut()).thenReturn(0L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
     when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(100L);
@@ -749,6 +719,10 @@ abstract class ReplicationWorkerTest {
     when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(1L);
     when(syncStatsTracker.getStreamToEmittedBytes())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
+    when(syncStatsTracker.getStreamToFilteredOutBytes())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 0L));
+    when(syncStatsTracker.getStreamToFilteredOutRecords())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 0L));
     when(syncStatsTracker.getStreamToEmittedRecords())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 12L));
     when(syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(5L);
@@ -775,6 +749,8 @@ abstract class ReplicationWorkerTest {
                 .withDestinationStateMessagesEmitted(1L)
                 .withMaxSecondsBeforeSourceStateMessageEmitted(5L)
                 .withMeanSecondsBeforeSourceStateMessageEmitted(4L)
+                .withBytesFilteredOut(0L)
+                .withRecordsFilteredOut(0L)
                 .withMaxSecondsBetweenStateMessageEmittedandCommitted(6L)
                 .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
                 .withBytesCommitted(100L)
@@ -786,6 +762,8 @@ abstract class ReplicationWorkerTest {
                     .withStats(new SyncStats()
                         .withBytesEmitted(100L)
                         .withRecordsEmitted(12L)
+                        .withRecordsFilteredOut(0L)
+                        .withBytesFilteredOut(0L)
                         .withBytesCommitted(100L)
                         .withRecordsCommitted(12L) // since success, should use emitted count
                         .withSourceStateMessagesEmitted(null)
@@ -819,6 +797,8 @@ abstract class ReplicationWorkerTest {
   void testPopulatesStatsOnFailureIfAvailable() throws Exception {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalRecordsFilteredOut()).thenReturn(0L);
+    when(syncStatsTracker.getTotalBytesFilteredOut()).thenReturn(0L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
     when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(6L);
@@ -826,6 +806,10 @@ abstract class ReplicationWorkerTest {
     when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(2L);
     when(syncStatsTracker.getStreamToEmittedBytes())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
+    when(syncStatsTracker.getStreamToFilteredOutBytes())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 0L));
+    when(syncStatsTracker.getStreamToFilteredOutRecords())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 0L));
     when(syncStatsTracker.getStreamToEmittedRecords())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 12L));
     when(syncStatsTracker.getStreamToCommittedRecords())
@@ -850,6 +834,8 @@ abstract class ReplicationWorkerTest {
         .withMaxSecondsBetweenStateMessageEmittedandCommitted(12L)
         .withMeanSecondsBetweenStateMessageEmittedandCommitted(11L)
         .withBytesCommitted(12L)
+        .withBytesFilteredOut(0L)
+        .withRecordsFilteredOut(0L)
         .withRecordsCommitted(6L);
     final List<StreamSyncStats> expectedStreamStats = Collections.singletonList(
         new StreamSyncStats()
@@ -859,6 +845,8 @@ abstract class ReplicationWorkerTest {
                 .withBytesEmitted(100L)
                 .withRecordsEmitted(12L)
                 .withBytesCommitted(13L)
+                .withBytesFilteredOut(0L)
+                .withRecordsFilteredOut(0L)
                 .withRecordsCommitted(6L)
                 .withSourceStateMessagesEmitted(null)
                 .withDestinationStateMessagesEmitted(null)));

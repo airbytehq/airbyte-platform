@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -7,6 +7,7 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -20,7 +21,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,10 +283,10 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
     public TimeoutException(final long thresholdMs, final long timeSinceLastActionMs) {
       super(String.format("Last action %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true),
-          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
-      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true);
+          DurationKt.formatMilli(timeSinceLastActionMs),
+          DurationKt.formatMilli(thresholdMs)));
+      this.humanReadableThreshold = DurationKt.formatMilli(thresholdMs);
+      this.humanReadableTimeSinceLastAction = DurationKt.formatMilli(timeSinceLastActionMs);
     }
 
   }

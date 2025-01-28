@@ -1,11 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
 
+import static io.airbyte.workers.ReplicationInputHydrator.FILE_TRANSFER_DELIVERY_TYPE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,19 +49,26 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.client.model.generated.SyncMode;
+import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
+import io.airbyte.config.DeliveryMethod;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
+import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
@@ -110,6 +120,7 @@ class ReplicationInputHydratorTest {
               null,
               null,
               null,
+              null,
               null))));
   private static final ConnectionState CONNECTION_STATE_RESPONSE = Jsons.deserialize(String
       .format("""
@@ -149,6 +160,7 @@ class ReplicationInputHydratorTest {
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
   private static final SyncResourceRequirements SYNC_RESOURCE_REQUIREMENTS = new SyncResourceRequirements();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final Boolean useRuntimePersistence = false;
   private static final CatalogDiff CATALOG_DIFF = new CatalogDiff(
       List.of(
           new StreamTransform(
@@ -170,6 +182,7 @@ class ReplicationInputHydratorTest {
       Jsons.emptyObject(),
       "name",
       "destinationName",
+      1L,
       "icon",
       false,
       null,
@@ -177,30 +190,36 @@ class ReplicationInputHydratorTest {
       null);
 
   private static SecretsRepositoryReader secretsRepositoryReader;
+  private static MapperSecretHydrationHelper mapperSecretHydrationHelper;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
   private static JobsApi jobsApi;
-  private static FeatureFlagClient featureFlagClient;
   private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
   private AttemptApi attemptApi;
   private DestinationApi destinationApi;
   private ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
+  private BackfillHelper backfillHelper;
+  private CatalogClientConverters catalogClientConverters;
+  private MetricClient metricClient;
 
   @BeforeEach
   void setup() throws IOException {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    mapperSecretHydrationHelper = mock(MapperSecretHydrationHelper.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     attemptApi = mock(AttemptApi.class);
     connectionApi = mock(ConnectionApi.class);
     stateApi = mock(StateApi.class);
     jobsApi = mock(JobsApi.class);
-    featureFlagClient = mock(TestClient.class);
     secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
     resumableFullRefreshStatsHelper = mock(ResumableFullRefreshStatsHelper.class);
+    catalogClientConverters = new CatalogClientConverters(new FieldGenerator());
+    backfillHelper = new BackfillHelper(catalogClientConverters);
+    metricClient = mock(MetricClient.class);
     when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
@@ -212,10 +231,20 @@ class ReplicationInputHydratorTest {
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(stateApi.getState(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
+    when(mapperSecretHydrationHelper.hydrateMapperSecrets(any(), anyBoolean(), any())).thenAnswer(invocation -> invocation.getArgument(0));
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient);
+    return new ReplicationInputHydrator(
+        airbyteApiClient,
+        resumableFullRefreshStatsHelper,
+        secretsRepositoryReader,
+        mapperSecretHydrationHelper,
+        backfillHelper,
+        catalogClientConverters,
+        new ReplicationInputMapper(),
+        metricClient,
+        useRuntimePersistence);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
@@ -237,7 +266,8 @@ class ReplicationInputHydratorTest {
         "unused",
         null, // unused
         new ConnectionContext().withOrganizationId(UUID.randomUUID()),
-        null);
+        null,
+        List.of());
   }
 
   @ParameterizedTest
@@ -270,7 +300,7 @@ class ReplicationInputHydratorTest {
     // Verify that if the sync is a reset, we retrieve the job info and handle the streams accordingly.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
-    input.setIsReset(true);
+    input.setReset(true);
     when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
         new JobOptionalRead(new JobRead(
             JOB_ID,
@@ -307,6 +337,22 @@ class ReplicationInputHydratorTest {
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+  }
+
+  @Test
+  void testGenerateReplicationFailsIfNonCompatibleFileTransfer() throws Exception {
+    mockNonRefresh();
+
+    // Verify that we get the state and catalog from the API.
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+
+    final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
+    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(true)));
+    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
+
+    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(false)
+        .withDeliveryMethod(new DeliveryMethod().withDeliveryType(FILE_TRANSFER_DELIVERY_TYPE))));
+    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
   }
 
   @Test
@@ -416,7 +462,8 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
-        true));
+        true,
+        false));
   }
 
   private void mockNonRefresh() throws IOException {
@@ -428,6 +475,7 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
+        false,
         false));
   }
 

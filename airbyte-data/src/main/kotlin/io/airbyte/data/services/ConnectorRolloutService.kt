@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.ConnectorRollout
@@ -13,7 +17,12 @@ interface ConnectorRolloutService {
   fun getConnectorRollout(id: UUID): ConnectorRollout
 
   /**
-   * Write a connector rollout.
+   * Insert a connector rollout.
+   */
+  fun insertConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout
+
+  /**
+   * Write (create or update) a connector rollout.
    */
   fun writeConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.queue
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -23,9 +27,13 @@ import java.util.concurrent.CountDownLatch
 
 // Payload for the Queue
 @JsonDeserialize(builder = TestQueueInput.Builder::class)
-data class TestQueueInput(val input: String) {
+data class TestQueueInput(
+  val input: String,
+) {
   // Using a builder here to prove that we can use a payload with non-nullable fields.
-  data class Builder(var input: String? = null) {
+  data class Builder(
+    var input: String? = null,
+  ) {
     fun input(input: String) = apply { this.input = input }
 
     fun build() = TestQueueInput(input = input!!)
@@ -33,7 +41,9 @@ data class TestQueueInput(val input: String) {
 }
 
 // The actual consumer
-class TestConsumer(val latch: CountDownLatch = CountDownLatch(1)) : MessageConsumer<TestQueueInput> {
+class TestConsumer(
+  val latch: CountDownLatch = CountDownLatch(1),
+) : MessageConsumer<TestQueueInput> {
   override fun consume(input: TestQueueInput) {
     latch.countDown()
     println(input)
@@ -62,7 +72,7 @@ class TestWorkflowImpl : QueueWorkflowBase<TestQueueInput>() {
 
 class BasicQueueTest {
   companion object {
-    val QUEUE_NAME = "testQueue"
+    const val QUEUE_NAME = "testQueue"
 
     lateinit var consumer: TestConsumer
     lateinit var activity: QueueActivityImpl<TestQueueInput>

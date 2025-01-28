@@ -449,7 +449,6 @@ components:
           nullable: true
     WorkloadCreateRequest:
       required:
-      - geography
       - labels
       - logPath
       - priority
@@ -467,8 +466,6 @@ components:
         workloadInput:
           type: string
         logPath:
-          type: string
-        geography:
           type: string
         mutexKey:
           type: string
@@ -560,6 +557,7 @@ components:
       enum:
       - high
       - default
+      x-type: String
     WorkloadRunningRequest:
       required:
       - workloadId
@@ -581,6 +579,7 @@ components:
       - success
       - failure
       - cancelled
+      x-type: String
     WorkloadSuccessRequest:
       required:
       - workloadId
@@ -595,3 +594,4 @@ components:
       - check
       - discover
       - spec
+      x-type: String

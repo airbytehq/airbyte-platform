@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence.helper
 
 import io.airbyte.commons.json.Jsons
@@ -65,7 +69,7 @@ class CatalogGenerationSetterTest {
     )
 
   val jobId = 3L
-  val connectionId = UUID.randomUUID()
+  val connectionId: UUID = UUID.randomUUID()
 
   @BeforeEach
   fun init() {

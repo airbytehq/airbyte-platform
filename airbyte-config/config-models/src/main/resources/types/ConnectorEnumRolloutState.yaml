@@ -13,4 +13,4 @@ enum:
   - succeeded # The rollout is finished; the release candidate has been promoted to latest and all connections have been unpinned.
   - errored # An unexpected error occurred during the rollout and requires investigation.
   - failed_rolled_back # The rollout failed, and we've deleted the release candidate from the registry and unpinned all connections.
-  - canceled_rolled_back # The rollout was canceled, and we've deleted the release candidate from the registry and unpinned all connections.
+  - canceled # The rollout was canceled, and we've unpinned all connections.

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.json.Jsons
@@ -7,7 +11,6 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.MetricClient
@@ -51,9 +54,6 @@ class ReplicationHydrationProcessorTest {
   lateinit var fileClient: FileClient
 
   @MockK
-  lateinit var featureFlagClient: FeatureFlagClient
-
-  @MockK
   lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
 
   @MockK
@@ -70,7 +70,6 @@ class ReplicationHydrationProcessorTest {
         serializer,
         protocolSerializer,
         fileClient,
-        featureFlagClient,
         destinationCatalogGenerator,
         metricClient,
       )
@@ -91,8 +90,10 @@ class ReplicationHydrationProcessorTest {
           ),
         ),
       )
-    val activityInput = ReplicationActivityInput()
-    activityInput.connectionId = UUID.randomUUID()
+    val activityInput =
+      ReplicationActivityInput(
+        connectionId = UUID.randomUUID(),
+      )
     val hydrated =
       ReplicationInput()
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
@@ -129,7 +130,6 @@ class ReplicationHydrationProcessorTest {
     every {
       destinationCatalogGenerator.generateDestinationCatalog(any())
     } returns DestinationCatalogGenerator.CatalogGenerationResult(hydrated.catalog, mapOf())
-    every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     processor.process(input)
 
@@ -152,13 +152,12 @@ class ReplicationHydrationProcessorTest {
   companion object {
     // Validates empty or null states serialize as "{}"
     @JvmStatic
-    private fun stateMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun stateMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(State().withState(null), 0),
         Arguments.of(null, 0),
         Arguments.of(State().withState(Jsons.jsonNode("this is" to "nested for some reason")), 1),
       )
-    }
   }
 
   object Fixtures {

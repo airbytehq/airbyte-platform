@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -118,7 +118,7 @@ public class JobsHandlerTest {
         .standardSyncOutput(standardSyncOutput);
 
     final Job job =
-        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -136,7 +136,7 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
-    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 

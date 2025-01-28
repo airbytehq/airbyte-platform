@@ -38,7 +38,7 @@ const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<C
         <FlexContainer gap="none" alignItems="center">
           {props.label}
           {props.infoTooltipContent && (
-            <InfoTooltip containerClassName={styles.tooltipContainer} className={styles.tooltip} placement="top-start">
+            <InfoTooltip className={styles.tooltip} placement="top-start">
               {props.infoTooltipContent}
             </InfoTooltip>
           )}
@@ -49,7 +49,7 @@ const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<C
           )}
         </FlexContainer>
       </Label>
-      {props.labelAction && <div className={styles.labelAction}>{props.labelAction}</div>}
+      {props.labelAction && <div>{props.labelAction}</div>}
     </FlexContainer>
     {props.children}
   </div>

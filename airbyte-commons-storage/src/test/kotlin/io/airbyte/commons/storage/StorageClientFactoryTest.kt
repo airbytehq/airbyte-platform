@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
 
+import com.google.cloud.storage.Bucket
+import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
@@ -17,13 +19,24 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 
 /**
  * Note @MockBean doesn't work in this class for some reason, possible due to a Micronaut 3 problem.
  * When upgrading to Micronaut 4, the `@get:Primary` and `@get:Bean` annotations might be replaceable with @MockBean.
  */
 
-private val bucket = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
+private val bucket =
+  StorageBucketConfig(
+    log = "log",
+    state = "state",
+    workloadOutput = "workload",
+    activityPayload = "payload",
+    auditLogging = null,
+  )
 
 @MicronautTest
 @Property(name = STORAGE_TYPE, value = "local")
@@ -40,18 +53,26 @@ class LocalStorageClientFactoryTest {
   val localStorageConfig: LocalStorageConfig =
     mockk {
       every { root } returns "/tmp/test"
+      every { buckets } returns
+        StorageBucketConfig(
+          log = "log",
+          state = "state",
+          workloadOutput = "wo",
+          activityPayload = "ap",
+          auditLogging = null,
+        )
     }
 
   @Test
   fun `get returns correct class`() {
-    val state: LocalStorageClient = factory.get(DocumentType.STATE) as LocalStorageClient
-    assertEquals("/tmp/test/state", state.root.toString())
+    val state: LocalStorageClient = factory.create(DocumentType.STATE) as LocalStorageClient
+    assertEquals("/tmp/test/state/foo", state.toPath("foo").toString())
 
-    val workload: LocalStorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT) as LocalStorageClient
-    assertEquals("/tmp/test/workload/output", workload.root.toString())
+    val workload: LocalStorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT) as LocalStorageClient
+    assertEquals("/tmp/test/workload/output/foo", workload.toPath("foo").toString())
 
-    val log: LocalStorageClient = factory.get(DocumentType.LOGS) as LocalStorageClient
-    assertEquals("/tmp/test/job-logging", log.root.toString())
+    val log: LocalStorageClient = factory.create(DocumentType.LOGS) as LocalStorageClient
+    assertEquals("/tmp/test/job-logging/foo", log.toPath("foo").toString())
   }
 }
 
@@ -66,7 +87,11 @@ class GcsStorageClientFactoryTest {
       every { applicationCredentials } returns "mock-app-creds"
     }
 
-  val gcsClient: Storage = mockk()
+  val gcsClient: Storage =
+    mockk {
+      every { get(any<String>(), *anyVararg()) } returns null
+      every { create(any<BucketInfo>()) } returns mockk<Bucket>()
+    }
 
   init {
     mockkStatic(GcsStorageConfig::gcsClient)
@@ -78,9 +103,9 @@ class GcsStorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is GcsStorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is GcsStorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is GcsStorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is GcsStorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is GcsStorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is GcsStorageClient, "workload returned wrong type")
   }
 }
 
@@ -97,7 +122,11 @@ class MinioStorageClientFactoryTest {
       every { endpoint } returns "mock-endpoint"
     }
 
-  val s3Client: S3Client = mockk()
+  val s3Client: S3Client =
+    mockk {
+      every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+      every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+    }
 
   init {
     mockkStatic(MinioStorageConfig::s3Client)
@@ -109,9 +138,9 @@ class MinioStorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is MinioStorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is MinioStorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is MinioStorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is MinioStorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is MinioStorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is MinioStorageClient, "workload returned wrong type")
   }
 }
 
@@ -128,7 +157,11 @@ class S3StorageClientFactoryTest {
       every { region } returns "mock-region"
     }
 
-  val s3Client: S3Client = mockk()
+  val s3Client: S3Client =
+    mockk {
+      every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
+      every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
+    }
 
   init {
     mockkStatic(S3StorageConfig::s3Client)
@@ -140,8 +173,8 @@ class S3StorageClientFactoryTest {
 
   @Test
   fun `get returns correct class`() {
-    assertTrue(factory.get(DocumentType.LOGS) is S3StorageClient, "log returned wrong type")
-    assertTrue(factory.get(DocumentType.STATE) is S3StorageClient, "state returned wrong type")
-    assertTrue(factory.get(DocumentType.WORKLOAD_OUTPUT) is S3StorageClient, "workload returned wrong type")
+    assertTrue(factory.create(DocumentType.LOGS) is S3StorageClient, "log returned wrong type")
+    assertTrue(factory.create(DocumentType.STATE) is S3StorageClient, "state returned wrong type")
+    assertTrue(factory.create(DocumentType.WORKLOAD_OUTPUT) is S3StorageClient, "workload returned wrong type")
   }
 }

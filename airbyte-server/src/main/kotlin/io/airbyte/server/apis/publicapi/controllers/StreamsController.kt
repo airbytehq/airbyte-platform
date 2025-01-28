@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -56,15 +56,15 @@ class StreamsController(
   ): Response {
     // Check permission for source and destination
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId),
+    apiAuthorizationHelper.checkWorkspacePermission(
+      sourceId,
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_READER,
     )
     destinationId?.apply {
-      apiAuthorizationHelper.checkWorkspacePermissions(
-        listOf(destinationId),
+      apiAuthorizationHelper.checkWorkspacePermission(
+        destinationId,
         Scope.DESTINATION,
         userId,
         PermissionType.WORKSPACE_READER,
@@ -98,7 +98,9 @@ class StreamsController(
         emptyList()
       }
     val streamList =
-      httpResponse.catalog!!.streams.stream()
+      httpResponse.catalog!!
+        .streams
+        .stream()
         .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
         .toList()
     val listOfStreamProperties =
@@ -120,8 +122,7 @@ class StreamsController(
     return Response
       .status(
         HttpStatus.OK.code,
-      )
-      .entity(listOfStreamProperties)
+      ).entity(listOfStreamProperties)
       .build()
   }
 

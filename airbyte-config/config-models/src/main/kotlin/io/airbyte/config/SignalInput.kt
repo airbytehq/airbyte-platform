@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config
 
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -13,6 +17,7 @@ data class SignalInput(
 ) : Serializable {
   companion object {
     const val SYNC_WORKFLOW = "sync"
+    const val CONNECTOR_COMMAND_WORKFLOW = "connector_command"
   }
 
   data class Builder

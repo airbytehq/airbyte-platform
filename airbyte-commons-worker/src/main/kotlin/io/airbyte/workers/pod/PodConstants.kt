@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.pod
 
 object PodConstants {
   const val KUBE_NAME_LEN_LIMIT = 63
-  const val REPL_POD_PREFIX = "replication"
-  const val REPLICATION_APPLICATION_NAME = "replication-orchestrator"
-  const val NO_OP_APPLICATION_NAME = "NO_OP"
+  const val CPU_RESOURCE_KEY = "cpu"
+  const val MEMORY_RESOURCE_KEY = "memory"
+  const val EPHEMERAL_STORAGE_RESOURCE_KEY = "ephemeral-storage"
 }

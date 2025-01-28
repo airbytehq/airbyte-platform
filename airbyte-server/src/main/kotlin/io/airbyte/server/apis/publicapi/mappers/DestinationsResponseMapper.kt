@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -38,14 +38,20 @@ object DestinationsResponseMapper {
     apiHost: String,
   ): DestinationsResponse {
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(DESTINATIONS_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(DESTINATIONS_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
+
     return DestinationsResponse(
       next = PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
       data =
-        destinationReadList.destinations.stream()
+        destinationReadList.destinations
+          .stream()
           .map { obj: DestinationRead? -> DestinationReadMapper.from(obj!!) }
           .toList(),
     )

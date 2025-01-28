@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -11,7 +11,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
-import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
@@ -19,15 +19,13 @@ import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * StreamResetActivityImpl.
  */
-@Slf4j
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
+@Requires(env = EnvConstants.CONTROL_PLANE)
 public class StreamResetActivityImpl implements StreamResetActivity {
 
   private final AirbyteApiClient airbyteApiClient;

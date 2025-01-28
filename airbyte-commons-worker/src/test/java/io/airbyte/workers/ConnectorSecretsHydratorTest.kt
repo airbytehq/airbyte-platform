@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.node.POJONode
@@ -9,9 +13,6 @@ import io.airbyte.api.client.model.generated.SecretPersistenceType
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Organization
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -27,7 +28,7 @@ class ConnectorSecretsHydratorTest {
     val airbyteApiClient: AirbyteApiClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
-    val featureFlagClient: FeatureFlagClient = mockk()
+    val useRuntimeSecretPersistence = true
 
     every { airbyteApiClient.secretPersistenceConfigApi } returns secretsApiClient
 
@@ -35,7 +36,7 @@ class ConnectorSecretsHydratorTest {
       ConnectorSecretsHydrator(
         secretsRepositoryReader,
         airbyteApiClient,
-        featureFlagClient,
+        useRuntimeSecretPersistence,
       )
 
     val unhydratedConfig = POJONode("un-hydrated")
@@ -59,8 +60,6 @@ class ConnectorSecretsHydratorTest {
     every { secretsApiClient.getSecretsPersistenceConfig(any()) } returns secretConfig
     every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhydratedConfig, runtimeSecretPersistence) } returns hydratedConfig
 
-    every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns true
-
     val result = hydrator.hydrateConfig(unhydratedConfig, orgId)
 
     verify { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhydratedConfig, runtimeSecretPersistence) }
@@ -73,7 +72,7 @@ class ConnectorSecretsHydratorTest {
     val airbyteApiClient: AirbyteApiClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
-    val featureFlagClient: FeatureFlagClient = mockk()
+    val useRuntimeSecretPersistence = false
 
     every { airbyteApiClient.secretPersistenceConfigApi } returns secretsApiClient
 
@@ -81,7 +80,7 @@ class ConnectorSecretsHydratorTest {
       ConnectorSecretsHydrator(
         secretsRepositoryReader,
         airbyteApiClient,
-        featureFlagClient,
+        useRuntimeSecretPersistence,
       )
 
     val unhydratedConfig = POJONode("un-hydrated")
@@ -90,8 +89,6 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
 
     every { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhydratedConfig) } returns hydratedConfig
-
-    every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns false
 
     val result = hydrator.hydrateConfig(unhydratedConfig, orgId)
 

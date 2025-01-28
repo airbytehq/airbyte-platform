@@ -1,10 +1,13 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
 
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.EnvConfigs;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.pod.FileConstants;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
@@ -52,6 +55,24 @@ public class ConfigFactory {
   @Named("workspaceRoot")
   public Path workspaceRoot(@Value("${airbyte.workspace-root}") final String workspaceRoot) {
     return Path.of(workspaceRoot);
+  }
+
+  @Singleton
+  @Named("workloadId")
+  public String workloadId(@Value("${airbyte.workload-id}") final String workloadId) {
+    return workloadId;
+  }
+
+  @Singleton
+  public ReplicationInput replicationInput(@Named("configDir") final String configDir) {
+    return Jsons.deserialize(
+        Path.of(configDir).resolve(FileConstants.INIT_INPUT_FILE).toFile(),
+        ReplicationInput.class);
+  }
+
+  @Singleton
+  EnvConfigs envConfigs() {
+    return new EnvConfigs();
   }
 
 }

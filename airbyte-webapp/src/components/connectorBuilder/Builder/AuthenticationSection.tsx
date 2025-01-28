@@ -1,10 +1,13 @@
-import { useCallback } from "react";
-import { useFormContext } from "react-hook-form";
-import { useIntl } from "react-intl";
+import { ComponentProps, useCallback, useEffect, useRef } from "react";
+import { useFormContext, useController } from "react-hook-form";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
+import { Box } from "components/ui/Box";
+import { Message } from "components/ui/Message";
+import { Tooltip } from "components/ui/Tooltip";
 
 import {
   HttpRequesterAuthenticator,
@@ -12,10 +15,19 @@ import {
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
+import { useExperiment } from "hooks/services/Experiment";
+import { useNotificationService } from "hooks/services/Notification";
+import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
+import {
+  useInitializedBuilderProject,
+  useConnectorBuilderFormState,
+  useConnectorBuilderFormManagementState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { AuthButtonBuilder } from "views/Connector/ConnectorForm/components/Sections/auth/AuthButton";
 
+import styles from "./AuthenticationSection.module.scss";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
@@ -27,11 +39,13 @@ import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
 import { useBuilderWatchWithPreview } from "../preview";
+import { useTestingValuesErrors } from "../StreamTestingPanel";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
   OAUTH_AUTHENTICATOR,
+  DeclarativeOAuthAuthenticatorType,
   SESSION_TOKEN_AUTHENTICATOR,
   useBuilderWatch,
   BuilderErrorHandler,
@@ -44,6 +58,8 @@ import {
   BuilderFormOAuthAuthenticator,
   builderAuthenticatorToManifest,
   builderInputsToSpec,
+  BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES,
+  extractInterpolatedConfigKey,
 } from "../types";
 import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
@@ -65,6 +81,96 @@ export const AuthenticationSection: React.FC = () => {
       manifestAuthenticatorToBuilder(authenticator, builderInputsToSpec(inputs)),
     [inputs]
   );
+
+  const options: ComponentProps<typeof BuilderOneOf<BuilderFormAuthenticator>>["options"] = [
+    { label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }), default: { type: NO_AUTH } },
+    {
+      label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
+      default: {
+        type: API_KEY_AUTHENTICATOR,
+        inject_into: {
+          type: "RequestOption",
+          inject_into: "header",
+          field_name: "",
+        },
+        api_token: interpolateConfigKey(
+          getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[API_KEY_AUTHENTICATOR].api_token.key)
+        ),
+      },
+      children: (
+        <>
+          <BuilderRequestInjection
+            path={authPath("inject_into")}
+            descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
+            excludeValues={["path"]}
+          />
+          <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
+        </>
+      ),
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
+      default: {
+        type: BEARER_AUTHENTICATOR,
+        api_token: interpolateConfigKey(
+          getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BEARER_AUTHENTICATOR].api_token.key)
+        ),
+      },
+      children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
+      default: {
+        type: BASIC_AUTHENTICATOR,
+        username: interpolateConfigKey(
+          getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].username.key)
+        ),
+        password: interpolateConfigKey(
+          getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].password.key)
+        ),
+      },
+      children: (
+        <>
+          <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.username" />
+          <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.password" />
+        </>
+      ),
+    },
+    ...useOauthOptions(),
+    {
+      label: formatMessage({ id: "connectorBuilder.authentication.method.sessionToken" }),
+      default: {
+        type: SESSION_TOKEN_AUTHENTICATOR,
+        login_requester: {
+          url: "",
+          authenticator: {
+            type: NO_AUTH,
+          },
+          httpMethod: "POST",
+          requestOptions: {
+            requestParameters: [],
+            requestHeaders: [],
+            requestBody: {
+              type: "json_list",
+              values: [],
+            },
+          },
+        },
+        decoder: "JSON",
+        session_token_path: [],
+        expiration_duration: "",
+        request_authentication: {
+          type: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+          inject_into: {
+            type: "RequestOption",
+            inject_into: "header",
+            field_name: "",
+          },
+        },
+      },
+      children: <SessionTokenForm />,
+    },
+  ];
 
   return (
     <BuilderCard
@@ -102,112 +208,7 @@ export const AuthenticationSection: React.FC = () => {
             auth_type: newType,
           });
         }}
-        options={[
-          { label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }), default: { type: NO_AUTH } },
-          {
-            label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
-            default: {
-              type: API_KEY_AUTHENTICATOR,
-              inject_into: {
-                type: "RequestOption",
-                inject_into: "header",
-                field_name: "",
-              },
-              api_token: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[API_KEY_AUTHENTICATOR].api_token.key)
-              ),
-            },
-            children: (
-              <>
-                <BuilderRequestInjection
-                  path={authPath("inject_into")}
-                  descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
-                  excludeValues={["path"]}
-                />
-                <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
-              </>
-            ),
-          },
-          {
-            label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
-            default: {
-              type: BEARER_AUTHENTICATOR,
-              api_token: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BEARER_AUTHENTICATOR].api_token.key)
-              ),
-            },
-            children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
-          },
-          {
-            label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
-            default: {
-              type: BASIC_AUTHENTICATOR,
-              username: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].username.key)
-              ),
-              password: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].password.key)
-              ),
-            },
-            children: (
-              <>
-                <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.username" />
-                <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.password" />
-              </>
-            ),
-          },
-          {
-            label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth" }),
-            default: {
-              type: OAUTH_AUTHENTICATOR,
-              refresh_request_body: [],
-              token_refresh_endpoint: "",
-              grant_type: "refresh_token",
-              client_id: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_id.key)
-              ),
-              client_secret: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_secret.key)
-              ),
-              refresh_token: interpolateConfigKey(
-                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token.key)
-              ),
-            },
-            children: <OAuthForm />,
-          },
-          {
-            label: formatMessage({ id: "connectorBuilder.authentication.method.sessionToken" }),
-            default: {
-              type: SESSION_TOKEN_AUTHENTICATOR,
-              login_requester: {
-                url: "",
-                authenticator: {
-                  type: NO_AUTH,
-                },
-                httpMethod: "POST",
-                requestOptions: {
-                  requestParameters: [],
-                  requestHeaders: [],
-                  requestBody: {
-                    type: "json_list",
-                    values: [],
-                  },
-                },
-              },
-              session_token_path: [],
-              expiration_duration: "",
-              request_authentication: {
-                type: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
-                inject_into: {
-                  type: "RequestOption",
-                  inject_into: "header",
-                  field_name: "",
-                },
-              },
-            },
-            children: <SessionTokenForm />,
-          },
-        ]}
+        options={options}
       />
     </BuilderCard>
   );
@@ -221,8 +222,8 @@ const OAuthForm = () => {
 
   return (
     <>
-      <BuilderFieldWithInputs
-        type="string"
+      <BuilderField
+        type="jinja"
         path={authPath("token_refresh_endpoint")}
         manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
       />
@@ -270,7 +271,7 @@ const OAuthForm = () => {
             }}
           >
             <BuilderField
-              type="string"
+              type="jinja"
               path={authPath("refresh_token_updater.refresh_token_name")}
               optional
               manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
@@ -285,20 +286,20 @@ const OAuthForm = () => {
           optional
           manifestPath="OAuthAuthenticator.properties.scopes"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("token_expiry_date_format")}
           optional
           manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("expires_in_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.expires_in_name"
         />
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("access_token_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.access_token_name"
@@ -306,6 +307,248 @@ const OAuthForm = () => {
         <KeyValueListField
           path={authPath("refresh_request_body")}
           manifestPath="OAuthAuthenticator.properties.refresh_request_body"
+        />
+      </BuilderOptional>
+    </>
+  );
+};
+
+const payloadHasField = <FieldKey extends string>(
+  payload: Record<string, unknown>,
+  fieldKey: FieldKey
+): payload is Record<FieldKey, string> => {
+  return fieldKey in payload;
+};
+
+const DeclarativeOAuthForm = () => {
+  const { projectId } = useInitializedBuilderProject();
+  const {
+    jsonManifest: { spec },
+  } = useConnectorBuilderFormState();
+  const { setValue, getValues } = useFormContext();
+  const testingValues = useBuilderWatch("testingValues");
+  const testingValuesErrors = useTestingValuesErrors(testingValues, spec);
+  const { updateTestingValues, savingState } = useConnectorBuilderFormState();
+
+  const canPerformOauthFlow = savingState === "saved";
+
+  const { field: authenticatorScopesField } = useController({ name: authPath("scopes") });
+  const { field: authenticatorAccessTokenNameField } = useController({ name: authPath("access_token_name") });
+  const authenticatorAccessTokenValueField = useBuilderWatch(authPath("access_token_value"));
+  const authenticatorRefreshTokenValueField = useBuilderWatch(authPath("refresh_token"));
+
+  const { formatMessage } = useIntl();
+  const getUniqueKey = useGetUniqueKey();
+
+  const { registerNotification } = useNotificationService();
+  const hasNecessaryTestingValues = testingValuesErrors === 0;
+
+  const { setTestingValuesInputOpen, handleScrollToField } = useConnectorBuilderFormManagementState();
+
+  const authButtonBuilderRef = useRef(null);
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(authButtonBuilderRef, "formValues.global.authenticator.declarative_oauth_flow");
+  }, [handleScrollToField]);
+
+  return (
+    <>
+      <Tooltip
+        disabled={canPerformOauthFlow}
+        control={
+          <AuthButtonBuilder
+            ref={authButtonBuilderRef}
+            disabled={!canPerformOauthFlow}
+            builderProjectId={projectId}
+            onClick={
+              hasNecessaryTestingValues
+                ? undefined
+                : () => {
+                    registerNotification({
+                      id: "connectorBuilder.authentication.oauthButton.inputsRequired",
+                      text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
+                      type: "info",
+                    });
+                    setTestingValuesInputOpen(true);
+                  }
+            }
+            onComplete={async (payload) => {
+              const testingValues = getValues("testingValues"); // ensure we have the latest testing values
+              const areRefreshTokensEnabled = !!getValues(authPath("refresh_token_updater"));
+
+              if (!areRefreshTokensEnabled) {
+                const accessTokenKey = getValues(authPath("declarative.access_token_key"));
+                if (payloadHasField(payload, accessTokenKey)) {
+                  // update testing values with the returned access token
+                  const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField)!;
+                  const response = await updateTestingValues({
+                    spec: spec?.connection_specification ?? {},
+                    testingValues: {
+                      ...testingValues,
+                      [accessTokenConfigKey]: payload[accessTokenKey],
+                    },
+                  });
+                  setValue("testingValues", response);
+                } else {
+                  registerNotification({
+                    id: "connectorBuilder.authentication.oauthButton.noAccessToken",
+                    text: (
+                      <FormattedMessage
+                        id="connectorBuilder.authentication.oauthButton.noAccessToken"
+                        values={{ accessTokenKey }}
+                      />
+                    ),
+                    type: "error",
+                  });
+                }
+              } else if (payloadHasField(payload, "refresh_token")) {
+                // update testing values with the returned refresh token
+                const refreshTokenConfigKey = extractInterpolatedConfigKey(authenticatorRefreshTokenValueField)!;
+                const response = await updateTestingValues({
+                  spec: spec?.connection_specification ?? {},
+                  testingValues: {
+                    ...testingValues,
+                    [refreshTokenConfigKey]: payload.refresh_token,
+                  },
+                });
+                setValue("testingValues", response);
+              } else {
+                registerNotification({
+                  id: "connectorBuilder.authentication.oauthButton.noRefreshToken",
+                  text: (
+                    <FormattedMessage
+                      id="connectorBuilder.authentication.oauthButton.noRefreshToken"
+                      values={{ refreshTokenKey: "refresh_token" }}
+                    />
+                  ),
+                  type: "error",
+                });
+              }
+            }}
+          />
+        }
+      >
+        <FormattedMessage id="connectorBuilder.authentication.oauthButton.disabledTooltip" />
+      </Tooltip>
+      <Box mt="xl">
+        <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
+      </Box>
+      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
+      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
+      <BuilderField
+        type="string"
+        path={authPath("declarative.consent_url")}
+        manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.consent_url"
+      />
+      <BuilderField
+        type="string"
+        path={authPath("declarative.access_token_url")}
+        manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_url"
+      />
+      <BuilderField
+        type="string"
+        path={authPath("declarative.scope")}
+        manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.scope"
+        optional
+        onChange={(newValue) => {
+          // also apply to authenticator's scopes
+          authenticatorScopesField.onChange(newValue.split(/\s+/));
+        }}
+      />
+      <BuilderField
+        type="string"
+        path={authPath("declarative.access_token_key")}
+        manifestPath="OAuthAuthenticator.properties.access_token_name"
+        onChange={
+          // also apply to authenticator's access token
+          authenticatorAccessTokenNameField.onChange
+        }
+      />
+      <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
+        label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
+        tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
+        fieldPath={authPath("refresh_token_updater")}
+        initialValues={{
+          refresh_token_name: "refresh_token",
+          access_token: interpolateConfigKey(
+            getUniqueKey(
+              LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token_updater
+                .access_token_config_path.key
+            )
+          ),
+          token_expiry_date: interpolateConfigKey(
+            getUniqueKey(
+              LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token_updater
+                .token_expiry_date_config_path.key
+            )
+          ),
+        }}
+      >
+        <BuilderField
+          type="jinja"
+          path={authPath("token_refresh_endpoint")}
+          manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
+        />
+        <BuilderField
+          type="jinja"
+          path={authPath("refresh_token_updater.refresh_token_name")}
+          optional
+          manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
+        />
+      </ToggleGroupField>
+      <BuilderOptional>
+        <KeyValueListField
+          path={authPath("declarative.access_token_headers")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_headers"
+        />
+        <KeyValueListField
+          path={authPath("declarative.access_token_params")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_params"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.auth_code_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.auth_code_key"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.client_id_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.client_id_key"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.client_secret_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.client_secret_key"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.redirect_uri_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.redirect_uri_key"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.scope_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.scope_key"
+        />
+        <BuilderField
+          type="string"
+          path={authPath("declarative.state_key")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.state_key"
+        />
+        <BuilderField
+          type="jsoneditor"
+          className={styles.stateField}
+          path={authPath("declarative.state")}
+          optional
+          manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.state"
         />
       </BuilderOptional>
     </>
@@ -326,8 +569,8 @@ const SessionTokenForm = () => {
   return (
     <>
       <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
-        <BuilderFieldWithInputs
-          type="string"
+        <BuilderField
+          type="jinja"
           path={authPath("login_requester.url")}
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.label" })}
           tooltip={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.tooltip" })}
@@ -337,6 +580,13 @@ const SessionTokenForm = () => {
           path={authPath("login_requester.httpMethod")}
           options={getOptionsByManifest("HttpRequester.properties.http_method")}
           manifestPath="HttpRequester.properties.http_method"
+        />
+        <BuilderField
+          type="enum"
+          path={authPath("decoder")}
+          label={formatMessage({ id: "connectorBuilder.decoder.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
+          options={[...BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES]}
         />
         <BuilderOneOf<BuilderFormAuthenticator>
           path={authPath("login_requester.authenticator")}
@@ -402,7 +652,7 @@ const SessionTokenForm = () => {
             },
           ]}
         />
-        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} omitInterpolationContext />
+        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} />
         <ToggleGroupField<BuilderErrorHandler[]>
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.errorHandler" })}
           tooltip={getDescriptionByManifest("DefaultErrorHandler")}
@@ -461,4 +711,73 @@ const SessionTokenForm = () => {
       />
     </>
   );
+};
+
+const useOauthOptions = () => {
+  const { formatMessage } = useIntl();
+  const getUniqueKey = useGetUniqueKey();
+  const isDeclarativeOAuthEnabled = useExperiment("connectorBuilder.declarativeOauth");
+
+  const baseOauthOption = {
+    refresh_request_body: [],
+    token_refresh_endpoint: "",
+    grant_type: "refresh_token",
+    client_id: interpolateConfigKey(
+      getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_id.key)
+    ),
+    client_secret: interpolateConfigKey(
+      getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_secret.key)
+    ),
+    refresh_token: interpolateConfigKey(
+      getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token.key)
+    ),
+  };
+
+  return !isDeclarativeOAuthEnabled
+    ? [
+        {
+          label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth" }),
+          children: <OAuthForm />,
+          default: {
+            type: OAUTH_AUTHENTICATOR,
+            ...baseOauthOption,
+          },
+        },
+      ]
+    : [
+        {
+          label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth.declarative" }),
+          children: <DeclarativeOAuthForm />,
+          default: {
+            type: DeclarativeOAuthAuthenticatorType,
+            ...baseOauthOption,
+            client_id: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_id.key)
+            ),
+            client_secret: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_secret.key)
+            ),
+            access_token_value: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].access_token.key)
+            ),
+            refresh_token: interpolateConfigKey(
+              getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token.key)
+            ),
+            declarative: {
+              consent_url: "",
+              access_token_url: "",
+              scope: "",
+              access_token_key: "access_token",
+            },
+          },
+        },
+        {
+          label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth.legacy" }),
+          children: <OAuthForm />,
+          default: {
+            type: OAUTH_AUTHENTICATOR,
+            ...baseOauthOption,
+          },
+        },
+      ];
 };

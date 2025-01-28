@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -21,13 +21,11 @@ import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Micronaut bean factory for general singletons.
  */
 @Factory
-@Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ApplicationBeanFactory {
 

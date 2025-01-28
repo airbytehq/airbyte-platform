@@ -11,7 +11,7 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useUpgradeConnectorVersion } from "core/api";
-import { ActorDefinitionVersionRead, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { ActorDefinitionVersionRead, DeadlineAction, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
@@ -58,6 +58,19 @@ export const BreakingChangeBanner = ({
 
   const messageType = connectorBreakingChangeDeadlines && supportState === "unsupported" ? "error" : "warning";
 
+  const isAutoUpgrade = actorDefinitionVersion.breakingChanges?.deadlineAction === DeadlineAction.auto_upgrade;
+
+  const unSupportedMessageId = isAutoUpgrade
+    ? "connector.breakingChange.autoupgrade.unsupportedUpgrade"
+    : "connector.breakingChange.unsupportedUpgrade";
+
+  const deprecatedMessageId = isAutoUpgrade
+    ? "connector.breakingChange.autoupgrade.deprecatedUpgrade"
+    : "connector.breakingChange.deprecatedUpgrade";
+
+  const breakingChangeMessageId = supportState === "unsupported" ? unSupportedMessageId : deprecatedMessageId;
+
+  const title = isAutoUpgrade ? "connector.breakingChange.autoupgrade.title" : "connector.breakingChange.title";
   return (
     <Message
       type={messageType}
@@ -69,7 +82,7 @@ export const BreakingChangeBanner = ({
         <FlexContainer direction="column" gap="lg">
           <FlexContainer direction="column" gap="sm">
             <Text size="lg" bold>
-              <FormattedMessage id="connector.breakingChange.title" />
+              <FormattedMessage id={title} />
             </Text>
             <Text>
               <FormattedMessage id="connector.breakingChange.pendingUpgrade" values={{ name: connectorName }} />
@@ -87,11 +100,7 @@ export const BreakingChangeBanner = ({
             {connectorBreakingChangeDeadlines && (
               <>
                 <FormattedMessage
-                  id={
-                    supportState === "unsupported"
-                      ? "connector.breakingChange.unsupportedUpgrade"
-                      : "connector.breakingChange.deprecatedUpgrade"
-                  }
+                  id={breakingChangeMessageId}
                   values={{
                     name: connectorName,
                     date: formattedUpgradeDeadline,

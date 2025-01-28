@@ -104,7 +104,7 @@ Magic.args = {
   iconPosition: "left",
   disabled: false,
   isLoading: false,
-  children: "AI Assist",
+  children: "AI Assistant",
 };
 
 export const SideBySide = () => (

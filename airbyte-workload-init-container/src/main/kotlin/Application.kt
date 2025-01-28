@@ -1,24 +1,28 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.initContainer
 
-import io.airbyte.commons.envvar.EnvVar
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.ApplicationContext
+import io.micronaut.runtime.Micronaut.build
 
 private val logger = KotlinLogging.logger {}
 
 fun main() {
-  ApplicationContext.run().use {
-    logger.info { "Init start" }
+  logger.info { "Init start" }
 
-    val workloadId = EnvVar.WORKLOAD_ID.fetch()!!
+  /**
+   * The application entrypoint, InputFetcher, runs as part of ApplicationContext creation via a PostConstruct annotation.
+   * This was done to improve startup time by preventing searching through all the beans.
+   */
 
-    val fetcher = it?.getBean(InputFetcher::class.java)
+  build()
+    .deduceCloudEnvironment(false)
+    .deduceEnvironment(false)
+    .start()
+    // Explicitly call stop so that the application shuts down after InputFetcher runs
+    .stop()
 
-    fetcher?.fetch(workloadId)
-
-    logger.info { "Init end" }
-  }
+  logger.info { "Init end" }
 }

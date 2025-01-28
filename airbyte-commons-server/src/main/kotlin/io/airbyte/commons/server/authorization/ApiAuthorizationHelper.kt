@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.model.generated.PermissionCheckRead
@@ -5,6 +9,7 @@ import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.AuthRoleInterface
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -29,46 +34,12 @@ private val logger = KotlinLogging.logger {}
  * for any API endpoint that requires authorization and doesn't go through the CloudAuthenticationProvider.
  */
 @Singleton
-class ApiAuthorizationHelper(
+open class ApiAuthorizationHelper(
   private val authorizationHeaderResolver: AuthenticationHeaderResolver,
   private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
   private val rbacRoleHelper: RbacRoleHelper,
 ) {
-  private fun resolveIdsToWorkspaceIds(
-    ids: List<String>,
-    scope: Scope,
-  ): List<UUID>? {
-    val properties =
-      when (scope) {
-        Scope.WORKSPACE -> {
-          buildPropertiesMapForWorkspaces(ids)
-        }
-        Scope.WORKSPACES -> {
-          buildPropertiesMapForWorkspaces(ids)
-        }
-        Scope.SOURCE -> {
-          buildPropertiesMapForSource(ids.first())
-        }
-        Scope.DESTINATION -> {
-          buildPropertiesMapForDestination(ids.first())
-        }
-        Scope.CONNECTION -> {
-          buildPropertiesMapForConnection(ids.first())
-        }
-        Scope.JOB -> {
-          buildPropertiesMapForJob(ids.first())
-        }
-        Scope.ORGANIZATION -> {
-          throw ForbiddenProblem(ProblemMessageData().message("Cannot resolve organization Ids to workspace Ids."))
-        }
-        Scope.PERMISSION -> {
-          buildPropertiesMapForPermission(ids.first())
-        }
-      }
-    return authorizationHeaderResolver.resolveWorkspace(properties)
-  }
-
   /**
    * Given a scoped ID, confirm that the current user has the given permission type.
    *
@@ -79,12 +50,13 @@ class ApiAuthorizationHelper(
    *
    * @throws ForbiddenProblem - If the user does not have the required permissions
    */
-  fun checkWorkspacePermissions(
+  fun checkWorkspacePermission(
     id: String,
     scope: Scope,
-    permissionTypes: Set<PermissionType>,
+    userId: UUID,
+    permissionTypes: PermissionType,
   ) {
-    checkWorkspacePermissions(listOf(id), scope, currentUserService.currentUser.userId, permissionTypes)
+    checkWorkspacesPermissions(listOf(id), scope, userId, setOf(permissionTypes))
   }
 
   /**
@@ -98,32 +70,33 @@ class ApiAuthorizationHelper(
    *
    * @throws ForbiddenProblem - If the user does not have the required permissions
    */
-  fun checkWorkspacePermissions(
+  fun checkWorkspacesPermission(
     ids: List<String>,
     scope: Scope,
     userId: UUID,
-    permissionType: PermissionType,
+    permissionTypes: PermissionType,
   ) {
-    checkWorkspacePermissions(ids, scope, userId, setOf(permissionType))
+    checkWorkspacesPermissions(ids, scope, userId, setOf(permissionTypes))
   }
 
   /**
-   * Given a list of scoped IDs, confirm that the current user has the
-   * given workspace permission type.
+   * Given a list of scoped IDs and a user ID, confirm that the indicated user
+   * has the given permission type.
    *
    * @param ids - The Ids we are checking permissions for
    * @param scope - The scope of the Ids
-   * @param permissionTypes - the set of permissions needed to access the resource(s).
-   * If the user has any of the permissions, the check will pass.
+   * @param userId - The ID of the user we are checking permissions for
+   * @param permissionTypes - the permission needed to access the resource(s)
    *
    * @throws ForbiddenProblem - If the user does not have the required permissions
    */
-  fun checkWorkspacePermissions(
-    ids: List<String>,
+  fun checkWorkspacesPermissions(
+    id: String,
     scope: Scope,
+    userId: UUID,
     permissionTypes: Set<PermissionType>,
   ) {
-    checkWorkspacePermissions(ids, scope, currentUserService.currentUser.userId, permissionTypes)
+    checkWorkspacesPermissions(listOf(id), scope, userId, permissionTypes)
   }
 
   /**
@@ -138,7 +111,8 @@ class ApiAuthorizationHelper(
    *
    * @throws ForbiddenProblem - If the user does not have the required permissions
    */
-  fun checkWorkspacePermissions(
+  @InternalForTesting
+  internal fun checkWorkspacesPermissions(
     ids: List<String>,
     scope: Scope,
     userId: UUID,
@@ -230,71 +204,62 @@ class ApiAuthorizationHelper(
     }
   }
 
+  private fun resolveIdsToWorkspaceIds(
+    ids: List<String>,
+    scope: Scope,
+  ): List<UUID>? {
+    val properties =
+      when (scope) {
+        Scope.WORKSPACE -> buildPropertiesMapForWorkspaces(ids)
+        Scope.WORKSPACES -> buildPropertiesMapForWorkspaces(ids)
+        Scope.SOURCE -> buildPropertiesMapForSource(ids.first())
+        Scope.DESTINATION -> buildPropertiesMapForDestination(ids.first())
+        Scope.CONNECTION -> buildPropertiesMapForConnection(ids.first())
+        Scope.JOB -> buildPropertiesMapForJob(ids.first())
+        Scope.ORGANIZATION -> throw ForbiddenProblem(ProblemMessageData().message("Cannot resolve organization Ids to workspace Ids."))
+        Scope.PERMISSION -> buildPropertiesMapForPermission(ids.first())
+      }
+
+    return authorizationHeaderResolver.resolveWorkspace(properties)
+  }
+
   /**
    * Just resolves Ids to either a workspace or organization per the scope.
    */
   private fun buildIdHeaderMap(
     ids: List<String>,
     scope: Scope,
-  ): Map<String, String> {
-    return when (scope) {
-      Scope.WORKSPACE -> {
-        buildPropertiesMapForWorkspaces(ids)
-      }
-      Scope.WORKSPACES -> {
-        buildPropertiesMapForWorkspaces(ids)
-      }
-      Scope.SOURCE -> {
-        buildPropertiesMapForSource(ids.first())
-      }
-      Scope.DESTINATION -> {
-        buildPropertiesMapForDestination(ids.first())
-      }
-      Scope.CONNECTION -> {
-        buildPropertiesMapForConnection(ids.first())
-      }
-      Scope.JOB -> {
-        buildPropertiesMapForJob(ids.first())
-      }
-      Scope.ORGANIZATION -> {
-        buildPropertiesMapForOrganization(ids.first())
-      }
-      Scope.PERMISSION -> {
-        buildPropertiesMapForPermission(ids.first())
-      }
+  ): Map<String, String> =
+    when (scope) {
+      Scope.WORKSPACE -> buildPropertiesMapForWorkspaces(ids)
+      Scope.WORKSPACES -> buildPropertiesMapForWorkspaces(ids)
+      Scope.SOURCE -> buildPropertiesMapForSource(ids.first())
+      Scope.DESTINATION -> buildPropertiesMapForDestination(ids.first())
+      Scope.CONNECTION -> buildPropertiesMapForConnection(ids.first())
+      Scope.JOB -> buildPropertiesMapForJob(ids.first())
+      Scope.ORGANIZATION -> buildPropertiesMapForOrganization(ids.first())
+      Scope.PERMISSION -> buildPropertiesMapForPermission(ids.first())
     }
-  }
 
-  private fun buildPropertiesMapForPermission(id: String): Map<String, String> {
-    return mapOf(Scope.PERMISSION.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForPermission(id: String): Map<String, String> = mapOf(Scope.PERMISSION.mappedHeaderProperty to id)
 
-  private fun buildPropertiesMapForOrganization(id: String): Map<String, String> {
-    return mapOf(Scope.ORGANIZATION.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForOrganization(id: String): Map<String, String> = mapOf(Scope.ORGANIZATION.mappedHeaderProperty to id)
 
-  private fun buildPropertiesMapForConnection(id: String): Map<String, String> {
-    return mapOf(Scope.CONNECTION.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForConnection(id: String): Map<String, String> = mapOf(Scope.CONNECTION.mappedHeaderProperty to id)
 
-  private fun buildPropertiesMapForSource(id: String): Map<String, String> {
-    return mapOf(Scope.SOURCE.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForSource(id: String): Map<String, String> = mapOf(Scope.SOURCE.mappedHeaderProperty to id)
 
-  private fun buildPropertiesMapForDestination(id: String): Map<String, String> {
-    return mapOf(Scope.DESTINATION.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForDestination(id: String): Map<String, String> = mapOf(Scope.DESTINATION.mappedHeaderProperty to id)
 
-  private fun buildPropertiesMapForWorkspaces(ids: List<String>): Map<String, String> {
-    return mapOf(Scope.WORKSPACES.mappedHeaderProperty to Jsons.serialize(ids))
-  }
+  private fun buildPropertiesMapForWorkspaces(ids: List<String>): Map<String, String> =
+    mapOf(Scope.WORKSPACES.mappedHeaderProperty to Jsons.serialize(ids))
 
-  private fun buildPropertiesMapForJob(id: String): Map<String, String> {
-    return mapOf(Scope.JOB.mappedHeaderProperty to id)
-  }
+  private fun buildPropertiesMapForJob(id: String): Map<String, String> = mapOf(Scope.JOB.mappedHeaderProperty to id)
 }
 
-enum class Scope(val mappedHeaderProperty: String) {
+enum class Scope(
+  val mappedHeaderProperty: String,
+) {
   WORKSPACE(WORKSPACE_IDS_HEADER),
   WORKSPACES(WORKSPACE_IDS_HEADER),
   CONNECTION(CONNECTION_ID_HEADER),

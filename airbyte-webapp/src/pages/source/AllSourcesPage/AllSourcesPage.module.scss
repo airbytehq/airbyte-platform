@@ -1,4 +1,37 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+$filters-fixed-height: 108px;
+
+.pageHeader {
+  grid-area: page-header;
+  padding-bottom: variables.$spacing-lg;
+}
+
+.pageBody {
+  grid-area: page-content;
+  padding-top: 0;
+}
+
 .card {
   min-width: 100%;
   width: fit-content;
+}
+
+.filters {
+  position: sticky;
+  top: 0;
+  z-index: z-indices.$tableStickyHeader;
+  background-color: colors.$foreground;
+  height: $filters-fixed-height;
+  min-width: variables.$min-width-wide-table-container;
+  border-top-left-radius: variables.$border-radius-lg;
+  border-top-right-radius: variables.$border-radius-lg;
+}
+
+.table {
+  thead {
+    top: $filters-fixed-height;
+  }
 }

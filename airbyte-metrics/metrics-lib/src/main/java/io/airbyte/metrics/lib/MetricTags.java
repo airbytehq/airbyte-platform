@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -22,9 +22,13 @@ public class MetricTags {
   public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
   public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CANCELLATION_SOURCE = "cancellation_source";
+  public static final String COMMAND = "command";
+  public static final String COMMAND_STEP = "command_step";
   public static final String CONFIG_TYPES = "config_types";
   public static final String CONNECTION_ID = "connection_id";
   public static final String CONNECTION_IDS = "connection_ids";
+  public static final String CONNECTOR_IMAGE = "connector_image";
+  public static final String CONNECTOR_TYPE = "connector_type";
   public static final String CRON_TYPE = "cron_type";
   public static final String CRUD_OPERATION = "crud_operation";
   public static final String DESTINATION_ID = "destination_id";
@@ -35,6 +39,8 @@ public class MetricTags {
   public static final String FAILURE_CAUSE = "failure_cause";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";
+  public static final String INTERNAL_MESSAGE = "internal_message";
+  public static final String EXTERNAL_MESSAGE = "external_message";
   public static final String GEOGRAPHY = "geography";
   public static final String IMPLEMENTATION = "implementation";
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
@@ -59,10 +65,13 @@ public class MetricTags {
   public static final String SUCCESS = "success";
   public static final String WILL_RETRY = "will_retry";
   public static final String WORKSPACE_ID = "workspace_id";
+  public static final String WORKFLOW_TYPE = "workflow_type";
   public static final String WORKLOAD_TYPE = "workload_type";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
+  public static final String CLIENT_ID = "client_id";
   public static final String LOG_CLIENT_TYPE = "log_client_type";
+  public static final String MALFORMED_LOG_LINE_LENGTH = "malformed_log_line_length";
 
   // payload metric tags
   public static final String URI_NULL = "uri_null";

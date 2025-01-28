@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories.entities
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
@@ -24,8 +28,8 @@ data class ScopedConfiguration(
   var scopeType: ConfigScopeType,
   var scopeId: UUID,
   @field:TypeDef(type = DataType.OBJECT)
-  var resourceType: ConfigResourceType,
-  var resourceId: UUID,
+  var resourceType: ConfigResourceType? = null,
+  var resourceId: UUID? = null,
   @field:TypeDef(type = DataType.OBJECT)
   var originType: ConfigOriginType,
   var origin: String,

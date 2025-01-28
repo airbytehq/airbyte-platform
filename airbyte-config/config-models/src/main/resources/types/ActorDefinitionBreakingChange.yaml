@@ -34,3 +34,6 @@ properties:
     minItems: 1
     items:
       $ref: BreakingChangeScope.yaml
+  deadlineAction:
+    description: Action to do when the deadline is reached
+    type: string

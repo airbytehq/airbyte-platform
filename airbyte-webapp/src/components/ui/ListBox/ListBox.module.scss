@@ -16,8 +16,7 @@
   align-items: center;
   gap: variables.$spacing-md;
   font-size: variables.$font-size-lg;
-  line-height: 1.4;
-  min-height: 36px;
+  height: variables.$form-input-height;
 
   &:disabled {
     border-color: colors.$grey-100;
@@ -71,6 +70,10 @@
   gap: 0;
   overflow: auto;
 
+  &:focus-visible {
+    outline: none;
+  }
+
   &.nonAdaptive {
     max-width: variables.$min-width-listbox-options-list;
   }
@@ -79,9 +82,22 @@
 .option {
   list-style-type: none;
   overflow: visible;
+  box-sizing: border-box;
+  user-select: none;
+
+  &:first-child > * {
+    border-top-left-radius: variables.$border-radius-lg;
+    border-top-right-radius: variables.$border-radius-lg;
+  }
+
+  &:last-child > * {
+    border-bottom-left-radius: variables.$border-radius-lg;
+    border-bottom-right-radius: variables.$border-radius-lg;
+  }
 }
 
 .optionValue {
+  border: variables.$border-thin solid transparent;
   padding: (variables.$spacing-xs + variables.$spacing-md) variables.$spacing-lg;
   cursor: pointer;
 }
@@ -96,12 +112,20 @@
   font-size: variables.$font-size-lg;
 }
 
-.active {
+.focus {
   background-color: colors.$grey-50;
+
+  &.focus {
+    border-color: colors.$blue;
+  }
 }
 
 .selected {
   background-color: colors.$blue-50;
+
+  &.focus {
+    border-color: colors.$blue;
+  }
 }
 
 .disabled {

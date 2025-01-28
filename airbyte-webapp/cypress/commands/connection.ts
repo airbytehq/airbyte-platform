@@ -1,3 +1,4 @@
+import { nextButton } from "@cy/pages/connection/createConnectionPageObject";
 import * as statusPage from "@cy/pages/connection/statusPageObject";
 import {
   DestinationRead,
@@ -12,7 +13,6 @@ import {
   selectScheduleType,
   setupDestinationNamespaceSourceFormat,
 } from "pages/connection/connectionFormPageObject";
-import { nextButtonOrLink } from "pages/connection/connectionReplicationPageObject";
 import { openCreateConnection } from "pages/destinationPage";
 
 import {
@@ -70,7 +70,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema", { timeout: 60000 });
 
-  cy.get(nextButtonOrLink).click();
+  cy.get(nextButton).click();
 
   enterConnectionName("Connection name");
   selectScheduleType("Manual");

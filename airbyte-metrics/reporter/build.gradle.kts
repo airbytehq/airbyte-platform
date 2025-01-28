@@ -15,6 +15,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
 
+  implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
@@ -22,6 +23,7 @@ dependencies {
   implementation(libs.jooq)
 
   runtimeOnly(libs.snakeyaml)
+  runtimeOnly(libs.bundles.logback)
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

@@ -1,14 +1,13 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
-import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
-import io.micronaut.context.annotation.Value;
+import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
@@ -33,7 +32,11 @@ public class Application {
   public static void main(final String[] args) {
     // To mimic previous behavior, assume an exit code of 1 unless Application.run returns otherwise.
     var exitCode = 1;
-    try (final var ctx = Micronaut.run(Application.class, args)) {
+    try (final var ctx = Micronaut.build(args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
+        .mainClass(Application.class)
+        .start()) {
       exitCode = ctx.getBean(Application.class).run();
     } catch (final Throwable t) {
       log.error("could not run {}", t.getMessage(), t);
@@ -46,12 +49,9 @@ public class Application {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  private final String application;
-  private final JobOrchestrator<?> jobOrchestrator;
+  private final ReplicationJobOrchestrator jobOrchestrator;
 
-  public Application(@Value("${airbyte.application}") final String application,
-                     final JobOrchestrator<?> jobOrchestrator) {
-    this.application = application;
+  public Application(final ReplicationJobOrchestrator jobOrchestrator) {
     this.jobOrchestrator = jobOrchestrator;
   }
 
@@ -66,9 +66,7 @@ public class Application {
   int run() {
     // set mdc scope for the remaining execution
     try (final var mdcScope = new MdcScope.Builder()
-        .setLogPrefix(application)
-        .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
-        .build()) {
+        .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc()).build()) {
 
       final String result = jobOrchestrator.runJob().orElse("");
     } catch (final Throwable t) {

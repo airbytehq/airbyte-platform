@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -52,11 +56,7 @@ class FieldGenerator {
         return FieldType.MULTI
       }
 
-      val type = node.get(TYPE)
-
-      if (type == null) {
-        return FieldType.UNKNOWN
-      }
+      val type = node.get(TYPE) ?: return FieldType.UNKNOWN
 
       return if (type.isArray) {
         val curatedArray = removeNullFromArray(type as ArrayNode)
@@ -89,9 +89,6 @@ class FieldGenerator {
       TYPE_NUMBER -> {
         val airbyteType = if (node.has(AIRBYTE_TYPE)) node.get(AIRBYTE_TYPE).asText() else null
         return if (airbyteType == AIRBYTE_TYPE_INTEGER) FieldType.INTEGER else FieldType.NUMBER
-      }
-      TYPE_BOOLEAN -> {
-        return FieldType.BOOLEAN
       }
       TYPE_OBJECT -> {
         return FieldType.OBJECT
@@ -128,8 +125,8 @@ class FieldGenerator {
     }
   }
 
-  internal fun removeNullFromArray(types: ArrayNode): List<String> {
-    return types.map { it.asText() }
+  internal fun removeNullFromArray(types: ArrayNode): List<String> =
+    types
+      .map { it.asText() }
       .filterNot { it == "null" }
-  }
 }

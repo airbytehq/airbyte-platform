@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.scheduling.state.listener;
@@ -7,9 +7,9 @@ package io.airbyte.commons.temporal.scheduling.state.listener;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.UUID;
-import lombok.Value;
 
 /**
  * Listen for changes to the WorkflowState so that they can be communicated to a running
@@ -48,11 +48,42 @@ public interface WorkflowStateChangedListener {
   /**
    * Container for transmitting changes to workflow state fields for a connection manager workflow.
    */
-  @Value
   class ChangedStateEvent {
 
     private final StateField field;
     private final boolean value;
+
+    public ChangedStateEvent(StateField field, boolean value) {
+      this.field = field;
+      this.value = value;
+    }
+
+    public StateField getField() {
+      return field;
+    }
+
+    public boolean isValue() {
+      return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ChangedStateEvent that = (ChangedStateEvent) o;
+      return value == that.value && field == that.field;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(field, value);
+    }
+
+    @Override
+    public String toString() {
+      return "ChangedStateEvent{field=" + field + ", value=" + value + '}';
+    }
 
   }
 
