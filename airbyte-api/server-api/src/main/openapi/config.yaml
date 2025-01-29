@@ -12930,8 +12930,6 @@ components:
       type: object
       required:
         - attempt
-        - logType
-        - logs
       properties:
         attempt:
           $ref: "#/components/schemas/AttemptRead"

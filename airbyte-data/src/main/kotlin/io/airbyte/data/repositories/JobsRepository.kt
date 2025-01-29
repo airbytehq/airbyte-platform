@@ -47,6 +47,18 @@ interface JobsRepository : PageableRepository<Job, Long> {
     FROM jobs
     WHERE scope = :scope
       AND status = 'succeeded'
+    ORDER BY created_at ASC
+    LIMIT 1
+    """,
+  )
+  fun firstSuccessfulJobForScope(scope: String): Job?
+
+  @Query(
+    """
+    SELECT *
+    FROM jobs
+    WHERE scope = :scope
+      AND status = 'succeeded'
     ORDER BY created_at DESC
     LIMIT 1
     """,

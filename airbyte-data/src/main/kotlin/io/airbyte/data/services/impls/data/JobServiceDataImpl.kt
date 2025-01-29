@@ -57,6 +57,8 @@ class JobServiceDataImpl(
       .toList()
   }
 
+  override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
+
   override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
 
   override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)

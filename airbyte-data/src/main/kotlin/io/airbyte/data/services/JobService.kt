@@ -28,6 +28,11 @@ interface JobService {
   ): List<Job>
 
   /**
+   * Get the first successful job for a given scope.
+   */
+  fun firstSuccessfulJobForScope(scope: String): Job?
+
+  /**
    * Get the last successful job for a given scope.
    */
   fun lastSuccessfulJobForScope(scope: String): Job?
