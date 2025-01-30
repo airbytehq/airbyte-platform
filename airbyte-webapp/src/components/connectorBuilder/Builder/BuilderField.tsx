@@ -23,7 +23,7 @@ import { useConnectorBuilderFormManagementState } from "services/connectorBuilde
 import styles from "./BuilderField.module.scss";
 import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useWatchWithPreview } from "../preview";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface EnumFieldProps {
   options: string[] | Array<{ label: string; value: string }>;

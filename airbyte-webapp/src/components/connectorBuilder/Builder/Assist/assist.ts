@@ -1,6 +1,9 @@
 import merge from "lodash/merge";
 
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
+import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
+import { BuilderFormValues } from "components/connectorBuilder/types";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
@@ -15,9 +18,6 @@ import {
   SpecConnectionSpecification,
 } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import { convertToBuilderFormValuesSync } from "../../convertManifestToBuilderForm";
-import { BuilderFormValues, useBuilderWatch } from "../../types";
 
 export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
 

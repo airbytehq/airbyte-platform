@@ -8,12 +8,8 @@ import {
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import {
-  BuilderState,
-  DeclarativeOAuthAuthenticatorType,
-  extractInterpolatedConfigKey,
-  useBuilderWatch,
-} from "./types";
+import { BuilderState, DeclarativeOAuthAuthenticatorType, extractInterpolatedConfigKey } from "./types";
+import { useBuilderWatch } from "./useBuilderWatch";
 
 export const useBuilderErrors = () => {
   const { trigger } = useFormContext<BuilderState>();

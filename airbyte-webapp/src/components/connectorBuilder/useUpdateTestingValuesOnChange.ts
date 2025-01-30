@@ -4,7 +4,7 @@ import isEqual from "lodash/isEqual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import { builderInputsToSpec, useBuilderWatch } from "components/connectorBuilder/types";
+import { builderInputsToSpec } from "components/connectorBuilder/types";
 
 import { useBuilderProjectUpdateTestingValues } from "core/api";
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
@@ -13,6 +13,8 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
+
+import { useBuilderWatch } from "./useBuilderWatch";
 
 /**
  * Handles persisting testing values to the backend whenever they change.

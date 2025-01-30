@@ -18,7 +18,7 @@ import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
 import { useTestingValuesErrors } from "./TestingValuesMenu";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestReadSettingsOpen, setTestReadSettingsOpen, setTestingValuesInputOpen } =

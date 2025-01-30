@@ -18,9 +18,9 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { getStreamHash, useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";

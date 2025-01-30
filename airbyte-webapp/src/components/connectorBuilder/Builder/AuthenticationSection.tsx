@@ -38,7 +38,6 @@ import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } fr
 import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
-import { useBuilderWatchWithPreview } from "../preview";
 import { useTestingValuesErrors } from "../StreamTestingPanel/TestingValuesMenu";
 import {
   API_KEY_AUTHENTICATOR,
@@ -47,7 +46,6 @@ import {
   OAUTH_AUTHENTICATOR,
   DeclarativeOAuthAuthenticatorType,
   SESSION_TOKEN_AUTHENTICATOR,
-  useBuilderWatch,
   BuilderErrorHandler,
   LARGE_DURATION_OPTIONS,
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
@@ -62,6 +60,7 @@ import {
   extractInterpolatedConfigKey,
 } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch, useBuilderWatchWithPreview } from "../useBuilderWatch";
 import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
   getAuthKeyToDesiredLockedInput,

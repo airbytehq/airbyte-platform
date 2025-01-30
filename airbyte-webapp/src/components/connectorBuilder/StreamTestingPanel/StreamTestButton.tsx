@@ -9,8 +9,8 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 
 import styles from "./StreamTestButton.module.scss";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
-import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;

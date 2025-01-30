@@ -15,8 +15,8 @@ import {
   SESSION_TOKEN_AUTHENTICATOR,
   extractInterpolatedConfigKey,
   isYamlString,
-  useBuilderWatch,
 } from "./types";
+import { useBuilderWatch } from "./useBuilderWatch";
 
 export const useUpdateLockedInputs = () => {
   const formValues = useBuilderWatch("formValues");

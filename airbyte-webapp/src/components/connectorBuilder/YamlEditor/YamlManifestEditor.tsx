@@ -11,7 +11,7 @@ import { YamlEditor } from "./YamlEditor";
 import styles from "./YamlManifestEditor.module.scss";
 import { Sidebar } from "../Sidebar";
 import { TestingValuesMenu } from "../StreamTestingPanel/TestingValuesMenu";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 export const YamlManifestEditor: React.FC = () => {
   const {

@@ -27,7 +27,7 @@ import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./TestingValuesMenu.module.scss";
 import { TestingValuesMenuErrorBoundaryComponent } from "./TestingValuesMenuErrorBoundary";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { applyTestingValuesDefaults } from "../useUpdateTestingValuesOnChange";
 
 export const TestingValuesMenu: React.FC = () => {

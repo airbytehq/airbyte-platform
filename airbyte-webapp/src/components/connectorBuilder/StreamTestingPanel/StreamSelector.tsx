@@ -10,7 +10,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamSelectorProps {
   className?: string;

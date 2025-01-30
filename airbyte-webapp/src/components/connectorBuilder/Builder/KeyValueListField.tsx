@@ -10,8 +10,8 @@ import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { BuilderField } from "./BuilderField";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useBuilderWatchArrayWithPreview } from "../preview";
 import { BuilderState, concatPath } from "../types";
+import { useBuilderWatchArrayWithPreview } from "../useBuilderWatch";
 
 interface KeyValueInputProps {
   path: string;

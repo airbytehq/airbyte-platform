@@ -26,7 +26,8 @@ import { BuilderField } from "./BuilderField";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, useBuilderWatch } from "../types";
+import { BuilderFormInput } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 

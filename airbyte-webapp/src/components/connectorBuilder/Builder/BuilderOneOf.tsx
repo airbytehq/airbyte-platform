@@ -8,7 +8,7 @@ import { ListBox } from "components/ui/ListBox";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useWatchWithPreview } from "../preview";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface OneOfType {
   type: string;

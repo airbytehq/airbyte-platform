@@ -16,9 +16,10 @@ import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { BuilderFormValues, convertToManifest, useBuilderWatch } from "../types";
+import { BuilderFormValues, convertToManifest } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface BuilderProps {
   hasMultipleStreams: boolean;

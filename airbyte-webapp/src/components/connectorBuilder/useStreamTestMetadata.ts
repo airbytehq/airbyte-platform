@@ -14,7 +14,8 @@ import {
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderMetadata, StreamTestResults, useBuilderWatch } from "./types";
+import { BuilderMetadata, StreamTestResults } from "./types";
+import { useBuilderWatch } from "./useBuilderWatch";
 import { formatJson } from "./utils";
 
 type StreamTestMetadataStatus = {

@@ -3,7 +3,6 @@ import { JSONSchema7 } from "json-schema";
 import isString from "lodash/isString";
 import merge from "lodash/merge";
 import omit from "lodash/omit";
-import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import { match } from "ts-pattern";
 
@@ -1202,11 +1201,6 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   },
   primary_key: undefined,
 };
-
-export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
-  useWatch<BuilderState, TPath>({ name: path, ...options });
-
-export type BuilderPathFn = <TPath extends FieldPath<BuilderState>>(fieldPath: string) => TPath;
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
 
