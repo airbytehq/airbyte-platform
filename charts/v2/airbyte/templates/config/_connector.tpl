@@ -12,7 +12,7 @@ Renders the connector secret name
 {{- if .Values.global.connectorRegistry.secretName }}
     {{- .Values.global.connectorRegistry.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

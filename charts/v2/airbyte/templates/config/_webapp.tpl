@@ -9,7 +9,7 @@
 Renders the webapp.api.url value
 */}}
 {{- define "airbyte.webapp.api.url" }}
-    {{- .Values.webapp.api.url }}
+    {{- "/api/v1" }}
 {{- end }}
 
 {{/*

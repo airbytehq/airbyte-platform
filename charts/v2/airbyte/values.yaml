@@ -6,6 +6,8 @@ global:
   # -- Edition; "community" or "pro"
   edition: "community"
 
+  secretName: ""
+
   local: false
 
   cluster:
@@ -217,6 +219,7 @@ global:
 
   workloads:
     secretName: ""
+    namespace: "jobs"
 
     images:
       workloadInit: ""
@@ -339,7 +342,7 @@ global:
 
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       # -- image pull secret to use for job pod
-      main_container_image_pull_secret: ""
+      mainContainerImagePullSecret: ""
 
       localVolume:
         enabled: false
@@ -469,6 +472,8 @@ webapp:
     repository: airbyte/webapp
     # -- The pull policy to use for the airbyte webapp image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the webapp pods
   podAnnotations: {}
@@ -694,6 +699,8 @@ podSweeper:
 
   replicaCount: 1
 
+  annotations: {}
+
   # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
 
@@ -820,6 +827,8 @@ server:
     type: ClusterIP
     port: 8001
     annotations: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the server pods
   podAnnotations: {}
@@ -1007,6 +1016,8 @@ worker:
     # -- the pull policy to use for the airbyte worker image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Add extra annotations to the worker pods
   podAnnotations: {}
 
@@ -1149,6 +1160,8 @@ workloadLauncher:
     pullPolicy: IfNotPresent
 
   env_vars: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the workload launcher pods
   podAnnotations: {}
@@ -1306,6 +1319,8 @@ connectorRolloutWorker:
     # -- The pull policy to use for the airbyte connector rollout worker image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Add extra annotations to the connector rollout worker pods
   podAnnotations: {}
 
@@ -1451,6 +1466,8 @@ metrics:
     # -- The pull policy to use for the airbyte metrics-reporter image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Add extra annotations to the metrics-reporter pod
   podAnnotations: {}
 
@@ -1542,6 +1559,8 @@ airbyteBootloader:
     repository: airbyte/bootloader
     # -- The pull policy to use for the airbyte bootloader image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the bootloader pod
   podAnnotations: {}
@@ -1712,17 +1731,6 @@ temporal:
 
   host: ""
 
-  cli:
-    address: ""
-    namespace: ""
-    tlsCert: ""
-    tlsKey: ""
-
-  cloud: 
-    namespace: 
-    clientCert: ""
-    clientKey: ""
-  
   sdk:
     rpc:
       timeout: "120s"
@@ -1737,6 +1745,11 @@ temporal:
     type: ClusterIP
     # -- The temporal port and exposed kubernetes port
     port: 7233
+
+  prometheus:
+    endpoint: ""
+
+  annotations: {}
 
   # -- Add extra annotations to the temporal pod
   podAnnotations: {}
@@ -2087,6 +2100,8 @@ cron:
   ##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
   workloadApi: {}
 
+  annotations: {}
+
   # -- Add extra annotations to the cron pods
   podAnnotations: {}
 
@@ -2264,6 +2279,8 @@ connectorBuilderServer:
     # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2354,6 +2371,8 @@ connectorBuilderServer:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  aiAssistUrlBase: ""
 
 keycloak:
   enabled: true
@@ -2494,6 +2513,8 @@ keycloakSetup:
     repository: airbyte/keycloak-setup
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2551,6 +2572,8 @@ workloadApiServer:
     repository: airbyte/workload-api-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2678,6 +2701,8 @@ featureflagServer:
     repository: airbyte/featureflag-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:

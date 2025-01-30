@@ -63,7 +63,7 @@ Renders the worker.activityMaxDelayBetweenAttemptsSeconds environment variable
 Renders the worker.configRoot value
 */}}
 {{- define "airbyte.worker.configRoot" }}
-    {{- .Values.worker.configRoot }}
+    {{- .Values.worker.configRoot | default "/configs" }}
 {{- end }}
 
 {{/*
@@ -261,7 +261,7 @@ Renders the worker.workspaceRoot environment variable
 Renders the worker.environment value
 */}}
 {{- define "airbyte.worker.environment" }}
-    {{- .Values.worker.environment }}
+    {{- "kubernetes" }}
 {{- end }}
 
 {{/*

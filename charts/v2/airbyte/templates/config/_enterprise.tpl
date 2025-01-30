@@ -12,7 +12,7 @@ Renders the enterprise secret name
 {{- if .Values.global.enterprise.secretName }}
     {{- .Values.global.enterprise.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

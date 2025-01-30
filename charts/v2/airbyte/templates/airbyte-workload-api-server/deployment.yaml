@@ -4,6 +4,8 @@ metadata:
   name: {{ .Release.Name }}-workload-api-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    {{ toYaml .Values.workloadApiServer.annotations | nindent 4 }}
 spec:
   minReadySeconds: 30
   replicas: {{ .Values.workloadApiServer.replicaCount }}

@@ -84,7 +84,7 @@ Renders the keycloak.admin.client secret name
 {{- if .Values.keycloak.secretName }}
     {{- .Values.keycloak.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -182,7 +182,7 @@ Renders the keycloak.admin.client.internalHost environment variable
 Renders the keycloak.internalProtocol value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalProtocol" }}
-    {{- .Values.keycloak.internalProtocol }}
+    {{- .Values.keycloak.internalProtocol | default "http" }}
 {{- end }}
 
 {{/*
@@ -267,7 +267,7 @@ Renders the keycloak.admin.user secret name
 {{- if .Values.keycloak.secretName }}
     {{- .Values.keycloak.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -344,7 +344,7 @@ Renders the keycloak.database secret name
 {{- if .Values.keycloak.database.secretName }}
     {{- .Values.keycloak.database.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

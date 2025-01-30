@@ -8,6 +8,8 @@ metadata:
     {{- if .Values.cron.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.cron.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.cron.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.cron.replicaCount }}
   selector:

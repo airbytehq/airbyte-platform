@@ -12,7 +12,7 @@ Renders the topology secret name
 {{- if .Values.global.topology.secretName }}
     {{- .Values.global.topology.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

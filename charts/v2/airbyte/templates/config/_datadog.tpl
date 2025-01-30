@@ -12,7 +12,7 @@ Renders the datadog secret name
 {{- if .Values.global.datadog.secretName }}
     {{- .Values.global.datadog.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
