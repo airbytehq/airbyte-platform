@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.29.0
+airbyte-cdk==6.30.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
@@ -130,7 +130,7 @@ pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-rapidfuzz==3.11.0
+rapidfuzz==3.12.1
     # via airbyte-cdk
 regex==2024.11.6
     # via nltk
