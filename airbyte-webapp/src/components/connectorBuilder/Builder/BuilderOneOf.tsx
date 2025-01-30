@@ -56,7 +56,6 @@ export const BuilderOneOf = <T extends OneOfType>({
     label,
     tooltip,
     manifestPath,
-    path,
     false,
     manifestOptionPaths
   );

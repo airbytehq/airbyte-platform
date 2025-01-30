@@ -62,7 +62,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestingValuesErrors) {
+  if ((mode === "ui" && hasErrors(relevantViews)) || (mode === "yaml" && hasTestingValuesErrors)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {
@@ -71,7 +71,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   }
 
   const executeTestRead = () => {
-    if (hasTestingValuesErrors) {
+    if (mode === "yaml" && hasTestingValuesErrors) {
       setTestingValuesInputOpen(true);
       return;
     }

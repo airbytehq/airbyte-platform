@@ -8,7 +8,6 @@ import {
   enterName,
   enterRecordSelector,
   enterStreamName,
-  enterTestInputs,
   enterUrlBase,
   enterUrlPath,
   enterUrlPathFromForm,
@@ -19,7 +18,6 @@ import {
   goToView,
   openDetectedSchemaTab,
   openStreamSchemaTab,
-  openTestInputs,
   selectAuthMethod,
   submitForm,
 } from "pages/connectorBuilderPage";
@@ -50,9 +48,8 @@ export const configureStream = () => {
 export const configureAuth = () => {
   goToView("global");
   selectAuthMethod("Bearer");
-  openTestInputs();
-  enterTestInputs({ apiKey: "theauthkey" });
-  submitForm();
+  goToView("inputs");
+  focusAndType("[name='testingValues.api_key']", "theauthkey");
 };
 
 export const configurePagination = () => {

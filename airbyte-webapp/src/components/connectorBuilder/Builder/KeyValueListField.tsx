@@ -52,7 +52,7 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
   manifestPath,
   optional,
 }) => {
-  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path, false);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, false);
   const { fieldValue: fields, append, remove } = useBuilderWatchArrayWithPreview(path);
 
   return (

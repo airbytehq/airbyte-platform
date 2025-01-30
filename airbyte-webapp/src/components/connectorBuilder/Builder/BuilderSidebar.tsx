@@ -132,6 +132,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         <ViewSelectButton
           data-testid="navbutton-inputs"
           selected={view === "inputs"}
+          showIndicator={hasErrors(["inputs"]) ? "error" : undefined}
           onClick={() => {
             handleViewSelect("inputs");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUTS_SELECT, {

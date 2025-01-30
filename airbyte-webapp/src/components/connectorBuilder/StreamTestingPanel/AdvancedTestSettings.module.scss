@@ -20,3 +20,7 @@
   overflow: hidden;
   resize: vertical;
 }
+
+.button {
+  padding: variables.$spacing-md !important;
+}

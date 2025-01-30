@@ -33,11 +33,12 @@ const testReadLimitsValidation = yup.object({
 });
 
 interface AdvancedTestSettingsProps {
+  className?: string;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-export const AdvancedTestSettings: React.FC<AdvancedTestSettingsProps> = ({ isOpen, setIsOpen }) => {
+export const AdvancedTestSettings: React.FC<AdvancedTestSettingsProps> = ({ className, isOpen, setIsOpen }) => {
   const {
     testReadLimits: { recordLimit, setRecordLimit, pageLimit, setPageLimit, sliceLimit, setSliceLimit, defaultLimits },
     testState,
@@ -48,8 +49,10 @@ export const AdvancedTestSettings: React.FC<AdvancedTestSettingsProps> = ({ isOp
   return (
     <>
       <Tooltip
+        containerClassName={className}
         control={
           <Button
+            className={styles.button}
             type="button"
             size="sm"
             variant="clear"

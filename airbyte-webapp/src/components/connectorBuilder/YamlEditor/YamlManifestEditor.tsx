@@ -2,12 +2,15 @@ import debounce from "lodash/debounce";
 import React, { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
+import { FlexItem } from "components/ui/Flex";
+
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { YamlEditor } from "./YamlEditor";
 import styles from "./YamlManifestEditor.module.scss";
 import { Sidebar } from "../Sidebar";
+import { TestingValuesMenu } from "../StreamTestingPanel/TestingValuesMenu";
 import { useBuilderWatch } from "../types";
 
 export const YamlManifestEditor: React.FC = () => {
@@ -24,7 +27,11 @@ export const YamlManifestEditor: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Sidebar yamlSelected />
+      <Sidebar yamlSelected>
+        <FlexItem grow>
+          <TestingValuesMenu />
+        </FlexItem>
+      </Sidebar>
       <div className={styles.editorContainer}>
         <YamlEditor
           value={yamlManifestValue}

@@ -20,7 +20,8 @@ import {
 
 export const useUpdateLockedInputs = () => {
   const formValues = useBuilderWatch("formValues");
-  const { setValue } = useFormContext();
+  const testingValues = useBuilderWatch("testingValues");
+  const { setValue, trigger } = useFormContext();
 
   useEffect(() => {
     const keyToDesiredLockedInput = getKeyToDesiredLockedInput(formValues.global.authenticator, formValues.streams);
@@ -42,7 +43,15 @@ export const useUpdateLockedInputs = () => {
       });
     });
     setValue("formValues.inputs", updatedInputs);
-  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue]);
+
+    // create a new testingValues object with each of the keys in lockedInputKeysToDelete removed
+    const newTestingValues = { ...testingValues };
+    lockedInputKeysToDelete.forEach((key) => {
+      delete newTestingValues[key];
+    });
+    setValue("testingValues", newTestingValues);
+    trigger("testingValues");
+  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue, testingValues, trigger]);
 };
 
 export const useGetUniqueKey = () => {

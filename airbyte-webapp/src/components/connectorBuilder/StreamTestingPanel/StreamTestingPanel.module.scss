@@ -15,8 +15,13 @@
 }
 
 .streamSelector {
-  flex: 0 0 auto;
+  flex: 1;
+  min-width: 0;
   height: variables.$button-height-sm;
+}
+
+.advancedSettings {
+  flex: 0;
 }
 
 .loadingSpinner {

@@ -553,10 +553,7 @@ const transformSlices = (
   };
 };
 
-export const useBuilderProjectUpdateTestingValues = (
-  builderProjectId: string,
-  onSuccess: (data: ConnectorBuilderProjectTestingValues) => void
-) => {
+export const useBuilderProjectUpdateTestingValues = (builderProjectId: string, onSettled?: () => void) => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
@@ -571,7 +568,7 @@ export const useBuilderProjectUpdateTestingValues = (
         requestOptions
       ),
     {
-      onSuccess,
+      onSettled,
     }
   );
 };
