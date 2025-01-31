@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.workers.config;
 
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -24,7 +23,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Provide WorkerConfigs.
@@ -208,25 +206,25 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .orElseThrow(() -> new NoSuchElementException(String.format("Unable to find config: {variant:%s, type:%s, subtype:%s}",
             key.variant, key.type, key.subType)));
 
-    final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
+    final Map<String, String> isolatedNodeSelectors = EnvUtils.splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
 
     // if annotations are not defined for this specific resource, then fallback to the default
     // resource's annotations
     final Map<String, String> annotations;
     if (Strings.isNullOrEmpty(kubeResourceConfig.getAnnotations())) {
-      annotations = splitKVPairsFromEnvString(workerConfigsDefaults.defaultKubeResourceConfig.getAnnotations());
+      annotations = EnvUtils.splitKVPairsFromEnvString(workerConfigsDefaults.defaultKubeResourceConfig.getAnnotations());
     } else {
-      annotations = splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations());
+      annotations = EnvUtils.splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations());
     }
 
     return new WorkerConfigs(
         getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
         TolerationPOJO.getJobKubeTolerations(workerConfigsDefaults.jobKubeTolerations()),
-        splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
+        EnvUtils.splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         annotations,
-        splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
+        EnvUtils.splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
         workerConfigsDefaults.mainContainerImagePullSecret(),
         workerConfigsDefaults.mainContainerImagePullPolicy());
   }
@@ -319,28 +317,6 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
           matchedSubType != null ? ResourceSubType.fromValue(matchedSubType) : ResourceSubType.DEFAULT));
     }
     return Optional.empty();
-  }
-
-  /**
-   * Splits key value pairs from the input string into a map. Each kv-pair is separated by a ','. The
-   * key and the value are separated by '='.
-   * <p>
-   * For example:- The following represents two map entries
-   * </p>
-   * key1=value1,key2=value2
-   *
-   * @param input string
-   * @return map containing kv pairs
-   */
-  private Map<String, String> splitKVPairsFromEnvString(final String input) {
-    if (input == null || input.isBlank()) {
-      return Map.of();
-    }
-    return Splitter.on(",")
-        .splitToStream(input)
-        .filter(s -> !Strings.isNullOrEmpty(s) && s.contains("="))
-        .map(s -> s.split("="))
-        .collect(Collectors.toMap(s -> s[0].trim(), s -> s[1].trim()));
   }
 
   private ResourceRequirements getResourceRequirementsFrom(final KubeResourceConfig kubeResourceConfig, final KubeResourceConfig defaultConfig) {
