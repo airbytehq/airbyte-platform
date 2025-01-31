@@ -12,6 +12,7 @@ import {
 
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
+import { ComponentsView } from "./ComponentsView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
@@ -26,7 +27,7 @@ interface BuilderProps {
 }
 
 function getView(
-  selectedView: "global" | "inputs" | { streamNum: number; streamId: string },
+  selectedView: "global" | "inputs" | "components" | { streamNum: number; streamId: string },
   hasMultipleStreams: boolean
 ) {
   switch (selectedView) {
@@ -34,6 +35,8 @@ function getView(
       return <GlobalConfigView />;
     case "inputs":
       return <InputsView />;
+    case "components":
+      return <ComponentsView />;
     default:
       // re-mount on changing stream
       return (
@@ -84,7 +87,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
 
   const selectedView = useMemo(
     () =>
-      view !== "global" && view !== "inputs"
+      view !== "global" && view !== "inputs" && view !== "components"
         ? {
             streamNum: view,
             streamId: streams[view]?.id ?? view,

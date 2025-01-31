@@ -10,6 +10,7 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -109,6 +110,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
+  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+
   return (
     <Sidebar yamlSelected={false}>
       <FlexContainer direction="column" alignItems="stretch" gap="none">
@@ -150,6 +153,24 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             />
           </Text>
         </ViewSelectButton>
+
+        {areCustomComponentsEnabled && (
+          <ViewSelectButton
+            data-testid="navbutton-components"
+            selected={view === "components"}
+            onClick={() => {
+              handleViewSelect("components");
+              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.COMPONENTS_SELECT, {
+                actionDescription: "Components view selected",
+              });
+            }}
+          >
+            <Icon type="wrench" />
+            <Text className={styles.streamViewText}>
+              <FormattedMessage id="connectorBuilder.customComponents" />
+            </Text>
+          </ViewSelectButton>
+        )}
       </FlexContainer>
 
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>

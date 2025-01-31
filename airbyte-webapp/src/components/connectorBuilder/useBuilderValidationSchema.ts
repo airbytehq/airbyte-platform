@@ -268,8 +268,8 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs"
+            'Must be "global", "inputs", "components", or a number',
+            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
           ),
         testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
         testingValues: testingValuesSchema,

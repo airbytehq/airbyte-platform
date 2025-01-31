@@ -67,7 +67,7 @@ import SchemaWorker from "./SchemaWorker?worker";
 
 const worker = new SchemaWorker();
 
-export type BuilderView = "global" | "inputs" | number;
+export type BuilderView = BuilderState["view"];
 
 export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 

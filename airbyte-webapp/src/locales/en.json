@@ -1613,6 +1613,7 @@
   "connectorBuilder.streamsHeading": "streams ({number})",
   "connectorBuilder.globalConfiguration": "Global Configuration",
   "connectorBuilder.globalConfiguration.connectorName": "Connector Name",
+  "connectorBuilder.customComponents": "Custom Components",
   "connectorBuilder.assist.config.docsUrl.label": "Public API Documentation URL",
   "connectorBuilder.assist.config.docsUrl.tooltip": "Web page that contains the documentation for the API you want to connect to. Often an overview page.",
   "connectorBuilder.assist.config.docsUrl.placeholder": "e.g. https://docs.github.com/en/rest",
