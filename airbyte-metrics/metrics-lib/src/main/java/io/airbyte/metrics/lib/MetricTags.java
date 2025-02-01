@@ -57,6 +57,7 @@ public class MetricTags {
   public static final String NOTIFICATION_TRIGGER = "notification_trigger";
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RELEASE_STAGE = "release_stage";
+  public static final String SECRET_COORDINATES_UPDATED = "secret_coordinates_updated";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";

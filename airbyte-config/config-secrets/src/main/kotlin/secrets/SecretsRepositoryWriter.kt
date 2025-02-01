@@ -9,9 +9,11 @@ import io.airbyte.commons.json.JsonPaths
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricTags.SECRET_COORDINATES_UPDATED
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -135,6 +137,10 @@ open class SecretsRepositoryWriter(
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
         metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
       }
+    updatedSplitConfig.getCoordinateToPayload().map { it.key }.let {
+      ApmTraceUtils.addTagsToTrace(mapOf(SECRET_COORDINATES_UPDATED to it))
+    }
+
     // Delete old secrets.
     deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
 
