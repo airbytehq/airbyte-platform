@@ -57,13 +57,15 @@ spec:
           image: {{ include "imageUrl" (list .Values.cron.image $) }}
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
           env:
+          # Add Datadog envs before other environment variables
+          {{- include "airbyte.datadog.envs" . | nindent 10 }}
+          {{- include "airbyte.metrics.envs" . | nindent 10 }}
 
           {{- include "airbyte.common.envs" . | nindent 10 }}
           {{- include "airbyte.cron.envs" . | nindent 10 }}
           {{- include "airbyte.database.envs" . | nindent 10 }}
           {{- include "airbyte.database.migrations.envs" . | nindent 10 }}
           {{- include "airbyte.featureFlags.envs" . | nindent 10 }}
-          {{- include "airbyte.metrics.envs" . | nindent 10 }}
           {{- include "airbyte.micronaut.envs" . | nindent 10 }}
           {{- include "airbyte.temporal.envs" . | nindent 10 }}
           {{- include "airbyte.tracking.envs" . | nindent 10 }}

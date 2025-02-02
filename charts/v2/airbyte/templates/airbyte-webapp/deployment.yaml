@@ -61,6 +61,9 @@ spec:
         {{ include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 8 }}
         {{ include "airbyte.tracking.envs" . | nindent 8 }}
         {{ include "airbyte.webapp.envs" . | nindent 8 }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+
 
         # Values from secret
         {{- if .Values.webapp.secrets }}

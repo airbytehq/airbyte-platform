@@ -24,17 +24,6 @@ Renders the global.datadog.agentHost value
 {{- end }}
 
 {{/*
-Renders the datadog.agentHost environment variable
-*/}}
-{{- define "airbyte.datadog.agentHost.env" }}
-- name: DD_AGENT_HOST
-  valueFrom:
-    fieldRef:
-      fieldPath: status.hostIP
-    
-{{- end }}
-
-{{/*
 Renders the global.datadog.enabled value
 */}}
 {{- define "airbyte.datadog.enabled" }}
@@ -309,6 +298,14 @@ Renders the global.datadog.integrations.urlConnection.enabled value
 */}}
 {{- define "airbyte.datadog.integrations.urlConnection.enabled" }}
     {{- .Values.global.datadog.integrations.urlConnection.enabled | default false }}
+{{- end }}
+
+{{- define "airbyte.datadog.agentHost.env" }}
+- name: DD_AGENT_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DD_AGENT_HOST
 {{- end }}
 
 {{/*

@@ -69,14 +69,15 @@ spec:
           value: "Internal server"
         {{- end}}
 
-        {{- include "airbyte.auth.security.envs" . | nindent 8 }} 
-        {{- include "airbyte.common.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.security.envs" . | nindent 8 }}
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}  # Add this line
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}  # Add this line
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
-        {{- include "airbyte.logging.envs" . | nindent 8 }} 
-        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.storage.envs" . | nindent 8 }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
@@ -86,15 +87,15 @@ spec:
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
 
         {{- if or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") }}
-        {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }} 
-        {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- else if (eq .Values.global.deploymentMode "oss") }}
-        {{- include "airbyte.auth.envs" . | nindent 8 }} 
-        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
+        {{- include "airbyte.auth.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- else }}
         {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}

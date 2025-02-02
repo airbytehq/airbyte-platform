@@ -70,13 +70,14 @@ spec:
 
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}  # Add this line
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}  # Add this line
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
-        {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.storage.envs" . | nindent 8 }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}

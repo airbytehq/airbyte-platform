@@ -96,17 +96,6 @@ Renders the global.metrics.statsd.host value
 {{- end }}
 
 {{/*
-Renders the metrics.statsd.host environment variable
-*/}}
-{{- define "airbyte.metrics.statsd.host.env" }}
-- name: STATSD_HOST
-  valueFrom:
-    fieldRef:
-      fieldPath: status.hostIP
-    
-{{- end }}
-
-{{/*
 Renders the global.metrics.statsd.port value
 */}}
 {{- define "airbyte.metrics.statsd.port" }}
@@ -122,6 +111,14 @@ Renders the metrics.statsd.port environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: STATSD_PORT
+{{- end }}
+
+{{- define "airbyte.metrics.statsd.host.env" }}
+- name: STATSD_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: STATSD_HOST
 {{- end }}
 
 {{/*

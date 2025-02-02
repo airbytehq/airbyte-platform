@@ -30,7 +30,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
-      {{- if .Values.global.imagePullSecrets }} 
+      {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
           {{- printf "- name: %s" .name | nindent 8 }}
@@ -54,6 +54,7 @@ spec:
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}  # Add this line
 
         # Values from secret
         {{- if .Values.metrics.secrets }}

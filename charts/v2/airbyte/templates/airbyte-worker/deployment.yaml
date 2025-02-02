@@ -68,6 +68,7 @@ spec:
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}  # Add this line
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
