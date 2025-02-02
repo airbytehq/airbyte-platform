@@ -12,7 +12,7 @@ Renders the otel secret name
 {{- if .Values.global.metrics.otel.secretName }}
     {{- .Values.global.metrics.otel.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -20,7 +20,7 @@ Renders the otel secret name
 Renders the global.metrics.otel.exporter.endpoint value
 */}}
 {{- define "airbyte.otel.exporter.endpoint" }}
-    {{- .Values.global.metrics.otel.exporter.endpoint }}
+    {{- .Values.global.metrics.otel.exporter.endpoint | default (ternary "http://$(DD_AGENT_HOST):4317" "" .Values.global.datadog.enabled) }}
 {{- end }}
 
 {{/*
@@ -38,7 +38,7 @@ Renders the otel.exporter.endpoint environment variable
 Renders the global.metrics.otel.exporter.protocol value
 */}}
 {{- define "airbyte.otel.exporter.protocol" }}
-    {{- .Values.global.metrics.otel.exporter.protocol }}
+    {{- .Values.global.metrics.otel.exporter.protocol | default "grpc" }}
 {{- end }}
 
 {{/*
@@ -56,7 +56,7 @@ Renders the otel.exporter.protocol environment variable
 Renders the global.metrics.otel.exporter.timeout value
 */}}
 {{- define "airbyte.otel.exporter.timeout" }}
-    {{- .Values.global.metrics.otel.exporter.timeout }}
+    {{- .Values.global.metrics.otel.exporter.timeout | default 30000 }}
 {{- end }}
 
 {{/*
@@ -74,7 +74,7 @@ Renders the otel.exporter.timeout environment variable
 Renders the global.metrics.otel.exporter.metricExportInterval value
 */}}
 {{- define "airbyte.otel.exporter.metricExportInterval" }}
-    {{- .Values.global.metrics.otel.exporter.metricExportInterval }}
+    {{- .Values.global.metrics.otel.exporter.metricExportInterval | default 10000 }}
 {{- end }}
 
 {{/*
@@ -92,7 +92,7 @@ Renders the otel.exporter.metricExportInterval environment variable
 Renders the global.metrics.otel.exporter.name value
 */}}
 {{- define "airbyte.otel.exporter.name" }}
-    {{- .Values.global.metrics.otel.exporter.name }}
+    {{- .Values.global.metrics.otel.exporter.name | default "otlp" }}
 {{- end }}
 
 {{/*
@@ -110,7 +110,7 @@ Renders the otel.exporter.name environment variable
 Renders the global.metrics.otel.resourceAttributes value
 */}}
 {{- define "airbyte.otel.resourceAttributes" }}
-    {{- (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .)) }}
+    {{- .Values.global.metrics.otel.resourceAttributes | default (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .)) }}
 {{- end }}
 
 {{/*

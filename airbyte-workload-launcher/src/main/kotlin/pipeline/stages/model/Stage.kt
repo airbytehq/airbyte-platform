@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages.model
 
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -65,14 +69,14 @@ abstract class Stage<T : StageIO>(
   abstract fun getMetricAttrs(input: T): List<MetricAttribute>
 }
 
-abstract class LaunchStage(metricPublisher: CustomMetricPublisher, dataplaneId: String) : Stage<LaunchStageIO>(metricPublisher, dataplaneId) {
-  override fun skipStage(input: StageIO): Boolean {
-    return input !is LaunchStageIO || input.skip
-  }
+abstract class LaunchStage(
+  metricPublisher: CustomMetricPublisher,
+  dataplaneId: String,
+) : Stage<LaunchStageIO>(metricPublisher, dataplaneId) {
+  override fun skipStage(input: StageIO): Boolean = input !is LaunchStageIO || input.skip
 
-  override fun getMetricAttrs(input: LaunchStageIO): List<MetricAttribute> {
-    return listOf(MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()))
-  }
+  override fun getMetricAttrs(input: LaunchStageIO): List<MetricAttribute> =
+    listOf(MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()))
 }
 
 class StageError(

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
@@ -43,9 +47,7 @@ open class BuildInputStage(
     end = "WORKLOAD_STAGE_DONE",
     tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "build")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
-    return super.apply(input)
-  }
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val built = buildPayload(input.msg.workloadInput, input.msg.workloadType)
@@ -55,15 +57,13 @@ open class BuildInputStage(
     }
   }
 
-  override fun getStageName(): StageName {
-    return StageName.BUILD
-  }
+  override fun getStageName(): StageName = StageName.BUILD
 
   private fun buildPayload(
     rawPayload: String,
     type: WorkloadType,
-  ): WorkloadPayload {
-    return when (type) {
+  ): WorkloadPayload =
+    when (type) {
       WorkloadType.CHECK -> {
         val parsed: CheckConnectionInput = deserializer.toCheckConnectionInput(rawPayload)
         CheckPayload(parsed)
@@ -88,5 +88,4 @@ open class BuildInputStage(
         throw NotImplementedError("Unimplemented workload type: $type")
       }
     }
-  }
 }

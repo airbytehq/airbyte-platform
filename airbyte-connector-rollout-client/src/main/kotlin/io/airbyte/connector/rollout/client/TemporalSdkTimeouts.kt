@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.connector.rollout.client
 
 import io.micronaut.context.annotation.ConfigurationProperties

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.helpers
 
 import io.fabric8.kubernetes.api.model.Node
@@ -10,7 +14,9 @@ import io.fabric8.kubernetes.client.dsl.Resource
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
-class PermissionDeniedException(message: String) : RuntimeException(message)
+class PermissionDeniedException(
+  message: String,
+) : RuntimeException(message)
 
 @Singleton
 class KubernetesClientPermissionHelper
@@ -36,7 +42,12 @@ class KubernetesClientPermissionHelper
             }
         }
 
-      val response = kubernetesClient.authorization().v1().selfSubjectAccessReview().create(review)
+      val response =
+        kubernetesClient
+          .authorization()
+          .v1()
+          .selfSubjectAccessReview()
+          .create(review)
       return response.status?.allowed ?: false
     }
   }

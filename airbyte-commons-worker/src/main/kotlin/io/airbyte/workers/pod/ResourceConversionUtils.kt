@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.pod
 
 import com.google.common.annotations.VisibleForTesting
@@ -79,15 +80,14 @@ object ResourceConversionUtils {
   fun sumResourceRequirements(
     reqs1: AirbyteResourceRequirements,
     reqs2: AirbyteResourceRequirements,
-  ): AirbyteResourceRequirements {
-    return AirbyteResourceRequirements()
+  ): AirbyteResourceRequirements =
+    AirbyteResourceRequirements()
       .withCpuRequest(sum(reqs1.cpuRequest, reqs2.cpuRequest))
       .withCpuLimit(sum(reqs1.cpuLimit, reqs2.cpuLimit))
       .withMemoryRequest(sum(reqs1.memoryRequest, reqs2.memoryRequest))
       .withMemoryLimit(sum(reqs1.memoryLimit, reqs2.memoryLimit))
       .withEphemeralStorageRequest(sum(reqs1.ephemeralStorageRequest, reqs2.ephemeralStorageRequest))
       .withEphemeralStorageLimit(sum(reqs1.ephemeralStorageLimit, reqs2.ephemeralStorageLimit))
-  }
 
   /**
    * Kube has a specific string DSL for specifying 'quantities' of bytes (e.g. 5G vs 5Gi vs 10m, vs 10K, etc.)

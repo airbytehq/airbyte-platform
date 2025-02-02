@@ -52,8 +52,7 @@ class StatsTrackerTest {
           AirbyteStreamState()
             .withStreamState(streamState)
             .withStreamDescriptor(streamDescriptor),
-        )
-        .withSourceStats(sourceStats)
+        ).withSourceStats(sourceStats)
         .withDestinationStats(destinationStats)
     val perStreamStateMessageWithoutStats: AirbyteStateMessage =
       AirbyteStateMessage()

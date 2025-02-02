@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import io.airbyte.commons.version.Version
@@ -100,7 +101,8 @@ internal class BreakingChangeNotificationHelperTest {
           ),
         StandardWorkspace()
           .withWorkspaceId(WORKSPACE_ID_2)
-          .withEmail(WORKSPACE_EMAIL_2).withNotificationSettings(NotificationSettings()),
+          .withEmail(WORKSPACE_EMAIL_2)
+          .withNotificationSettings(NotificationSettings()),
       )
     breakingChangeNotificationHelper.notifyDisabledSyncs(notifications)
 

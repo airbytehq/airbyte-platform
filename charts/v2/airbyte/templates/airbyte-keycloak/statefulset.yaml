@@ -9,6 +9,8 @@ metadata:
       {{- if .Values.keycloak.extraLabels }}
       {{ toYaml (mergeOverwrite .Values.keycloak.extraLabels .Values.global.extraLabels) | nindent 4 }}
       {{- end }}
+  annotations:
+    {{ toYaml .Values.keycloak.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.keycloak.replicaCount }}
   serviceName: {{.Release.Name }}-airbyte-keycloak-headless-svc

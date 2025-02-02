@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
@@ -35,9 +39,7 @@ open class CheckStatusStage(
     end = "WORKLOAD_STAGE_DONE",
     tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
-    return super.apply(input)
-  }
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val podExists = podClient.podsExistForAutoId(input.msg.autoId)
@@ -60,7 +62,5 @@ open class CheckStatusStage(
     return input
   }
 
-  override fun getStageName(): StageName {
-    return StageName.CHECK_STATUS
-  }
+  override fun getStageName(): StageName = StageName.CHECK_STATUS
 }

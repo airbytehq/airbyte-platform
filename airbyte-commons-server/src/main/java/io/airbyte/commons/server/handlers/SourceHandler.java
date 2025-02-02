@@ -4,9 +4,13 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.metrics.lib.MetricTags.SOURCE_ID;
+import static io.airbyte.metrics.lib.MetricTags.WORKSPACE_ID;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorStatus;
@@ -54,6 +58,7 @@ import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -63,6 +68,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -144,9 +150,13 @@ public class SourceHandler {
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
+  @Trace
   public SourceRead updateSourceWithOptionalSecret(final PartialSourceUpdate partialSourceUpdate)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final ConnectorSpecification spec = getSpecFromSourceId(partialSourceUpdate.getSourceId());
+    ApmTraceUtils.addTagsToTrace(
+        Map.of(
+            SOURCE_ID, partialSourceUpdate.getSourceId().toString()));
     if (partialSourceUpdate.getSecretId() != null && !partialSourceUpdate.getSecretId().isBlank()) {
       final SourceConnection sourceConnection;
       try {
@@ -159,6 +169,9 @@ public class SourceHandler {
       partialSourceUpdate.setConnectionConfiguration(
           OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret,
               Optional.ofNullable(partialSourceUpdate.getConnectionConfiguration()).orElse(Jsons.emptyObject())));
+      ApmTraceUtils.addTagsToTrace(
+          Map.of(
+              "oauth_secret", true));
     } else {
       // We aren't using a secret to update the source so no server provided credentials should have been
       // passed in.
@@ -200,6 +213,8 @@ public class SourceHandler {
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
     validateSource(spec, updatedSource.getConfiguration());
 
+    ApmTraceUtils.addTagsToTrace(Map.of(WORKSPACE_ID, updatedSource.getWorkspaceId().toString()));
+
     // persist
     persistSourceConnection(
         updatedSource.getName(),
@@ -214,6 +229,7 @@ public class SourceHandler {
     return buildSourceRead(sourceService.getSourceConnection(sourceId), spec);
   }
 
+  @Trace
   public SourceRead updateSource(final SourceUpdate sourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
 
@@ -223,6 +239,11 @@ public class SourceHandler {
             sourceUpdate.getConnectionConfiguration());
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
     validateSource(spec, sourceUpdate.getConnectionConfiguration());
+
+    ApmTraceUtils.addTagsToTrace(
+        Map.of(
+            WORKSPACE_ID, updatedSource.getWorkspaceId().toString(),
+            SOURCE_ID, sourceId.toString()));
 
     // persist
     persistSourceConnection(

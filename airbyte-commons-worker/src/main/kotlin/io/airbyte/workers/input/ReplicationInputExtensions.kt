@@ -1,31 +1,20 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.input
 
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.ReplicationInput
 
-fun ReplicationInput.getJobId(): String {
-  return this.jobRunConfig.jobId
-}
+fun ReplicationInput.getJobId(): String = this.jobRunConfig.jobId
 
-fun ReplicationInput.getAttemptId(): Long {
-  return this.jobRunConfig.attemptId
-}
+fun ReplicationInput.getAttemptId(): Long = this.jobRunConfig.attemptId
 
-fun ReplicationInput.getOrchestratorResourceReqs(): ResourceRequirements? {
-  return this.syncResourceRequirements?.orchestrator
-}
+fun ReplicationInput.getOrchestratorResourceReqs(): ResourceRequirements? = this.syncResourceRequirements?.orchestrator
 
-fun ReplicationInput.getSourceResourceReqs(): ResourceRequirements? {
-  return this.syncResourceRequirements?.source
-}
+fun ReplicationInput.getSourceResourceReqs(): ResourceRequirements? = this.syncResourceRequirements?.source
 
-fun ReplicationInput.getDestinationResourceReqs(): ResourceRequirements? {
-  return this.syncResourceRequirements?.destination
-}
+fun ReplicationInput.getDestinationResourceReqs(): ResourceRequirements? = this.syncResourceRequirements?.destination
 
-fun ReplicationInput.usesCustomConnector(): Boolean {
-  return this.sourceLauncherConfig.isCustomConnector || this.destinationLauncherConfig.isCustomConnector
-}
+fun ReplicationInput.usesCustomConnector(): Boolean = this.sourceLauncherConfig.isCustomConnector || this.destinationLauncherConfig.isCustomConnector

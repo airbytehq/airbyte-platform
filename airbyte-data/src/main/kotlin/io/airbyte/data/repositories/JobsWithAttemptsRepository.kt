@@ -21,7 +21,9 @@ import jakarta.persistence.criteria.Root
 import java.time.OffsetDateTime
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface JobsWithAttemptsRepository : PageableRepository<JobWithAttempts, Long>, JpaSpecificationExecutor<JobWithAttempts> {
+interface JobsWithAttemptsRepository :
+  PageableRepository<JobWithAttempts, Long>,
+  JpaSpecificationExecutor<JobWithAttempts> {
   @Join(value = "attempts", type = Join.Type.LEFT_FETCH)
   override fun findAll(spec: QuerySpecification<JobWithAttempts>?): List<JobWithAttempts>
 
@@ -41,8 +43,8 @@ object Specifications {
     createdAtEnd: OffsetDateTime?,
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
-  ): QuerySpecification<JobWithAttempts> {
-    return QuerySpecification { root, _, criteriaBuilder ->
+  ): QuerySpecification<JobWithAttempts> =
+    QuerySpecification { root, _, criteriaBuilder ->
       buildJobPredicate(
         configTypes = configTypes,
         scope = scope,
@@ -55,7 +57,6 @@ object Specifications {
         criteriaBuilder = criteriaBuilder,
       )
     }
-  }
 
   private fun buildJobPredicate(
     configTypes: Set<JobConfigType>,

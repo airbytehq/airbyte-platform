@@ -1,6 +1,5 @@
 import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
 import { dump } from "js-yaml";
-import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";
 import toPath from "lodash/toPath";
@@ -19,12 +18,13 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { getStreamHash, useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
+import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
 
@@ -39,7 +39,6 @@ import {
   StreamReadTransformedSlices,
   useBuilderProject,
   useBuilderProjectReadStream,
-  useBuilderProjectUpdateTestingValues,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
@@ -54,16 +53,13 @@ import {
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
 import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
-import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
-import { FormGroupItem } from "core/form/types";
+import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
@@ -71,7 +67,7 @@ import SchemaWorker from "./SchemaWorker?worker";
 
 const worker = new SchemaWorker();
 
-export type BuilderView = "global" | "inputs" | number;
+export type BuilderView = BuilderState["view"];
 
 export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 
@@ -113,7 +109,6 @@ interface FormStateContext {
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
   setFormValuesDirty: (value: boolean) => void;
-  updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
   assistSessionId: string;
@@ -541,12 +536,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const { pendingBlocker, blockedOnInvalidState } = useBlockOnSavingState(savingState);
 
-  const { mutateAsync: updateTestingValues } = useBuilderProjectUpdateTestingValues(projectId, (result) =>
-    setValue("testingValues", result)
-  );
-
-  useUpdateTestingValuesOnSpecChange(jsonManifest.spec, updateTestingValues);
-
   useUpdateLockedInputs();
 
   const undoRedo = useUndoRedo();
@@ -580,7 +569,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     toggleUI,
     setFormValuesValid,
     setFormValuesDirty,
-    updateTestingValues,
     updateYamlCdkVersion,
     setAssistEnabled,
     assistEnabled,
@@ -594,48 +582,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     </ConnectorBuilderFormStateContext.Provider>
   );
 };
-
-const EMPTY_SCHEMA = {};
-
-const useUpdateTestingValuesOnSpecChange = (
-  spec: Spec | undefined,
-  updateTestingValues: FormStateContext["updateTestingValues"]
-) => {
-  const testingValues = useBuilderWatch("testingValues");
-  const specRef = useRef<Spec | undefined>(spec);
-
-  useEffect(() => {
-    if (!isEqual(specRef.current?.connection_specification, spec?.connection_specification)) {
-      // clone testingValues because applyTestingValuesDefaults mutates the object
-      const testingValuesWithDefaults = applyTestingValuesDefaults(cloneDeep(testingValues), spec);
-      if (!isEqual(testingValues, testingValuesWithDefaults)) {
-        updateTestingValues({
-          spec: spec?.connection_specification ?? {},
-          testingValues: testingValuesWithDefaults ?? {},
-        });
-      }
-    }
-    specRef.current = spec;
-  }, [spec, testingValues, updateTestingValues]);
-};
-
-export function applyTestingValuesDefaults(
-  testingValues: ConnectorBuilderProjectTestingValues | undefined,
-  spec?: Spec
-) {
-  const testingValuesToUpdate = testingValues || {};
-  try {
-    const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
-    const formFields = jsonSchemaToFormBlock(jsonSchema);
-    setDefaultValues(formFields as FormGroupItem, testingValuesToUpdate, { respectExistingValues: true });
-  } catch {
-    // spec is user supplied so it might not be valid - prevent crashing the application by just skipping trying to set default values
-  }
-
-  return testingValues === undefined && Object.keys(testingValuesToUpdate).length === 0
-    ? undefined
-    : testingValuesToUpdate;
-}
 
 export function useInitializedBuilderProject() {
   const { projectId } = useParams<{
@@ -889,11 +835,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   );
 
+  const { testingValuesDirty } = useUpdateTestingValuesOnChange();
   const [queuedStreamRead, setQueuedStreamRead] = useState(false);
   const { refetch } = streamRead;
-  // trigger a stream read if the a stream read is queued and form is in a ready state to be tested
+  // trigger a stream read if a stream read is queued and form is in a ready state to be tested
   useEffect(() => {
-    if (isResolving || formValuesDirty || !queuedStreamRead) {
+    if (isResolving || formValuesDirty || testingValuesDirty || !queuedStreamRead) {
       return;
     }
 
@@ -904,7 +851,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
     setQueuedStreamRead(false);
     refetch();
-  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty]);
+  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty, testingValuesDirty]);
 
   const queueStreamRead = useCallback(() => {
     setQueuedStreamRead(true);

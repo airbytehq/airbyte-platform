@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -102,7 +106,13 @@ internal class MapperSecretHydrationHelperTest {
           ),
       )
 
-    Assertions.assertEquals(expectedConfig, hydratedConfig.streams.first().mappers.first())
+    Assertions.assertEquals(
+      expectedConfig,
+      hydratedConfig.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
     verify { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(eq(mapperConfigJson), any()) }
   }
@@ -114,7 +124,13 @@ internal class MapperSecretHydrationHelperTest {
     val catalog = generateCatalogWithMapper(mapperConfig)
 
     val resultingCatalog = mapperSecretHydrationHelper.hydrateMapperSecrets(catalog, true, ORGANIZATION_ID)
-    Assertions.assertEquals(mapperConfig, resultingCatalog.streams.first().mappers.first())
+    Assertions.assertEquals(
+      mapperConfig,
+      resultingCatalog.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
     verify(exactly = 0) {
       airbyteApiClient.secretPersistenceConfigApi.getSecretsPersistenceConfig(any())
@@ -123,13 +139,17 @@ internal class MapperSecretHydrationHelperTest {
     }
   }
 
-  private fun generateCatalogWithMapper(mapperConfig: MapperConfig): ConfiguredAirbyteCatalog {
-    return ConfiguredAirbyteCatalog(
+  private fun generateCatalogWithMapper(mapperConfig: MapperConfig): ConfiguredAirbyteCatalog =
+    ConfiguredAirbyteCatalog(
       listOf(
-        ConfiguredAirbyteStream.Builder().stream(
-          mockk<AirbyteStream>(),
-        ).syncMode(SyncMode.FULL_REFRESH).destinationSyncMode(DestinationSyncMode.OVERWRITE).mappers(listOf(mapperConfig)).build(),
+        ConfiguredAirbyteStream
+          .Builder()
+          .stream(
+            mockk<AirbyteStream>(),
+          ).syncMode(SyncMode.FULL_REFRESH)
+          .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+          .mappers(listOf(mapperConfig))
+          .build(),
       ),
     )
-  }
 }

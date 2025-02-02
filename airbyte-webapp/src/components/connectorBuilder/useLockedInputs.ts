@@ -15,12 +15,13 @@ import {
   SESSION_TOKEN_AUTHENTICATOR,
   extractInterpolatedConfigKey,
   isYamlString,
-  useBuilderWatch,
 } from "./types";
+import { useBuilderWatch } from "./useBuilderWatch";
 
 export const useUpdateLockedInputs = () => {
   const formValues = useBuilderWatch("formValues");
-  const { setValue } = useFormContext();
+  const testingValues = useBuilderWatch("testingValues");
+  const { setValue, trigger } = useFormContext();
 
   useEffect(() => {
     const keyToDesiredLockedInput = getKeyToDesiredLockedInput(formValues.global.authenticator, formValues.streams);
@@ -42,7 +43,15 @@ export const useUpdateLockedInputs = () => {
       });
     });
     setValue("formValues.inputs", updatedInputs);
-  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue]);
+
+    // create a new testingValues object with each of the keys in lockedInputKeysToDelete removed
+    const newTestingValues = { ...testingValues };
+    lockedInputKeysToDelete.forEach((key) => {
+      delete newTestingValues[key];
+    });
+    setValue("testingValues", newTestingValues);
+    trigger("testingValues");
+  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue, testingValues, trigger]);
 };
 
 export const useGetUniqueKey = () => {
@@ -154,8 +163,12 @@ export function getAuthKeyToDesiredLockedInput(
       const tokenExpiryDateKey = extractInterpolatedConfigKey(authenticator.refresh_token_updater?.token_expiry_date);
 
       return {
-        [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_id,
-        [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_secret,
+        ...(clientIdKey && {
+          [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_id,
+        }),
+        ...(clientSecretKey && {
+          [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_secret,
+        }),
         ...(refreshTokenKey && {
           [refreshTokenKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].refresh_token,
         }),
@@ -180,8 +193,12 @@ export function getAuthKeyToDesiredLockedInput(
       const accessTokenKey = extractInterpolatedConfigKey(authenticator.access_token_value);
 
       return {
-        [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_id,
-        [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_secret,
+        ...(clientIdKey && {
+          [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_id,
+        }),
+        ...(clientSecretKey && {
+          [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_secret,
+        }),
         ...(isRefreshTokenFlowEnabled && refreshTokenKey
           ? {
               [refreshTokenKey]:

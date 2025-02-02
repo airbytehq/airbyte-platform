@@ -34,7 +34,8 @@ class LocalContainerAirbyteSource(
   companion object {
     const val CALLER = "airbyte-source"
     val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope.Builder()
+      MdcScope
+        .Builder()
         .setExtraMdcEntries(LogSource.SOURCE.toMdc())
   }
 
@@ -65,13 +66,13 @@ class LocalContainerAirbyteSource(
     Failsafe.with(LOCAL_CONTAINER_RETRY_POLICY).run(
       CheckedRunnable {
         messageIterator =
-          streamFactory.create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
+          streamFactory
+            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
             .peek { message: AirbyteMessage ->
               if (shouldBeat(message.type)) {
                 heartbeatMonitor.beat()
               }
-            }
-            .filter { message: AirbyteMessage -> ACCEPTED_MESSAGE_TYPES.contains(message.type) }
+            }.filter { message: AirbyteMessage -> ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },
     )
@@ -85,9 +86,7 @@ class LocalContainerAirbyteSource(
     return !messageIterator.hasNext() && containerIOHandle.exitCodeExists()
   }
 
-  override fun getExitValue(): Int {
-    return containerIOHandle.getExitCode()
-  }
+  override fun getExitValue(): Int = containerIOHandle.getExitCode()
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null
@@ -101,7 +100,6 @@ class LocalContainerAirbyteSource(
     close()
   }
 
-  private fun shouldBeat(airbyteMessageType: AirbyteMessage.Type): Boolean {
-    return airbyteMessageType == AirbyteMessage.Type.STATE || airbyteMessageType == AirbyteMessage.Type.RECORD
-  }
+  private fun shouldBeat(airbyteMessageType: AirbyteMessage.Type): Boolean =
+    airbyteMessageType == AirbyteMessage.Type.STATE || airbyteMessageType == AirbyteMessage.Type.RECORD
 }

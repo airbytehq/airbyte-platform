@@ -33,9 +33,7 @@ class InternalApiAuthenticationFactory {
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun testInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
-  ): String {
-    return airbyteApiAuthHeaderValue
-  }
+  ): String = airbyteApiAuthHeaderValue
 
   @Singleton
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
@@ -44,9 +42,7 @@ class InternalApiAuthenticationFactory {
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
-  ): String {
-    return airbyteApiAuthHeaderValue
-  }
+  ): String = airbyteApiAuthHeaderValue
 
   /**
    * Generate an auth token based on configs. This is called by the Api Client's requestInterceptor
@@ -74,7 +70,8 @@ class InternalApiAuthenticationFactory {
         Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(JWT_TTL_MINUTES.toLong()))
       // Build the JWT payload
       val token: JWTCreator.Builder =
-        JWT.create()
+        JWT
+          .create()
           .withIssuedAt(now)
           .withExpiresAt(expTime)
           .withIssuer(dataPlaneServiceAccountEmail)
@@ -87,7 +84,9 @@ class InternalApiAuthenticationFactory {
       val stream = FileInputStream(dataPlaneServiceAccountCredentialsPath)
       val cred = ServiceAccountCredentials.fromStream(stream)
       val key = cred.privateKey as RSAPrivateKey
-      val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
+      val algorithm: com.auth0.jwt.algorithms.Algorithm =
+        com.auth0.jwt.algorithms.Algorithm
+          .RSA256(null, key)
       val signedToken = token.sign(algorithm)
       meterRegistry?.counter("api-client.auth-token.success")?.increment()
       return "Bearer $signedToken"

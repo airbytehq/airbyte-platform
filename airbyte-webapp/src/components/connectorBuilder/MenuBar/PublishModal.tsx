@@ -42,7 +42,7 @@ import {
 
 import styles from "./PublishModal.module.scss";
 import { useExperiment } from "../../../hooks/services/Experiment";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 const PUBLISH_TO_WORKSPACE_NOTIFICATION_ID = "publish-to-workspace-notification";

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
+import { ValidationError } from "yup";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -13,10 +14,12 @@ import { Tooltip } from "components/ui/Tooltip";
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import { Spec } from "core/api/types/ConnectorManifest";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
+import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
-  applyTestingValuesDefaults,
+  useConnectorBuilderFormManagementState,
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -24,25 +27,23 @@ import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./TestingValuesMenu.module.scss";
 import { TestingValuesMenuErrorBoundaryComponent } from "./TestingValuesMenuErrorBoundary";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
+import { applyTestingValuesDefaults } from "../useUpdateTestingValuesOnChange";
 
-interface TestingValuesMenuProps {
-  testingValuesErrors: number;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-}
-
-export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingValuesErrors, isOpen, setIsOpen }) => {
+export const TestingValuesMenu: React.FC = () => {
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const {
     jsonManifest: { spec },
     permission,
   } = useConnectorBuilderFormState();
+  const { isTestingValuesInputOpen: isOpen, setTestingValuesInputOpen: setIsOpen } =
+    useConnectorBuilderFormManagementState();
   const {
     streamRead: { isFetching },
   } = useConnectorBuilderTestRead();
 
+  const testingValuesErrors = useTestingValuesErrors();
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage("connectorBuilderInputsWarning", true);
 
   const closeAndSwitchToYaml = () => {
@@ -54,27 +55,27 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
     <>
       <Tooltip
         control={
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              data-testid="test-inputs"
-              onClick={() => setIsOpen(true)}
-              disabled={
-                isFetching || !spec || Object.keys(spec.connection_specification?.properties || {}).length === 0
-              }
-              icon="user"
-              iconClassName={styles.icon}
-            >
-              <FormattedMessage id="connectorBuilder.inputsButton" />
-            </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            data-testid="test-inputs"
+            onClick={() => setIsOpen(true)}
+            disabled={isFetching || !spec || Object.keys(spec.connection_specification?.properties || {}).length === 0}
+            icon="user"
+            iconClassName={styles.icon}
+            className={styles.button}
+          >
+            <FormattedMessage
+              id="connectorBuilder.userInputs"
+              values={{ number: Object.keys(spec?.connection_specification?.properties ?? {}).length }}
+            />
             {testingValuesErrors > 0 && (
               <NumberBadge className={styles.inputsErrorBadge} value={testingValuesErrors} color="red" />
             )}
-          </>
+          </Button>
         }
-        placement="left"
+        placement="bottom"
         containerClassName={styles.container}
       >
         {spec ? (
@@ -108,7 +109,7 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
                     <FormattedMessage id="connectorBuilder.adminTestingValuesWarning" />
                   </Text>
                 )}
-                <TestingValuesForm spec={spec} setIsOpen={setIsOpen} />
+                <TestingValuesForm spec={spec} />
               </FlexContainer>
             </TestingValuesMenuErrorBoundaryComponent>
           </ModalBody>
@@ -120,16 +121,16 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
 
 interface TestingValuesFormProps {
   spec?: Spec;
-  setIsOpen: TestingValuesMenuProps["setIsOpen"];
 }
 
-const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec, setIsOpen }) => {
+const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec }) => {
+  const { setTestingValuesInputOpen: setIsOpen } = useConnectorBuilderFormManagementState();
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const testingValues = useBuilderWatch("testingValues");
-  const { updateTestingValues } = useConnectorBuilderFormState();
   const [connectorFormValues, setConnectorFormValues] = useState(testingValues);
   const [connectorFormKey, setConnectorFormKey] = useState(0);
   const [formWasReset, setFormWasReset] = useState(false);
+  const { setValue } = useFormContext();
   const resetConnectorFormValues = useCallback((values?: ConnectorBuilderProjectTestingValues) => {
     setFormWasReset(true);
     setConnectorFormValues(values);
@@ -156,10 +157,7 @@ const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec, setIsOpen }
       selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
       formValues={{ connectionConfiguration: connectorFormValues }}
       onSubmit={async (values) => {
-        await updateTestingValues({
-          spec: spec?.connection_specification ?? {},
-          testingValues: values.connectionConfiguration as ConnectorBuilderProjectTestingValues,
-        });
+        setValue("testingValues", values.connectionConfiguration);
         setIsOpen(false);
       }}
       isEditMode
@@ -205,3 +203,26 @@ const ResetButton: React.FC<{
     </Button>
   );
 };
+
+export function useTestingValuesErrors(): number {
+  const { formatMessage } = useIntl();
+  const testingValues = useBuilderWatch("testingValues");
+  const {
+    jsonManifest: { spec },
+  } = useConnectorBuilderFormState();
+
+  return useMemo(() => {
+    try {
+      const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : {};
+      const formFields = jsonSchemaToFormBlock(jsonSchema);
+      const validationSchema = buildYupFormForJsonSchema(jsonSchema, formFields, formatMessage);
+      validationSchema.validateSync(testingValues, { abortEarly: false });
+      return 0;
+    } catch (e) {
+      if (ValidationError.isError(e)) {
+        return e.errors.length;
+      }
+      return 1;
+    }
+  }, [spec, formatMessage, testingValues]);
+}

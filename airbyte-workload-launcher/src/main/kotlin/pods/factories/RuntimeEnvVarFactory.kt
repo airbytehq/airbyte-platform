@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import com.google.common.annotations.VisibleForTesting
@@ -83,32 +87,29 @@ class RuntimeEnvVarFactory(
     launcherConfig: IntegrationLauncherConfig,
     organizationId: UUID,
     workloadId: String,
-  ): List<EnvVar> {
-    return resolveAwsAssumedRoleEnvVars(launcherConfig) +
+  ): List<EnvVar> =
+    resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
-  }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun discoverConnectorEnvVars(
     launcherConfig: IntegrationLauncherConfig,
     organizationId: UUID,
     workloadId: String,
-  ): List<EnvVar> {
-    return resolveAwsAssumedRoleEnvVars(launcherConfig) +
+  ): List<EnvVar> =
+    resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
-  }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
-  fun specConnectorEnvVars(workloadId: String): List<EnvVar> {
-    return listOf(
+  fun specConnectorEnvVars(workloadId: String): List<EnvVar> =
+    listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
     )
-  }
 
   /**
    * Env vars to enable APM metrics for the connector if enabled.
@@ -130,13 +131,12 @@ class RuntimeEnvVarFactory(
    * Metadata env vars. Unsure of purpose. Copied from AirbyteIntegrationLauncher.
    */
   @VisibleForTesting
-  internal fun getMetadataEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
-    return listOf(
+  internal fun getMetadataEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> =
+    listOf(
       EnvVar(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, launcherConfig.dockerImage, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ID, launcherConfig.jobId, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ATTEMPT, launcherConfig.attemptId.toString(), null),
     )
-  }
 
   /**
    * Env vars that specify the resource limits of the connectors. For use by the connectors.

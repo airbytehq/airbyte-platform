@@ -8,6 +8,8 @@ metadata:
     {{- if .Values.temporal.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.temporal.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.temporal.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.temporal.replicaCount }}
   selector:

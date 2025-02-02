@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -94,12 +94,13 @@ class DestinationServiceImpl(
     destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.createDestination(destinationCreateOss)
-      }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.createDestination(destinationCreateOss)
+        }.onFailure {
+          log.error("Error while listing connections for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -114,12 +115,13 @@ class DestinationServiceImpl(
     destinationIdRequestBody.destinationId = destinationId
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.getDestination(destinationIdRequestBody)
-      }.onFailure {
-        log.error("Error while getting destination: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.getDestination(destinationIdRequestBody)
+        }.onFailure {
+          log.error("Error while getting destination: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -134,12 +136,13 @@ class DestinationServiceImpl(
     destinationIdRequestBody.destinationId = destinationId
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.getDestination(destinationIdRequestBody)
-      }.onFailure {
-        log.error("Error while getting destination: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.getDestination(destinationIdRequestBody)
+        }.onFailure {
+          log.error("Error while getting destination: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrThrow()
@@ -160,12 +163,13 @@ class DestinationServiceImpl(
         .name(destinationPutRequest.name)
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.updateDestination(destinationUpdate)
-      }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.updateDestination(destinationUpdate)
+        }.onFailure {
+          log.error("Error while listing connections for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
     return DestinationReadMapper.from(destinationRead)
@@ -185,12 +189,13 @@ class DestinationServiceImpl(
         .name(destinationPatchRequest.name)
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.partialDestinationUpdate(partialDestinationUpdate)
-      }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.partialDestinationUpdate(partialDestinationUpdate)
+        }.onFailure {
+          log.error("Error while listing connections for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
     return DestinationReadMapper.from(destinationRead)
@@ -202,12 +207,13 @@ class DestinationServiceImpl(
   override fun deleteDestination(destinationId: UUID) {
     val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
     val result =
-      kotlin.runCatching {
-        destinationHandler.deleteDestination(destinationIdRequestBody)
-      }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.deleteDestination(destinationIdRequestBody)
+        }.onFailure {
+          log.error("Error while listing connections for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
 
@@ -228,12 +234,13 @@ class DestinationServiceImpl(
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
 
     val result =
-      kotlin.runCatching {
-        destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
-      }.onFailure {
-        log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
+        }.onFailure {
+          log.error("Error while listing destinations for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return DestinationsResponseMapper.from(
       result.getOrNull()!!,
@@ -257,12 +264,13 @@ class DestinationServiceImpl(
     destinationDefinitionIdWithWorkspaceId.workspaceId = destinationRead.workspaceId
 
     val result =
-      kotlin.runCatching {
-        connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId)
-      }.onFailure {
-        log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it)
-      }
+      kotlin
+        .runCatching {
+          connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId)
+        }.onFailure {
+          log.error("Error while listing destinations for workspaces: ", it)
+          ConfigClientErrorHandler.handleError(it)
+        }
 
     val destinationDefinitionSpecificationRead = result.getOrNull()!!
     return destinationDefinitionSpecificationRead.supportedDestinationSyncModes!!

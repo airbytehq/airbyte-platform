@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.metrics.lib.MetricClient
@@ -25,7 +29,10 @@ class OutputStorageClientTest {
 
   private lateinit var client: OutputStorageClient<TestClass>
 
-  class TestClass(value1: String, value2: Long)
+  class TestClass(
+    value1: String,
+    value2: Long,
+  )
 
   @BeforeEach
   fun setup() {

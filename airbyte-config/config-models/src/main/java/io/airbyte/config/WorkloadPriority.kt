@@ -1,10 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 
-enum class WorkloadPriority(private val value: String) {
+enum class WorkloadPriority(
+  private val value: String,
+) {
   @JsonProperty("high")
   HIGH("high"),
 
@@ -13,9 +19,7 @@ enum class WorkloadPriority(private val value: String) {
   ;
 
   @JsonValue
-  override fun toString(): String {
-    return value
-  }
+  override fun toString(): String = value
 
   companion object {
     @JvmStatic

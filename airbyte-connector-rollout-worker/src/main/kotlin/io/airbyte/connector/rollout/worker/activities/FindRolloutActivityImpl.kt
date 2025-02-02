@@ -20,7 +20,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class FindRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : FindRolloutActivity {
+class FindRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : FindRolloutActivity {
   init {
     logger.info { "Initialized FindRolloutActivityImpl" }
   }

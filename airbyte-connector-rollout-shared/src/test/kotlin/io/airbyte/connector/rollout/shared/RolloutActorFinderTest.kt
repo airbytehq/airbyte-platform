@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared
 
 import io.airbyte.config.ActorType
@@ -222,8 +226,8 @@ class RolloutActorFinderTest {
         )
       }
 
-    private fun createMockConnectorRollout(actorDefinitionId: UUID): ConnectorRollout {
-      return ConnectorRollout().apply {
+    private fun createMockConnectorRollout(actorDefinitionId: UUID): ConnectorRollout =
+      ConnectorRollout().apply {
         this.id = id
         this.actorDefinitionId = actorDefinitionId
         this.releaseCandidateVersionId = RELEASE_CANDIDATE_VERSION_ID
@@ -238,7 +242,6 @@ class RolloutActorFinderTest {
         this.updatedAt = OffsetDateTime.now().toEpochSecond()
         this.expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond()
       }
-    }
 
     @JvmStatic
     fun actorDefinitionIds() = listOf(SOURCE_ACTOR_DEFINITION_ID, DESTINATION_ACTOR_DEFINITION_ID)
@@ -795,9 +798,10 @@ class RolloutActorFinderTest {
 
     assertEquals(
       0,
-      rolloutActorFinder.getActorsPinnedToReleaseCandidate(
-        createMockConnectorRollout(actorDefinitionId),
-      ).size,
+      rolloutActorFinder
+        .getActorsPinnedToReleaseCandidate(
+          createMockConnectorRollout(actorDefinitionId),
+        ).size,
     )
 
     verify { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) }
@@ -900,9 +904,11 @@ class RolloutActorFinderTest {
     val candidates = rolloutActorFinder.filterByAlreadyPinned(actorDefinitionId, CONFIG_SCOPE_MAP.values)
 
     assertEquals(
-      CONFIG_SCOPE_MAP.filter {
-        it.key != ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE && it.key != ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
-      }.values.toSet(),
+      CONFIG_SCOPE_MAP
+        .filter {
+          it.key != ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_SOURCE && it.key != ORGANIZATION_1_WORKSPACE_1_ACTOR_ID_DESTINATION
+        }.values
+        .toSet(),
       candidates.toSet(),
     )
   }
@@ -1057,15 +1063,14 @@ class RolloutActorFinderTest {
     }
   }
 
-  private fun getScheduleMultiplier(timeUnit: Schedule.TimeUnit): Long {
-    return when (timeUnit) {
+  private fun getScheduleMultiplier(timeUnit: Schedule.TimeUnit): Long =
+    when (timeUnit) {
       Schedule.TimeUnit.MINUTES -> 1L
       Schedule.TimeUnit.HOURS -> 60L
       Schedule.TimeUnit.DAYS -> 24 * 60L
       Schedule.TimeUnit.WEEKS -> 7 * 24 * 60L
       Schedule.TimeUnit.MONTHS -> 30 * 24 * 60L // Assuming an average month length
     }
-  }
 
   @Test
   fun `test getFrequencyInMinutes with different schedule values`() {
@@ -1132,7 +1137,7 @@ class RolloutActorFinderTest {
   @MethodSource("actorDefinitionIds")
   fun `test filterByJobStatus`(actorDefinitionId: UUID) {
     var callCount = 0
-    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers {
+    every { jobService.listJobs(any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers { _ ->
       callCount++
 
       // Return different job lists based on the call index

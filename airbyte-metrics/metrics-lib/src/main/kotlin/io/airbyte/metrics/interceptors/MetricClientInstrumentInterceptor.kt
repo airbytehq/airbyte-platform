@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.interceptors
 
 import io.airbyte.metrics.annotations.Instrument
@@ -12,7 +16,9 @@ import kotlin.time.DurationUnit
 
 @Singleton
 @InterceptorBean(Instrument::class)
-class MetricClientInstrumentInterceptor(private val metricClient: MetricClient) : InstrumentInterceptorBase() {
+class MetricClientInstrumentInterceptor(
+  private val metricClient: MetricClient,
+) : InstrumentInterceptorBase() {
   override fun emitStartMetric(
     startMetricName: String,
     tags: Array<MetricAttribute>,

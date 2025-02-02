@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -27,9 +27,7 @@ object PaginationMapper {
   fun getBuilder(
     publicApiHost: String,
     path: String,
-  ): UriBuilder {
-    return UriBuilder.of(publicApiHost).path(path)
-  }
+  ): UriBuilder = UriBuilder.of(publicApiHost).path(path)
 
   /**
    * Get next offset.
@@ -84,8 +82,10 @@ object PaginationMapper {
   ): String {
     val nextOffset = getNextOffset(collection, limit, offset)
     return if (nextOffset.isPresent) {
-      uriBuilder.queryParam(LIMIT, limit)
-        .replaceQueryParam(OFFSET, nextOffset.get()).toString()
+      uriBuilder
+        .queryParam(LIMIT, limit)
+        .replaceQueryParam(OFFSET, nextOffset.get())
+        .toString()
     } else {
       ""
     }
@@ -103,23 +103,22 @@ object PaginationMapper {
     limit: Int,
     offset: Int,
     uriBuilder: UriBuilder,
-  ): String {
-    return if (offset != 0) {
-      uriBuilder.queryParam(LIMIT, limit).replaceQueryParam(
-        OFFSET,
-        getPreviousOffset(limit, offset),
-      ).toString()
+  ): String =
+    if (offset != 0) {
+      uriBuilder
+        .queryParam(LIMIT, limit)
+        .replaceQueryParam(
+          OFFSET,
+          getPreviousOffset(limit, offset),
+        ).toString()
     } else {
       ""
     }
-  }
 
   /**
    * Helper to turn a list of UUIDs into a pagination acceptable string.
    *
    * @param uuids uuids to stringify
    */
-  fun uuidListToQueryString(uuids: List<UUID>): String {
-    return java.lang.String.join(",", uuids.stream().map { obj: UUID -> obj.toString() }.toList())
-  }
+  fun uuidListToQueryString(uuids: List<UUID>): String = java.lang.String.join(",", uuids.stream().map { obj: UUID -> obj.toString() }.toList())
 }

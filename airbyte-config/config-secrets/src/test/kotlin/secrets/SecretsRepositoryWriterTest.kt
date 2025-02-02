@@ -391,9 +391,7 @@ internal class SecretsRepositoryWriterTest {
 //  }
 
   // this only works if the secrets store has one secret.
-  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate {
-    return secretPersistence.map.keys.first()
-  }
+  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate = secretPersistence.map.keys.first()
 
 //  @Test
 //  @Throws(JsonValidationException::class, IOException::class)
@@ -473,8 +471,7 @@ internal class SecretsRepositoryWriterTest {
     private const val TEST_WEBHOOK_NAME = "test-webhook-name"
     private const val TEST_AUTH_TOKEN = "test-auth-token"
 
-    private fun injectCoordinate(coordinate: String): JsonNode {
-      return Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
-    }
+    private fun injectCoordinate(coordinate: String): JsonNode =
+      Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
   }
 }

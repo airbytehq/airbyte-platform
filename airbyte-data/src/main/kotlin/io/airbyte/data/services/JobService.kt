@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.Job
@@ -22,6 +26,11 @@ interface JobService {
     orderByField: String? = "createdAt",
     orderByMethod: String? = "desc",
   ): List<Job>
+
+  /**
+   * Get the first successful job for a given scope.
+   */
+  fun firstSuccessfulJobForScope(scope: String): Job?
 
   /**
    * Get the last successful job for a given scope.

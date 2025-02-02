@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.workflows
 
 import datadog.trace.api.Trace
@@ -15,10 +19,9 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
     jobRunConfig: JobRunConfig,
     launcherConfig: IntegrationLauncherConfig,
     config: StandardDiscoverCatalogInput,
-  ): RefreshSchemaActivityOutput {
+  ): RefreshSchemaActivityOutput =
     throw ApplicationFailure.newNonRetryableFailure(
       "Workflow has been deprecated. Retry to automatically transition to the current workflow.",
       "Deprecated",
     )
-  }
 }

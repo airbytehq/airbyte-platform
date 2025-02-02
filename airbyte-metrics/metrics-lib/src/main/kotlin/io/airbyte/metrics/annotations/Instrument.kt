@@ -1,8 +1,15 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.annotations
 
 import io.micronaut.aop.Around
 
-annotation class Tag(val key: String, val value: String)
+annotation class Tag(
+  val key: String,
+  val value: String,
+)
 
 /**
  * Set this annotation to a function to instrument metric emissions.

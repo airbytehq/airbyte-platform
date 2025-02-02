@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
@@ -118,12 +122,11 @@ class ConnectorRolloutWorkflowImplTest {
     private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
 
     @JvmStatic
-    fun exceptionProvider(): Stream<Arguments> {
-      return Stream.of(
+    fun exceptionProvider(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(ApplicationFailure::class.java, "Simulated ApplicationFailure"),
         Arguments.of(IllegalArgumentException::class.java, "Simulated IllegalArgumentException"),
       )
-    }
   }
 
   @BeforeEach

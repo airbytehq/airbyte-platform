@@ -10,13 +10,14 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
-import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 interface ViewSelectButtonProps {
@@ -109,6 +110,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
+  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+
   return (
     <Sidebar yamlSelected={false}>
       <FlexContainer direction="column" alignItems="stretch" gap="none">
@@ -132,6 +135,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         <ViewSelectButton
           data-testid="navbutton-inputs"
           selected={view === "inputs"}
+          showIndicator={hasErrors(["inputs"]) ? "error" : undefined}
           onClick={() => {
             handleViewSelect("inputs");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUTS_SELECT, {
@@ -149,6 +153,24 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             />
           </Text>
         </ViewSelectButton>
+
+        {areCustomComponentsEnabled && (
+          <ViewSelectButton
+            data-testid="navbutton-components"
+            selected={view === "components"}
+            onClick={() => {
+              handleViewSelect("components");
+              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.COMPONENTS_SELECT, {
+                actionDescription: "Components view selected",
+              });
+            }}
+          >
+            <Icon type="wrench" />
+            <Text className={styles.streamViewText}>
+              <FormattedMessage id="connectorBuilder.customComponents" />
+            </Text>
+          </ViewSelectButton>
+        )}
       </FlexContainer>
 
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>

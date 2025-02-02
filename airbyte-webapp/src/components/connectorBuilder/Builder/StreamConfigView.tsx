@@ -43,8 +43,9 @@ import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BUILDER_DECODER_TYPES, BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { BUILDER_DECODER_TYPES, BuilderStream, StreamPathFn, isEmptyOrDefault } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -98,11 +98,14 @@ open class WorkspaceServiceImpl(
     val organizationId = DEFAULT_ORGANIZATION_ID
 
     val workspaceCreate =
-      WorkspaceCreate().name(
-        workspaceCreateRequest.name,
-      ).email(currentUserService.currentUser.email).organizationId(organizationId)
+      WorkspaceCreate()
+        .name(
+          workspaceCreateRequest.name,
+        ).email(currentUserService.currentUser.email)
+        .organizationId(organizationId)
     val result =
-      kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
+      kotlin
+        .runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
           log.error("Error for createWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -148,7 +151,8 @@ open class WorkspaceServiceImpl(
         this.workspaceId = workspaceId
       }
     val result =
-      kotlin.runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
+      kotlin
+        .runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
         .onFailure {
           log.error("Error for updateWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -188,7 +192,8 @@ open class WorkspaceServiceImpl(
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
     val result =
-      kotlin.runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for getWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -229,7 +234,8 @@ open class WorkspaceServiceImpl(
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
     val result =
-      kotlin.runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -275,7 +281,8 @@ open class WorkspaceServiceImpl(
     listResourcesForWorkspacesRequestBody.pagination = pagination
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
     val result =
-      kotlin.runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listWorkspaces", it)
           ConfigClientErrorHandler.handleError(it)
@@ -327,7 +334,5 @@ open class WorkspaceServiceImpl(
   override fun controllerSetWorkspaceOverrideOAuthParams(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
-  ): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
-  }
+  ): Response = Response.status(Response.Status.NOT_IMPLEMENTED).build()
 }

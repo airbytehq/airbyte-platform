@@ -14,9 +14,7 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 
-fun formatUserAgent(userAgent: String): String {
-  return CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent)
-}
+fun formatUserAgent(userAgent: String): String = CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent)
 
 @Singleton
 @Named("userAgentInterceptor")

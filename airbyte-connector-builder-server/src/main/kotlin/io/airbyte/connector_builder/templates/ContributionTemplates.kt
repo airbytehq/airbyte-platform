@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.templates
@@ -51,8 +55,8 @@ class ContributionTemplates {
     return pagination?.get("type") as? String
   }
 
-  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> {
-    return streams?.map { stream ->
+  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> =
+    streams?.map { stream ->
       TemplateStream(
         name = stream["name"] as? String,
         primaryKey = primaryKeyToString(stream["primary_key"]),
@@ -60,7 +64,6 @@ class ContributionTemplates {
         incrementalSyncEnabled = stream["incremental_sync"] != null,
       )
     } ?: emptyList()
-  }
 
   fun getAllowedHosts(streams: List<Map<String, Any>>): List<String> {
     val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
@@ -90,13 +93,12 @@ class ContributionTemplates {
    * - ["id", ["name", "age"]] -> "id.name.age"
    * - [["id"], ["name", "age"]] -> "id.name.age"
    */
-  fun primaryKeyToString(primaryKey: Any?): String {
-    return when (primaryKey) {
+  fun primaryKeyToString(primaryKey: Any?): String =
+    when (primaryKey) {
       is String -> primaryKey
       is List<*> -> primaryKey.joinToString(".") { primaryKeyToString(it) }
       else -> ""
     }
-  }
 
   fun toTemplateSpecProperties(spec: Map<String, Any>): List<TemplateSpecProperty> {
     val connectionSpec = spec["connection_specification"] as Map<String, Any>
@@ -171,9 +173,7 @@ class ContributionTemplates {
     return renderTemplateString("contribution_templates/metadata.yaml.peb", context)
   }
 
-  fun renderIconSvg(): String {
-    return renderTemplateString("contribution_templates/icon.svg", emptyMap())
-  }
+  fun renderIconSvg(): String = renderTemplateString("contribution_templates/icon.svg", emptyMap())
 
   fun renderAcceptanceTestConfigYaml(contributionInfo: BuilderContributionInfo): String {
     val context = mapOf("connectorImageName" to contributionInfo.connectorImageName)

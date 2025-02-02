@@ -8,6 +8,8 @@ metadata:
     {{- if .Values.connectorRolloutWorker.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.connectorRolloutWorker.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.connectorRolloutWorker.replicaCount }}
   selector:

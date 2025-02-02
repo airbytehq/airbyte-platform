@@ -37,7 +37,8 @@ open class AirbyteCompatibleConnectorVersionsProvider(
   @Cacheable
   open fun getCompatibleConnectorsMatrix(): Map<String, ConnectorInfo> {
     val request: Request =
-      Request.Builder()
+      Request
+        .Builder()
         .url(REMOTE_URL)
         .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
         .build()
@@ -69,7 +70,8 @@ open class AirbyteCompatibleConnectorVersionsProvider(
 
     val failsafe: FailsafeExecutor<Response> =
       Failsafe.with(
-        RetryPolicy.builder<Response>()
+        RetryPolicy
+          .builder<Response>()
           .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
           .withMaxRetries(5)
           .build(),

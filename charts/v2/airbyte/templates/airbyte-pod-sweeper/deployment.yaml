@@ -3,10 +3,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-pod-sweeper
-  namespace: {{ .Values.podSweeper.namespace | default .Release.Namespace }}
+  namespace: {{ include "airbyte.workloads.namespace" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
-    namespace: {{ .Values.podSweeper.namespace | default .Release.Namespace }}
+    namespace: {{ include "airbyte.workloads.namespace" . }}
+  annotations:
+    {{ toYaml .Values.podSweeper.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.podSweeper.replicaCount }}
   selector:

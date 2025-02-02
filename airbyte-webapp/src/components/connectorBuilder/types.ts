@@ -3,7 +3,6 @@ import { JSONSchema7 } from "json-schema";
 import isString from "lodash/isString";
 import merge from "lodash/merge";
 import omit from "lodash/omit";
-import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import { match } from "ts-pattern";
 
@@ -71,7 +70,7 @@ export interface BuilderState {
   formValues: BuilderFormValues;
   previewValues?: BuilderFormValues;
   yaml: string;
-  view: "global" | "inputs" | number;
+  view: "global" | "inputs" | "components" | number;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
@@ -1027,6 +1026,9 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
   const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
   const accessTokenKey = authenticator.declarative.access_token_key;
 
+  const accessTokenConfigPath = extractInterpolatedConfigKey(authenticator.access_token_value);
+  const refreshTokenConfigPath = extractInterpolatedConfigKey(authenticator.refresh_token);
+
   updatedSpec.advanced_auth = {
     auth_flow_type: "oauth2.0",
     oauth_config_specification: {
@@ -1055,13 +1057,13 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
         properties: {
           [accessTokenKey]: {
             type: "string",
-            path_in_connector_config: [accessTokenKey],
+            path_in_connector_config: [accessTokenConfigPath],
           },
           ...(isRefreshTokenFlowEnabled
             ? {
                 refresh_token: {
                   type: "string",
-                  path_in_connector_config: ["refresh_token"],
+                  path_in_connector_config: [refreshTokenConfigPath],
                 },
               }
             : {}),
@@ -1199,11 +1201,6 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   },
   primary_key: undefined,
 };
-
-export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
-  useWatch<BuilderState, TPath>({ name: path, ...options });
-
-export type BuilderPathFn = <TPath extends FieldPath<BuilderState>>(fieldPath: string) => TPath;
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
 

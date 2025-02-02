@@ -98,25 +98,23 @@ class WorkloadIdGeneratorTest {
 
   companion object {
     @JvmStatic
-    private fun workloadIdArgsMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun workloadIdArgsMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(UUID.randomUUID(), 12412431L.toString(), 1),
         Arguments.of(UUID.randomUUID(), "89127421", 2),
         Arguments.of(UUID.randomUUID(), UUID.randomUUID().toString(), 0),
         Arguments.of(UUID.randomUUID(), "any string really", 0),
       )
-    }
 
     @JvmStatic
-    private fun actorTimestampMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun actorTimestampMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(UUID.randomUUID(), System.currentTimeMillis() + 12412431L),
         Arguments.of(UUID.randomUUID(), 89127421L),
         Arguments.of(UUID.randomUUID(), 0),
         Arguments.of(UUID.randomUUID(), System.currentTimeMillis()),
         Arguments.of(UUID.randomUUID(), System.currentTimeMillis() - 12412431L),
       )
-    }
 
     @JvmStatic
     private fun windowSnapMatrix(): Stream<Arguments> {
@@ -157,14 +155,14 @@ class WorkloadIdGeneratorTest {
       hr: Int,
       min: Int,
       sec: Int,
-    ): Long {
-      return OffsetDateTime.now()
+    ): Long =
+      OffsetDateTime
+        .now()
         .withHour(hr)
         .withMinute(min)
         .withSecond(sec)
         .withNano(0) // zero this out so we don't get remainders
         .toInstant()
         .toEpochMilli()
-    }
   }
 }

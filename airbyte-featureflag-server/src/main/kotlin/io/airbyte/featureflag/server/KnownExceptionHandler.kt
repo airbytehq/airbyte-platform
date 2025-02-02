@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.featureflag.server
 
 import io.micronaut.http.HttpRequest
@@ -12,7 +16,5 @@ class KnownExceptionHandler : ExceptionHandler<KnownException, HttpResponse<Stri
   override fun handle(
     request: HttpRequest<Any>,
     exception: KnownException,
-  ): HttpResponse<String> {
-    return HttpResponse.status<Any>(exception.httpCode).body(exception.message)
-  }
+  ): HttpResponse<String> = HttpResponse.status<Any>(exception.httpCode).body(exception.message)
 }

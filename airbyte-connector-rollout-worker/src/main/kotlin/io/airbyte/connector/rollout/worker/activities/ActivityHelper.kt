@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.worker.activities
 
 import io.airbyte.api.client.model.generated.ConnectorRolloutStrategy
@@ -31,6 +35,5 @@ fun handleAirbyteApiClientException(e: ClientException): Nothing {
   throw ApplicationFailure.newFailure(body, Constants.AIRBYTE_API_CLIENT_EXCEPTION)
 }
 
-fun getRolloutStrategyFromInput(rolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorRolloutStrategy {
-  return if (rolloutStrategy == null) ConnectorRolloutStrategy.MANUAL else ConnectorRolloutStrategy.valueOf(rolloutStrategy.toString().uppercase())
-}
+fun getRolloutStrategyFromInput(rolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorRolloutStrategy =
+  if (rolloutStrategy == null) ConnectorRolloutStrategy.MANUAL else ConnectorRolloutStrategy.valueOf(rolloutStrategy.toString().uppercase())

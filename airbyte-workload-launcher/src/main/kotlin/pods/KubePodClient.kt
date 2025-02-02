@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
@@ -43,9 +47,7 @@ class KubePodClient(
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
 ) {
-  fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
-  }
+  fun podsExistForAutoId(autoId: UUID): Boolean = kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(

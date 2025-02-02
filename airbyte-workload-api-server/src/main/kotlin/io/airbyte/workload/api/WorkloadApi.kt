@@ -422,15 +422,14 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) @Body workloadListRequest: WorkloadListRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
+  ): WorkloadListResponse =
+    WorkloadListResponse(
       workloadHandler.getWorkloads(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
       ),
     )
-  }
 
   @POST
   @Path("/expired_deadline_list")
@@ -450,15 +449,14 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
     ) @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
+  ): WorkloadListResponse =
+    WorkloadListResponse(
       workloadHandler.getWorkloadsWithExpiredDeadline(
         expiredDeadlineWorkloadListRequest.dataplane,
         expiredDeadlineWorkloadListRequest.status,
         expiredDeadlineWorkloadListRequest.deadline,
       ),
     )
-  }
 
   @POST
   @Path("/list_long_running_non_sync")
@@ -478,15 +476,14 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
+  ): WorkloadListResponse =
+    WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
         longRunningWorkloadRequest.dataplane,
         listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC),
         longRunningWorkloadRequest.createdBefore,
       ),
     )
-  }
 
   @POST
   @Path("/list_long_running_sync")
@@ -506,13 +503,12 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
+  ): WorkloadListResponse =
+    WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
         longRunningWorkloadRequest.dataplane,
         listOf(WorkloadType.SYNC),
         longRunningWorkloadRequest.createdBefore,
       ),
     )
-  }
 }

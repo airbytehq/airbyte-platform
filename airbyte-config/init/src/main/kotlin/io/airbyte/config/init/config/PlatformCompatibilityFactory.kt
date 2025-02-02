@@ -17,9 +17,9 @@ class PlatformCompatibilityFactory {
   @Named("platformCompatibilityClient")
   fun platformCompatibilityClient(
     @Value("\${airbyte.platform-compatibility.remote.timeout-ms:30000}") platformCompatibilityRemoteTimeoutMs: Long,
-  ): OkHttpClient {
-    return OkHttpClient.Builder()
+  ): OkHttpClient =
+    OkHttpClient
+      .Builder()
       .callTimeout(Duration.ofMillis(platformCompatibilityRemoteTimeoutMs))
       .build()
-  }
 }

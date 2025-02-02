@@ -19,7 +19,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class CleanupActivityImpl(private val airbyteApiClient: AirbyteApiClient) : CleanupActivity {
+class CleanupActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : CleanupActivity {
   init {
     logger.info { "Initialized CleanupActivityImpl" }
   }

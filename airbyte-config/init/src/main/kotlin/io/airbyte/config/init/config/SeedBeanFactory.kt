@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init.config
 
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
@@ -36,8 +37,8 @@ class SeedBeanFactory {
   fun seedDefinitionsProvider(
     seedProvider: SeedDefinitionsProviderType,
     remoteDefinitionsProvider: RemoteDefinitionsProvider,
-  ): DefinitionsProvider {
-    return when (seedProvider) {
+  ): DefinitionsProvider =
+    when (seedProvider) {
       SeedDefinitionsProviderType.LOCAL -> {
         LOGGER.info("Using local definitions provider for seeding")
         LocalDefinitionsProvider()
@@ -47,7 +48,6 @@ class SeedBeanFactory {
         remoteDefinitionsProvider
       }
     }
-  }
 
   @Singleton
   fun seedDefinitionsProviderType(
@@ -70,15 +70,14 @@ class SeedBeanFactory {
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
     featureFlagClient: FeatureFlagClient,
-  ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(
+  ): DeclarativeSourceUpdater =
+    DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
       featureFlagClient,
     )
-  }
 
   @Singleton
   @Named("localDeclarativeSourceUpdater")
@@ -88,21 +87,18 @@ class SeedBeanFactory {
     actorDefinitionService: ActorDefinitionService,
     airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
     featureFlagClient: FeatureFlagClient,
-  ): DeclarativeSourceUpdater {
-    return DeclarativeSourceUpdater(
+  ): DeclarativeSourceUpdater =
+    DeclarativeSourceUpdater(
       declarativeManifestImageVersionsProvider,
       declarativeManifestImageVersionService,
       actorDefinitionService,
       airbyteCompatibleConnectorsValidator,
       featureFlagClient,
     )
-  }
 
   @Singleton
   @Named("dockerHubOkHttpClient")
-  fun okHttpClient(): OkHttpClient {
-    return OkHttpClient()
-  }
+  fun okHttpClient(): OkHttpClient = OkHttpClient()
 
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(SeedBeanFactory::class.java)

@@ -12,7 +12,7 @@ Renders the featureFlags secret name
 {{- if .Values.global.featureFlags.secretName }}
     {{- .Values.global.featureFlags.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

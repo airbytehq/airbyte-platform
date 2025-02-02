@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -37,7 +37,8 @@ object SourcesResponseMapper {
     apiHost: String,
   ): SourcesResponse {
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(SOURCES_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(SOURCES_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
     if (workspaceIds.isNotEmpty()) {

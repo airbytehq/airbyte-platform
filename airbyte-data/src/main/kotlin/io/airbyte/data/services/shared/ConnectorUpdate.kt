@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 data class ConnectorUpdate(
@@ -16,7 +20,5 @@ data class ConnectorUpdate(
     BREAKING_CHANGE_MANUAL,
   }
 
-  override fun getEventType(): ConnectionEvent.Type {
-    return ConnectionEvent.Type.CONNECTOR_UPDATE
-  }
+  override fun getEventType(): ConnectionEvent.Type = ConnectionEvent.Type.CONNECTOR_UPDATE
 }

@@ -15,7 +15,7 @@ import {
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal, PublishType } from "./PublishModal";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 interface PublishButtonProps {

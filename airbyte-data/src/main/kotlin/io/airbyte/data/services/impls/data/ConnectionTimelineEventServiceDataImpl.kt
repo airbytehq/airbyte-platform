@@ -46,9 +46,7 @@ class ConnectionTimelineEventServiceDataImpl(
     return repository.save(timelineEvent)
   }
 
-  override fun getEvent(eventId: UUID): ConnectionTimelineEvent {
-    return repository.findById(eventId).get()
-  }
+  override fun getEvent(eventId: UUID): ConnectionTimelineEvent = repository.findById(eventId).get()
 
   override fun listEvents(
     connectionId: UUID,
@@ -57,9 +55,8 @@ class ConnectionTimelineEventServiceDataImpl(
     createdAtEnd: OffsetDateTime?,
     pageSize: Int,
     rowOffset: Int,
-  ): List<ConnectionTimelineEvent> {
-    return repository.findByConnectionIdWithFilters(connectionId, eventTypes, createdAtStart, createdAtEnd, pageSize, rowOffset)
-  }
+  ): List<ConnectionTimelineEvent> =
+    repository.findByConnectionIdWithFilters(connectionId, eventTypes, createdAtStart, createdAtEnd, pageSize, rowOffset)
 
   /**
    * The returned associated user could be null when:

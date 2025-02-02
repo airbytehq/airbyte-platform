@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.config
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -33,8 +37,8 @@ class ApplicationBeanFactory {
     metricClient: MetricClient,
     mapper: ReplicationInputMapper,
     @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
-  ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(
+  ): ReplicationInputHydrator =
+    ReplicationInputHydrator(
       airbyteApiClient,
       resumableFullRefreshStatsHelper,
       secretsRepositoryReader,
@@ -45,7 +49,6 @@ class ApplicationBeanFactory {
       metricClient,
       useRuntimeSecretPersistence,
     )
-  }
 
   @Singleton
   fun metricClient(): MetricClient {
@@ -58,26 +61,21 @@ class ApplicationBeanFactory {
     airbyteApiClient: AirbyteApiClient,
     secretsRepositoryReader: SecretsRepositoryReader,
     @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
-  ): ConnectorSecretsHydrator {
-    return ConnectorSecretsHydrator(
+  ): ConnectorSecretsHydrator =
+    ConnectorSecretsHydrator(
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
       useRuntimeSecretPersistence = useRuntimeSecretPersistence,
     )
-  }
 
   @Singleton
-  fun checkInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): CheckConnectionInputHydrator {
-    return CheckConnectionInputHydrator(connectorSecretsHydrator)
-  }
+  fun checkInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): CheckConnectionInputHydrator =
+    CheckConnectionInputHydrator(connectorSecretsHydrator)
 
   @Singleton
-  fun discoverCatalogInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): DiscoverCatalogInputHydrator {
-    return DiscoverCatalogInputHydrator(connectorSecretsHydrator)
-  }
+  fun discoverCatalogInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): DiscoverCatalogInputHydrator =
+    DiscoverCatalogInputHydrator(connectorSecretsHydrator)
 
   @Singleton
-  fun protocolSerializer(): ProtocolSerializer {
-    return DefaultProtocolSerializer()
-  }
+  fun protocolSerializer(): ProtocolSerializer = DefaultProtocolSerializer()
 }

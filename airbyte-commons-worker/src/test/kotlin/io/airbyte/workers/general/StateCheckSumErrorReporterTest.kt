@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.amazonaws.internal.ExceptionUtils
@@ -69,11 +73,13 @@ class StateCheckSumErrorReporterTest {
         webUrlHelper,
       )
     stateMessage =
-      AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      AirbyteStateMessage()
+        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
         .withStream(
           AirbyteStreamState().withStreamState(Jsons.emptyObject()).withStreamDescriptor(
             StreamDescriptor()
-              .withNamespace("namespace").withName("name"),
+              .withNamespace("namespace")
+              .withName("name"),
           ),
         )
   }
@@ -116,8 +122,15 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(any()) } returns sourceDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
-      exception, stateMessage,
+      workspaceId,
+      connectionId,
+      jobId,
+      attemptNumber,
+      origin,
+      internalMessage,
+      externalMessage,
+      exception,
+      stateMessage,
     )
 
     verify(
@@ -167,8 +180,15 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(any()) } returns destinationDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
-      exception, stateMessage,
+      workspaceId,
+      connectionId,
+      jobId,
+      attemptNumber,
+      origin,
+      internalMessage,
+      externalMessage,
+      exception,
+      stateMessage,
     )
 
     verify(

@@ -137,16 +137,12 @@ class ConfigFileClient(
   override fun stringVariation(
     flag: Flag<String>,
     context: Context,
-  ): String {
-    return flags[flag.key]?.serve(context)?.let { it as? String } ?: flag.default
-  }
+  ): String = flags[flag.key]?.serve(context)?.let { it as? String } ?: flag.default
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
-  ): Int {
-    return flags[flag.key]?.serve(context)?.let { it as? Int } ?: flag.default
-  }
+  ): Int = flags[flag.key]?.serve(context)?.let { it as? Int } ?: flag.default
 
   companion object {
     private val log = LoggerFactory.getLogger(ConfigFileClient::class.java)
@@ -160,30 +156,27 @@ class ConfigFileClient(
  */
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
-class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
+class LaunchDarklyClient(
+  private val client: LDClient,
+) : FeatureFlagClient {
   override fun boolVariation(
     flag: Flag<Boolean>,
     context: Context,
-  ): Boolean {
-    return when (flag) {
+  ): Boolean =
+    when (flag) {
       is EnvVar -> flag.enabled(context)
       else -> client.boolVariation(flag.key, context.toLDContext(), flag.default)
     }
-  }
 
   override fun stringVariation(
     flag: Flag<String>,
     context: Context,
-  ): String {
-    return client.stringVariation(flag.key, context.toLDContext(), flag.default)
-  }
+  ): String = client.stringVariation(flag.key, context.toLDContext(), flag.default)
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
-  ): Int {
-    return client.intVariation(flag.key, context.toLDContext(), flag.default)
-  }
+  ): Int = client.intVariation(flag.key, context.toLDContext(), flag.default)
 }
 
 @Singleton
@@ -197,30 +190,25 @@ class FeatureFlagServiceClient(
   override fun boolVariation(
     flag: Flag<Boolean>,
     context: Context,
-  ): Boolean {
-    return callFeatureFlagService(flag.key, context)?.toBoolean() ?: flag.default
-  }
+  ): Boolean = callFeatureFlagService(flag.key, context)?.toBoolean() ?: flag.default
 
   override fun stringVariation(
     flag: Flag<String>,
     context: Context,
-  ): String {
-    return callFeatureFlagService(flag.key, context) ?: flag.default
-  }
+  ): String = callFeatureFlagService(flag.key, context) ?: flag.default
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
-  ): Int {
-    return callFeatureFlagService(flag.key, context)?.toInt() ?: flag.default
-  }
+  ): Int = callFeatureFlagService(flag.key, context)?.toInt() ?: flag.default
 
   private fun callFeatureFlagService(
     key: String,
     context: Context,
   ): String? {
     val request =
-      Request.Builder()
+      Request
+        .Builder()
         .url("$baseUrl$basePath/$key/evaluate?${context.toQueryParams()}")
         .build()
     return httpClient.newCall(request).execute().use {
@@ -253,40 +241,38 @@ class FeatureFlagServiceClient(
  * @param [values] is a map of [Flag.key] to its status.
  */
 @Secondary
-open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
+open class TestClient(
+  val values: Map<String, Any>,
+) : FeatureFlagClient {
   @Inject
   constructor() : this(mapOf())
 
   override fun boolVariation(
     flag: Flag<Boolean>,
     context: Context,
-  ): Boolean {
-    return when (flag) {
+  ): Boolean =
+    when (flag) {
       is EnvVar -> {
         // convert to a EnvVar flag with a custom fetcher that uses the [values] of this Test class
         // instead of fetching from the environment variables
-        EnvVar(envVar = flag.key, default = flag.default, attrs = flag.attrs).apply {
-          fetcher = { values[flag.key]?.toString() ?: flag.default.toString() }
-        }.enabled(context)
+        EnvVar(envVar = flag.key, default = flag.default, attrs = flag.attrs)
+          .apply {
+            fetcher = { values[flag.key]?.toString() ?: flag.default.toString() }
+          }.enabled(context)
       }
 
       else -> values[flag.key]?.let { it as? Boolean } ?: flag.default
     }
-  }
 
   override fun stringVariation(
     flag: Flag<String>,
     context: Context,
-  ): String {
-    return values[flag.key]?.let { it as? String } ?: flag.default
-  }
+  ): String = values[flag.key]?.let { it as? String } ?: flag.default
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
-  ): Int {
-    return values[flag.key]?.let { it as? Int } ?: flag.default
-  }
+  ): Int = values[flag.key]?.let { it as? Int } ?: flag.default
 }
 
 /**
@@ -299,7 +285,9 @@ open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
  *  - name: feature-two
  *    enabled: false
  */
-private data class ConfigFileFlags(val flags: List<ConfigFileFlag>)
+private data class ConfigFileFlags(
+  val flags: List<ConfigFileFlag>,
+)
 
 /**
  * Data wrapper around an individual flag read from the configuration file.
@@ -334,7 +322,8 @@ private data class ConfigFileFlag(
     }
     return when (ctx) {
       is Multi ->
-        ctx.contexts.map { serve(it) }
+        ctx.contexts
+          .map { serve(it) }
           .find { it != serve } ?: serve
       else ->
         contextsByType[ctx.kind]
@@ -379,7 +368,9 @@ private fun Path.onChange(block: () -> Unit) {
     val key = watcher.take()
     // The context on the poll-events for ENTRY_MODIFY and ENTRY_CREATE events should return a Path,
     // however officially `Returns: the event context; may be null`, so there is a null check here
-    key.pollEvents().mapNotNull { it.context() as? Path }
+    key
+      .pollEvents()
+      .mapNotNull { it.context() as? Path }
       // As events are generated at the directory level and not the file level, any files that do not match the specific file
       // this Path represents must be filtered out.
       // E.g.

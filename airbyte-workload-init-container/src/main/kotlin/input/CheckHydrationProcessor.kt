@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.initContainer.system.FileClient
@@ -39,7 +43,11 @@ class CheckHydrationProcessor(
           OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
           1,
           MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
-          MetricAttribute(CONNECTOR_TYPE, parsed.checkConnectionInput.actorContext.actorType.toString()),
+          MetricAttribute(
+            CONNECTOR_TYPE,
+            parsed.checkConnectionInput.actorContext.actorType
+              .toString(),
+          ),
           MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
         )
         throw e

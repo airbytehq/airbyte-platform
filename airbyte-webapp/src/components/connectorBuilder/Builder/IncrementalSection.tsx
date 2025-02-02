@@ -28,8 +28,8 @@ import {
   StreamPathFn,
   builderIncrementalSyncToManifest,
   interpolateConfigKey,
-  useBuilderWatch,
 } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME, useGetUniqueKey } from "../useLockedInputs";
 
 interface IncrementalSectionProps {

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.metrics
 
 import io.airbyte.metrics.annotations.Instrument
@@ -14,7 +18,9 @@ import kotlin.time.toJavaDuration
 @Singleton
 @InterceptorBean(Instrument::class)
 @Replaces(MetricClientInstrumentInterceptor::class)
-class CustomMetricPublisherInstrumentInterceptor(private val customMetricPublisher: CustomMetricPublisher) : InstrumentInterceptorBase() {
+class CustomMetricPublisherInstrumentInterceptor(
+  private val customMetricPublisher: CustomMetricPublisher,
+) : InstrumentInterceptorBase() {
   override fun emitStartMetric(
     startMetricName: String,
     tags: Array<MetricAttribute>,

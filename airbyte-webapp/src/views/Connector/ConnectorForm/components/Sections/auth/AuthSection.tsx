@@ -1,17 +1,18 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
+
+import { ConnectorSpecification } from "core/domain/connector";
 import { getSupportRevokingTokensConnectorIds } from "core/domain/connector/constants";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
+import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
+import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
 import { AuthButton } from "./AuthButton";
 import { RevokeButton } from "./RevokeButton";
-import { FlexContainer } from "../../../../../../components/ui/Flex";
-import { Message } from "../../../../../../components/ui/Message";
-import { ConnectorSpecification } from "../../../../../../core/domain/connector";
-import { OAUTH_REDIRECT_URL } from "../../../../../../hooks/services/useConnectorAuth";
-import { useAuthentication } from "../../../useAuthentication";
 import { SectionContainer } from "../SectionContainer";
 
 export const AuthSection: React.FC = () => {
@@ -27,8 +28,8 @@ export const AuthSection: React.FC = () => {
   const supportsRevokingTokens = getSupportRevokingTokensConnectorIds().includes(definitionId);
 
   return (
-    <>
-      <SectionContainer>
+    <SectionContainer>
+      <FlexContainer direction="column" gap="xl">
         <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
           <AuthButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
           {supportsRevokingTokens && hasAuthFieldValues && connectorId && (
@@ -38,10 +39,10 @@ export const AuthSection: React.FC = () => {
             />
           )}
         </FlexContainer>
-      </SectionContainer>
-      {shouldShowRedirectUrlTooltip && (
-        <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
-      )}
-    </>
+        {shouldShowRedirectUrlTooltip && (
+          <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
+        )}
+      </FlexContainer>
+    </SectionContainer>
   );
 };

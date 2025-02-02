@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -18,15 +18,13 @@ object WorkspaceResponseMapper {
    * @param workspaceRead Output of a workspace create/get from config api
    * @return WorkspaceResponse Response object which contains the workspace id
    */
-  fun from(workspaceRead: WorkspaceRead): WorkspaceResponse {
-    return WorkspaceResponse(
+  fun from(workspaceRead: WorkspaceRead): WorkspaceResponse =
+    WorkspaceResponse(
       workspaceId = workspaceRead.workspaceId.toString(),
       name = workspaceRead.name,
       dataResidency =
-        workspaceRead.defaultGeography?.let {
-            defaultGeography ->
+        workspaceRead.defaultGeography?.let { defaultGeography ->
           GeographyEnum.valueOf(defaultGeography.toString().uppercase())
         } ?: GeographyEnum.AUTO,
     )
-  }
 }

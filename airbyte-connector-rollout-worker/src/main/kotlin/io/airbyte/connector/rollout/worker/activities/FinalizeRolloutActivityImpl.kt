@@ -22,7 +22,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : FinalizeRolloutActivity {
+class FinalizeRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : FinalizeRolloutActivity {
   init {
     logger.info { "Initialized FinalizeRolloutActivityImpl" }
   }

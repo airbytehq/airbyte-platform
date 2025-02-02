@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.commons.json.Jsons
@@ -178,17 +182,18 @@ class EncryptionMapperTest {
   fun `testing aes options`() {
     AesMode.entries.forEach { mode ->
       val validConfigCount: Int =
-        AesPadding.entries.map { padding ->
-          // verify that if schema rejects config for which we cannot instantiate a Cipher
-          try {
-            Cipher.getInstance("AES/$mode/$padding")
-            assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
-            return@map 1
-          } catch (e: Exception) {
-            assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
-            return@map 0
-          }
-        }.sum()
+        AesPadding.entries
+          .map { padding ->
+            // verify that if schema rejects config for which we cannot instantiate a Cipher
+            try {
+              Cipher.getInstance("AES/$mode/$padding")
+              assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
+              return@map 1
+            } catch (e: Exception) {
+              assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
+              return@map 0
+            }
+          }.sum()
 
       // Making sure that each mode has at least one valid config
       assertTrue(validConfigCount > 0, "No valid config found for $mode")

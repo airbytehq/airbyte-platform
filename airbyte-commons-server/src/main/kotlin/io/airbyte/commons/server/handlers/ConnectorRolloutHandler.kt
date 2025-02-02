@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
@@ -238,7 +239,8 @@ open class ConnectorRolloutHandler
         )
       }
       val connectorRollout =
-        initializedRollouts.first()
+        initializedRollouts
+          .first()
           .withUpdatedBy(updatedBy)
           .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
           .withInitialRolloutPct(initialRolloutPct?.toLong())
@@ -777,21 +779,19 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)!!, false)
     }
 
-    internal fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {
-      return if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
+    internal fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy =
+      if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
         ConnectorEnumRolloutStrategy.MANUAL
       } else {
         ConnectorEnumRolloutStrategy.OVERRIDDEN
       }
-    }
 
-    internal fun getRolloutStrategyForManualStart(rolloutStrategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy {
-      return if (rolloutStrategy == null || rolloutStrategy == ConnectorRolloutStrategy.MANUAL) {
+    internal fun getRolloutStrategyForManualStart(rolloutStrategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy =
+      if (rolloutStrategy == null || rolloutStrategy == ConnectorRolloutStrategy.MANUAL) {
         ConnectorEnumRolloutStrategy.MANUAL
       } else {
         ConnectorEnumRolloutStrategy.AUTOMATED
       }
-    }
 
     @Transactional("config")
     open fun getActorSelectionInfo(

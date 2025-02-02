@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared
 
 import com.google.common.annotations.VisibleForTesting
@@ -265,29 +269,27 @@ class RolloutActorFinder(
     actorType: ActorType,
     job: Job,
     versionId: UUID,
-  ): Boolean {
-    return if (actorType == ActorType.SOURCE) {
+  ): Boolean =
+    if (actorType == ActorType.SOURCE) {
       job.config.sync.sourceDefinitionVersionId == versionId
     } else {
       job.config.sync.destinationDefinitionVersionId == versionId
     }
-  }
 
   @VisibleForTesting
   fun jobDockerImageIsDefault(
     actorType: ActorType,
     job: Job,
-  ): Boolean {
-    return if (actorType == ActorType.SOURCE) {
+  ): Boolean =
+    if (actorType == ActorType.SOURCE) {
       job.config.sync.sourceDockerImageIsDefault
     } else {
       job.config.sync.destinationDockerImageIsDefault
     }
-  }
 
   @VisibleForTesting
-  fun getActorType(actorDefinitionId: UUID): ActorType {
-    return try {
+  fun getActorType(actorDefinitionId: UUID): ActorType =
+    try {
       sourceService.getStandardSourceDefinition(actorDefinitionId)
       ActorType.SOURCE
     } catch (e: ConfigNotFoundException) {
@@ -301,7 +303,6 @@ class RolloutActorFinder(
         )
       }
     }
-  }
 
   @Trace
   @VisibleForTesting
@@ -311,9 +312,10 @@ class RolloutActorFinder(
     return candidates.filter { candidate ->
       val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
       // Include the candidate if the organization ID is not in the map or if the CustomerTier is not TIER_0 or TIER_1
-      organizationId == null || organizationTiers[organizationId]?.let { tier ->
-        tier != CustomerTier.TIER_0 && tier != CustomerTier.TIER_1
-      } ?: true
+      organizationId == null ||
+        organizationTiers[organizationId]?.let { tier ->
+          tier != CustomerTier.TIER_0 && tier != CustomerTier.TIER_1
+        } ?: true
     }
   }
 
@@ -351,10 +353,11 @@ class RolloutActorFinder(
     }
 
     val filtered =
-      scopedConfigurations.filter {
-        it.value == connectorRollout.releaseCandidateVersionId.toString() &&
-          it.originType == ConfigOriginType.CONNECTOR_ROLLOUT
-      }.map { it.scopeId }
+      scopedConfigurations
+        .filter {
+          it.value == connectorRollout.releaseCandidateVersionId.toString() &&
+            it.originType == ConfigOriginType.CONNECTOR_ROLLOUT
+        }.map { it.scopeId }
 
     logger.info { "getActorsPinnedToReleaseCandidate  connectorRollout.id=${connectorRollout.id} filtered=$filtered" }
     return filtered
@@ -384,16 +387,17 @@ class RolloutActorFinder(
     }
 
     val sortedSyncs =
-      connections.filter { connection ->
-        when (actorType) {
-          ActorType.SOURCE -> connection.sourceId in actorIds
-          ActorType.DESTINATION -> connection.destinationId in actorIds
+      connections
+        .filter { connection ->
+          when (actorType) {
+            ActorType.SOURCE -> connection.sourceId in actorIds
+            ActorType.DESTINATION -> connection.destinationId in actorIds
+          }
+        }.filter { connection ->
+          connection.manual != true
+        }.sortedBy { connection ->
+          getFrequencyInMinutes(connection.schedule)
         }
-      }.filter { connection ->
-        connection.manual != true
-      }.sortedBy { connection ->
-        getFrequencyInMinutes(connection.schedule)
-      }
 
     logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
     for (sync in sortedSyncs) {
@@ -436,14 +440,15 @@ class RolloutActorFinder(
     }
 
     val sortedSyncs =
-      connections.filter { connection ->
-        when (actorType) {
-          ActorType.SOURCE -> connection.sourceId in actorIds
-          ActorType.DESTINATION -> connection.destinationId in actorIds
+      connections
+        .filter { connection ->
+          when (actorType) {
+            ActorType.SOURCE -> connection.sourceId in actorIds
+            ActorType.DESTINATION -> connection.destinationId in actorIds
+          }
+        }.sortedBy { connection ->
+          getFrequencyInMinutes(connection.schedule)
         }
-      }.sortedBy { connection ->
-        getFrequencyInMinutes(connection.schedule)
-      }
 
     logger.info { "Connector rollout sorted actor definition connections: sortedSyncs.size=${sortedSyncs.size}" }
     for (sync in sortedSyncs) {
@@ -453,8 +458,8 @@ class RolloutActorFinder(
   }
 
   @VisibleForTesting
-  fun getFrequencyInMinutes(schedule: Schedule?): Long {
-    return if (schedule?.units == null) {
+  fun getFrequencyInMinutes(schedule: Schedule?): Long =
+    if (schedule?.units == null) {
       Long.MAX_VALUE
     } else {
       when (schedule.timeUnit) {
@@ -466,7 +471,6 @@ class RolloutActorFinder(
         else -> Long.MAX_VALUE
       }
     }
-  }
 
   @Trace
   @VisibleForTesting

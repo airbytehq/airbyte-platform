@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.validation
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -128,8 +132,8 @@ internal class CatalogValidatorTest {
 
   companion object {
     @JvmStatic
-    fun validSizeCatalogMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun validSizeCatalogMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT, 1)),
         Arguments.of(buildCatalog(10, 1000)),
@@ -141,11 +145,10 @@ internal class CatalogValidatorTest {
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT, true)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT, 1, true)),
       )
-    }
 
     @JvmStatic
-    fun tooLargeCatalogMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun tooLargeCatalogMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT + 1)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT + 1, 1)),
         Arguments.of(buildCatalog(10, 1001)),
@@ -155,7 +158,6 @@ internal class CatalogValidatorTest {
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT + 1, true)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT + 1, 1, true)),
       )
-    }
   }
 
   object Fixtures {

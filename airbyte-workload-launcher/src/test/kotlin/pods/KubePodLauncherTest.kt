@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.RetryPolicy
@@ -127,7 +131,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -166,7 +171,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -205,7 +211,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -247,7 +254,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -287,7 +295,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)

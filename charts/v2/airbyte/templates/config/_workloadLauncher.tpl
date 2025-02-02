@@ -124,7 +124,7 @@ Renders the workloadLauncher.images secret name
 {{- if .Values.workloadLauncher.secretName }}
     {{- .Values.workloadLauncher.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

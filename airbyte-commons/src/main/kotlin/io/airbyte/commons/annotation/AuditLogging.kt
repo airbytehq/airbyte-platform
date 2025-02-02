@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.annotation
 
 import io.micronaut.aop.Around
@@ -31,7 +35,9 @@ import io.micronaut.aop.Around
 @Around
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
-annotation class AuditLogging(val provider: String)
+annotation class AuditLogging(
+  val provider: String,
+)
 
 class AuditLoggingProvider {
   companion object {

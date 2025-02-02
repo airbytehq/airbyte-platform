@@ -21,7 +21,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class PauseRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : PauseRolloutActivity {
+class PauseRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : PauseRolloutActivity {
   init {
     logger.info { "Initialized PauseRolloutActivityImpl" }
   }

@@ -57,6 +57,8 @@ class JobServiceDataImpl(
       .toList()
   }
 
+  override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
+
   override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
 
   override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)
@@ -65,9 +67,7 @@ class JobServiceDataImpl(
     scope: String,
     jobId: Long,
     status: JobStatus,
-  ): Job? {
-    return jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
-  }
+  ): Job? = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
 
   private fun buildPageable(
     limit: Int,

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package pods.factories
 
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
@@ -59,9 +63,17 @@ class ReplicationPodFactoryTest {
     val pod = Fixtures.createPodWithDefaults(fac)
     // the pod gets two new volumes: storage and local
     assertEquals(STORAGE_VOLUME_NAME, pod.spec.volumes[4].name)
-    assertEquals(STORAGE_CLAIM_NAME, pod.spec.volumes[4].persistentVolumeClaim.claimName)
+    assertEquals(
+      STORAGE_CLAIM_NAME,
+      pod.spec.volumes[4]
+        .persistentVolumeClaim.claimName,
+    )
     assertEquals(VolumeFactory.LOCAL_VOLUME_NAME, pod.spec.volumes[5].name)
-    assertEquals(VolumeFactory.LOCAL_CLAIM_NAME, pod.spec.volumes[5].persistentVolumeClaim.claimName)
+    assertEquals(
+      VolumeFactory.LOCAL_CLAIM_NAME,
+      pod.spec.volumes[5]
+        .persistentVolumeClaim.claimName,
+    )
 
     val initSpec = pod.spec.initContainers[0]
     val orchSpec = pod.spec.containers[0]
@@ -152,7 +164,8 @@ class ReplicationPodFactoryTest {
     val workloadSecurityContextProvider = WorkloadSecurityContextProvider(rootlessWorkload = true)
     val featureFlagClient = TestClient()
     val resourceRequirements =
-      io.airbyte.config.ResourceRequirements()
+      io.airbyte.config
+        .ResourceRequirements()
         .withCpuLimit("2")
         .withCpuRequest("1")
         .withMemoryLimit("200")
@@ -233,9 +246,21 @@ class ReplicationPodFactoryTest {
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
     ) = factory.create(
-      podName, allLabels, annotations, nodeSelectors, orchImage, sourceImage, destImage, orchResourceReqs,
-      sourceResourceReqs, destResourceReqs, orchRuntimeEnvVars, sourceRuntimeEnvVars, destRuntimeEnvVars,
-      isFileTransfer, workspaceId,
+      podName,
+      allLabels,
+      annotations,
+      nodeSelectors,
+      orchImage,
+      sourceImage,
+      destImage,
+      orchResourceReqs,
+      sourceResourceReqs,
+      destResourceReqs,
+      orchRuntimeEnvVars,
+      sourceRuntimeEnvVars,
+      destRuntimeEnvVars,
+      isFileTransfer,
+      workspaceId,
     )
 
     fun createResetWithDefaults(
@@ -253,8 +278,18 @@ class ReplicationPodFactoryTest {
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
     ) = factory.createReset(
-      podName, allLabels, annotations, nodeSelectors, orchImage, destImage, orchResourceReqs,
-      destResourceReqs, orchRuntimeEnvVars, destRuntimeEnvVars, isFileTransfer, workspaceId,
+      podName,
+      allLabels,
+      annotations,
+      nodeSelectors,
+      orchImage,
+      destImage,
+      orchResourceReqs,
+      destResourceReqs,
+      orchRuntimeEnvVars,
+      destRuntimeEnvVars,
+      isFileTransfer,
+      workspaceId,
     )
   }
 }

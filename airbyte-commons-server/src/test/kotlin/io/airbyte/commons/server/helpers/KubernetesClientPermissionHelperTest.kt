@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.helpers
 
 import io.fabric8.kubernetes.api.model.Node
@@ -34,7 +38,11 @@ class KubernetesClientPermissionHelperTest {
 
     every { mockReviewResponse.status } returns SubjectAccessReviewStatus().apply { allowed = true }
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val mockNodesOperation = mockk<NonNamespaceOperation<Node, NodeList, Resource<Node>>>()
@@ -45,7 +53,13 @@ class KubernetesClientPermissionHelperTest {
     assertNotNull(nodes)
     assertEquals(mockNodesOperation, nodes)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
     verify(exactly = 1) { kubernetesClient.nodes() }
   }
 
@@ -55,7 +69,11 @@ class KubernetesClientPermissionHelperTest {
     every { mockReviewResponse.status } returns SubjectAccessReviewStatus().apply { allowed = false }
 
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val exception =
@@ -65,7 +83,13 @@ class KubernetesClientPermissionHelperTest {
 
     assertEquals("Permission denied: unable to list Kubernetes nodes.", exception.message)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
     verify(exactly = 0) { kubernetesClient.nodes() }
   }
 
@@ -75,7 +99,11 @@ class KubernetesClientPermissionHelperTest {
 
     every { mockReviewResponse.status } returns null
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val exception =
@@ -85,7 +113,13 @@ class KubernetesClientPermissionHelperTest {
 
     assertEquals("Permission denied: unable to list Kubernetes nodes.", exception.message)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
     verify(exactly = 0) { kubernetesClient.nodes() }
   }
 
@@ -95,7 +129,11 @@ class KubernetesClientPermissionHelperTest {
 
     every { mockReviewResponse.status } returns SubjectAccessReviewStatus().apply { allowed = true }
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val allowedToListNodes = kubernetesClientPermissionHelper.javaClass.getDeclaredMethod("allowedToListNodes")
@@ -104,7 +142,13 @@ class KubernetesClientPermissionHelperTest {
 
     assertTrue(result)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
   }
 
   @Test
@@ -113,7 +157,11 @@ class KubernetesClientPermissionHelperTest {
 
     every { mockReviewResponse.status } returns SubjectAccessReviewStatus().apply { allowed = false }
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val allowedToListNodes = kubernetesClientPermissionHelper.javaClass.getDeclaredMethod("allowedToListNodes")
@@ -122,7 +170,13 @@ class KubernetesClientPermissionHelperTest {
 
     assertFalse(result)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
   }
 
   @Test
@@ -131,7 +185,11 @@ class KubernetesClientPermissionHelperTest {
 
     every { mockReviewResponse.status } returns null
     every {
-      kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any())
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
     } returns mockReviewResponse
 
     val allowedToListNodes = kubernetesClientPermissionHelper.javaClass.getDeclaredMethod("allowedToListNodes")
@@ -140,6 +198,12 @@ class KubernetesClientPermissionHelperTest {
 
     assertFalse(result)
 
-    verify(exactly = 1) { kubernetesClient.authorization().v1().selfSubjectAccessReview().create(any()) }
+    verify(exactly = 1) {
+      kubernetesClient
+        .authorization()
+        .v1()
+        .selfSubjectAccessReview()
+        .create(any())
+    }
   }
 }

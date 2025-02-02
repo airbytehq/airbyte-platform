@@ -7,6 +7,8 @@ metadata:
     {{- if .Values.workloadLauncher.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.workloadLauncher.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.workloadLauncher.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.workloadLauncher.replicaCount }}
   selector:

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -51,10 +55,17 @@ class RowFilterMapperConfigSpecGenerator {
         with(Option.FLATTENED_ENUMS)
       }
 
-    configBuilder.forTypesInGeneral()
-      .withTitleResolver { it.type.erasedType.getAnnotation(SchemaTitle::class.java)?.title }
-      .withDescriptionResolver { it.type.erasedType.getAnnotation(SchemaDescription::class.java)?.description }
-      .withTypeAttributeOverride(PolymorphicTypeResolver(objectMapper, configBuilder.build()))
+    configBuilder
+      .forTypesInGeneral()
+      .withTitleResolver {
+        it.type.erasedType
+          .getAnnotation(SchemaTitle::class.java)
+          ?.title
+      }.withDescriptionResolver {
+        it.type.erasedType
+          .getAnnotation(SchemaDescription::class.java)
+          ?.description
+      }.withTypeAttributeOverride(PolymorphicTypeResolver(objectMapper, configBuilder.build()))
 
     setFieldsConfigBuilder(configBuilder, false)
 
@@ -75,7 +86,8 @@ class RowFilterMapperConfigSpecGenerator {
       configBuilder: SchemaGeneratorConfigBuilder,
       shouldHandleConditions: Boolean,
     ) {
-      configBuilder.forFields()
+      configBuilder
+        .forFields()
         .withRequiredCheck { it.getAnnotation(NotNull::class.java) != null }
         .withTitleResolver { it.getAnnotation(SchemaTitle::class.java)?.title }
         .withDescriptionResolver { it.getAnnotation(SchemaDescription::class.java)?.description }

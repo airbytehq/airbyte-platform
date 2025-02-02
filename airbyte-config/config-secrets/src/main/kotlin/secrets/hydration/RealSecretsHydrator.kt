@@ -16,26 +16,21 @@ import jakarta.inject.Singleton
  */
 @Requires(bean = SecretPersistence::class)
 @Singleton
-class RealSecretsHydrator(private val secretPersistence: SecretPersistence) : SecretsHydrator {
-  override fun hydrateFromDefaultSecretPersistence(partialConfig: JsonNode): JsonNode {
-    return SecretsHelpers.combineConfig(partialConfig, secretPersistence)
-  }
+class RealSecretsHydrator(
+  private val secretPersistence: SecretPersistence,
+) : SecretsHydrator {
+  override fun hydrateFromDefaultSecretPersistence(partialConfig: JsonNode): JsonNode = SecretsHelpers.combineConfig(partialConfig, secretPersistence)
 
   override fun hydrateFromRuntimeSecretPersistence(
     partialConfig: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode {
-    return SecretsHelpers.combineConfig(partialConfig, runtimeSecretPersistence)
-  }
+  ): JsonNode = SecretsHelpers.combineConfig(partialConfig, runtimeSecretPersistence)
 
-  override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode {
-    return SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence)
-  }
+  override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode =
+    SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence)
 
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode {
-    return SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, runtimeSecretPersistence)
-  }
+  ): JsonNode = SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, runtimeSecretPersistence)
 }

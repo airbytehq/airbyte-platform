@@ -2,8 +2,8 @@ import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { BuilderField } from "./BuilderField";
-import { useWatchWithPreview } from "../preview";
 import { InjectIntoValue, injectIntoOptions } from "../useBuilderValidationSchema";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface BuilderRequestInjectionProps {
   path: string;

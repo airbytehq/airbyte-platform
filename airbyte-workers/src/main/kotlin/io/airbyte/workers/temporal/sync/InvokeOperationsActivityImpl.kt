@@ -38,9 +38,11 @@ class InvokeOperationsActivityImpl(
     jobRunConfig: JobRunConfig,
   ): WebhookOperationSummary {
     val webhookOperationSummary = WebhookOperationSummary()
-    MdcScope.Builder()
+    MdcScope
+      .Builder()
       .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
-      .build().use { _ ->
+      .build()
+      .use { _ ->
         try {
           logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId))
           logger.info { LineGobbler.formatStartSection(SECTION_NAME) }

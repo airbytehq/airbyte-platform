@@ -70,7 +70,7 @@ interface Tag {
   readonly value: string;
 }
 
-interface TagInputProps {
+export interface TagInputProps {
   name: string;
   fieldValue: string[];
   itemType?: string;

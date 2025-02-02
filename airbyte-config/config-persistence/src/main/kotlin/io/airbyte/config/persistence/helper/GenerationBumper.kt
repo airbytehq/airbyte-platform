@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence.helper
 
 import io.airbyte.config.StreamDescriptor
@@ -9,7 +13,9 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class GenerationBumper(private val streamGenerationRepository: StreamGenerationRepository) {
+class GenerationBumper(
+  private val streamGenerationRepository: StreamGenerationRepository,
+) {
   /**
    * This is increasing the generation of the stream being refreshed.
    * For each stream being refreshed, it fetches the current generation and then create a new entry in the generation
@@ -26,7 +32,8 @@ class GenerationBumper(private val streamGenerationRepository: StreamGenerationR
   ) {
     val streamDescriptors: Set<StreamDescriptor> =
       streamRefreshes
-        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }.toHashSet() + fullRefreshStream
+        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }
+        .toHashSet() + fullRefreshStream
 
     val currentMaxGeneration: List<Generation> = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId)
 

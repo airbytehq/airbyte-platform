@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.metrics
 
 import io.airbyte.metrics.lib.MetricEmittingApp
@@ -78,15 +82,9 @@ enum class WorkloadLauncherMetricMetadata(
   ),
   ;
 
-  override fun getApplication(): MetricEmittingApp {
-    return MetricEmittingApps.WORKLOAD_LAUNCHER
-  }
+  override fun getApplication(): MetricEmittingApp = MetricEmittingApps.WORKLOAD_LAUNCHER
 
-  override fun getMetricName(): String {
-    return metricName
-  }
+  override fun getMetricName(): String = metricName
 
-  override fun getMetricDescription(): String {
-    return description
-  }
+  override fun getMetricDescription(): String = description
 }

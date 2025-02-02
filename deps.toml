@@ -21,7 +21,7 @@ jooq = "3.19.7"
 junit-jupiter = "5.11.3"
 keycloak = "25.0.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
-kotlin-logging = "5.1.0"
+kotlin-logging = "7.0.3"
 kubernetes-client = "7.0.1"
 logback = "1.5.15"
 micronaut = "4.7.4"
@@ -140,9 +140,9 @@ junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" 
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
-kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.9.0" }
+kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.9.10" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "2.1.0" }
 kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }

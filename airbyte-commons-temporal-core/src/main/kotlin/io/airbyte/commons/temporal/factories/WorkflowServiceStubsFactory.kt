@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.factories
 
 import com.uber.m3.tally.RootScopeBuilder
@@ -70,13 +74,12 @@ class WorkflowServiceStubsFactory(
     return WorkflowServiceStubs.newConnectedServiceStubs(options, timeoutOptions.maxTimeToConnect)
   }
 
-  fun createWorkflowServiceStubsOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
-    return if (temporalCloudEnabled) {
+  fun createWorkflowServiceStubsOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions =
+    if (temporalCloudEnabled) {
       createTemporalCloudOptions(timeoutOptions)
     } else {
       createTemporalSelfHostedOptions(timeoutOptions)
     }
-  }
 
   private fun createTemporalCloudOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
     val clientCert: InputStream = ByteArrayInputStream(temporalCloudConfig.clientCert.orEmpty().toByteArray(StandardCharsets.UTF_8))
@@ -91,7 +94,8 @@ class WorkflowServiceStubsFactory(
       }
 
     val optionBuilder =
-      WorkflowServiceStubsOptions.newBuilder()
+      WorkflowServiceStubsOptions
+        .newBuilder()
         .setRpcTimeout(timeoutOptions.rpcTimeout)
         .setRpcLongPollTimeout(timeoutOptions.rpcLongPollTimeout)
         .setRpcQueryTimeout(timeoutOptions.rpcQueryTimeout)
@@ -109,17 +113,20 @@ class WorkflowServiceStubsFactory(
       optionBuilder.setMetricsScope(
         RootScopeBuilder()
           .reporter(reporter)
-          .reportEvery(com.uber.m3.util.Duration.ofSeconds(REPORT_INTERVAL_SECONDS)),
+          .reportEvery(
+            com.uber.m3.util.Duration
+              .ofSeconds(REPORT_INTERVAL_SECONDS),
+          ),
       )
     }
   }
 
-  private fun createTemporalSelfHostedOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
-    return WorkflowServiceStubsOptions.newBuilder()
+  private fun createTemporalSelfHostedOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions =
+    WorkflowServiceStubsOptions
+      .newBuilder()
       .setRpcTimeout(timeoutOptions.rpcTimeout)
       .setRpcLongPollTimeout(timeoutOptions.rpcLongPollTimeout)
       .setRpcQueryTimeout(timeoutOptions.rpcQueryTimeout)
       .setTarget(temporalSelfHostedConfig.host)
       .build()
-  }
 }

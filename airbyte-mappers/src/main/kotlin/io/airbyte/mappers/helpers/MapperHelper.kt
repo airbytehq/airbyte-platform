@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.helpers
 
 import io.airbyte.config.MapperOperationName
@@ -16,8 +20,8 @@ internal const val DEFAULT_HASHING_SUFFIX = "_hashed"
 fun createHashingMapper(
   fieldName: String,
   id: UUID? = null,
-): HashingMapperConfig {
-  return HashingMapperConfig(
+): HashingMapperConfig =
+  HashingMapperConfig(
     id = id,
     name = MapperOperationName.HASHING,
     config =
@@ -27,15 +31,10 @@ fun createHashingMapper(
         DEFAULT_HASHING_SUFFIX,
       ),
   )
-}
 
-fun createHashingMapper(fieldName: String): HashingMapperConfig {
-  return createHashingMapper(fieldName, null)
-}
+fun createHashingMapper(fieldName: String): HashingMapperConfig = createHashingMapper(fieldName, null)
 
 /**
  * Get the name of the field that is being hashed from a hashing mapper.
  */
-fun getHashedFieldName(mapper: HashingMapperConfig): String {
-  return mapper.config.targetField
-}
+fun getHashedFieldName(mapper: HashingMapperConfig): String = mapper.config.targetField

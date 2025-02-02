@@ -188,8 +188,8 @@ internal class StreamStatusCompletionTrackerTest {
   private fun getStreamStatusCompletedMessage(
     name: String,
     namespace: String? = null,
-  ): AirbyteMessage {
-    return AirbyteMessage()
+  ): AirbyteMessage =
+    AirbyteMessage()
       .withType(AirbyteMessage.Type.TRACE)
       .withTrace(
         AirbyteTraceMessage()
@@ -199,11 +199,11 @@ internal class StreamStatusCompletionTrackerTest {
             AirbyteStreamStatusTraceMessage()
               .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
               .withStreamDescriptor(
-                io.airbyte.protocol.models.StreamDescriptor()
+                io.airbyte.protocol.models
+                  .StreamDescriptor()
                   .withName(name)
                   .withNamespace(namespace),
               ),
           ),
       )
-  }
 }

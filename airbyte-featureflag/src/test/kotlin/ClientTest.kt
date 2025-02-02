@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.featureflag
 
 import com.launchdarkly.sdk.LDContext
@@ -327,8 +328,8 @@ class FeatureFlagServiceClientTest {
   private fun mockResponse(
     bodyString: String,
     statusCode: Int = 200,
-  ): Call {
-    return mockk<Call> {
+  ): Call =
+    mockk<Call> {
       every { execute() } returns
         mockk<Response> {
           every { code } returns statusCode
@@ -339,7 +340,6 @@ class FeatureFlagServiceClientTest {
           every { close() } returns Unit
         }
     }
-  }
 }
 
 class LaunchDarklyClientTest {
@@ -583,7 +583,9 @@ class InjectTest {
 @MicronautTest(rebuildContext = true)
 class NonMockBeanTest {
   @Singleton
-  class Dummy(val ffClient: FeatureFlagClient)
+  class Dummy(
+    val ffClient: FeatureFlagClient,
+  )
 
   @Inject
   lateinit var dummy: Dummy
@@ -597,7 +599,9 @@ class NonMockBeanTest {
 @MicronautTest(rebuildContext = true)
 class MockBeanTest {
   @Singleton
-  class Dummy(val ffClient: FeatureFlagClient)
+  class Dummy(
+    val ffClient: FeatureFlagClient,
+  )
 
   @Inject
   lateinit var dummy: Dummy

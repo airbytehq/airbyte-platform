@@ -97,11 +97,11 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private val verifyActivityOptions =
-    defaultActivityOptions.toBuilder()
+    defaultActivityOptions
+      .toBuilder()
       .setHeartbeatTimeout(
         Duration.ofSeconds(Constants.VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS.toLong()),
-      )
-      .setStartToCloseTimeout(
+      ).setStartToCloseTimeout(
         Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
       ).build()
 
@@ -295,9 +295,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     return e.cause?.message?.contains(ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse().type) ?: false
   }
 
-  private fun getCurrentTimeMilli(): Instant {
-    return Instant.ofEpochMilli(Workflow.currentTimeMillis())
-  }
+  private fun getCurrentTimeMilli(): Instant = Instant.ofEpochMilli(Workflow.currentTimeMillis())
 
   private fun doNext(
     decision: Decision,
@@ -388,21 +386,16 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       )
   }
 
-  private fun getOffset(timestamp: Long?): OffsetDateTime? {
-    return if (timestamp == null) {
+  private fun getOffset(timestamp: Long?): OffsetDateTime? =
+    if (timestamp == null) {
       null
     } else {
       Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC)
     }
-  }
 
-  private fun getRolloutState(): ConnectorEnumRolloutState {
-    return connectorRollout?.state ?: ConnectorEnumRolloutState.WORKFLOW_STARTED
-  }
+  private fun getRolloutState(): ConnectorEnumRolloutState = connectorRollout?.state ?: ConnectorEnumRolloutState.WORKFLOW_STARTED
 
-  private fun rolloutStateIsTerminal(): Boolean {
-    return ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
-  }
+  private fun rolloutStateIsTerminal(): Boolean = ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
 
   @VisibleForTesting
   internal fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {

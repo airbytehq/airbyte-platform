@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -19,13 +23,18 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-class EncryptionConfigException(msg: String, cause: Throwable) : MapperException(
-  type = DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG,
-  message = msg,
-  cause = cause,
-)
+class EncryptionConfigException(
+  msg: String,
+  cause: Throwable,
+) : MapperException(
+    type = DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG,
+    message = msg,
+    cause = cause,
+  )
 
-class MissingSecretValueException(msg: String) : IllegalArgumentException(msg)
+class MissingSecretValueException(
+  msg: String,
+) : IllegalArgumentException(msg)
 
 @Singleton
 class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
@@ -86,12 +95,11 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
   private fun encrypt(
     data: ByteArray,
     config: EncryptionConfig,
-  ): String {
-    return when (config) {
+  ): String =
+    when (config) {
       is AesEncryptionConfig -> encryptAES(data, config)
       is RsaEncryptionConfig -> encryptRSA(data, config)
     }
-  }
 
   private fun encryptSample(config: EncryptionConfig) {
     val sampleData = "sample data"
@@ -104,8 +112,8 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     }
   }
 
-  private fun getCipher(config: EncryptionConfig): Cipher {
-    return when (config) {
+  private fun getCipher(config: EncryptionConfig): Cipher =
+    when (config) {
       is AesEncryptionConfig ->
         try {
           Cipher.getInstance("${config.algorithm}/${config.mode}/${config.padding}")
@@ -114,7 +122,6 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
         }
       is RsaEncryptionConfig -> Cipher.getInstance(config.algorithm)
     }
-  }
 
   @OptIn(ExperimentalStdlibApi::class)
   private fun encryptAES(

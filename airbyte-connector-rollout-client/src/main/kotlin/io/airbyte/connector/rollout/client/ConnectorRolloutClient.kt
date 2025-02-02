@@ -38,16 +38,14 @@ class ConnectorRolloutClient
       name: String,
       version: String,
       actorDefinitionId: UUID,
-    ): String {
-      return "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
-    }
+    ): String = "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
 
     private fun <I, T> executeUpdate(
       input: I,
       workflowId: String,
       action: (ConnectorRolloutWorkflow, I) -> T,
-    ): T {
-      return try {
+    ): T =
+      try {
         val workflowStub = workflowClient.getClient().newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowId)
         logger.info { "Executing workflow action for $workflowId" }
         action(workflowStub, input)
@@ -55,7 +53,6 @@ class ConnectorRolloutClient
         logger.error { "Error executing workflow action: $e" }
         throw e
       }
-    }
 
     fun startRollout(input: ConnectorRolloutWorkflowInput) {
       logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
@@ -67,7 +64,8 @@ class ConnectorRolloutClient
       val workflowStub =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
-          WorkflowOptions.newBuilder()
+          WorkflowOptions
+            .newBuilder()
             .setWorkflowId(workflowId)
             .setTaskQueue(Constants.TASK_QUEUE)
             .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_FAIL)

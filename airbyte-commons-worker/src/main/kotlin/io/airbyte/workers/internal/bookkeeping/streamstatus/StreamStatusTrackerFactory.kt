@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.workers.context.ReplicationContext
@@ -17,12 +21,11 @@ class StreamStatusTrackerFactory(
   private val dataExtractor: AirbyteMessageDataExtractor,
   private val eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>,
 ) {
-  fun create(ctx: ReplicationContext): StreamStatusTracker {
-    return StreamStatusTracker(
+  fun create(ctx: ReplicationContext): StreamStatusTracker =
+    StreamStatusTracker(
       dataExtractor,
       StreamStatusStateStore(),
       eventPublisher,
       ctx,
     )
-  }
 }

@@ -43,8 +43,8 @@ fun ILoggingEvent.toLogEvent(): LogEvent {
  * If the [ILoggingEvent] contains specific keys in the MDC property map, those values are used for caller information.
  * Otherwise, values returned by the [ILoggingEvent.getCallerData] and [ILoggingEvent.getThreadName] methods are used.
  */
-fun ILoggingEvent.getCaller(): LogCaller {
-  return LogCaller(
+fun ILoggingEvent.getCaller(): LogCaller =
+  LogCaller(
     className =
       this.mdcPropertyMap[CALLER_QUALIFIED_CLASS_NAME_PATTERN]
         ?: if (this.callerData.isNotEmpty()) this.callerData.first().className else null,
@@ -56,12 +56,16 @@ fun ILoggingEvent.getCaller(): LogCaller {
         ?: if (this.callerData.isNotEmpty()) this.callerData.first().lineNumber else null,
     threadName = this.mdcPropertyMap[CALLER_THREAD_NAME_PATTERN] ?: this.threadName,
   )
-}
 
 /**
  * Represents the calling thread information for the log event.
  */
-data class LogCaller(val className: String? = null, val methodName: String? = null, val lineNumber: Int? = null, val threadName: String? = null)
+data class LogCaller(
+  val className: String? = null,
+  val methodName: String? = null,
+  val lineNumber: Int? = null,
+  val threadName: String? = null,
+)
 
 /**
  * Represents a structured log event.
@@ -78,7 +82,10 @@ data class LogEvent(
 /**
  * Represents a collection of structured log events.
  */
-data class LogEvents(val events: List<LogEvent>, val version: String = LOG_EVENT_SCHEMA_VERSION)
+data class LogEvents(
+  val events: List<LogEvent>,
+  val version: String = LOG_EVENT_SCHEMA_VERSION,
+)
 
 /**
  * Custom Jackson [StdDeserializer] to reduce the amount of characters written for [StackTraceElement] objects.

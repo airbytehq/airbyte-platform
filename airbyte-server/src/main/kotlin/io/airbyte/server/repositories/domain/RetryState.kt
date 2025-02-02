@@ -67,9 +67,7 @@ class RetryState(
     return thisTotalPartialFailures == otherTotalPartialFailures
   }
 
-  private fun canEqual(other: Any?): Boolean {
-    return other is RetryState
-  }
+  private fun canEqual(other: Any?): Boolean = other is RetryState
 
   override fun hashCode(): Int {
     val prime = 59
@@ -145,29 +143,29 @@ class RetryState(
       return this
     }
 
-    fun build(): RetryState {
-      return RetryState(
-        id = this.id, connectionId = this.connectionId, jobId = this.jobId, createdAt = this.createdAt, updatedAt = this.updatedAt,
+    fun build(): RetryState =
+      RetryState(
+        id = this.id,
+        connectionId = this.connectionId,
+        jobId = this.jobId,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt,
         successiveCompleteFailures = this.successiveCompleteFailures,
         totalCompleteFailures = this.totalCompleteFailures,
         successivePartialFailures = this.successivePartialFailures,
         totalPartialFailures = this.totalPartialFailures,
       )
-    }
 
-    override fun toString(): String {
-      return (
+    override fun toString(): String =
+      (
         "RetryState.RetryStateBuilder(id=" + this.id + ", connectionId=" + this.connectionId + ", jobId=" + this.jobId + ", createdAt=" +
           this.createdAt + ", updatedAt=" + this.updatedAt + ", successiveCompleteFailures=" + this.successiveCompleteFailures +
           ", totalCompleteFailures=" + this.totalCompleteFailures + ", successivePartialFailures=" + this.successivePartialFailures +
           ", totalPartialFailures=" + this.totalPartialFailures + ")"
       )
-    }
   }
 
   companion object {
-    fun builder(): RetryStateBuilder {
-      return RetryStateBuilder()
-    }
+    fun builder(): RetryStateBuilder = RetryStateBuilder()
   }
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.pod
 
 import io.airbyte.workers.pod.Metadata.CHECK_JOB
@@ -25,62 +29,56 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class PodLabeler(private val podNetworkSecurityLabeler: PodNetworkSecurityLabeler) {
-  fun getSourceLabels(): Map<String, String> {
-    return mapOf(
+class PodLabeler(
+  private val podNetworkSecurityLabeler: PodNetworkSecurityLabeler,
+) {
+  fun getSourceLabels(): Map<String, String> =
+    mapOf(
       SYNC_STEP_KEY to READ_STEP,
     )
-  }
 
-  fun getDestinationLabels(): Map<String, String> {
-    return mapOf(
+  fun getDestinationLabels(): Map<String, String> =
+    mapOf(
       SYNC_STEP_KEY to WRITE_STEP,
     )
-  }
 
-  fun getReplicationOrchestratorLabels(orchestratorImageName: String): Map<String, String> {
-    return getOrchestratorImageLabels(orchestratorImageName) +
+  fun getReplicationOrchestratorLabels(orchestratorImageName: String): Map<String, String> =
+    getOrchestratorImageLabels(orchestratorImageName) +
       mapOf(
         JOB_TYPE_KEY to SYNC_JOB,
         SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
       )
-  }
 
   fun getReplicationLabels(
     orchestratorImageName: String,
     sourceImageName: String,
     destImageName: String,
-  ): Map<String, String> {
-    return getReplicationImageLabels(orchestratorImageName, sourceImageName, destImageName) +
+  ): Map<String, String> =
+    getReplicationImageLabels(orchestratorImageName, sourceImageName, destImageName) +
       mapOf(
         JOB_TYPE_KEY to SYNC_JOB,
         SYNC_STEP_KEY to REPLICATION_STEP,
       )
-  }
 
-  fun getCheckLabels(): Map<String, String> {
-    return mapOf(
+  fun getCheckLabels(): Map<String, String> =
+    mapOf(
       JOB_TYPE_KEY to CHECK_JOB,
     )
-  }
 
-  fun getDiscoverLabels(): Map<String, String> {
-    return mapOf(
+  fun getDiscoverLabels(): Map<String, String> =
+    mapOf(
       JOB_TYPE_KEY to DISCOVER_JOB,
     )
-  }
 
-  fun getSpecLabels(): Map<String, String> {
-    return mapOf(
+  fun getSpecLabels(): Map<String, String> =
+    mapOf(
       JOB_TYPE_KEY to SPEC_JOB,
     )
-  }
 
-  fun getAutoIdLabels(autoId: UUID): Map<String, String> {
-    return mapOf(
+  fun getAutoIdLabels(autoId: UUID): Map<String, String> =
+    mapOf(
       AUTO_ID to autoId.toString(),
     )
-  }
 
   fun getWorkloadLabels(workloadId: String?): Map<String, String> {
     if (workloadId == null) {
@@ -102,11 +100,10 @@ class PodLabeler(private val podNetworkSecurityLabeler: PodNetworkSecurityLabele
     )
   }
 
-  fun getPodSweeperLabels(): Map<String, String> {
-    return mapOf(
+  fun getPodSweeperLabels(): Map<String, String> =
+    mapOf(
       SWEEPER_LABEL_KEY to SWEEPER_LABEL_VALUE,
     )
-  }
 
   fun getSharedLabels(
     workloadId: String?,
@@ -115,14 +112,13 @@ class PodLabeler(private val podNetworkSecurityLabeler: PodNetworkSecurityLabele
     autoId: UUID,
     workspaceId: UUID?,
     networkSecurityTokens: List<String>,
-  ): Map<String, String> {
-    return passThroughLabels +
+  ): Map<String, String> =
+    passThroughLabels +
       getMutexLabels(mutexKey) +
       getWorkloadLabels(workloadId) +
       getAutoIdLabels(autoId) +
       getPodSweeperLabels() +
       podNetworkSecurityLabeler.getLabels(workspaceId, networkSecurityTokens)
-  }
 
   fun getReplicationImageLabels(
     orchestratorImageName: String,

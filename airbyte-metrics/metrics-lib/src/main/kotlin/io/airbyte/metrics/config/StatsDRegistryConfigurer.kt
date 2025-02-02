@@ -45,9 +45,7 @@ class StatsDRegistryConfigurer :
     }
   }
 
-  override fun getType(): Class<StatsdMeterRegistry> {
-    return StatsdMeterRegistry::class.java
-  }
+  override fun getType(): Class<StatsdMeterRegistry> = StatsdMeterRegistry::class.java
 
   /**
    * Safely adds the value associated with the provided environment variable if it exists and is not

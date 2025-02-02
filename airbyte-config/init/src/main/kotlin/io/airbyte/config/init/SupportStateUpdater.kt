@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
@@ -50,7 +51,11 @@ class SupportStateUpdater(
     private val log = LoggerFactory.getLogger(SupportStateUpdater::class.java)
   }
 
-  data class SupportStateUpdate(val unsupportedVersionIds: List<UUID>, val deprecatedVersionIds: List<UUID>, val supportedVersionIds: List<UUID>) {
+  data class SupportStateUpdate(
+    val unsupportedVersionIds: List<UUID>,
+    val deprecatedVersionIds: List<UUID>,
+    val supportedVersionIds: List<UUID>,
+  ) {
     companion object {
       /**
        * Returns a new SupportStateUpdate that is the result of merging two given SupportStateUpdates.
@@ -62,16 +67,21 @@ class SupportStateUpdater(
       fun merge(
         a: SupportStateUpdate,
         b: SupportStateUpdate,
-      ): SupportStateUpdate {
-        return SupportStateUpdate(
-          Stream.of(a.unsupportedVersionIds, b.unsupportedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+      ): SupportStateUpdate =
+        SupportStateUpdate(
+          Stream
+            .of(a.unsupportedVersionIds, b.unsupportedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
-          Stream.of(a.deprecatedVersionIds, b.deprecatedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+          Stream
+            .of(a.deprecatedVersionIds, b.deprecatedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
-          Stream.of(a.supportedVersionIds, b.supportedVersionIds).flatMap { obj: List<UUID> -> obj.stream() }
+          Stream
+            .of(a.supportedVersionIds, b.supportedVersionIds)
+            .flatMap { obj: List<UUID> -> obj.stream() }
             .toList(),
         )
-      }
     }
   }
 
@@ -107,14 +117,16 @@ class SupportStateUpdater(
     // Latest stale breaking change is the most recent breaking change for which the upgrade deadline
     // has passed (as of the reference date).
     val latestStaleBreakingChange =
-      applicableBreakingChanges.stream()
+      applicableBreakingChanges
+        .stream()
         .filter { breakingChange: ActorDefinitionBreakingChange -> LocalDate.parse(breakingChange.upgradeDeadline).isBefore(referenceDate) }
         .max(Comparator.comparing { obj: ActorDefinitionBreakingChange -> obj.upgradeDeadline })
 
     // Latest future breaking change is the most recent breaking change for which the upgrade deadline
     // is still upcoming (as of the reference date).
     val latestFutureBreakingChange =
-      applicableBreakingChanges.stream()
+      applicableBreakingChanges
+        .stream()
         .filter { breakingChange: ActorDefinitionBreakingChange -> LocalDate.parse(breakingChange.upgradeDeadline).isAfter(referenceDate) }
         .max(Comparator.comparing { obj: ActorDefinitionBreakingChange -> obj.upgradeDeadline })
     log.info(
@@ -374,13 +386,13 @@ class SupportStateUpdater(
   private fun getVersionTag(
     actorDefinitionVersions: List<ActorDefinitionVersion>,
     versionId: UUID,
-  ): Version {
-    return actorDefinitionVersions.stream()
+  ): Version =
+    actorDefinitionVersions
+      .stream()
       .filter { actorDefinitionVersion: ActorDefinitionVersion -> actorDefinitionVersion.versionId == versionId }
       .findFirst()
       .map { actorDefinitionVersion: ActorDefinitionVersion -> Version(actorDefinitionVersion.dockerImageTag) }
       .orElseThrow()
-  }
 
   private fun shouldNotifyBreakingChanges(): Boolean {
     // we only want to notify about these on Cloud
@@ -400,9 +412,15 @@ class SupportStateUpdater(
     supportStateUpdate: SupportStateUpdate,
   ): List<UUID> {
     val previouslySupportedVersionIds =
-      versionsBeforeUpdate.stream().filter { v: ActorDefinitionVersion -> v.supportState == ActorDefinitionVersion.SupportState.SUPPORTED }
-        .map { obj: ActorDefinitionVersion -> obj.versionId }.toList()
-    return supportStateUpdate.deprecatedVersionIds.stream().filter { o: UUID -> previouslySupportedVersionIds.contains(o) }.toList()
+      versionsBeforeUpdate
+        .stream()
+        .filter { v: ActorDefinitionVersion -> v.supportState == ActorDefinitionVersion.SupportState.SUPPORTED }
+        .map { obj: ActorDefinitionVersion -> obj.versionId }
+        .toList()
+    return supportStateUpdate.deprecatedVersionIds
+      .stream()
+      .filter { o: UUID -> previouslySupportedVersionIds.contains(o) }
+      .toList()
   }
 
   /**

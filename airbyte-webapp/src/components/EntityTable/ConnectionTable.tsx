@@ -8,7 +8,6 @@ import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useExperiment } from "hooks/services/Experiment";
-import { SelectConnectionTags } from "pages/connections/AllConnectionsPage/ConnectionTags/SelectConnectionTags";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionStatus } from "./components/ConnectionStatus";
@@ -18,6 +17,7 @@ import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSync } from "./components/LastSync";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
+import { TagsCell } from "./components/TagsCell";
 import styles from "./ConnectionTable.module.scss";
 import { ConnectionTableDataItem } from "./types";
 
@@ -108,6 +108,18 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         },
         cell: FrequencyCell,
       }),
+      ...(isConnectionTagsEnabled
+        ? [
+            columnHelper.accessor("tags", {
+              header: () => <FormattedMessage id="connection.tags.title" />,
+              enableSorting: true,
+              meta: {
+                noPadding: true,
+              },
+              cell: TagsCell,
+            }),
+          ]
+        : []),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
         cell: LastSyncCell,
@@ -117,33 +129,6 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         },
         sortUndefined: 1,
       }),
-      ...(isConnectionTagsEnabled
-        ? /**
-           * base components for tags are still a WIP, but must be implemented somewhere
-           * to avoid the "unused code" error
-           */
-          [
-            columnHelper.display({
-              id: "tags",
-              header: () => <FormattedMessage id="connection.tags.title" />,
-              cell: () => (
-                <SelectConnectionTags
-                  selectedTags={[]}
-                  availableTags={[]}
-                  createTag={(name: string, color: string) => {
-                    console.log(name, color);
-                  }}
-                  selectTag={(id: string) => {
-                    console.log(id);
-                  }}
-                  deselectTag={(id: string) => {
-                    console.log(id);
-                  }}
-                />
-              ),
-            }),
-          ]
-        : []),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
         meta: {

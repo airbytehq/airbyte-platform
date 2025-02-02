@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.metrics
 
 import io.airbyte.metrics.lib.MetricAttribute
@@ -37,7 +41,6 @@ class CustomMetricPublisher(
     maybeMeterRegistry?.gauge(workloadLauncherMetricMetadata.metricName, toTags(*attributes), stateObject, valueFunction)
   }
 
-  private fun toTags(vararg attributes: MetricAttribute): List<Tag> {
-    return Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
-  }
+  private fun toTags(vararg attributes: MetricAttribute): List<Tag> =
+    Stream.of(*attributes).map { a: MetricAttribute -> Tag.of(a.key, a.value) }.collect(Collectors.toList())
 }

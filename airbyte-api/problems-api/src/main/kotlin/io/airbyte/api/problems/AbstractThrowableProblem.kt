@@ -4,6 +4,8 @@
 
 package io.airbyte.api.problems
 
-abstract class AbstractThrowableProblem(val problem: ProblemResponse) : RuntimeException(
-  problem.detail,
-)
+abstract class AbstractThrowableProblem(
+  val problem: ProblemResponse,
+) : RuntimeException(
+    problem.detail,
+  )
