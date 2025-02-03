@@ -65,7 +65,7 @@ spec:
             value: "config/dynamicconfig/development.yaml"
 
           {{- include "airbyte.temporal.database.envs" . | nindent 10 }}
-          
+
         {{- end }}
 
         {{- if eq .Values.global.database.type "external" }}
