@@ -1,5 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import { PageContainer } from "components/PageContainer";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -34,6 +35,7 @@ const ConnectionMappingsPageContent = () => {
   const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+
   const handleValidations = async () => {
     const validations = await Promise.allSettled(
       Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
@@ -73,6 +75,7 @@ const ConnectionMappingsPageContent = () => {
             <Heading as="h3" size="sm">
               <FormattedMessage id="connections.mappings.title" />
             </Heading>
+            <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
             {showSubmissionButtons && (
               <FlexContainer>
                 <Button
