@@ -1,11 +1,13 @@
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.pnpm.task.PnpmTask
 import groovy.json.JsonSlurper
+import io.airbyte.gradle.plugins.TASK_DOCKER_BUILD
+import io.airbyte.gradle.tasks.DockerBuildxTask
 import java.io.FileReader
 
 plugins {
     id("base")
-    id("io.airbyte.gradle.docker")
+    id("io.airbyte.gradle.docker") apply false
     id("io.airbyte.gradle.kube-reload")
     alias(libs.plugins.node.gradle)
 }
@@ -20,7 +22,7 @@ ext {
 fun parseIgnoreFile(f: File): List<String> {
     val ignores = mutableListOf<String>()
     f.forEachLine { line ->
-        //ignore comments and empty lines
+        // ignore comments and empty lines
         if (!line.startsWith('#') && line.isNotEmpty()) {
             ignores.add(line)
         }
@@ -57,10 +59,6 @@ configure<NodeExtension> {
 }
 
 airbyte {
-    docker {
-        imageName = "webapp"
-    }
-
     kubeReload {
         deployment = "ab-webapp"
         container = "airbyte-webapp-container"
@@ -90,28 +88,34 @@ val allFiles = fileTree(".") {
     exclude(parseIgnoreFile(file("./src/core/api/types/.gitignore")))
 }
 
-tasks.register<PnpmTask>("pnpmBuild") {
-    dependsOn(tasks.named("pnpmInstall"))
+val cloudEnv = System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: ""
 
-    // todo (cgardens) - this isn't great because this version is used for cloud as well (even though it's pulled from the oss project).
-    environment.put("VERSION", (ext["ossRootProject"] as Project).ext["webapp_version"] as String)
+// todo (cgardens) - this isn't great because this version is used for cloud as well
+//  (even though it's pulled from the oss project).
+var webappVersion = (ext["ossRootProject"] as Project).ext["webapp_version"] as String
+
+tasks.register<PnpmTask>("pnpmBuild") {
+    dependsOn("pnpmInstall")
+
+    environment.put("VERSION", webappVersion)
 
     // Pass the WEBAPP_ENV_PATH environment variable to the Vite build process
- System.getenv("WEBAPP_ENV_PATH")?.also {
+    System.getenv("WEBAPP_ENV_PATH")?.also {
         environment.put("WEBAPP_ENV_PATH", it)
         inputs.file(it)
     }
     args = listOf("build")
 
-    // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task, since it changes for which env we're building the webapp
-    inputs.property("cloudEnv", System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: "")
+    // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task,
+    // since it changes for which env we're building the webapp
+    inputs.property("cloudEnv", cloudEnv)
     inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir(project.ext.get("appBuildDir") as String)
 }
 
 tasks.register<PnpmTask>("test") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
     
     args = listOf("run", "test:ci")
     inputs.files(allFiles, outsideWebappDependencies)
@@ -124,7 +128,7 @@ tasks.register<PnpmTask>("test") {
 }
 
 tasks.register<PnpmTask>("cypress") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     /*
     If the cypressWebappKey property has been set from the outside via the workflow file
@@ -145,9 +149,8 @@ tasks.register<PnpmTask>("cypress") {
     outputs.upToDateWhen { false }
 }
 
-
 tasks.register<PnpmTask>("cypressCloud") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
     args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
@@ -164,7 +167,7 @@ tasks.register<PnpmTask>("cypressCloud") {
 }
 
 tasks.register<PnpmTask>("licenseCheck") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     args = listOf("run", "license-check")
 
@@ -176,7 +179,7 @@ tasks.register<PnpmTask>("licenseCheck") {
 }
 
 tasks.register<PnpmTask>("validateLock") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     args = listOf("run", "validate-lock")
 
@@ -186,7 +189,7 @@ tasks.register<PnpmTask>("validateLock") {
 }
 
 tasks.register<PnpmTask>("validateLinks") {
-   dependsOn(tasks.named("pnpmInstall"))
+   dependsOn("pnpmInstall")
 
    args = listOf("run", "validate-links")
 
@@ -198,7 +201,7 @@ tasks.register<PnpmTask>("validateLinks") {
 }
 
 tasks.register<PnpmTask>("unusedCode") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     args = listOf("run", "unused-code")
 
@@ -208,7 +211,7 @@ tasks.register<PnpmTask>("unusedCode") {
 }
 
 tasks.register<PnpmTask>("prettier") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     args = listOf("run", "prettier:ci")
 
@@ -218,7 +221,7 @@ tasks.register<PnpmTask>("prettier") {
 }
 
 tasks.register<PnpmTask>("buildStorybook") {
-    dependsOn(tasks.named("pnpmInstall"))
+    dependsOn("pnpmInstall")
 
     args = listOf("run", "build:storybook")
 
@@ -232,7 +235,7 @@ tasks.register<PnpmTask>("buildStorybook") {
 }
 
 tasks.register<Copy>("copyBuildOutput") {
-    dependsOn(tasks.named("pnpmBuild"))
+    dependsOn("pnpmBuild")
 
     from("${project.projectDir}/${project.ext.get("appBuildDir")}")
     into("build/airbyte/docker/bin/build")
@@ -245,23 +248,29 @@ tasks.register<Copy>("copyNginx") {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("prettier"), tasks.named("test"))
+    dependsOn("licenseCheck", "validateLock", "unusedCode", "prettier", "test")
 }
 
 // Some check tasks only should be run on CI, thus a separate ciCheck task
 tasks.register("ciCheck") {
-    dependsOn(tasks.named("check"), tasks.named("validateLinks"))
+    dependsOn("check", "validateLinks")
 }
 
 tasks.named("build") {
-    dependsOn(tasks.named("buildStorybook"))
+    dependsOn("buildStorybook")
 }
 
-tasks.named("dockerCopyDistribution") {
-    dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+tasks.register<DockerBuildxTask>(TASK_DOCKER_BUILD) {
+    dependsOn("copyNginx", "copyBuildOutput")
+    imageName = "webapp"
+
+    if (cloudEnv.isNotEmpty()) {
+        buildArgs.put("NGINX_CONFIG", "bin/nginx/cloud.conf.template")
+        val cloudVersion = project(":cloud").ext["webapp_version"] as String
+        tag = if (cloudEnv == "test") "test" else "cloud-$cloudEnv-$cloudVersion"
+    }
 }
 
-// Include some cloud-specific tasks only in the airbyte-platform-internal environment
-if (file("${project.projectDir}/../../cloud/cloud-webapp/cloud-tasks.gradle").exists()) {
-    apply(from = "${project.projectDir}/../../cloud/cloud-webapp/cloud-tasks.gradle")
+tasks.named("assemble").configure {
+    dependsOn(TASK_DOCKER_BUILD)
 }
