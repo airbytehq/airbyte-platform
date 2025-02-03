@@ -24,6 +24,7 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Clock
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
@@ -37,6 +38,7 @@ import kotlin.time.toJavaDuration
  * @param unsuccessfulTtl If non-null, failed/unknown pods older than now - unsuccessfulTtl will be deleted
  */
 private val logger = KotlinLogging.logger {}
+private const val DELETE_TIMEOUT_MINUTES = 1L
 
 @Singleton
 class PodSweeper(
@@ -155,11 +157,27 @@ class PodSweeper(
       it.name?.let { name ->
         logger.info { "Deleting pod [$name]. Reason: $reason" }
         runKubeCommand {
-          kubernetesClient
-            .pods()
-            .inNamespace(namespace)
-            .resource(pod)
-            .delete()
+          try {
+            kubernetesClient
+              .pods()
+              .inNamespace(namespace)
+              .resource(pod)
+              .withTimeout(DELETE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+              .delete()
+          } catch (e: Exception) {
+            // If we time out (or otherwise fail), force-delete immediately
+            logger.warn(e) {
+              "Timed out or error encountered while deleting pod [$name] in namespace [$namespace]. " +
+                "Forcing immediate deletion with gracePeriod=0."
+            }
+
+            kubernetesClient
+              .pods()
+              .inNamespace(namespace)
+              .resource(pod)
+              .withGracePeriod(0)
+              .delete()
+          }
         }
         metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, 1, MetricAttribute("phase", phase))
       }
