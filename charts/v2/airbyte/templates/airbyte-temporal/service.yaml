@@ -11,6 +11,11 @@ spec:
   - port: {{ .Values.temporal.service.port }}
     protocol: TCP
     targetPort: 7233
+    name: temporal
+  - port: {{ .Values.temporal.service.metricsPort }}
+    name: metrics
+    targetPort: 9090
+    protocol: TCP
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
     {{- if .Values.temporal.extraSelectorLabels }}

@@ -83,7 +83,11 @@ spec:
         {{- end }}
         {{- end }}
         ports:
-        - containerPort: 7233
+        - name: temporal  # Added name for the main temporal port
+          containerPort: 7233
+        # Add metrics port
+        - name: metrics
+          containerPort: 9090
         {{- if .Values.temporal.containerSecurityContext }}
         securityContext: {{- toYaml .Values.temporal.containerSecurityContext | nindent 10 }}
         {{- end }}

@@ -1,0 +1,65 @@
+global:
+  image:
+    tag: "1.4.0"
+
+  env_vars:
+    DD_SERVICE: "airbyte"
+    DD_VERSION: "1.4.0"
+    PUBLISH_METRICS: true
+
+  logging:
+    level: debug
+    httpAccessLogsEnabled: true
+
+  workloads:
+    namespace: "airbyte-jobs"
+
+  metrics:
+    client: "datadog"
+
+    micrometer:
+      enabled: true
+      statsdFlavor: "datadog"
+
+    statsd:
+      host: "statsd-prometheus-statsd-exporter.monitoring"
+      port: "9125"
+
+  datadog:
+    enabled: true
+    env: dev
+    traceAgentPort: 9125
+    agentHost: "statsd-prometheus-statsd-exporter.monitoring"
+
+    statsd:
+      port: 9125
+      host: "statsd-prometheus-statsd-exporter.monitoring"
+
+    integrations:
+      dbm:
+        enabled: true
+        propagationMode: "full"
+      grpc:
+        enabled: true
+        clientEnabled: true
+        serverEnabled: true
+      googleHttpClient:
+        enabled: true
+      httpUrlConnection:
+        enabled: true
+      urlConnection:
+        enabled: true
+      netty:
+        enabled: true
+      netty41:
+        enabled: true
+
+metrics:
+  enabled: true
+
+temporal:
+  enabled: true
+  service:
+    metricsPort: 9090
+  prometheus:
+    endpoint: "0.0.0.0:9090"
