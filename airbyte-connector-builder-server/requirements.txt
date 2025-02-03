@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.30.0
+airbyte-cdk==6.32.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
@@ -27,7 +27,7 @@ cachetools==5.5.1
     # via airbyte-cdk
 cattrs==24.1.2
     # via requests-cache
-certifi==2024.12.14
+certifi==2025.1.31
     # via
     #   httpcore
     #   httpx
@@ -176,7 +176,7 @@ urllib3==2.3.0
     #   requests-cache
 wcmatch==10.0
     # via airbyte-cdk
-whenever==0.6.16
+whenever==0.6.17
     # via airbyte-cdk
 xmltodict==0.14.2
     # via airbyte-cdk
