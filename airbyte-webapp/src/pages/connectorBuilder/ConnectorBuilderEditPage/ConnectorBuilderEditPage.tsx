@@ -32,6 +32,7 @@ import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
+    projectId,
     initialFormValues,
     failedInitialFormValueConversion,
     initialYaml,
@@ -40,9 +41,9 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
-  const { storedMode } = useConnectorBuilderLocalStorage();
+  const { getStoredMode } = useConnectorBuilderLocalStorage();
   const values = {
-    mode: failedInitialFormValueConversion ? "yaml" : storedMode,
+    mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
     name,

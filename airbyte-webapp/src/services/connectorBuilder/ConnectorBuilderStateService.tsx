@@ -317,8 +317,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   }, []);
 
   useEffect(() => {
-    setStoredMode(mode);
-  }, [mode, setStoredMode]);
+    setStoredMode(projectId, mode);
+  }, [mode, projectId, setStoredMode]);
 
   const formValues = useBuilderWatch("formValues");
   const openNoUiValueModal = useNoUiValueModal();
