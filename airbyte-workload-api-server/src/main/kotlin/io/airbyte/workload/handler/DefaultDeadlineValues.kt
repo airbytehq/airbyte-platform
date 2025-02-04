@@ -11,8 +11,8 @@ import java.time.OffsetDateTime
 @Singleton
 class DefaultDeadlineValues {
   companion object {
-    private val MAX_CREATE_TO_CLAIMED_INTERVAL = Duration.ofHours(2)
-    private val MAX_CLAIMED_TO_LAUNCHED_INTERVAL = Duration.ofHours(1)
+    private val MAX_CREATE_TO_CLAIMED_INTERVAL = Duration.ofMinutes(30)
+    private val MAX_CLAIMED_TO_LAUNCHED_INTERVAL = Duration.ofMinutes(30)
     private val MAX_DEFAULT_INTERVAL = Duration.ofMinutes(10)
   }
 
