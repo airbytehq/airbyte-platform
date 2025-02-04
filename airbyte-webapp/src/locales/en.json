@@ -1187,6 +1187,7 @@
   "settings.organization.billing.invoices": "Invoices",
   "settings.organization.billing.invoices.viewAll": "View all",
   "settings.organization.billing.invoices.viewInvoice": "View invoice",
+  "settings.organization.billing.invoices.payNow": "Pay now",
   "settings.organization.billing.invoices.noInvoicesYet": "You don't have any invoices yet.",
   "settings.organization.billing.invoicesError": "Error loading invoices",
   "settings.organization.billing.customerPortalURLFailure": "Failed to load the customer portal.",
