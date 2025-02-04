@@ -17,6 +17,7 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.Application;
 import io.airbyte.data.services.ApplicationService;
+import io.airbyte.micronaut.annotations.RequestTimeout;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.annotation.Body;
@@ -52,6 +53,7 @@ public class ApplicationsController implements ApplicationsApi {
   @Override
   @Secured(IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @RequestTimeout(timeout = "PT1S")
   public AccessToken applicationTokenRequest(@Body ApplicationTokenRequest applicationTokenRequest) {
     final var token = applicationService.getToken(
         applicationTokenRequest.getClientId(),

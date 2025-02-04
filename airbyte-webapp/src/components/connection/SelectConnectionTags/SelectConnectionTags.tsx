@@ -27,7 +27,7 @@ export interface SelectConnectionTagsProps {
   onClose?: () => void;
 }
 
-const THEMED_HEX_OPTIONS = [
+export const THEMED_HEX_OPTIONS = [
   "FBECB1",
   "FEC9BE",
   "FFE5E9",

@@ -9,6 +9,7 @@
   border-radius: variables.$border-radius-2xs;
   cursor: default;
   white-space: nowrap;
+  width: fit-content;
 
   &--fallback {
     background-color: colors.$grey-100;

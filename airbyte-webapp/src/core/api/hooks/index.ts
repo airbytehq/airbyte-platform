@@ -30,7 +30,7 @@ export * from "./security";
 export * from "./sources";
 export * from "./sourceDefinitions";
 export * from "./streams";
-export * from "./permissions";
+export * from "./tags";
 export * from "./upgradeConnectorVersion";
 export * from "./userInvitations";
 export * from "./users";
