@@ -93,7 +93,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     // initialize the state as undefined
     const uiState: UIStreamState = {
       streamName: streamItem.streamName,
-      streamNameWithPrefix: `${prefix}${streamItem.streamName}`,
+      streamNameWithPrefix: `${prefix ? prefix : ""}${streamItem.streamName}`,
       streamNamespace: streamItem.streamNamespace,
       catalogStream: syncCatalog.streams.find(
         (catalogStream) =>
