@@ -45,7 +45,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
   const isConnectionTagsEnabled = useExperiment("connection.tags");
 
   return (
-    <Card title={title} className={styles.hideOverflow}>
+    <Card title={title}>
       <FlexContainer direction="column" gap="xl">
         <SimplifiedConnectionNameFormField />
 
