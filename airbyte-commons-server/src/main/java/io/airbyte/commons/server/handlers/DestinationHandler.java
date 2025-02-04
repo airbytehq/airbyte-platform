@@ -26,9 +26,11 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Configs;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -69,6 +71,7 @@ public class DestinationHandler {
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private final ApiPojoConverters apiPojoConverters;
+  private final Configs.DeploymentMode deploymentMode;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -81,7 +84,8 @@ public class DestinationHandler {
                             final DestinationService destinationService,
                             final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                             final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
-                            final ApiPojoConverters apiPojoConverters) {
+                            final ApiPojoConverters apiPojoConverters,
+                            final Configs.DeploymentMode deploymentMode) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -93,10 +97,15 @@ public class DestinationHandler {
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
     this.apiPojoConverters = apiPojoConverters;
+    this.deploymentMode = deploymentMode;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    if (destinationCreate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
+
     // validate configuration
     final ConnectorSpecification spec = getSpecForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
     validateDestination(spec, destinationCreate.getConnectionConfiguration());
@@ -110,7 +119,8 @@ public class DestinationHandler {
         destinationId,
         destinationCreate.getConnectionConfiguration(),
         false,
-        spec);
+        spec,
+        destinationCreate.getResourceAllocation());
 
     // read configuration from db
     return buildDestinationRead(destinationService.getDestinationConnection(destinationId), spec);
@@ -154,6 +164,10 @@ public class DestinationHandler {
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
+    if (destinationUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
+
     // get existing implementation
     final DestinationConnection updatedDestination = configurationUpdate
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
@@ -173,7 +187,8 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec);
+        spec,
+        destinationUpdate.getResourceAllocation());
 
     // read configuration from db
     return buildDestinationRead(
@@ -182,6 +197,10 @@ public class DestinationHandler {
 
   public DestinationRead partialDestinationUpdate(final PartialDestinationUpdate partialDestinationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
+    if (partialDestinationUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
+
     // get existing implementation
     final DestinationConnection updatedDestination = configurationUpdate
         .partialDestination(partialDestinationUpdate.getDestinationId(), partialDestinationUpdate.getName(),
@@ -204,7 +223,8 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec);
+        spec,
+        partialDestinationUpdate.getResourceAllocation());
 
     // read configuration from db
     return buildDestinationRead(
@@ -242,7 +262,8 @@ public class DestinationHandler {
         .name(destinationName)
         .destinationDefinitionId(destinationToClone.getDestinationDefinitionId())
         .connectionConfiguration(destinationToClone.getConnectionConfiguration())
-        .workspaceId(destinationToClone.getWorkspaceId());
+        .workspaceId(destinationToClone.getWorkspaceId())
+        .resourceAllocation(destinationToClone.getResourceAllocation());
 
     if (destinationCloneConfiguration != null) {
       if (destinationCloneConfiguration.getName() != null) {
@@ -352,7 +373,8 @@ public class DestinationHandler {
                                             final UUID destinationId,
                                             final JsonNode configurationJson,
                                             final boolean tombstone,
-                                            final ConnectorSpecification spec)
+                                            final ConnectorSpecification spec,
+                                            final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
@@ -362,7 +384,8 @@ public class DestinationHandler {
         .withWorkspaceId(workspaceId)
         .withDestinationId(destinationId)
         .withConfiguration(oAuthMaskedConfigurationJson)
-        .withTombstone(tombstone);
+        .withTombstone(tombstone)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
     try {
       destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
@@ -434,7 +457,8 @@ public class DestinationHandler {
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
-        .createdAt(destinationConnection.getCreatedAt());
+        .createdAt(destinationConnection.getCreatedAt())
+        .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(destinationConnection.getResourceRequirements()));
   }
 
   protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,

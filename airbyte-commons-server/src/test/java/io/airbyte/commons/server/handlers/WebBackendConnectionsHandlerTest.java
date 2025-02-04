@@ -91,6 +91,7 @@ import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobStatusSummary;
@@ -228,7 +229,8 @@ class WebBackendConnectionsHandlerTest {
         destinationService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
-        apiPojoConverters);
+        apiPojoConverters,
+        Configs.DeploymentMode.OSS);
 
     final SourceHandler sourceHandler = new SourceHandler(
         catalogService,
@@ -247,7 +249,8 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         catalogConverter,
-        apiPojoConverters);
+        apiPojoConverters,
+        Configs.DeploymentMode.OSS);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,

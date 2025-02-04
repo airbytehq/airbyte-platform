@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import java.io.IOException;
@@ -19,18 +20,27 @@ import java.util.UUID;
 public class SourceHelpers {
 
   public static SourceConnection generateSource(final UUID sourceDefinitionId) throws IOException {
-    return generateSource(sourceDefinitionId, "my default source name", false);
+    return generateSource(sourceDefinitionId, "my default source name", false, null);
   }
 
   public static SourceConnection generateSource(final UUID sourceDefinitionId, final String name) throws IOException {
-    return generateSource(sourceDefinitionId, name, false);
+    return generateSource(sourceDefinitionId, name, false, null);
   }
 
   public static SourceConnection generateSource(final UUID sourceDefinitionId, final boolean tombstone) throws IOException {
-    return generateSource(sourceDefinitionId, "my default source name", tombstone);
+    return generateSource(sourceDefinitionId, "my default source name", tombstone, null);
   }
 
-  public static SourceConnection generateSource(final UUID sourceDefinitionId, final String name, final boolean tombstone) throws IOException {
+  public static SourceConnection generateSource(final UUID sourceDefinitionId, final ScopedResourceRequirements resourceRequirements)
+      throws IOException {
+    return generateSource(sourceDefinitionId, "my default source name", false, resourceRequirements);
+  }
+
+  public static SourceConnection generateSource(final UUID sourceDefinitionId,
+                                                final String name,
+                                                final boolean tombstone,
+                                                final ScopedResourceRequirements resourceRequirements)
+      throws IOException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
 
@@ -42,7 +52,8 @@ public class SourceHelpers {
         .withSourceDefinitionId(sourceDefinitionId)
         .withSourceId(sourceId)
         .withConfiguration(implementationJson)
-        .withTombstone(tombstone);
+        .withTombstone(tombstone)
+        .withResourceRequirements(resourceRequirements);
   }
 
   public static JsonNode getTestImplementationJson() throws IOException {
@@ -53,13 +64,14 @@ public class SourceHelpers {
   public static SourceRead getSourceRead(final SourceConnection source, final StandardSourceDefinition standardSourceDefinition) {
     // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
     // if you want to override them.
-    return getSourceRead(source, standardSourceDefinition, false, SupportState.SUPPORTED);
+    return getSourceRead(source, standardSourceDefinition, false, SupportState.SUPPORTED, null);
   }
 
   public static SourceRead getSourceRead(final SourceConnection source,
                                          final StandardSourceDefinition standardSourceDefinition,
                                          final boolean isVersionOverrideApplied,
-                                         final SupportState supportState) {
+                                         final SupportState supportState,
+                                         final io.airbyte.api.model.generated.ScopedResourceRequirements resourceAllocation) {
 
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -71,7 +83,8 @@ public class SourceHelpers {
         .sourceName(standardSourceDefinition.getName())
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(isVersionOverrideApplied)
-        .supportState(supportState);
+        .supportState(supportState)
+        .resourceAllocation(resourceAllocation);
   }
 
 }

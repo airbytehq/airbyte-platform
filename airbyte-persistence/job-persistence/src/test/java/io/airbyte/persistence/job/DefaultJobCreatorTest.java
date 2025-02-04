@@ -270,6 +270,8 @@ class DefaultJobCreatorTest {
         List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null, expectedRefreshType));
 
     jobCreator.createRefreshConnection(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
         SOURCE_PROTOCOL_VERSION,
@@ -316,6 +318,8 @@ class DefaultJobCreatorTest {
         new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
         SOURCE_PROTOCOL_VERSION,

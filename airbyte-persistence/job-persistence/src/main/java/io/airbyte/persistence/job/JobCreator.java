@@ -79,7 +79,9 @@ public interface JobCreator {
                                           UUID workspaceId)
       throws IOException;
 
-  Optional<Long> createRefreshConnection(final StandardSync standardSync,
+  Optional<Long> createRefreshConnection(final SourceConnection source,
+                                         final DestinationConnection destination,
+                                         final StandardSync standardSync,
                                          final String sourceDockerImageName,
                                          final Version sourceProtocolVersion,
                                          final String destinationDockerImageName,

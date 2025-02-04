@@ -177,6 +177,8 @@ class SchedulerHandlerTest {
   private static final long JOB_ID = 123L;
   private static final UUID SYNC_JOB_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "docker-repo";
@@ -416,8 +418,13 @@ class SchedulerHandlerTest {
   void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(WEBHOOK_OPERATION);
     final StandardSync standardSync =
-        new StandardSync().withDestinationId(DESTINATION_ID).withOperationIds(List.of(WEBHOOK_OPERATION_ID));
+        new StandardSync().withDestinationId(DESTINATION_ID).withOperationIds(List.of(WEBHOOK_OPERATION_ID)).withSourceId(SOURCE_ID);
     Mockito.when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+    final SourceConnection source = new SourceConnection()
+        .withSourceId(SOURCE_ID)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID);
+    Mockito.when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(source);
     final DestinationConnection destination = new DestinationConnection()
         .withDestinationId(DESTINATION_ID)
         .withWorkspaceId(WORKSPACE_ID)

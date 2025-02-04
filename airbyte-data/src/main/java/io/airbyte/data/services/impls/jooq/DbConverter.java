@@ -231,7 +231,10 @@ public class DbConverter {
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
-        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**
@@ -248,7 +251,10 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
-        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**

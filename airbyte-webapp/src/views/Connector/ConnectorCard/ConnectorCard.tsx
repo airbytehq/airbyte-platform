@@ -192,10 +192,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const connectorId = connector ? getConnectorId(connector) : undefined;
 
   // Fill form with existing connector values otherwise set the default service name
-  const formValues = useMemo(
-    () => (isEditMode && connector ? connector : { name: selectedConnectorDefinition?.name }),
-    [isEditMode, connector, selectedConnectorDefinition?.name]
-  );
+  const formValues = useMemo(() => {
+    if (isEditMode && connector) {
+      return {
+        ...connector,
+        resourceAllocation: undefined,
+      };
+    }
+    return { name: selectedConnectorDefinition?.name };
+  }, [isEditMode, connector, selectedConnectorDefinition?.name]);
 
   return (
     <ConnectorForm

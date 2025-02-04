@@ -22,6 +22,8 @@ import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SourceCloneConfiguration;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
@@ -38,12 +40,15 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
+import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Configs;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
@@ -74,6 +79,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -106,6 +112,9 @@ class SourceHandlerTest {
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
   private static final boolean IS_VERSION_OVERRIDE_APPLIED = true;
   private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
+  private static final String DEFAULT_MEMORY = "2 GB";
+  private static final String DEFAULT_CPU = "2";
+  private static final ScopedResourceRequirements RESOURCE_ALLOCATION = getResourceRequirementsForSourceRequest(DEFAULT_CPU, DEFAULT_MEMORY);
 
   private SourceService sourceService;
   private WorkspaceService workspaceService;
@@ -155,7 +164,8 @@ class SourceHandlerTest {
         .connectionSpecification(connectorSpecification.getConnectionSpecification())
         .documentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    sourceConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
+    sourceConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId(),
+        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
 
     sourceHandler = new SourceHandler(
         catalogService,
@@ -172,7 +182,7 @@ class SourceHandlerTest {
         workspaceService,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters);
+        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.OSS);
   }
 
   @Test
@@ -182,7 +192,8 @@ class SourceHandlerTest {
         .name(sourceConnection.getName())
         .workspaceId(sourceConnection.getWorkspaceId())
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionConfiguration(sourceConnection.getConfiguration());
+        .connectionConfiguration(sourceConnection.getConfiguration())
+        .resourceAllocation(RESOURCE_ALLOCATION);
 
     when(uuidGenerator.get()).thenReturn(sourceConnection.getSourceId());
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -202,8 +213,8 @@ class SourceHandlerTest {
     final SourceRead actualSourceRead = sourceHandler.createSource(sourceCreate);
 
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE)
-            .connectionConfiguration(sourceConnection.getConfiguration());
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION)
+            .connectionConfiguration(sourceConnection.getConfiguration()).resourceAllocation(RESOURCE_ALLOCATION);
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
@@ -217,21 +228,62 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testNonNullCreateSourceThrowsOnInvalidResourceAllocation()
+      throws IOException {
+    SourceHandler cloudSourceHandler = new SourceHandler(
+        catalogService,
+        secretsRepositoryReader,
+        validator,
+        connectionsHandler,
+        uuidGenerator,
+        secretsProcessor,
+        configurationUpdate,
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        workspaceService,
+        secretPersistenceConfigService,
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+
+    final SourceCreate sourceCreate = new SourceCreate()
+        .name(sourceConnection.getName())
+        .workspaceId(sourceConnection.getWorkspaceId())
+        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .connectionConfiguration(DestinationHelpers.getTestDestinationJson())
+        .resourceAllocation(RESOURCE_ALLOCATION);
+
+    Assertions.assertThrows(
+        BadRequestException.class,
+        () -> cloudSourceHandler.createSource(sourceCreate),
+        "Expected createSource to throw BadRequestException");
+  }
+
+  public static ScopedResourceRequirements getResourceRequirementsForSourceRequest(final String defaultCpuRequest,
+                                                                                   final String defaultMemoryRequest) {
+    return new ScopedResourceRequirements()._default(new ResourceRequirements().cpuRequest(defaultCpuRequest).memoryRequest(defaultMemoryRequest));
+  }
+
+  @Test
   void testUpdateSource()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
 
     final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection)
         .withName(updatedSourceName)
         .withConfiguration(newConfiguration)
-        .withTombstone(false);
+        .withTombstone(false)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation));
 
     final SourceUpdate sourceUpdate = new SourceUpdate()
         .name(updatedSourceName)
         .sourceId(sourceConnection.getSourceId())
-        .connectionConfiguration(newConfiguration);
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
 
     when(secretsProcessor
         .copySecrets(sourceConnection.getConfiguration(), newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -257,7 +309,8 @@ class SourceHandlerTest {
 
     final SourceRead actualSourceRead = sourceHandler.updateSource(sourceUpdate);
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE)
+        SourceHelpers
+            .getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, newResourceAllocation)
             .connectionConfiguration(newConfiguration);
 
     assertEquals(expectedSourceRead, actualSourceRead);
@@ -269,6 +322,42 @@ class SourceHandlerTest {
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
+  }
+
+  @Test
+  void testNonNullUpdateSourceThrowsOnInvalidResourceAllocation() {
+    SourceHandler cloudSourceHandler = new SourceHandler(
+        catalogService,
+        secretsRepositoryReader,
+        validator,
+        connectionsHandler,
+        uuidGenerator,
+        secretsProcessor,
+        configurationUpdate,
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper,
+        featureFlagClient,
+        sourceService,
+        workspaceService,
+        secretPersistenceConfigService,
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+
+    final String updatedSourceName = "my updated source name";
+    final JsonNode newConfiguration = sourceConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
+
+    final SourceUpdate sourceUpdate = new SourceUpdate()
+        .name(updatedSourceName)
+        .sourceId(sourceConnection.getSourceId())
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
+
+    Assertions.assertThrows(
+        BadRequestException.class,
+        () -> cloudSourceHandler.updateSource(sourceUpdate),
+        "Expected updateSource to throw BadRequestException");
   }
 
   @Test
@@ -288,7 +377,7 @@ class SourceHandlerTest {
   @Test
   void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -316,10 +405,13 @@ class SourceHandlerTest {
   @Test
   void testCloneSourceWithoutConfigChange()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
+    final SourceConnection clonedConnection = SourceHelpers.generateSource(
+        standardSourceDefinition.getSourceDefinitionId(),
+        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
     final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
-    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+    final SourceRead sourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
 
     final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
 
@@ -351,10 +443,13 @@ class SourceHandlerTest {
   @Test
   void testCloneSourceWithConfigChange()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
+    final SourceConnection clonedConnection = SourceHelpers.generateSource(
+        standardSourceDefinition.getSourceDefinitionId(),
+        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
     final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
-    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+    final SourceRead sourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
 
     final SourceCloneConfiguration sourceCloneConfiguration = new SourceCloneConfiguration().name("Copy Name");
     final SourceCloneRequestBody sourceCloneRequestBody =
@@ -388,7 +483,7 @@ class SourceHandlerTest {
   void testListSourcesForWorkspace()
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
     expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
@@ -420,7 +515,7 @@ class SourceHandlerTest {
   void testListSourcesForSourceDefinition()
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
@@ -447,7 +542,7 @@ class SourceHandlerTest {
   @Test
   void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(sourceService.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));

@@ -109,6 +109,7 @@ import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.Cron;
@@ -418,7 +419,8 @@ class ConnectionsHandlerTest {
             destinationService,
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
-            apiPojoConverters);
+            apiPojoConverters,
+            Configs.DeploymentMode.OSS);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -436,7 +438,8 @@ class ConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         catalogConverter,
-        apiPojoConverters);
+        apiPojoConverters,
+        Configs.DeploymentMode.OSS);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

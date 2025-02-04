@@ -30,6 +30,7 @@ class DestinationMatcher(
       isVersionOverrideApplied(query.isVersionOverrideApplied)
       breakingChanges(query.breakingChanges)
       supportState(query.supportState)
+      resourceAllocation(query.resourceAllocation)
 
       val connectionConfiguration =
         when {

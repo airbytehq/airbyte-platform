@@ -844,7 +844,8 @@ public class AcceptanceTestHarness {
             workspaceId,
             name,
             destinationDefId,
-            destinationConfig));
+            destinationConfig,
+            null));
     destinationIds.add(destination.getDestinationId());
     return destination;
   }
@@ -1028,6 +1029,7 @@ public class AcceptanceTestHarness {
             sourceConfig,
             workspaceId,
             name,
+            null,
             null)));
     sourceIds.add(source.getSourceId());
     return source;

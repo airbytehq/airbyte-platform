@@ -110,6 +110,8 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
       final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
 
       return jobCreator.createRefreshConnection(
+          jobCreatorInput.getSource(),
+          jobCreatorInput.getDestination(),
           jobCreatorInput.getStandardSync(),
           jobCreatorInput.getSourceDockerImageName(),
           jobCreatorInput.getSourceProtocolVersion(),

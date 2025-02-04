@@ -655,6 +655,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.ACTOR_TYPE, ActorType.source)
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(sourceConnection.getResourceRequirements())))
             .where(ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute();
       } else {
@@ -668,6 +669,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(sourceConnection.getResourceRequirements())))
             .execute();
       }
     });

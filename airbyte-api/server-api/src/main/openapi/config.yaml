@@ -9531,6 +9531,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceDiscoverSchemaRequestBody:
       type: object
       required:
@@ -9583,6 +9585,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceUpdate:
       type: object
       required:
@@ -9599,6 +9603,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceRead:
       type: object
       required:
@@ -9635,6 +9641,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string
@@ -9960,6 +9968,8 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionId"
         connectionConfiguration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationUpdate:
       type: object
       required:
@@ -9973,6 +9983,8 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         name:
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     PartialDestinationUpdate:
       type: object
       properties:
@@ -9982,6 +9994,8 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         name:
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationCloneRequestBody:
       description: The values required to configure the destination. The schema for this should have an id of the existing destination along with the configuration you want to change in case.
       type: object
@@ -10035,6 +10049,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationSnippetRead:
       type: object
       required:

@@ -187,6 +187,7 @@ class ReplicationInputHydratorTest {
       false,
       null,
       null,
+      null,
       null);
 
   private static SecretsRepositoryReader secretsRepositoryReader;

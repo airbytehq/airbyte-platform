@@ -587,6 +587,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(ACTOR.ACTOR_TYPE, ActorType.destination)
             .set(ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(destinationConnection.getResourceRequirements())))
             .where(ACTOR.ID.eq(destinationConnection.getDestinationId()))
             .execute();
 
@@ -601,6 +602,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(destinationConnection.getResourceRequirements())))
             .execute();
       }
     });
