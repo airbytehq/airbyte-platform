@@ -13,17 +13,13 @@ export default {
 
 const Template: StoryFn<typeof SelectConnectionTags> = (args) => {
   const [selectedTags, setSelectedTags] = useState<Tag[]>(args.selectedTags);
-  const [availableTags, setAvailableTags] = useState<Tag[]>(args.availableTags);
 
-  const selectTag = (id: string) => {
-    const tag = availableTags.find((tag) => tag.tagId === id);
-    if (tag) {
-      setSelectedTags((prevTags) => [...prevTags, tag]);
-    }
+  const selectTag = (selectedTag: Tag) => {
+    setSelectedTags((prevTags) => [...prevTags, selectedTag]);
   };
 
-  const deselectTag = (id: string) => {
-    setSelectedTags((prevTags) => prevTags.filter((tag) => tag.tagId !== id));
+  const deselectTag = (deselectedTag: Tag) => {
+    setSelectedTags((prevTags) => prevTags.filter((tag) => tag.tagId !== deselectedTag.tagId));
   };
 
   const createTag = (name: string, color: string) => {
@@ -34,13 +30,12 @@ const Template: StoryFn<typeof SelectConnectionTags> = (args) => {
       color,
     };
 
-    setAvailableTags((prevTags) => [newTag, ...prevTags]);
     setSelectedTags((prevTags) => [newTag, ...prevTags]);
   };
 
   return (
     <SelectConnectionTags
-      availableTags={availableTags}
+      availableTags={args.availableTags}
       selectedTags={selectedTags}
       selectTag={selectTag}
       deselectTag={deselectTag}
@@ -66,8 +61,8 @@ Edit.args = {
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
   createTag: (name: string) => console.log(`Create tag: ${name}`),
-  selectTag: (id: string) => console.log(`Select tag: ${id}`),
-  deselectTag: (id: string) => console.log(`Deselect tag: ${id}`),
+  selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
+  deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
 };
 export const EditDisabled = Template.bind({});
 EditDisabled.args = {
@@ -85,8 +80,8 @@ EditDisabled.args = {
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
   createTag: (name: string) => console.log(`Create tag: ${name}`),
-  selectTag: (id: string) => console.log(`Select tag: ${id}`),
-  deselectTag: (id: string) => console.log(`Deselect tag: ${id}`),
+  selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
+  deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: true,
 };
 
@@ -118,8 +113,8 @@ EditLimitReached.args = {
     { tagId: "11", name: "Legacy", color: "#75DCFF", workspaceId: "workspace" },
   ],
   createTag: (name: string) => console.log(`Create tag: ${name}`),
-  selectTag: (id: string) => console.log(`Select tag: ${id}`),
-  deselectTag: (id: string) => console.log(`Deselect tag: ${id}`),
+  selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
+  deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: false,
 };
 
@@ -139,8 +134,8 @@ DefaultDisabled.args = {
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
   createTag: (name: string) => console.log(`Create tag: ${name}`),
-  selectTag: (id: string) => console.log(`Select tag: ${id}`),
-  deselectTag: (id: string) => console.log(`Deselect tag: ${id}`),
+  selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
+  deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: true,
 };
 
@@ -149,6 +144,6 @@ EmptyTags.args = {
   selectedTags: [],
   availableTags: [],
   createTag: (name: string) => console.log(`Create tag: ${name}`),
-  selectTag: (id: string) => console.log(`Select tag: ${id}`),
-  deselectTag: (id: string) => console.log(`Deselect tag: ${id}`),
+  selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
+  deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
 };

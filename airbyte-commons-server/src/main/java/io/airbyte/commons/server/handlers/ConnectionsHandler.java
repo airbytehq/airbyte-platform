@@ -368,6 +368,10 @@ public class ConnectionsHandler {
     if (patch.getBackfillPreference() != null) {
       sync.setBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
     }
+
+    if (patch.getTags() != null) {
+      sync.setTags(patch.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
+    }
   }
 
   private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
@@ -461,7 +465,8 @@ public class ConnectionsHandler {
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
-        .withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
+        .withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()))
+        .withTags(connectionCreate.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
     if (connectionCreate.getResourceRequirements() != null) {
       standardSync.withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }

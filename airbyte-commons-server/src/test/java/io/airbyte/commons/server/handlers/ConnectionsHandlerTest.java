@@ -74,6 +74,7 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
@@ -1279,7 +1280,8 @@ class ConnectionsHandlerTest {
             .prefix(PRESTO_TO_HUDI_PREFIX)
             .status(ConnectionStatus.ACTIVE)
             .schedule(ConnectionHelpers.generateBasicConnectionSchedule())
-            .syncCatalog(catalog);
+            .syncCatalog(catalog)
+            .tags(Collections.emptyList());
 
         assertThrows(ConfigNotFoundException.class, () -> connectionsHandler.createConnection(connectionCreateBadDestination));
       }
@@ -1791,7 +1793,8 @@ class ConnectionsHandlerTest {
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
-            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
+            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class),
+            standardSync.getTags().stream().map(apiPojoConverters::toApiTag).toList())
             .status(ConnectionStatus.INACTIVE)
             .scheduleType(ConnectionScheduleType.MANUAL)
             .scheduleData(null)
@@ -1800,6 +1803,36 @@ class ConnectionsHandlerTest {
             .resourceRequirements(resourceRequirements);
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
+        verify(connectionService).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchTags() throws Exception {
+        final UUID workspaceId = UUID.randomUUID();
+        final Tag apiTag1 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag1").color("ABC123");
+        final Tag apiTag2 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag2").color("000000");
+        final Tag apiTag3 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag3").color("FFFFFF");
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final io.airbyte.config.Tag configTag1 = apiPojoConverters.toInternalTag(apiTag1);
+        final io.airbyte.config.Tag configTag2 = apiPojoConverters.toInternalTag(apiTag2);
+        final io.airbyte.config.Tag configTag3 = apiPojoConverters.toInternalTag(apiTag3);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withTags(List.of(configTag1, configTag2, configTag3));
+
+        when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
       }

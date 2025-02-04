@@ -13,6 +13,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SchemaChangeBackfillPreference,
+  Tag,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -46,6 +47,7 @@ export interface FormConnectionFormValues {
   syncCatalog: AirbyteCatalog;
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
+  tags?: Tag[];
 }
 
 /**
@@ -89,6 +91,14 @@ export const useConnectionValidationSchema = () => {
           syncCatalog: syncCatalogSchema,
           notifySchemaChanges: yup.boolean().optional(),
           backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
+          tags: yup
+            .array()
+            .of(
+              yup
+                .object()
+                .shape({ tagId: yup.string(), name: yup.string(), color: yup.string(), workspaceId: yup.string() })
+            )
+            .notRequired(),
         })
         .noUnknown(),
     [allowAutoDetectSchema, scheduleDataSchema]
@@ -172,6 +182,7 @@ export const useInitialFormValues = (
         (notificationSettings?.sendOnConnectionUpdate?.notificationType &&
           notificationSettings.sendOnConnectionUpdate.notificationType.length > 0),
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
+      tags: connection.tags ?? [],
     };
 
     return initialValues;
@@ -189,6 +200,7 @@ export const useInitialFormValues = (
     connection.geography,
     connection.notifySchemaChanges,
     connection.backfillPreference,
+    connection.tags,
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     syncCatalog,

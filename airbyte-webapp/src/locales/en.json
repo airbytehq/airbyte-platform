@@ -591,6 +591,8 @@
   "connection.title": "Connection",
   "connection.fromTo": "{source} → {destination}",
   "connection.connectionSettings": "Connection settings",
+  "connection.tags": "Connection tags",
+  "connection.tags.empty": "No tags yet",
   "connection.loadMoreJobs": "Load more",
   "connection.updateSchema": "Refresh source schema",
   "connection.updateSchema.loading": "Refreshing source schema…",
@@ -772,7 +774,7 @@
   "connection.tags.edit": "Edit tags",
   "connection.tags.create": "Create",
   "connection.tags.selectOrCreateTag": "{hasTags, select, true {Select an option or create one} other {Create a tag}}",
-  "connection.tags.limitReached": "Connection tag limit reached.  To add a tag to this connection, remove an existing one.",
+  "connection.tags.limitReached": "Maximum 10 tags can be added to a connection.",
 
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",

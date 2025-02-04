@@ -30,6 +30,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private ActorDefinitionServiceJooqImpl actorDefinitionService;
 
   @BeforeEach
-  void setUp() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void setUp() throws JsonValidationException, ConfigNotFoundException, IOException, SQLException {
     this.actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);

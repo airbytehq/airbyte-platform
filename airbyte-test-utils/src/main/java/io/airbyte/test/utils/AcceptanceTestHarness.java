@@ -667,6 +667,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null));
   }
 
@@ -699,6 +700,7 @@ public class AcceptanceTestHarness {
             null,
             create.getCatalogId(),
             create.getGeography(),
+            null,
             null,
             null,
             null,
@@ -740,6 +742,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -753,6 +756,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -784,6 +788,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -1110,6 +1115,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null);
     updateConnection(connectionUpdate);
   }
@@ -1335,6 +1341,7 @@ public class AcceptanceTestHarness {
             null,
             nonBreakingChangesPreference,
             backfillPreference,
+            null,
             null));
   }
 

@@ -13,6 +13,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -21,10 +22,13 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -111,7 +115,57 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
-        .withStatus(StandardSync.Status.ACTIVE);
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withTags(Collections.emptyList());
+  }
+
+  @Test
+  void testCreateConnectionWithTags() throws JsonValidationException, ConfigNotFoundException, IOException, SQLException {
+    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setUpDependencies();
+
+    final DestinationConnection destination = jooqTestDbSetupHelper.getDestination();
+    final SourceConnection source = jooqTestDbSetupHelper.getSource();
+    final List<ConfiguredAirbyteStream> streams =
+        List.of(catalogHelpers.createConfiguredAirbyteStream("stream_a", "namespace", Field.of("field_name", JsonSchemaType.STRING)));
+    final List<Tag> tags = jooqTestDbSetupHelper.getTags();
+
+    final StandardSync standardSyncToCreate = createStandardSync(source, destination, streams);
+
+    standardSyncToCreate.setTags(tags);
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate);
+
+    final StandardSync standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.getConnectionId());
+
+    assertEquals(tags, standardSyncPersisted.getTags());
+  }
+
+  @Test
+  void testUpdateConnectionWithTags() throws JsonValidationException, ConfigNotFoundException, IOException, SQLException {
+    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setUpDependencies();
+
+    final DestinationConnection destination = jooqTestDbSetupHelper.getDestination();
+    final SourceConnection source = jooqTestDbSetupHelper.getSource();
+    final List<ConfiguredAirbyteStream> streams =
+        List.of(catalogHelpers.createConfiguredAirbyteStream("stream_a", "namespace", Field.of("field_name", JsonSchemaType.STRING)));
+    final List<Tag> tags = jooqTestDbSetupHelper.getTags();
+
+    final StandardSync standardSyncToCreate = createStandardSync(source, destination, streams);
+
+    standardSyncToCreate.setTags(tags);
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate);
+
+    // update the connection with only the third tag
+    final List<Tag> updatedTags = List.of(tags.get(2));
+    standardSyncToCreate.setTags(updatedTags);
+    connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate);
+
+    final StandardSync standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.getConnectionId());
+
+    assertEquals(updatedTags, standardSyncPersisted.getTags());
   }
 
 }

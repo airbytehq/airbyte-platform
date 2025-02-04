@@ -148,3 +148,7 @@ properties:
   createdAt:
     type: integer
     format: int64
+  tags:
+    type: array
+    items:
+      $ref: Tag.yaml

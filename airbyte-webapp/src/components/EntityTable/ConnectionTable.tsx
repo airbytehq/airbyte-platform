@@ -67,7 +67,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="tables.name" />,
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.connectionName,
           responsive: true,
           noPadding: true,
         },
@@ -81,7 +81,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           />
         ),
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.width25,
           responsive: true,
           noPadding: true,
         },
@@ -93,7 +93,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           <FormattedMessage id={entity === "connection" ? "tables.sourceConnectionToName" : "tables.connector"} />
         ),
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.width25,
           responsive: true,
           noPadding: true,
         },
@@ -115,6 +115,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
               enableSorting: true,
               meta: {
                 noPadding: true,
+                thClassName: styles.tags,
               },
               cell: TagsCell,
             }),
@@ -124,7 +125,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         header: () => <FormattedMessage id="tables.lastSync" />,
         cell: LastSyncCell,
         meta: {
-          thClassName: styles.width20,
+          thClassName: styles.lastSync,
           noPadding: true,
         },
         sortUndefined: 1,
@@ -132,7 +133,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
         meta: {
-          thClassName: styles.thEnabled,
+          thClassName: styles.enabled,
         },
         cell: StateSwitchCell,
         enableSorting: false,
@@ -140,7 +141,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("connection", {
         header: "",
         meta: {
-          thClassName: styles.thConnectionSettings,
+          thClassName: styles.connectionSettings,
         },
         cell: EntityWarningsCell,
         enableSorting: false,

@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.SupportState;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -168,7 +169,8 @@ public class ApiPojoConverters {
         .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .createdAt(standardSync.getCreatedAt())
-        .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
+        .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
+        .tags(standardSync.getTags().stream().map(this::toApiTag).toList());
 
     if (standardSync.getResourceRequirements() != null) {
       connectionRead.resourceRequirements(this.resourceRequirementsToApi(standardSync.getResourceRequirements()));
@@ -185,6 +187,15 @@ public class ApiPojoConverters {
 
   public io.airbyte.config.JobTypeResourceLimit.JobType toInternalJobType(final JobType jobType) {
     return Enums.convertTo(jobType, io.airbyte.config.JobTypeResourceLimit.JobType.class);
+  }
+
+  public Tag toApiTag(final io.airbyte.config.Tag tag) {
+    return new Tag().name(tag.getName()).tagId(tag.getTagId()).workspaceId(tag.getWorkspaceId()).color(tag.getColor());
+  }
+
+  public io.airbyte.config.Tag toInternalTag(final Tag tag) {
+    return new io.airbyte.config.Tag().withName(tag.getName()).withTagId(tag.getTagId()).withWorkspaceId(tag.getWorkspaceId())
+        .withColor(tag.getColor());
   }
 
   public io.airbyte.config.ActorType toInternalActorType(final ActorType actorType) {

@@ -10363,6 +10363,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendConnectionCreate:
       type: object
       required:
@@ -10485,6 +10489,11 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
+        tags:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionUpdateWithReason:
       type: object
       required:
@@ -10552,6 +10561,7 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         tags:
           type: array
+          nullable: true
           items:
             $ref: "#/components/schemas/Tag"
     ConnectionRead:
@@ -10619,6 +10629,10 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionStatusesRequestBody:
       type: object
       required:

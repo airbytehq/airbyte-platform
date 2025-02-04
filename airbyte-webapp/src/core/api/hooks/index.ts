@@ -34,4 +34,5 @@ export * from "./permissions";
 export * from "./upgradeConnectorVersion";
 export * from "./userInvitations";
 export * from "./users";
+export * from "./tags";
 export * from "./workspaces";

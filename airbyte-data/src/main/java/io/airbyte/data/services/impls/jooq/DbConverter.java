@@ -68,11 +68,13 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.Tag;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.LocalDateTime;
@@ -100,7 +102,8 @@ public class DbConverter {
    */
   public static StandardSync buildStandardSync(final Record record,
                                                final List<UUID> connectionOperationId,
-                                               final List<NotificationConfigurationRecord> notificationConfigurations) {
+                                               final List<NotificationConfigurationRecord> notificationConfigurations,
+                                               final List<TagRecord> tagRecords) {
     final boolean isWebhookNotificationEnabled = notificationConfigurations.stream()
         .filter(notificationConfiguration -> notificationConfiguration
             .getNotificationType() == NotificationType.webhook && notificationConfiguration.getEnabled())
@@ -110,6 +113,12 @@ public class DbConverter {
         .filter(notificationConfiguration -> notificationConfiguration
             .getNotificationType() == NotificationType.email && notificationConfiguration.getEnabled())
         .findAny().isPresent();
+
+    final List<Tag> tags = new ArrayList<>();
+    for (final TagRecord tagRecord : tagRecords) {
+      tags.add(new Tag().withTagId(tagRecord.getId()).withWorkspaceId(tagRecord.getWorkspaceId()).withName(tagRecord.getName())
+          .withColor(tagRecord.getColor()));
+    }
 
     return new StandardSync()
         .withConnectionId(record.get(CONNECTION.ID))
@@ -148,7 +157,8 @@ public class DbConverter {
         .withCreatedAt(record.get(CONNECTION.CREATED_AT, OffsetDateTime.class).toEpochSecond())
         .withBackfillPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).getLiteral(),
-                StandardSync.BackfillPreference.class).orElseThrow());
+                StandardSync.BackfillPreference.class).orElseThrow())
+        .withTags(tags);
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
