@@ -14,13 +14,14 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { Tag } from "core/api/types/AirbyteClient";
 import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
+import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SelectConnectionTags.module.scss";
 
 export interface SelectConnectionTagsProps {
   availableTags: Tag[];
   selectedTags: Tag[];
-  createTag: (name: string, color: string) => void;
+  createTag: (name: string, color: string) => Promise<void>;
   selectTag: (tag: Tag) => void;
   deselectTag: (tag: Tag) => void;
   disabled?: boolean; // intent
@@ -43,11 +44,12 @@ export const THEMED_HEX_OPTIONS = [
 const CONNECTION_TAGS_LIMIT = 10;
 
 const CreateTagControl: React.FC<{
+  createTagLoading: boolean;
   tagName: string;
   handleCreateTag: (tagName: string, color: string) => void;
   color: string;
   disabled?: boolean;
-}> = ({ tagName, handleCreateTag, color, disabled }) => {
+}> = ({ createTagLoading, tagName, handleCreateTag, color, disabled }) => {
   return (
     <button
       className={classNames(styles.selectConnectionTags__tagRow, {
@@ -58,6 +60,7 @@ const CreateTagControl: React.FC<{
       type="button"
     >
       <FlexContainer gap="sm" alignItems="center" justifyContent="flex-start">
+        {createTagLoading && <Icon size="xs" type="loading" />}
         <Text>
           <FormattedMessage id="connection.tags.create" />
         </Text>
@@ -124,6 +127,8 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
 }) => {
   const [tagsSelectedOnOpen, setTagsSelectedOnOpen] = useState(selectedTags);
   const [query, setQuery] = useState("");
+  const [createTagLoading, setCreateTagLoading] = useState(false);
+  const notificationService = useNotificationService();
 
   const onClosePopover = useCallback(() => {
     setQuery("");
@@ -179,9 +184,20 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     placement: "bottom-start",
   });
 
-  const handleCreateTag = (deferredQueryValue: string, color: string) => {
-    createTag(deferredQueryValue, color);
-    setQuery("");
+  const handleCreateTag = async (deferredQueryValue: string, color: string) => {
+    setCreateTagLoading(true);
+    try {
+      await createTag(deferredQueryValue, color);
+    } catch (e) {
+      notificationService.registerNotification({
+        id: "create-tag-error",
+        text: formatMessage({ id: "connection.tags.creationError" }),
+        type: "error",
+      });
+    } finally {
+      setCreateTagLoading(false);
+      setQuery("");
+    }
   };
 
   return (
@@ -218,16 +234,18 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               {tagDoesNotExist &&
                 (!tagLimitReached ? (
                   <CreateTagControl
+                    createTagLoading={createTagLoading}
                     handleCreateTag={handleCreateTag}
                     tagName={deferredQueryValue}
                     color={color}
-                    disabled={disabled}
+                    disabled={disabled || createTagLoading}
                   />
                 ) : (
                   <Tooltip
                     containerClassName={styles.selectConnectionTags__tagRowTooltip}
                     control={
                       <CreateTagControl
+                        createTagLoading={createTagLoading}
                         handleCreateTag={handleCreateTag}
                         tagName={deferredQueryValue}
                         color={color}

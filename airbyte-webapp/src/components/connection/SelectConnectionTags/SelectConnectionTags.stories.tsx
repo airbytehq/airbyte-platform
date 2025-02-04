@@ -22,7 +22,7 @@ const Template: StoryFn<typeof SelectConnectionTags> = (args) => {
     setSelectedTags((prevTags) => prevTags.filter((tag) => tag.tagId !== deselectedTag.tagId));
   };
 
-  const createTag = (name: string, color: string) => {
+  const createTag = async (name: string, color: string) => {
     const newTag = {
       name,
       tagId: uuidv4(),
@@ -60,7 +60,7 @@ Edit.args = {
     { tagId: "6", name: "IT", color: "#CAC7FF", workspaceId: "workspace" },
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
-  createTag: (name: string) => console.log(`Create tag: ${name}`),
+  createTag: async (name: string) => console.log(`Create tag: ${name}`),
   selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
   deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
 };
@@ -79,7 +79,7 @@ EditDisabled.args = {
     { tagId: "6", name: "IT", color: "#CAC7FF", workspaceId: "workspace" },
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
-  createTag: (name: string) => console.log(`Create tag: ${name}`),
+  createTag: async (name: string) => console.log(`Create tag: ${name}`),
   selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
   deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: true,
@@ -112,7 +112,7 @@ EditLimitReached.args = {
     { tagId: "10", name: "Admin", color: "#DFD5CE", workspaceId: "workspace" },
     { tagId: "11", name: "Legacy", color: "#75DCFF", workspaceId: "workspace" },
   ],
-  createTag: (name: string) => console.log(`Create tag: ${name}`),
+  createTag: async (name: string) => console.log(`Create tag: ${name}`),
   selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
   deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: false,
@@ -133,7 +133,7 @@ DefaultDisabled.args = {
     { tagId: "6", name: "IT", color: "#CAC7FF", workspaceId: "workspace" },
     { tagId: "7", name: "Legal", color: "#FFE5E9", workspaceId: "workspace" },
   ],
-  createTag: (name: string) => console.log(`Create tag: ${name}`),
+  createTag: async (name: string) => console.log(`Create tag: ${name}`),
   selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
   deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
   disabled: true,
@@ -143,7 +143,7 @@ export const EmptyTags = Template.bind({});
 EmptyTags.args = {
   selectedTags: [],
   availableTags: [],
-  createTag: (name: string) => console.log(`Create tag: ${name}`),
+  createTag: async (name: string) => console.log(`Create tag: ${name}`),
   selectTag: (tag: Tag) => console.log(`Select tag: ${tag.tagId}`),
   deselectTag: (tag: Tag) => console.log(`Deselect tag: ${tag.tagId}`),
 };
