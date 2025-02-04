@@ -11609,6 +11609,8 @@ components:
           enum:
             - free
             - internal
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
     # ORGANIZATIONS
     OrganizationId:
       type: string

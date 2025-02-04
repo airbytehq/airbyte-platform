@@ -881,6 +881,7 @@
   "connectionAutoDisabledReason.INVOICE_MARKED_UNCOLLECTIBLE": "Airbyte disabled the connection due to a billing issue.",
   "connectionAutoDisabledReason.INVALID_PAYMENT_METHOD": "Airbyte disabled the connection due to a billing issue.",
   "connectionAutoDisabledReason.UNSUBSCRIBED": "Airbyte disabled the connection because your Airbyte subscription ended.",
+  "connectionAutoDisabledReason.MANUALLY_LOCKED": "Airbyte disabled the connection and manually locked your account due to a billing issue.",
 
   "connection.actions.error": "There was an error starting this job. Please try again.",
   "connection.actions.refreshData": "Refresh your data",

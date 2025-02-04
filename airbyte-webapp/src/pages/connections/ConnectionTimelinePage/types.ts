@@ -39,6 +39,7 @@ const connectionAutoDisabledReasons = [
   "INVOICE_MARKED_UNCOLLECTIBLE",
   "INVALID_PAYMENT_METHOD",
   "UNSUBSCRIBED",
+  "MANUALLY_LOCKED",
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",
