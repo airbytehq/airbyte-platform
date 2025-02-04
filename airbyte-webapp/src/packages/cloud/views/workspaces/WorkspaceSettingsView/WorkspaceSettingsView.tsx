@@ -8,12 +8,15 @@ import { Separator } from "components/ui/Separator";
 import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { DeleteWorkspace } from "pages/SettingsPage/components/DeleteWorkspace";
+import { TagsTable } from "pages/SettingsPage/Workspace/components/TagsTable";
 
 import { UpdateWorkspaceSettingsForm } from "./components/UpdateWorkspaceSettingsForm";
 
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);
+  const showConnectionTags = useExperiment("connection.tags");
 
   const { workspaceId } = useCurrentWorkspace();
   const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
@@ -23,6 +26,12 @@ export const WorkspaceSettingsView: React.FC = () => {
         <FormattedMessage id="settings.workspace.general.title" />
       </Heading>
       <UpdateWorkspaceSettingsForm />
+      {showConnectionTags && (
+        <>
+          <Separator />
+          <TagsTable />
+        </>
+      )}
       {canDeleteWorkspace && (
         <>
           <Separator />
