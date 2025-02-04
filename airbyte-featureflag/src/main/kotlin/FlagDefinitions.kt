@@ -181,3 +181,5 @@ object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", defau
 object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
 
 object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable-temporal-ingestion", default = false)
+
+object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
