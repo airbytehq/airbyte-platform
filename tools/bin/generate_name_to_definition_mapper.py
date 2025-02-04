@@ -67,6 +67,7 @@ source_id_to_destination_name = "\n    ".join([
 content = f"""/*
  * Copyright (c) 2020-{ current_year } Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import java.util.UUID
