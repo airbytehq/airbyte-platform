@@ -2214,7 +2214,7 @@
 
   "billing.banners.manualPaymentStatusFree": "Your account will not be billed for usage. Please reach out to your contact at Airbyte for any questions.",
   "billing.banners.manualPaymentStatusInternal": "This is an Airbyte internal organization. Usage will not be billed.",
-  "billing.banners.lockedPaymentStatus": "Your syncs are disabled. Please get in touch with {mail} to unlock your account.",
+  "billing.banners.lockedPaymentStatus": "Your syncs are disabled. Please get in touch with <lnk>Airbyte Support</lnk> to unlock your account.",
   "billing.banners.disabledPaymentStatus": "Your syncs are disabled due to unpaid invoices. Please update your payment method to enable syncing again.",
   "billing.banners.disabledPaymentStatusWithLink": "Your syncs are disabled due to unpaid invoices. Please <lnk>update your payment method</lnk> to enable syncing again.",
   "billing.banners.gracePeriodPaymentStatus": "Please update your payment method to keep using Airbyte. Otherwise your syncs will be disabled {days, plural, =0 {very soon} one {in # day} other {in # days}}.",
