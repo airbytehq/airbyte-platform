@@ -2,20 +2,6 @@
 // NOTE: this settings is only discovered when running from oss/build.gradle
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 pluginManagement {
-
-  plugins {
-    val airbyteGradlePluginsVersion: String by settings
-    id("io.airbyte.gradle.jvm") version "$airbyteGradlePluginsVersion" apply false
-    id("io.airbyte.gradle.jvm.app") version "$airbyteGradlePluginsVersion" apply false
-    id("io.airbyte.gradle.jvm.lib") version "$airbyteGradlePluginsVersion" apply false
-    id("io.airbyte.gradle.docker") version "$airbyteGradlePluginsVersion" apply false
-    id("io.airbyte.gradle.publish") version "$airbyteGradlePluginsVersion" apply false
-    id("io.airbyte.gradle.kube-reload") version "$airbyteGradlePluginsVersion" apply false
-
-    id("com.github.eirnym.js2p") version "1.0" apply false
-    id("org.openapi.generator") version "7.10.0" apply false
-  }
-
   repositories {
     maven {
       name = "localPluginRepo"
