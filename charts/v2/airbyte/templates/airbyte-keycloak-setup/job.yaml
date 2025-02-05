@@ -1,5 +1,6 @@
 {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
 {{- if eq .Values.global.deploymentMode "oss" }}
+{{- if .Values.keycloakSetup.enabled }}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -57,6 +58,7 @@ spec:
             {{- include "airbyte.keycloak.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.admin.client.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.client.envs" . | nindent 12 }}
 
             {{- if (eq .Values.global.edition "enterprise") }}
             {{- include "airbyte.enterprise.envs" . | nindent 12 }}
@@ -126,5 +128,6 @@ spec:
         {{- if .Values.keycloakSetup.extraVolumes }}
         {{- toYaml .Values.keycloakSetup.extraVolumes | nindent 8 }}
         {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

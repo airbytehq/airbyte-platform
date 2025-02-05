@@ -1,3 +1,4 @@
+{{- if .Values.workloadApiServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,7 +73,7 @@ spec:
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.envs" . | nindent 8 }}
@@ -178,3 +179,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
       {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

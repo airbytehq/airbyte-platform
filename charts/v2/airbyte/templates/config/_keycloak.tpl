@@ -215,24 +215,6 @@ Renders the keycloak.admin.client.internalRealm environment variable
 {{- end }}
 
 {{/*
-Renders the keycloak.realmIssuer value
-*/}}
-{{- define "airbyte.keycloak.admin.client.realmIssuer" }}
-    {{- ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
-{{- end }}
-
-{{/*
-Renders the keycloak.admin.client.realmIssuer environment variable
-*/}}
-{{- define "airbyte.keycloak.admin.client.realmIssuer.env" }}
-- name: KEYCLOAK_INTERNAL_REALM_ISSUER
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: KEYCLOAK_INTERNAL_REALM_ISSUER
-{{- end }}
-
-{{/*
 Renders the set of all keycloak.admin.client environment variables
 */}}
 {{- define "airbyte.keycloak.admin.client.envs" }}
@@ -243,7 +225,6 @@ Renders the set of all keycloak.admin.client environment variables
 {{- include "airbyte.keycloak.admin.client.internalHost.env" . }}
 {{- include "airbyte.keycloak.admin.client.internalProtocol.env" . }}
 {{- include "airbyte.keycloak.admin.client.internalRealm.env" . }}
-{{- include "airbyte.keycloak.admin.client.realmIssuer.env" . }}
 {{- end }}
 
 {{/*
@@ -257,7 +238,6 @@ KEYCLOAK_INTERNAL_BASE_PATH: {{ include "airbyte.keycloak.admin.client.internalB
 KEYCLOAK_INTERNAL_HOST: {{ include "airbyte.keycloak.admin.client.internalHost" . | quote }}
 KEYCLOAK_INTERNAL_PROTOCOL: {{ include "airbyte.keycloak.admin.client.internalProtocol" . | quote }}
 KEYCLOAK_INTERNAL_REALM: {{ include "airbyte.keycloak.admin.client.internalRealm" . | quote }}
-KEYCLOAK_INTERNAL_REALM_ISSUER: {{ include "airbyte.keycloak.admin.client.realmIssuer" . | quote }}
 {{- end }}
 
 {{/*
@@ -335,6 +315,49 @@ Renders the set of all keycloak.admin.user secret variables
 {{- define "airbyte.keycloak.admin.user.secrets" }}
 KEYCLOAK_ADMIN_USER: {{ include "airbyte.keycloak.admin.user.auth.adminUsername" . | quote }}
 KEYCLOAK_ADMIN_PASSWORD: {{ include "airbyte.keycloak.admin.user.auth.adminPassword" . | quote }}
+{{- end }}
+
+{{/*
+Renders the keycloak.client secret name
+*/}}
+{{- define "airbyte.keycloak.client.secretName" }}
+{{- if .Values.keycloak.secretName }}
+    {{- .Values.keycloak.secretName }}
+{{- else }}
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Renders the keycloak.realmIssuer value
+*/}}
+{{- define "airbyte.keycloak.client.realmIssuer" }}
+    {{- ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
+{{- end }}
+
+{{/*
+Renders the keycloak.client.realmIssuer environment variable
+*/}}
+{{- define "airbyte.keycloak.client.realmIssuer.env" }}
+- name: KEYCLOAK_INTERNAL_REALM_ISSUER
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_INTERNAL_REALM_ISSUER
+{{- end }}
+
+{{/*
+Renders the set of all keycloak.client environment variables
+*/}}
+{{- define "airbyte.keycloak.client.envs" }}
+{{- include "airbyte.keycloak.client.realmIssuer.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all keycloak.client config map variables
+*/}}
+{{- define "airbyte.keycloak.client.configVars" }}
+KEYCLOAK_INTERNAL_REALM_ISSUER: {{ include "airbyte.keycloak.client.realmIssuer" . | quote }}
 {{- end }}
 
 {{/*

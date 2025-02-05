@@ -1,3 +1,4 @@
+{{- if .Values.podSweeper.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -96,3 +97,4 @@ spec:
       volumes:
       - name: kube-config
         emptyDir: {}
+{{- end }}

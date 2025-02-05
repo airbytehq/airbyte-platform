@@ -69,15 +69,15 @@ global:
       type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      oidc:
-        # -- OIDC application domain
-        domain: ""
-        # -- OIDC application name
-        appName: ""
-        # -- The key within `clientIdSecretName` where the OIDC client id is stored
-        clientIdSecretKey: ""
-        # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
-        clientSecretSecretKey: ""
+      oidc: {}
+      #  # -- OIDC application domain
+      #  domain: ""
+      #  # -- OIDC application name
+      #  appName: ""
+      #  # -- The key within `clientIdSecretName` where the OIDC client id is stored
+      #  clientIdSecretKey: ""
+      #  # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+      #  clientSecretSecretKey: ""
 
     # -- Security configuration
     security:
@@ -204,15 +204,6 @@ global:
     level: info
     httpAccessLogsEnabled: false
     log4jConfigFile: ""
-
-  email:
-    enabled: false
-    secretName: ""
-    client: "" # one of: sengrid
-
-    sendgrid:
-      apiKey: ""
-      apiKeySecretKey: ""
 
   connectorRegistry:
     seedProvider: "local"

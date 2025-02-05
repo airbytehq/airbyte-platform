@@ -263,8 +263,8 @@ PROMETHEUS_ENDPOINT: {{ include "airbyte.temporal.prometheus.endpoint" . | quote
 Renders the temporal.cli secret name
 */}}
 {{- define "airbyte.temporal.cli.secretName" }}
-{{- if .Values.global.temporal.cli.secretName }}
-    {{- .Values.global.temporal.cli.secretName }}
+{{- if .Values.global.temporal.secretName }}
+    {{- .Values.global.temporal.secretName }}
 {{- else }}
     {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}

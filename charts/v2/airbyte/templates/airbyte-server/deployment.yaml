@@ -1,3 +1,4 @@
+{{- if .Values.server.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -94,12 +95,14 @@ spec:
         {{- include "airbyte.keycloak.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- else if (eq .Values.global.deploymentMode "oss") }}
         {{- include "airbyte.auth.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
         {{- else }}
         {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end}}
@@ -203,3 +206,4 @@ spec:
       {{- if .Values.server.extraVolumes }}
       {{ toYaml .Values.server.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

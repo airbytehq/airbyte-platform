@@ -1,3 +1,4 @@
+{{- if .Values.webapp.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -141,3 +142,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{ toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

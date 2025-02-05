@@ -26,6 +26,7 @@ data:
   {{- include "airbyte.jobs.configVars" . | nindent 2 }}
   {{- include "airbyte.jobs.errors.configVars" . | nindent 2 }}
   {{- include "airbyte.keycloak.admin.client.configVars" . | nindent 2 }}
+  {{- include "airbyte.keycloak.client.configVars" . | nindent 2 }}
   {{- include "airbyte.keycloak.configVars" . | nindent 2 }}
   {{- include "airbyte.keycloak.database.configVars" . | nindent 2 }}
   {{- include "airbyte.logging.configVars" . | nindent 2 }}
