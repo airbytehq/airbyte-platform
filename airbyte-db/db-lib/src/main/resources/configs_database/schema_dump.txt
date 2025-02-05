@@ -56,6 +56,7 @@ create table "public"."actor_definition" (
   "default_version_id" uuid,
   "icon_url" varchar(256),
   "metrics" jsonb,
+  "enterprise" boolean not null default false,
   constraint "actor_definition_pkey" primary key ("id")
 );
 create table "public"."actor_definition_breaking_change" (

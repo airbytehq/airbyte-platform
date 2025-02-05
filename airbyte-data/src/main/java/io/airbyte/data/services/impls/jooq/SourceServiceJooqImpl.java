@@ -595,6 +595,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardSourceDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardSourceDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardSourceDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardSourceDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardSourceDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getResourceRequirements())))
@@ -622,6 +623,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardSourceDefinition.getTombstone() != null && standardSourceDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardSourceDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardSourceDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardSourceDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardSourceDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getResourceRequirements())))

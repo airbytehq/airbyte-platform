@@ -111,6 +111,7 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withIsEnterprise(true)
         .withSupportLevel(SupportLevel.CERTIFIED)
         .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
@@ -128,6 +129,7 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withEnterprise(true)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withMaxSecondsBetweenMessages(10L);
 
@@ -188,6 +190,7 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withIsEnterprise(true)
         .withSupportLevel(SupportLevel.CERTIFIED)
         .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
@@ -204,6 +207,7 @@ class ConnectorRegistryConvertersTest {
         .withName(CONNECTOR_NAME)
         .withTombstone(false)
         .withPublic(true)
+        .withEnterprise(true)
         .withCustom(false)
         .withResourceRequirements(RESOURCE_REQUIREMENTS);
 

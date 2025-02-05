@@ -286,6 +286,7 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withEnterprise(record.get(ACTOR_DEFINITION.ENTERPRISE))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class))
@@ -311,6 +312,7 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withEnterprise(record.get(ACTOR_DEFINITION.ENTERPRISE))
         .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))

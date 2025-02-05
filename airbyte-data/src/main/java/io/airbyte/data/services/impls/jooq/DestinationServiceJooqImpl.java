@@ -652,6 +652,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
@@ -673,6 +674,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
                 standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))

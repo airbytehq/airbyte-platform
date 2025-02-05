@@ -38,6 +38,10 @@ properties:
   spec:
     type: object
     existingJavaType: io.airbyte.protocol.models.ConnectorSpecification
+  isEnterprise:
+    description: true if this connector definition is only available with an enterprise license
+    type: boolean
+    default: false
   tombstone:
     description: if false, the configuration is active. if true, then this
       configuration is permanently off.
