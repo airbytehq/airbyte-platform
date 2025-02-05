@@ -332,7 +332,16 @@ const nonPathRequestOptionSchema = yup
   .object()
   .shape({
     inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required(REQUIRED_ERROR),
+    field_name: yup.mixed().when("inject_into", {
+      is: (val: string) => val !== "body_json",
+      then: yup.string().required(REQUIRED_ERROR),
+      otherwise: strip,
+    }),
+    field_path: yup.mixed().when("inject_into", {
+      is: (val: string) => val === "body_json",
+      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+      otherwise: strip,
+    }),
   })
   .notRequired()
   .default(undefined);
@@ -594,9 +603,14 @@ const paginatorSchema = yup
       .shape({
         inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
         field_name: yup.mixed().when("inject_into", {
-          is: "path",
-          then: strip,
-          otherwise: yup.string().required(REQUIRED_ERROR),
+          is: (val: string) => val !== "body_json" && val !== "path",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        field_path: yup.mixed().when("inject_into", {
+          is: "body_json",
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+          otherwise: strip,
         }),
       })
       .notRequired()

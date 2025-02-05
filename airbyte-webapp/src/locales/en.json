@@ -1971,6 +1971,8 @@
   "connectorBuilder.injectInto.tooltip": "Configures where the {descriptor} should be set on the HTTP requests",
   "connectorBuilder.injectInto.fieldName.label": "Field Name",
   "connectorBuilder.injectInto.fieldName.tooltip": "Configures which key should be used in the location that the {descriptor} is being injected into",
+  "connectorBuilder.injectInto.fieldPath.label": "Field Path",
+  "connectorBuilder.injectInto.fieldPath.tooltip": "Specifies the key path to the location that the {descriptor} is being injected into. Each key in the path represents a level of nesting in the JSON object.",
   "connectorBuilder.pagination.label": "Pagination",
   "connectorBuilder.pagination.tooltip": "Configure how pagination is handled by your connector",
   "connectorBuilder.pagination.strategy.label": "Strategy",

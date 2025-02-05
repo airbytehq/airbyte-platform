@@ -58,6 +58,7 @@ import {
   WaitTimeFromHeader,
   SimpleRetrieverDecoder,
   XmlDecoderType,
+  RequestOptionType,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
@@ -544,10 +545,15 @@ export function builderAuthenticatorToManifest(
     } satisfies OAuthAuthenticator;
   }
   if (authenticator.type === "ApiKeyAuthenticator") {
+    const convertedInjectInto = authenticator.inject_into
+      ? convertRequestOptionFieldPathToLegacyFieldName(authenticator.inject_into)
+      : undefined;
+
     return {
       ...authenticator,
       header: undefined,
       api_token: authenticator.api_token,
+      inject_into: convertedInjectInto,
     };
   }
   if (authenticator.type === "BearerAuthenticator") {
@@ -636,17 +642,45 @@ export function builderPaginatorToManifest(
   } else if (paginator?.pageTokenOption.inject_into === "path") {
     pageTokenOption = { type: "RequestPath" };
   } else {
-    pageTokenOption = {
-      type: "RequestOption",
-      inject_into: paginator.pageTokenOption.inject_into,
-      field_name: paginator.pageTokenOption.field_name,
-    };
+    pageTokenOption = convertRequestOptionFieldPathToLegacyFieldName(paginator.pageTokenOption);
   }
+
+  let pageSizeOption: RequestOption | undefined;
+  if (paginator.strategy.page_size && paginator.pageSizeOption) {
+    pageSizeOption = convertRequestOptionFieldPathToLegacyFieldName(paginator.pageSizeOption);
+  }
+
   return {
     type: "DefaultPaginator",
     page_token_option: pageTokenOption,
-    page_size_option: paginator.strategy.page_size ? paginator.pageSizeOption : undefined,
+    page_size_option: pageSizeOption,
     pagination_strategy: builderPaginationStrategyToManifest(paginator.strategy),
+  };
+}
+
+function convertRequestOptionFieldPathToLegacyFieldName(option: RequestOptionOrPathInject): RequestOption {
+  // We are introducing a field_path field (type: string[]) to the RequestOption type, to support nested field injection.
+  // Eventually, we should deprecate the existing field_name field (type: string), since field_path is more flexible.
+  // However, because existing builder projects already use field_name and we trigger stream change warnings on any schema change,
+  // we need to support both fields for now to avoid triggering unnecessary and potentially confusing warnings.
+
+  // This function converts a single-element field_path in the UI to field_name in the YAML manifest:
+  // RequestOption.field_path: ['page_size'] -> RequestOption.field_name: 'page_size'
+  // TODO: Remove this function once we are ready to fully deprecate RequestOption.field_name
+  if ("inject_into" in option && option.inject_into === "path") {
+    throw new Error("Cannot convert path injection to manifest");
+  }
+
+  if (option.field_path && option.field_path.length === 1) {
+    return {
+      type: RequestOptionType.RequestOption,
+      inject_into: option.inject_into,
+      field_name: option.field_path[0],
+    };
+  }
+  return {
+    type: RequestOptionType.RequestOption,
+    ...option,
   };
 }
 
@@ -668,6 +702,12 @@ export function builderIncrementalSyncToManifest(
     datetime_format,
     ...regularFields
   } = formValues;
+
+  const startTimeOption = start_time_option
+    ? convertRequestOptionFieldPathToLegacyFieldName(start_time_option)
+    : undefined;
+  const endTimeOption = end_time_option ? convertRequestOptionFieldPathToLegacyFieldName(end_time_option) : undefined;
+
   const startDatetime = {
     type: "MinMaxDatetime" as const,
     datetime: start_datetime.value,
@@ -684,8 +724,8 @@ export function builderIncrementalSyncToManifest(
   if (filter_mode === "range") {
     return {
       ...manifestIncrementalSync,
-      start_time_option,
-      end_time_option,
+      start_time_option: startTimeOption,
+      end_time_option: endTimeOption,
       end_datetime: {
         type: "MinMaxDatetime",
         datetime:
@@ -701,7 +741,7 @@ export function builderIncrementalSyncToManifest(
   if (filter_mode === "start") {
     return {
       ...manifestIncrementalSync,
-      start_time_option,
+      start_time_option: startTimeOption,
     };
   }
   return {
@@ -718,10 +758,16 @@ export function builderParameterizedRequestsToManifest(
   }
 
   return parameterizedRequests.map((parameterizedRequest) => {
-    return {
+    const request = {
       ...parameterizedRequest,
       values: parameterizedRequest.values.value,
     };
+
+    if (request.request_option) {
+      request.request_option = convertRequestOptionFieldPathToLegacyFieldName(request.request_option);
+    }
+
+    return request;
   });
 }
 
@@ -745,7 +791,9 @@ export function builderParentStreamsToManifest(
           {
             type: "ParentStreamConfig",
             parent_key: parentStreamConfiguration.parent_key,
-            request_option: parentStreamConfiguration.request_option,
+            request_option: parentStreamConfiguration.request_option
+              ? convertRequestOptionFieldPathToLegacyFieldName(parentStreamConfiguration.request_option)
+              : undefined,
             partition_field: parentStreamConfiguration.partition_field,
             stream: streamRef(parentStream.name),
             incremental_dependency: parentStreamConfiguration.incremental_dependency ? true : undefined,
