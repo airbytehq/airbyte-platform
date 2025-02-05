@@ -272,5 +272,5 @@ tasks.register<DockerBuildxTask>(TASK_DOCKER_BUILD) {
 }
 
 tasks.named("assemble").configure {
-    dependsOn(TASK_DOCKER_BUILD)
+    dependsOn("copyNginx", "copyBuildOutput", TASK_DOCKER_BUILD)
 }
