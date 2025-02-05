@@ -15,6 +15,7 @@ import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEv
 import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 
+import { CatalogChangeEventItem } from "./components/CatalogChangeEventItem";
 import { ClearEventItem } from "./components/ClearEventItem";
 import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
 import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
@@ -40,6 +41,7 @@ import {
   jobStartedEventSchema,
   mappingEventSchema,
   refreshEventSchema,
+  schemaConfigUpdateEventSchema,
   schemaUpdateEventSchema,
   syncEventSchema,
   syncFailEventSchema,
@@ -59,6 +61,7 @@ type AllSchemaEventTypes =
   | InferType<typeof schemaUpdateEventSchema>
   | InferType<typeof schemaUpdateEventSchema>
   | InferType<typeof connectorUpdateEventSchema>
+  | InferType<typeof schemaConfigUpdateEventSchema>
   | InferType<typeof mappingEventSchema>;
 
 interface EventSchemaComponentMapItem<T> {
@@ -78,6 +81,7 @@ const eventSchemaComponentMap = [
   { schema: connectionSettingsUpdateEventSchema, component: ConnectionSettingsUpdateEventItem },
   { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
   { schema: connectorUpdateEventSchema, component: ConnectorUpdateEventItem },
+  { schema: schemaConfigUpdateEventSchema, component: CatalogChangeEventItem },
   { schema: mappingEventSchema, component: MappingEventItem },
 ] as Array<EventSchemaComponentMapItem<AllSchemaEventTypes>>;
 
