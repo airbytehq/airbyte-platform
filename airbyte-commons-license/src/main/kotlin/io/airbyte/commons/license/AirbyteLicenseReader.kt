@@ -27,6 +27,7 @@ class AirbyteLicenseReader(
     val body = fragments[1]
     val jsonContent = String(Base64.getDecoder().decode(body), Charset.defaultCharset())
     val jwt = Jsons.deserialize(jsonContent, LicenseJwt::class.java)
+    // TODO grab enterprise connectors
     if (jwt.license != null && jwt.exp != null) {
       return AirbyteLicense(
         jwt.license,

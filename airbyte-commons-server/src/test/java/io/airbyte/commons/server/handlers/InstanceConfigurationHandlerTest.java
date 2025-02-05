@@ -50,6 +50,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +78,7 @@ class InstanceConfigurationHandlerTest {
   private static final String DEFAULT_USER_EMAIL = ""; // matches what we do in production code
   private static final Integer MAX_NODES = 12;
   private static final Integer MAX_EDITORS = 50;
+  private static final Set<UUID> ENTERPRISE_CONNECTOR_IDS = Set.of();
   private static final Date EXPIRATION_DATE = new Date(2025, 12, 3);
 
   @Mock
@@ -110,7 +112,7 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense
-        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS));
+        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS));
   }
 
   @ParameterizedTest

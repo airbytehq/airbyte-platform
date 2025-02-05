@@ -87,6 +87,25 @@ components:
             detail:
               type: string
               default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
+    LicenseEntitlementProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: error:license/entitlement
+            title:
+              type: string
+              default: License Entitlement Error
+            detail:
+              type: string
+              default: The license for this organization is not entitled to use the requested feature.
     UserAlreadyExistsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1089,6 +1108,15 @@ components:
         - value
       properties:
         value:
+          type: string
+    ProblemLicenseEntitlementData:
+      type: object
+      required:
+        - entitlement
+      properties:
+        entitlement:
+          type: string
+        resourceId:
           type: string
     DbtCloudIntegrationData:
       type: object

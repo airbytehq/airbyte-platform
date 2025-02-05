@@ -7,6 +7,7 @@ package io.airbyte.commons.license
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonValue
 import java.util.Date
+import java.util.UUID
 
 /**
  * An immutable representation of an Airbyte License.
@@ -16,6 +17,7 @@ data class AirbyteLicense(
   val expirationDate: Date? = null,
   val maxNodes: Int? = null,
   val maxEditors: Int? = null,
+  val enterpriseConnectorIds: Set<UUID> = emptySet(),
 ) {
   enum class LicenseType(
     @get:JsonValue val value: String,
