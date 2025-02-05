@@ -1,5 +1,6 @@
 import { config } from "core/config";
 
+import { HockeyStackAnalyticsObject } from "./HockeyStackAnalytics";
 import { Action, EventParams, Namespace } from "./types";
 
 type Context = Record<string, unknown>;
@@ -8,6 +9,8 @@ export class AnalyticsService {
   private context: Context = {};
 
   private getSegmentAnalytics = (): SegmentAnalytics.AnalyticsJS | undefined => window.analytics;
+
+  private getHockeyStackAnalytics = (): HockeyStackAnalyticsObject | undefined => window.HockeyStack;
 
   public setContext(context: Context) {
     this.context = {
@@ -52,6 +55,7 @@ export class AnalyticsService {
       console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
     }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
+    this.getHockeyStackAnalytics()?.identify?.(userId);
   }
 
   public group(organisationId: string, traits: Record<string, unknown> = {}): void {
