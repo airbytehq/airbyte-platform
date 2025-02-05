@@ -264,6 +264,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const { setValue, getValues } = useFormContext();
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   const {
     data: resolveData,
@@ -365,7 +366,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
           // set jsonManifest first so that a save isn't triggered
           setJsonManifest(convertedManifest);
-          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
+          setPersistedState({
+            name: currentProject.name,
+            manifest: convertedManifest,
+            componentsFileContent: customComponentsCode,
+          });
           // don't need to explicitly validate here, since automatic form validation will still prevent
           // publishing if there are any form errors
           setValue("formValues", convertedFormValues, { shouldValidate: false });
@@ -391,6 +396,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       resolveErrorMessage,
       resolvedManifest,
       setValue,
+      customComponentsCode,
     ]
   );
 
@@ -409,15 +415,19 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [persistedState, setPersistedState] = useState<BuilderProjectWithManifest>(() => ({
     manifest: jsonManifest,
     name: builderProject.builderProject.name,
+    componentsFileContent: builderProject.builderProject.componentsFileContent,
   }));
 
   const setToVersion = useCallback(
     (version: number | undefined, manifest: DeclarativeComponentSchema) => {
-      const updateManifestState = (manifestToProcess: DeclarativeComponentSchema) => {
+      const updateManifestState = (
+        manifestToProcess: DeclarativeComponentSchema,
+        componentsFileContent: string | undefined
+      ) => {
         const cleanedManifest = removeEmptyProperties(manifestToProcess);
         if (version === undefined) {
           // set persisted state to the current state so that the draft is not saved when switching back to the staged draft
-          setPersistedState({ name: currentProject.name, manifest: cleanedManifest });
+          setPersistedState({ name: currentProject.name, manifest: cleanedManifest, componentsFileContent });
         }
         // set json manifest first so that a save isn't triggered
         setJsonManifest(cleanedManifest);
@@ -437,23 +447,24 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       }
 
       const mode = getValues("mode");
+      const componentsFileContent = customComponentsCode;
       if (mode === "ui") {
         try {
           const formValues = convertToBuilderFormValuesSync(manifest);
-          updateManifestState(convertToManifest(formValues));
+          updateManifestState(convertToManifest(formValues), componentsFileContent);
           setValue("formValues", formValues);
         } catch (e) {
-          updateManifestState(manifest);
+          updateManifestState(manifest, componentsFileContent);
           setValue("mode", "yaml");
         }
       } else {
-        updateManifestState(manifest);
+        updateManifestState(manifest, componentsFileContent);
       }
 
       setDisplayedVersion(version);
       setStateKey((key) => key + 1);
     },
-    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue]
+    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue, customComponentsCode]
   );
 
   const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();
@@ -491,7 +502,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     persistedState,
     displayedVersion,
     updateError,
-    permission
+    permission,
+    customComponentsCode
   );
 
   const modeRef = useRef(mode);
@@ -513,10 +525,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       name,
       manifest: jsonManifest,
       yamlManifest: convertJsonToYaml(jsonManifest),
+      componentsFileContent: customComponentsCode,
     };
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [permission, name, formAndResolveValid, jsonManifest, updateProject]);
+  }, [permission, name, formAndResolveValid, jsonManifest, updateProject, customComponentsCode]);
 
   useDebounce(
     () => {
@@ -524,7 +537,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         // do not save already released versions as draft
         return;
       }
-      if (persistedState.manifest === jsonManifest && persistedState.name === name) {
+      if (
+        persistedState.manifest === jsonManifest &&
+        persistedState.name === name &&
+        persistedState.componentsFileContent === customComponentsCode
+      ) {
         // first run of the hook, no need to update
         return;
       }
@@ -698,10 +715,11 @@ function getSavingState(
   formAndResolveValid: boolean,
   mode: BuilderState["mode"],
   name: string | undefined,
-  persistedState: { name: string; manifest?: DeclarativeComponentSchema },
+  persistedState: { name: string; manifest?: DeclarativeComponentSchema; componentsFileContent?: string },
   displayedVersion: number | undefined,
   updateError: Error | null,
-  permission: ConnectorBuilderPermission
+  permission: ConnectorBuilderPermission,
+  currentComponentsFileContent?: string
 ): SavingState {
   if (updateError) {
     return "error";
@@ -718,7 +736,11 @@ function getSavingState(
   if (permission !== "write") {
     return "readonly";
   }
-  const currentStateIsPersistedState = persistedState.manifest === currentJsonManifest && persistedState.name === name;
+
+  const currentStateIsPersistedState =
+    persistedState.manifest === currentJsonManifest &&
+    persistedState.name === name &&
+    persistedState.componentsFileContent === currentComponentsFileContent;
 
   if (currentStateIsPersistedState || displayedVersion !== undefined) {
     return "saved";

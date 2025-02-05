@@ -70,6 +70,7 @@ export interface BuilderState {
   formValues: BuilderFormValues;
   previewValues?: BuilderFormValues;
   yaml: string;
+  customComponentsCode?: string;
   view: "global" | "inputs" | "components" | number;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;

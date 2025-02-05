@@ -8776,6 +8776,8 @@ components:
           $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
         contributionInfo:
           $ref: "#/components/schemas/ContributionInfo"
+        componentsFileContent:
+          type: string
     BaseActorDefinitionVersionInfo:
       type: object
       required:

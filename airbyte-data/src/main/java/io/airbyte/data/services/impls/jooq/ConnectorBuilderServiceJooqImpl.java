@@ -129,6 +129,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             CONNECTOR_BUILDER_PROJECT.NAME,
             CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID,
             CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
+            CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT,
             field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"))
         .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST)
         .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
@@ -735,7 +736,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
         .withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
         .withManifestVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
-        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION));
+        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
+        .withComponentsFileContent(record.get(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT));
   }
 
 }

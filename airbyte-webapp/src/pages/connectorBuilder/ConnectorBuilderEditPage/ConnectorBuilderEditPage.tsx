@@ -37,7 +37,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     failedInitialFormValueConversion,
     initialYaml,
     builderProject: {
-      builderProject: { name },
+      builderProject: { name, componentsFileContent },
       testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
@@ -46,6 +46,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
+    customComponentsCode: componentsFileContent,
     name,
     view: "global" as const,
     testStreamIndex: 0,

@@ -411,7 +411,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const connectorName = useBuilderWatch("name");
   const connectorImageName = useMemo(() => convertConnectorNameToImageName(connectorName), [connectorName]);
   const { jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const mode = useBuilderWatch("mode");
 
   // update the version so that the manifest reflects which CDK version was used to build it
@@ -500,6 +500,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       name: values.name,
       manifest: jsonManifestWithDescription,
       yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
+      componentsFileContent: getValues("customComponentsCode"),
       contributionPullRequestUrl: contribution.pull_request_url,
       contributionActorDefinitionId: contribution.actor_definition_id,
     };
