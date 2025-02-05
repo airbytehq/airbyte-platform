@@ -17,6 +17,7 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.data.services.OrganizationPaymentConfigService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
@@ -43,14 +44,17 @@ public class OrganizationsHandler {
   private final OrganizationPersistence organizationPersistence;
 
   private final Supplier<UUID> uuidGenerator;
+  private final OrganizationPaymentConfigService organizationPaymentConfigService;
 
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
                               final PermissionService permissionService,
-                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
+                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
+                              final OrganizationPaymentConfigService organizationPaymentConfigService) {
     this.organizationPersistence = organizationPersistence;
     this.permissionService = permissionService;
     this.uuidGenerator = uuidGenerator;
+    this.organizationPaymentConfigService = organizationPaymentConfigService;
   }
 
   private static OrganizationRead buildOrganizationRead(final Organization organization) {
@@ -84,6 +88,8 @@ public class OrganizationsHandler {
     } catch (final PermissionRedundantException e) {
       throw new ConflictException(e.getMessage(), e);
     }
+
+    organizationPaymentConfigService.saveDefaultPaymentConfig(organization.getOrganizationId());
     return buildOrganizationRead(organization);
   }
 

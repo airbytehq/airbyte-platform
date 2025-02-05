@@ -16,7 +16,6 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Organization
-import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -102,13 +101,7 @@ open class ResourceBootstrapHandler(
       }
     organizationService.writeOrganization(organization)
 
-    val paymentConfig =
-      OrganizationPaymentConfig()
-        .withOrganizationId(organization.organizationId)
-        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
-        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
-
-    organizationPaymentConfigService.savePaymentConfig(paymentConfig)
+    organizationPaymentConfigService.saveDefaultPaymentConfig(organization.organizationId)
 
     val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
     permissionService.createPermission(organizationPermission)
