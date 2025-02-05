@@ -36,7 +36,11 @@ class FailureHandler(
     withLoggingContext(io.logCtx) {
       // Attaching an exception here should tie it to the root span to ensure we mark it as failed.
       ApmTraceUtils.addExceptionToTrace(e)
-      logger.error(e) { ("Pipeline Error") }
+      logger.error(e) {
+        "Pipeline Exception: $e\n" +
+          "message: ${e.message}\n" +
+          "stackTrace: ${e.stackTrace}\n"
+      }
 
       if (e is StageError) {
         apiClient.reportFailure(e)

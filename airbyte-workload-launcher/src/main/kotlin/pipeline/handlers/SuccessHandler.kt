@@ -50,9 +50,19 @@ class SuccessHandler(
         } catch (e: Exception) {
           val errorMsg = "Failed to update workload status to launched. Workload may be reprocessed on restart."
           if (e is ClientException && e.statusCode == 410) {
-            logger.debug(e) { errorMsg }
+            logger.debug(e) {
+              errorMsg +
+                "Exception: $e\n" +
+                "message: ${e.message}\n" +
+                "stackTrace: ${e.stackTrace}\n"
+            }
           } else {
-            logger.warn(e) { errorMsg }
+            logger.warn(e) {
+              errorMsg +
+                "Exception: $e\n" +
+                "message: ${e.message}\n" +
+                "stackTrace: ${e.stackTrace}\n"
+            }
           }
         }
       }

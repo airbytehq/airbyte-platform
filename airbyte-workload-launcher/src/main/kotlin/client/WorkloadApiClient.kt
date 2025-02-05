@@ -10,7 +10,6 @@ import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadRunningRequest
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,14 +33,13 @@ class WorkloadApiClient(
     try {
       updateStatusToFailed(failure)
     } catch (e: Exception) {
-      logger.warn(e) { "Could not set the status for workload ${failure.io.msg.workloadId} to failed." }
+      logger.warn(e) {
+        "Could not set the status for workload ${failure.io.msg.workloadId} to failed.\n" +
+          "Exception: $e\n" +
+          "message: ${e.message}\n" +
+          "stackTrace: ${e.stackTrace}\n"
+      }
     }
-  }
-
-  fun updateStatusToRunning(workloadId: String) {
-    val request = WorkloadRunningRequest(workloadId)
-    logger.info { "Attempting to update workload: $workloadId to RUNNING." }
-    workloadApiClient.workloadApi.workloadRunning(request)
   }
 
   fun updateStatusToFailed(failure: StageError) {
@@ -76,7 +74,12 @@ class WorkloadApiClient(
 
       result = resp.claimed
     } catch (e: Exception) {
-      logger.error(e) { "Error claiming workload $workloadId via API for $dataplaneId" }
+      logger.error(e) {
+        "Error claiming workload $workloadId via API for $dataplaneId.\n" +
+          "Exception: $e\n" +
+          "message: ${e.message}\n" +
+          "stackTrace: ${e.stackTrace}\n"
+      }
     }
 
     return result
