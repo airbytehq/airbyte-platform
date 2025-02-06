@@ -50,8 +50,6 @@ global:
 
     # -- Admin user configuration
     instanceAdmin:
-      # -- Secret name where the instanceAdmin configuration is stored
-      secretName: "airbyte-auth-secrets"
       # -- The first name of the initial user
       firstName: ""
       # -- The last name of the initial user
