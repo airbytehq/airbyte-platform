@@ -17,7 +17,9 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install, post-upgrade"
     "helm.sh/hook-delete-policy": "before-hook-creation"
+    {{- if .Values.keycloakSetup.annotations -}}
     {{ toYaml .Values.keycloakSetup.annotations | nindent 4 }}
+    {{- end }}
 spec:
   completions: 1
   template:
