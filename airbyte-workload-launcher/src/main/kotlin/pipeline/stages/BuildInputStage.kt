@@ -6,8 +6,10 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Context
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
+import io.airbyte.workers.input.InputFeatureFlagContextMapper
 import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -29,15 +31,15 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 
 /**
- * Deserializes input payloads and performs any necessary hydration from other
- * sources. When complete, a fully formed workload input should be attached to
- * the IO.
+ * Deserializes input payloads, derives a feature flag context from input data and attaches both to the IO.
+ * The input is usually not fully hydrated with further hydration eventually performed by the launched pod itself.
  */
 @Singleton
 @Named("build")
 open class BuildInputStage(
   private val replicationInputMapper: ReplicationInputMapper,
   private val deserializer: PayloadDeserializer,
+  private val ffCtxMapper: InputFeatureFlagContextMapper,
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
 ) : LaunchStage(metricPublisher, dataplaneId) {
@@ -51,9 +53,11 @@ open class BuildInputStage(
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val built = buildPayload(input.msg.workloadInput, input.msg.workloadType)
+    val ffCtx = buildInputContext(built)
 
     return input.apply {
       payload = built
+      ffContext = ffCtx
     }
   }
 
@@ -87,5 +91,13 @@ open class BuildInputStage(
       else -> {
         throw NotImplementedError("Unimplemented workload type: $type")
       }
+    }
+
+  private fun buildInputContext(payload: WorkloadPayload): Context =
+    when (payload) {
+      is CheckPayload -> ffCtxMapper.map(payload.input)
+      is DiscoverCatalogPayload -> ffCtxMapper.map(payload.input)
+      is SpecPayload -> ffCtxMapper.map(payload.input)
+      is SyncPayload -> ffCtxMapper.map(payload.input)
     }
 }

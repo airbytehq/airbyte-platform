@@ -20,8 +20,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.getActorType
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrganizationId
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -31,10 +33,6 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodNetworkSecurityLabeler
 import io.airbyte.workers.pod.ResourceConversionUtils
-import io.airbyte.workload.launcher.model.getActorType
-import io.airbyte.workload.launcher.model.getAttemptId
-import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrganizationId
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -235,7 +233,7 @@ class PayloadKubeInputMapperTest {
       )
     val input: CheckConnectionInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.CheckConnectionInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.CheckConnectionInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
@@ -348,7 +346,7 @@ class PayloadKubeInputMapperTest {
       )
     val input: DiscoverCatalogInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.DiscoverCatalogInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.DiscoverCatalogInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
@@ -472,7 +470,7 @@ class PayloadKubeInputMapperTest {
     val jobRunConfig = mockk<JobRunConfig>()
 
     val input: SpecInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.SpecInputExtensionsKt")
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.jobRunConfig } returns jobRunConfig
@@ -559,20 +557,20 @@ class PayloadKubeInputMapperTest {
       }
 
     val specInput: SpecInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.SpecInputExtensionsKt")
     every { specInput.getJobId() } returns "job-1"
     every { specInput.getAttemptId() } returns 1
     every { specInput.jobRunConfig } returns jobConfig
     every { specInput.launcherConfig } returns testConfig
 
     val checkInput: CheckConnectionInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.CheckConnectionInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.CheckConnectionInputExtensionsKt")
     every { checkInput.jobRunConfig } returns jobConfig
     every { checkInput.launcherConfig } returns testConfig
     every { checkInput.checkConnectionInput } returns checkConnectionInput
 
     val discoverInput: DiscoverCatalogInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.DiscoverCatalogInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.DiscoverCatalogInputExtensionsKt")
     every { discoverInput.getJobId() } returns "job-1"
     every { discoverInput.getAttemptId() } returns 1
     every { discoverInput.jobRunConfig } returns jobConfig

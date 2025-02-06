@@ -185,3 +185,5 @@ object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable
 object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
 
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
+
+object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)

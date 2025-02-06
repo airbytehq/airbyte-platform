@@ -9,69 +9,91 @@ import fixtures.RecordFixtures
 import io.airbyte.config.ActorType
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
-import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.InputFeatureFlagContextMapper
 import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.models.JobInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.serde.PayloadDeserializer
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.util.UUID
 
+@ExtendWith(MockKExtension::class)
 class BuildInputStageTest {
+  @MockK
+  private lateinit var replicationInputMapper: ReplicationInputMapper
+
+  @MockK
+  private lateinit var deserializer: PayloadDeserializer
+
+  @MockK
+  private lateinit var ffCtxMapper: InputFeatureFlagContextMapper
+
+  @MockK
+  private lateinit var metricPublisher: CustomMetricPublisher
+
+  private lateinit var stage: BuildInputStage
+
+  @BeforeEach
+  fun setup() {
+    stage =
+      BuildInputStage(
+        replicationInputMapper,
+        deserializer,
+        ffCtxMapper,
+        metricPublisher,
+        "dataplane-id",
+      )
+
+    every { ffCtxMapper.map(any<ReplicationInput>()) } returns Empty
+    every { ffCtxMapper.map(any<CheckConnectionInput>()) } returns Empty
+    every { ffCtxMapper.map(any<DiscoverCatalogInput>()) } returns Empty
+    every { ffCtxMapper.map(any<SpecInput>()) } returns Empty
+  }
+
   @Test
-  fun `deserializes and maps sync input`() {
+  fun `builds sync input and flag context`() {
     val inputStr = "foo"
     val sourceConfig = POJONode("bar")
     val destConfig = POJONode("baz")
-    val sourceConfig1 = POJONode("hello")
-    val destConfig1 = POJONode("world")
-    val input =
+    val deserialized =
       ReplicationActivityInput(
         connectionId = UUID.randomUUID(),
         workspaceId = UUID.randomUUID(),
         jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
       )
+    val context = Workspace("sync test")
 
     val mapped =
       ReplicationInput()
         .withSourceConfiguration(sourceConfig)
         .withDestinationConfiguration(destConfig)
 
-    val replicationInputMapper: ReplicationInputMapper = mockk()
-    val deserializer: PayloadDeserializer = mockk()
-    JobInput(
-      null,
-      null,
-      null,
-      StandardSyncInput()
-        .withSourceConfiguration(sourceConfig1)
-        .withDestinationConfiguration(destConfig1),
-    )
-    every { deserializer.toReplicationActivityInput(inputStr) } returns input
-    every { replicationInputMapper.toReplicationInput(input) } returns mapped
+    every { deserializer.toReplicationActivityInput(inputStr) } returns deserialized
+    every { replicationInputMapper.toReplicationInput(deserialized) } returns mapped
+    every { ffCtxMapper.map(mapped) } returns context
 
-    val stage =
-      BuildInputStage(
-        replicationInputMapper,
-        deserializer,
-        mockk(),
-        "dataplane-id",
-      )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
     val result = stage.applyStage(io)
@@ -81,17 +103,16 @@ class BuildInputStageTest {
     }
 
     verify {
-      replicationInputMapper.toReplicationInput(input)
+      replicationInputMapper.toReplicationInput(deserialized)
     }
 
-    when (val payload = result.payload) {
-      is SyncPayload -> assert(mapped == payload.input)
-      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
-    }
+    val payload = (result.payload as SyncPayload)
+    assertEquals(mapped, payload.input)
+    assertEquals(context, result.ffContext)
   }
 
   @Test
-  fun `deserializes check input`() {
+  fun `builds check input and flag context`() {
     val inputStr = "foo"
 
     val input =
@@ -100,24 +121,17 @@ class BuildInputStageTest {
         .withAdditionalProperty("whatever", "random value")
         .withActorType(ActorType.DESTINATION)
 
-    val deserialized =
+    val inputWrapper =
       CheckConnectionInput(
         launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
         jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
         checkConnectionInput = input,
       )
+    val context = Workspace("check test")
 
-    val replicationInputMapper: ReplicationInputMapper = mockk()
-    val deserializer: PayloadDeserializer = mockk()
-    every { deserializer.toCheckConnectionInput(inputStr) } returns deserialized
+    every { deserializer.toCheckConnectionInput(inputStr) } returns inputWrapper
+    every { ffCtxMapper.map(inputWrapper) } returns context
 
-    val stage =
-      BuildInputStage(
-        replicationInputMapper,
-        deserializer,
-        mockk(),
-        "dataplane-id",
-      )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
 
     val result = stage.applyStage(io)
@@ -127,11 +141,12 @@ class BuildInputStageTest {
     }
 
     val payload = (result.payload as CheckPayload)
-    assert(input == payload.input.checkConnectionInput)
+    assertEquals(input, payload.input.checkConnectionInput)
+    assertEquals(context, result.ffContext)
   }
 
   @Test
-  fun `deserializes discover input`() {
+  fun `builds discover input and flag context`() {
     val inputStr = "foo"
     val input =
       StandardDiscoverCatalogInput()
@@ -139,25 +154,17 @@ class BuildInputStageTest {
         .withConfigHash(UUID.randomUUID().toString())
         .withAdditionalProperty("whatever", "random value")
 
-    val deserialized =
+    val inputWrapper =
       DiscoverCatalogInput(
         discoverCatalogInput = input,
         launcherConfig = IntegrationLauncherConfig().withWorkspaceId(UUID.randomUUID()),
         jobRunConfig = JobRunConfig().withJobId("1").withAttemptId(0L),
       )
+    val context = Workspace("discover test")
 
-    val replicationInputMapper: ReplicationInputMapper = mockk()
-    val deserializer: PayloadDeserializer = mockk()
+    every { deserializer.toDiscoverCatalogInput(inputStr) } returns inputWrapper
+    every { ffCtxMapper.map(inputWrapper) } returns context
 
-    every { deserializer.toDiscoverCatalogInput(inputStr) } returns deserialized
-
-    val stage =
-      BuildInputStage(
-        replicationInputMapper,
-        deserializer,
-        mockk(),
-        "dataplane-id",
-      )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
 
     val result = stage.applyStage(io)
@@ -167,24 +174,19 @@ class BuildInputStageTest {
     }
 
     val payload = (result.payload as DiscoverCatalogPayload)
-    assert(input == payload.input.discoverCatalogInput)
+    assertEquals(input, payload.input.discoverCatalogInput)
+    assertEquals(context, result.ffContext)
   }
 
   @Test
-  fun `deserializes spec input`() {
+  fun `builds spec input and flag context`() {
     val inputStr = "foo"
-    val specInput = mockk<SpecInput>()
+    val inputWrapper = mockk<SpecInput>()
+    val context = Workspace("spec test")
 
-    val replicationInputMapper: ReplicationInputMapper = mockk()
-    val deserializer: PayloadDeserializer = mockk()
-    every { deserializer.toSpecInput(inputStr) } returns specInput
-    val stage =
-      BuildInputStage(
-        replicationInputMapper,
-        deserializer,
-        mockk(),
-        "dataplane-id",
-      )
+    every { deserializer.toSpecInput(inputStr) } returns inputWrapper
+    every { ffCtxMapper.map(inputWrapper) } returns context
+
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SPEC))
 
     val result = stage.applyStage(io)
@@ -193,9 +195,8 @@ class BuildInputStageTest {
       deserializer.toSpecInput(inputStr)
     }
 
-    when (val payload = result.payload) {
-      is SpecPayload -> assert(specInput == payload.input)
-      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
-    }
+    val payload = (result.payload as SpecPayload)
+    assertEquals(inputWrapper, payload.input)
+    assertEquals(context, result.ffContext)
   }
 }

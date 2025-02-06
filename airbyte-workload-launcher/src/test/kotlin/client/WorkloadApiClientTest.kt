@@ -94,13 +94,9 @@ internal class WorkloadApiClientTest {
     val workloadId = "workload-id"
     val requestCapture = slot<WorkloadFailureRequest>()
 
-    val launcherInput = mockk<LauncherInput>()
-    every { launcherInput.workloadId } returns workloadId
-    val io = mockk<StageIO>()
-    every { io.msg } returns launcherInput
     every { workloadApi.workloadFailure(any()) } returns Unit
 
-    workloadApiClient.updateStatusToFailed(StageError(io, StageName.CLAIM, RuntimeException("Cause")))
+    workloadApiClient.updateStatusToFailed(workloadId, "Cause")
 
     verify(exactly = 1) { workloadApi.workloadFailure(capture(requestCapture)) }
     assertEquals(workloadId, requestCapture.captured.workloadId)

@@ -31,7 +31,7 @@ class WorkloadApiClient(
     }
 
     try {
-      updateStatusToFailed(failure)
+      updateStatusToFailed(failure.io.msg.workloadId, ExceptionUtils.exceptionStackTrace(failure))
     } catch (e: Exception) {
       logger.warn(e) {
         "Could not set the status for workload ${failure.io.msg.workloadId} to failed.\n" +
@@ -42,14 +42,17 @@ class WorkloadApiClient(
     }
   }
 
-  fun updateStatusToFailed(failure: StageError) {
+  fun updateStatusToFailed(
+    workloadId: String,
+    reason: String? = null,
+  ) {
     val request =
       WorkloadFailureRequest(
-        failure.io.msg.workloadId,
+        workloadId,
         MetricEmittingApps.WORKLOAD_LAUNCHER.applicationName,
-        ExceptionUtils.exceptionStackTrace(failure),
+        reason,
       )
-    logger.info { "Attempting to update workload: ${failure.io.msg.workloadId} to FAILED." }
+    logger.info { "Attempting to update workload: $workloadId to FAILED." }
     workloadApiClient.workloadApi.workloadFailure(request)
   }
 
