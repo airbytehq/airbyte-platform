@@ -361,6 +361,8 @@
   "connectorForm.signInWithGoogle": "Sign in with Google",
   "connectorForm.authenticate.succeeded": "Authentication succeeded!",
   "connectorForm.authenticate.required": "Authentication required",
+  "connectorForm.manualAuth.toggle": "Setup manually",
+  "connectorForm.manualAuth.back": "Back",
   "connectorForm.redirectUrl": "When configuring your OAuth app, set the callback or redirect URL to <b>{url}</b>",
   "connectorForm.revoke": "Disconnect",
   "connectorForm.revocation.succeeded": "Your {connector} integration has been disconnected.",

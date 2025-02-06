@@ -2,16 +2,9 @@
 @use "scss/mixins";
 @use "scss/variables";
 
-.message {
-  margin-left: variables.$spacing-lg;
-}
-
 .error {
+  margin-left: variables.$spacing-lg;
   color: colors.$red;
-}
-
-.success {
-  color: colors.$green;
 }
 
 .accented__container {

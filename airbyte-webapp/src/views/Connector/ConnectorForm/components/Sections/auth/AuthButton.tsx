@@ -1,4 +1,3 @@
-import classnames from "classnames";
 import React, { useImperativeHandle, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -56,7 +55,7 @@ export const AuthButton: React.FC<{
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
 
-  const { hiddenAuthFieldErrors } = useAuthentication();
+  const { hiddenAuthFieldErrors, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -73,25 +72,37 @@ export const AuthButton: React.FC<{
   const definitionId = ConnectorSpecification.id(selectedConnectorDefinitionSpecification);
   const Component = getButtonComponent(definitionId);
 
-  const messageStyle = classnames(styles.message, {
-    [styles.error]: authRequiredError,
-    [styles.success]: !authRequiredError,
-  });
-  const buttonLabel = done ? (
-    <FormattedMessage id="connectorForm.reauthenticate" />
-  ) : (
-    <FormattedMessage
-      id={getAuthenticateMessageId(definitionId)}
-      values={{ connector: selectedConnectorDefinition.name }}
-    />
-  );
+  if (manualOAuthMode) {
+    return (
+      <FlexContainer direction="column" gap="lg" alignItems="flex-start">
+        <Button variant="clear" icon="chevronLeft" iconSize="lg" onClick={toggleManualOAuthMode}>
+          <FormattedMessage id="connectorForm.manualAuth.back" />
+        </Button>
+      </FlexContainer>
+    );
+  }
+
   return (
-    <FlexContainer alignItems="center">
-      <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
-        {buttonLabel}
-      </Component>
+    <FlexContainer direction="column" gap="lg" alignItems="flex-start">
+      <FlexContainer gap="lg" alignItems="center" justifyContent="space-between">
+        <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
+          {done ? (
+            <FormattedMessage id="connectorForm.reauthenticate" />
+          ) : (
+            <FormattedMessage
+              id={getAuthenticateMessageId(definitionId)}
+              values={{ connector: selectedConnectorDefinition.name }}
+            />
+          )}
+        </Component>
+
+        <Button variant="clear" onClick={toggleManualOAuthMode}>
+          <FormattedMessage id="connectorForm.manualAuth.toggle" />
+        </Button>
+      </FlexContainer>
+
       {authRequiredError && (
-        <Text as="div" size="lg" className={messageStyle}>
+        <Text as="div" size="lg" className={styles.error}>
           <FormattedMessage id="connectorForm.authenticate.required" />
         </Text>
       )}

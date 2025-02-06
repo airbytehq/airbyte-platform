@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from "react";
+import React, { useContext, useMemo, useState, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { AnySchema } from "yup";
 
@@ -19,6 +19,8 @@ interface ConnectorFormContext {
   isEditMode?: boolean;
   validationSchema: AnySchema;
   connectorId?: string;
+  manualOAuthMode: boolean;
+  toggleManualOAuthMode: () => void;
 }
 
 const connectorFormContext = React.createContext<ConnectorFormContext | null>(null);
@@ -52,6 +54,11 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
   connectorId,
 }) => {
   const { reset: resetForm } = useFormContext<ConnectorFormValues>();
+  const [manualOAuthMode, setManualOAuthMode] = useState(false);
+
+  const toggleManualOAuthMode = useCallback(() => {
+    setManualOAuthMode((prev) => !prev);
+  }, []);
 
   const ctx = useMemo<ConnectorFormContext>(() => {
     const context: ConnectorFormContext = {
@@ -62,6 +69,8 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
       validationSchema,
       isEditMode,
       connectorId,
+      manualOAuthMode,
+      toggleManualOAuthMode,
       resetConnectorForm: () => {
         resetForm();
       },
@@ -76,6 +85,8 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
     isEditMode,
     connectorId,
     resetForm,
+    manualOAuthMode,
+    toggleManualOAuthMode,
   ]);
 
   return <connectorFormContext.Provider value={ctx}>{children}</connectorFormContext.Provider>;
