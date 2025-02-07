@@ -19,17 +19,7 @@ import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
 import { BuilderFormInput, BuilderFormValues, BuilderState } from "../types";
 
-const supportedTypes = [
-  "string",
-  "integer",
-  "number",
-  "array",
-  "boolean",
-  "enum",
-  "unknown",
-  "date",
-  "date-time",
-] as const;
+export const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "date", "date-time"] as const;
 
 export interface InputInEditing {
   key: string;
@@ -40,7 +30,7 @@ export interface InputInEditing {
   isLocked?: boolean;
   isNew?: boolean;
   showDefaultValueField: boolean;
-  type: (typeof supportedTypes)[number];
+  type?: (typeof supportedTypes)[number];
 }
 
 function sluggify(str: string) {
@@ -71,12 +61,7 @@ function inputInEditingToFormInput({
     ...values,
     definition: {
       ...values.definition,
-      type:
-        type === "enum" || type === "date" || type === "date-time"
-          ? "string"
-          : type === "unknown"
-          ? values.definition.type
-          : type,
+      type: type === "enum" || type === "date" || type === "date-time" ? "string" : type,
       // only respect the enum values if the user explicitly selected enum as type
       enum: type === "enum" && values.definition.enum?.length ? values.definition.enum : undefined,
       default: showDefaultValueField ? values.definition.default : undefined,
@@ -117,6 +102,10 @@ export const InputForm = ({
         definition: yup.object().shape({
           title: yup.string().required("form.empty.error"),
         }),
+        type: yup
+          .mixed()
+          .oneOf([...supportedTypes])
+          .required("form.empty.error"),
       }) as unknown as yup.SchemaOf<InputInEditing, never>,
     [inputInEditing?.isNew, inputInEditing?.key, usedKeys]
   );
@@ -290,7 +279,7 @@ const InputModal = ({
   onSubmit: (inputInEditing: InputInEditing) => void;
 }) => {
   const {
-    formState: { isValid, isSubmitting },
+    formState: { isSubmitting },
     setValue,
     handleSubmit,
   } = useFormContext<InputInEditing>();
@@ -352,7 +341,7 @@ const InputModal = ({
             label={formatMessage({ id: "connectorBuilder.inputModal.description" })}
             tooltip={formatMessage({ id: "connectorBuilder.inputModal.descriptionTooltip" })}
           />
-          {values.type !== "unknown" && !values.isLocked ? (
+          {!values.isLocked ? (
             <>
               <BuilderField
                 path="type"
@@ -408,18 +397,7 @@ const InputModal = ({
               )}
             </>
           ) : (
-            <Message
-              type="info"
-              text={
-                <FormattedMessage
-                  id={
-                    values.type === "unknown"
-                      ? "connectorBuilder.inputModal.unsupportedInput"
-                      : "connectorBuilder.inputModal.lockedInput"
-                  }
-                />
-              }
-            />
+            <Message type="info" text={<FormattedMessage id="connectorBuilder.inputModal.lockedInput" />} />
           )}
         </ModalBody>
         <ModalFooter>
@@ -433,7 +411,7 @@ const InputModal = ({
           <Button variant="secondary" type="reset" onClick={onClose}>
             <FormattedMessage id="form.cancel" />
           </Button>
-          <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
+          <Button type="submit" isLoading={isSubmitting}>
             <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
           </Button>
         </ModalFooter>

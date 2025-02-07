@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import classNames from "classnames";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -17,6 +17,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -24,12 +25,10 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
+import { InputForm, InputInEditing, newInputInEditing, supportedTypes } from "./InputsForm";
 import styles from "./InputsView.module.scss";
 import { BuilderFormInput } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
-
-const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -109,8 +108,8 @@ function getType(definition: BuilderFormInput["definition"]): InputInEditing["ty
   if (definition.format === "date-time") {
     return "date-time";
   }
-  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
-  if (supportedType !== "unknown" && definition.enum) {
+  const supportedType = supportedTypes.find((type) => type === definition.type);
+  if (supportedType && definition.enum) {
     return "enum";
   }
   return supportedType;
@@ -147,6 +146,11 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
     zIndex: isDragging ? 1 : undefined,
   };
 
+  const openInputForm = useCallback(
+    () => setInputInEditing(formInputToInputInEditing(input)),
+    [input, setInputInEditing]
+  );
+
   return (
     <div ref={setNodeRef} style={style} className={classNames({ [styles.dragging]: isDragging })}>
       <Card bodyClassName={styles.inputCard}>
@@ -173,21 +177,26 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
               variant="secondary"
               aria-label="Edit"
               type="button"
-              onClick={() => {
-                setInputInEditing(formInputToInputInEditing(input));
-              }}
+              onClick={openInputForm}
             >
               <Icon type="gear" color="action" />
             </Button>
           </FlexContainer>
-          <InputFormControl builderInput={input} />
+          <InputFormControl builderInput={input} openInputForm={openInputForm} />
         </FlexContainer>
       </Card>
     </div>
   );
 };
 
-const InputFormControl = ({ builderInput }: { builderInput: BuilderFormInput }) => {
+const InputFormControl = ({
+  builderInput,
+  openInputForm,
+}: {
+  builderInput: BuilderFormInput;
+  openInputForm: () => void;
+}) => {
+  const { toggleUI } = useConnectorBuilderFormState();
   const { definition } = builderInput;
   const fieldPath = `testingValues.${builderInput.key}`;
 
@@ -214,6 +223,33 @@ const InputFormControl = ({ builderInput }: { builderInput: BuilderFormInput }) 
     case "array":
       return <BuilderField type={definition.type} path={fieldPath} />;
     default:
-      throw new Error(`No matching form input found for type: ${definition.type}`);
+      return (
+        <Message
+          type="error"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.unsupportedInputType.primary"
+              values={{ type: definition.type ?? "undefined" }}
+            />
+          }
+          secondaryText={
+            <FormattedMessage
+              id="connectorBuilder.unsupportedInputType.secondary"
+              values={{
+                openInputButton: (children: React.ReactNode) => (
+                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={openInputForm}>
+                    {children}
+                  </Button>
+                ),
+                switchToYamlButton: (children: React.ReactNode) => (
+                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={() => toggleUI("yaml")}>
+                    {children}
+                  </Button>
+                ),
+              }}
+            />
+          }
+        />
+      );
   }
 };

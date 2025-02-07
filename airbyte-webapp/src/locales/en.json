@@ -2067,6 +2067,8 @@
   "connectorBuilder.decoder.label": "HTTP Response Format",
   "connectorBuilder.decoder.tooltip": "The format of the body in the HTTP response returned by the API.",
   "connectorBuilder.unique": "Must be unique",
+  "connectorBuilder.unsupportedInputType.primary": "This Input has type <b>{type}</b>, which is not currently supported in UI mode.",
+  "connectorBuilder.unsupportedInputType.secondary": "You must either <openInputButton>modify the Input</openInputButton> or <switchToYamlButton>switch to YAML mode</switchToYamlButton>.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

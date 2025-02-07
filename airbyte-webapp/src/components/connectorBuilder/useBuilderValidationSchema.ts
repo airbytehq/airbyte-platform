@@ -242,7 +242,7 @@ export const useBuilderValidationSchema = () => {
                 fieldSchema = yup.array().of(yup.string());
                 break;
               default:
-                throw new Error(`Unknown type: ${input.definition.type}`);
+                fieldSchema = yup.mixed().test("invalid-type", `Invalid type: ${input.definition.type}`, () => false);
             }
 
             if (input.required) {
