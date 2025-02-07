@@ -18,10 +18,6 @@ import { useNotificationService } from "hooks/services/Notification";
 import { TagFormModal } from "./TagFormModal";
 import styles from "./TagsTable.module.scss";
 
-interface WorkspaceTagDataItem extends Tag {
-  connectionCount: number;
-}
-
 export const TagsTable: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
   const tags = useTagsList(workspaceId);
@@ -32,14 +28,8 @@ export const TagsTable: React.FC = () => {
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
-  // TODO: use the actual connection count from the API once it's implemented
-  const tagsWithConnectionCount = tags.map((tag) => ({
-    ...tag,
-    connectionCount: 0,
-  }));
-
   const onEdit = useCallback(
-    (tag?: WorkspaceTagDataItem) => {
+    (tag?: Tag) => {
       openModal({
         title: formatMessage({
           id: tag ? "settings.workspace.tags.tagForm.edit" : "settings.workspace.tags.tagForm.create",
@@ -53,7 +43,7 @@ export const TagsTable: React.FC = () => {
   );
 
   const onDelete = useCallback(
-    (tag?: WorkspaceTagDataItem) => {
+    (tag?: Tag) => {
       if (!tag) {
         return;
       }
@@ -64,7 +54,6 @@ export const TagsTable: React.FC = () => {
             id="settings.workspace.tags.deleteModal.text"
             values={{
               tag: tag.name,
-              count: tag.connectionCount,
             }}
           />
         ),
@@ -86,17 +75,13 @@ export const TagsTable: React.FC = () => {
     [closeConfirmationModal, deleteTag, formatMessage, openConfirmationModal, registerNotification, workspaceId]
   );
 
-  const columnHelper = createColumnHelper<WorkspaceTagDataItem>();
+  const columnHelper = createColumnHelper<Tag>();
 
   const columns = React.useMemo(
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="settings.workspace.tags.tagColumn" />,
         cell: (props) => <TagBadge color={props.row.original.color} text={props.row.original.name} />,
-      }),
-      columnHelper.accessor("connectionCount", {
-        header: () => <FormattedMessage id="settings.workspace.tags.connectionsColumn" />,
-        cell: (props) => props.getValue(),
       }),
       columnHelper.display({
         id: "actions",
@@ -140,7 +125,7 @@ export const TagsTable: React.FC = () => {
             <FormattedMessage id="settings.workspace.tags.tagForm.create" />
           </Button>
         </FlexContainer>
-        <Table columns={columns} data={tagsWithConnectionCount} initialSortBy={[{ id: "name", desc: false }]} />
+        <Table columns={columns} data={tags} initialSortBy={[{ id: "name", desc: false }]} />
       </FlexContainer>
     </Box>
   );

@@ -112,7 +112,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         ? [
             columnHelper.accessor("tags", {
               header: () => <FormattedMessage id="connection.tags.title" />,
-              enableSorting: true,
+              enableSorting: false,
               meta: {
                 noPadding: true,
                 thClassName: styles.tags,
