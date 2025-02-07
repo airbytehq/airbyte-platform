@@ -5,8 +5,11 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,9 +34,12 @@ import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -52,6 +58,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -82,10 +89,13 @@ class DestinationHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
-  // needs to match name of file in src/test/resources/icons
+  private static final String API_KEY_FIELD = "apiKey";
+  private static final String API_KEY_VALUE = "987-xyz";
 
+  // needs to match name of file in src/test/resources/icons
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
   private static final Boolean IS_VERSION_OVERRIDE_APPLIED = true;
   private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
@@ -94,6 +104,7 @@ class DestinationHandlerTest {
 
   private static final ScopedResourceRequirements RESOURCE_ALLOCATION = getResourceRequirementsForDestinationRequest(DEFAULT_CPU, DEFAULT_MEMORY);
   private DestinationService destinationService;
+  private WorkspaceHelper workspaceHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -108,6 +119,8 @@ class DestinationHandlerTest {
     destinationService = mock(DestinationService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -144,10 +157,14 @@ class DestinationHandlerTest {
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
             apiPojoConverters,
+            workspaceHelper,
+            licenseEntitlementChecker,
             Configs.DeploymentMode.OSS);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
+
+    when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(UUID.randomUUID());
   }
 
   @Test
@@ -203,6 +220,36 @@ class DestinationHandlerTest {
   }
 
   @Test
+  void testCreateDestinationNoEntitlementThrows()
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(uuidGenerator.get())
+        .thenReturn(destinationConnection.getDestinationId());
+    when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(destinationConnection);
+    when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
+        .thenReturn(destinationDefinitionVersion);
+
+    final DestinationCreate destinationCreate = new DestinationCreate()
+        .name(destinationConnection.getName())
+        .workspaceId(destinationConnection.getWorkspaceId())
+        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .connectionConfiguration(DestinationHelpers.getTestDestinationJson())
+        .resourceAllocation(RESOURCE_ALLOCATION);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(licenseEntitlementChecker)
+        .ensureEntitled(any(), eq(Entitlement.DESTINATION_CONNECTOR), eq(standardDestinationDefinition.getDestinationDefinitionId()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> destinationHandler.createDestination(destinationCreate));
+
+    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId());
+  }
+
+  @Test
   void testNonNullCreateDestinationThrowsOnInvalidResourceAllocation()
       throws IOException {
     DestinationHandler cloudDestinationHandler =
@@ -218,6 +265,8 @@ class DestinationHandlerTest {
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
             apiPojoConverters,
+            workspaceHelper,
+            licenseEntitlementChecker,
             Configs.DeploymentMode.CLOUD);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
@@ -243,7 +292,7 @@ class DestinationHandlerTest {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
     final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForDestinationRequest("3", "3 GB");
     final DestinationUpdate destinationUpdate = new DestinationUpdate()
         .name(updatedDestName)
@@ -296,6 +345,52 @@ class DestinationHandlerTest {
   }
 
   @Test
+  void testUpdateDestinationNoEntitlementThrows()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final String updatedDestName = "my updated dest name";
+    final JsonNode newConfiguration = destinationConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForDestinationRequest("3", "3 GB");
+    final DestinationUpdate destinationUpdate = new DestinationUpdate()
+        .name(updatedDestName)
+        .destinationId(destinationConnection.getDestinationId())
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
+
+    final DestinationConnection expectedDestinationConnection = Jsons.clone(destinationConnection)
+        .withName(updatedDestName)
+        .withConfiguration(newConfiguration)
+        .withTombstone(false)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation));
+
+    when(secretsProcessor
+        .copySecrets(destinationConnection.getConfiguration(), newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(newConfiguration);
+    when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
+    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(expectedDestinationConnection);
+    when(configurationUpdate.destination(destinationConnection.getDestinationId(), updatedDestName, newConfiguration))
+        .thenReturn(expectedDestinationConnection);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(licenseEntitlementChecker)
+        .ensureEntitled(any(), eq(Entitlement.DESTINATION_CONNECTOR), eq(standardDestinationDefinition.getDestinationDefinitionId()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> destinationHandler.updateDestination(destinationUpdate));
+
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId());
+    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
+  }
+
+  @Test
   void testNonNullUpdateDestinationThrowsOnInvalidResourceAllocation() {
     DestinationHandler cloudDestinationHandler =
         new DestinationHandler(
@@ -310,11 +405,13 @@ class DestinationHandlerTest {
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
             apiPojoConverters,
+            workspaceHelper,
+            licenseEntitlementChecker,
             Configs.DeploymentMode.CLOUD);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
     final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForDestinationRequest("3", "3 GB");
     final DestinationUpdate destinationUpdate = new DestinationUpdate()
         .name(updatedDestName)
@@ -425,7 +522,7 @@ class DestinationHandlerTest {
   void testDeleteDestinationAndDeleteSecrets()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
 
     final DestinationConnection expectedSourceConnection = Jsons.clone(destinationConnection).withTombstone(true);
 

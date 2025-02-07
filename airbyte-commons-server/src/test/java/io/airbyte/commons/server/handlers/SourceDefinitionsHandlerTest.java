@@ -38,6 +38,8 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
@@ -54,6 +56,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.helpers.FieldGenerator;
@@ -111,6 +114,7 @@ class SourceDefinitionsHandlerTest {
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
 
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
   private SourceService sourceService;
@@ -136,6 +140,7 @@ class SourceDefinitionsHandlerTest {
     featureFlagClient = mock(TestClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
 
@@ -152,6 +157,7 @@ class SourceDefinitionsHandlerTest {
             airbyteCompatibleConnectorsValidator,
             sourceService,
             workspaceService,
+            licenseEntitlementChecker,
             apiPojoConverters);
   }
 
@@ -298,7 +304,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list")
-  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException {
+  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
 
@@ -310,6 +316,10 @@ class SourceDefinitionsHandlerTest {
             Map.of(
                 sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
                 sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
+        eq(List.of(sourceDefinition.getSourceDefinitionId()))))
+            .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -353,7 +363,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException {
+  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition hiddenSourceDefinition = generateSourceDefinition();
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
@@ -368,6 +378,44 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(Map.of(
             sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
             sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
+        eq(List.of(hiddenSourceDefinition.getSourceDefinitionId(), sourceDefinition.getSourceDefinitionId()))))
+            .thenReturn(Map.of(
+                sourceDefinition.getSourceDefinitionId(), true,
+                hiddenSourceDefinition.getSourceDefinitionId(), true));
+
+    final SourceDefinitionReadList actualSourceDefinitionReadList =
+        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final List<UUID> expectedIds = Lists.newArrayList(sourceDefinition.getSourceDefinitionId(), sourceDefinition2.getSourceDefinitionId());
+    assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualSourceDefinitionReadList.getSourceDefinitions().stream()
+        .map(SourceDefinitionRead::getSourceDefinitionId)
+        .toList()));
+  }
+
+  @Test
+  @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out unentitled connectors")
+  void testListSourceDefinitionsForWorkspaceWithUnentitledConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition unentitledSourceDefinition = generateSourceDefinition();
+    final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(sourceService.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(unentitledSourceDefinition, sourceDefinition));
+    when(sourceService.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(sourceDefinition, sourceDefinition2), workspaceId))
+        .thenReturn(Map.of(
+            sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
+            sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
+        eq(List.of(unentitledSourceDefinition.getSourceDefinitionId(), sourceDefinition.getSourceDefinitionId()))))
+            .thenReturn(Map.of(
+                sourceDefinition.getSourceDefinitionId(), true,
+                unentitledSourceDefinition.getSourceDefinitionId(), false));
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
         sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));

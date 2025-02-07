@@ -26,6 +26,8 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
@@ -40,6 +42,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -71,6 +74,8 @@ public class DestinationHandler {
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private final ApiPojoConverters apiPojoConverters;
+  private final WorkspaceHelper workspaceHelper;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final Configs.DeploymentMode deploymentMode;
 
   @VisibleForTesting
@@ -85,6 +90,8 @@ public class DestinationHandler {
                             final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                             final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
                             final ApiPojoConverters apiPojoConverters,
+                            final WorkspaceHelper workspaceHelper,
+                            final LicenseEntitlementChecker licenseEntitlementChecker,
                             final Configs.DeploymentMode deploymentMode) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
@@ -97,6 +104,8 @@ public class DestinationHandler {
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
     this.apiPojoConverters = apiPojoConverters;
+    this.workspaceHelper = workspaceHelper;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.deploymentMode = deploymentMode;
   }
 
@@ -376,6 +385,9 @@ public class DestinationHandler {
                                             final ConnectorSpecification spec,
                                             final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinitionId);
+
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
     final DestinationConnection destinationConnection = new DestinationConnection()

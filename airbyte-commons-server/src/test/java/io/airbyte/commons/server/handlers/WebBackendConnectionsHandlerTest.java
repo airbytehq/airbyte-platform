@@ -80,6 +80,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -121,6 +122,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -171,9 +173,11 @@ class WebBackendConnectionsHandlerTest {
   private CatalogService catalogService;
   private ConnectionService connectionService;
   private WorkspaceService workspaceService;
+  private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private DestinationCatalogGenerator destinationCatalogGenerator;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
@@ -199,11 +203,13 @@ class WebBackendConnectionsHandlerTest {
     catalogService = mock(CatalogService.class);
     connectionService = mock(ConnectionService.class);
     workspaceService = mock(WorkspaceService.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -230,6 +236,8 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         apiPojoConverters,
+        workspaceHelper,
+        licenseEntitlementChecker,
         Configs.DeploymentMode.OSS);
 
     final SourceHandler sourceHandler = new SourceHandler(
@@ -245,9 +253,11 @@ class WebBackendConnectionsHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
         Configs.DeploymentMode.OSS);

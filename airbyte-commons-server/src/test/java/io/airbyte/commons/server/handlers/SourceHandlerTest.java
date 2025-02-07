@@ -6,8 +6,11 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -37,9 +40,12 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -66,6 +72,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -104,6 +111,8 @@ class SourceHandlerTest {
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
 
+  private static final String API_KEY_FIELD = "apiKey";
+  private static final String API_KEY_VALUE = "987-xyz";
   private static final String SHOES = "shoes";
   private static final String SKU = "sku";
   private static final AirbyteCatalog airbyteCatalog = CatalogHelpers.createAirbyteCatalog(SHOES,
@@ -118,8 +127,10 @@ class SourceHandlerTest {
 
   private SourceService sourceService;
   private WorkspaceService workspaceService;
+  private WorkspaceHelper workspaceHelper;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private CatalogService catalogService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
@@ -139,9 +150,11 @@ class SourceHandlerTest {
     featureFlagClient = mock(TestClient.class);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -180,9 +193,12 @@ class SourceHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.OSS);
+        actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.OSS);
   }
 
   @Test
@@ -228,6 +244,34 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testCreateSourceNoEntitlementThrows()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final SourceCreate sourceCreate = new SourceCreate()
+        .name(sourceConnection.getName())
+        .workspaceId(sourceConnection.getWorkspaceId())
+        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .connectionConfiguration(sourceConnection.getConfiguration())
+        .resourceAllocation(RESOURCE_ALLOCATION);
+
+    when(uuidGenerator.get()).thenReturn(sourceConnection.getSourceId());
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
+        .thenReturn(sourceDefinitionVersion);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(licenseEntitlementChecker)
+        .ensureEntitled(any(), eq(Entitlement.SOURCE_CONNECTOR), eq(standardSourceDefinition.getSourceDefinitionId()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> sourceHandler.createSource(sourceCreate));
+
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
+  }
+
+  @Test
   void testNonNullCreateSourceThrowsOnInvalidResourceAllocation()
       throws IOException {
     SourceHandler cloudSourceHandler = new SourceHandler(
@@ -243,9 +287,12 @@ class SourceHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+        actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -270,7 +317,7 @@ class SourceHandlerTest {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
     final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
 
     final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection)
@@ -325,6 +372,53 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testUpdateSourceNoEntitlementThrows()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final String updatedSourceName = "my updated source name";
+    final JsonNode newConfiguration = sourceConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
+
+    final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection)
+        .withName(updatedSourceName)
+        .withConfiguration(newConfiguration)
+        .withTombstone(false)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation));
+
+    final SourceUpdate sourceUpdate = new SourceUpdate()
+        .name(updatedSourceName)
+        .sourceId(sourceConnection.getSourceId())
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
+
+    when(secretsProcessor
+        .copySecrets(sourceConnection.getConfiguration(), newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(newConfiguration);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
+        .thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
+        .thenReturn(sourceConnection)
+        .thenReturn(expectedSourceConnection);
+    when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
+        .thenReturn(expectedSourceConnection);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(licenseEntitlementChecker)
+        .ensureEntitled(any(), eq(Entitlement.SOURCE_CONNECTOR), eq(standardSourceDefinition.getSourceDefinitionId()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> sourceHandler.updateSource(sourceUpdate));
+
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
+  }
+
+  @Test
   void testNonNullUpdateSourceThrowsOnInvalidResourceAllocation() {
     SourceHandler cloudSourceHandler = new SourceHandler(
         catalogService,
@@ -339,13 +433,16 @@ class SourceHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater, catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+        actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
     final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
 
     final SourceUpdate sourceUpdate = new SourceUpdate()
@@ -571,7 +668,7 @@ class SourceHandlerTest {
   void testDeleteSourceAndDeleteSecrets()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
-    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
 
     final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection).withTombstone(true);
 

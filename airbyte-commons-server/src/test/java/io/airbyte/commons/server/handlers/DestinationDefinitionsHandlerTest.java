@@ -36,6 +36,8 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
@@ -52,6 +54,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
@@ -114,6 +117,7 @@ class DestinationDefinitionsHandlerTest {
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
   private DestinationService destinationService;
   private WorkspaceService workspaceService;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
@@ -129,6 +133,7 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionVersionWithOptionals = generateDestinationDefinitionVersionWithOptionals(destinationDefinitionWithOptionals);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
     destinationHandler = mock(DestinationHandler.class);
     supportStateUpdater = mock(SupportStateUpdater.class);
     workspaceId = UUID.randomUUID();
@@ -148,6 +153,7 @@ class DestinationDefinitionsHandlerTest {
         airbyteCompatibleConnectorsValidator,
         destinationService,
         workspaceService,
+        licenseEntitlementChecker,
         apiPojoConverters);
   }
 
@@ -271,11 +277,15 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
-  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, ConfigNotFoundException {
+  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, ConfigNotFoundException, JsonValidationException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
     when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
     when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
+        eq(List.of(destinationDefinition.getDestinationDefinitionId()))))
+            .thenReturn(Map.of(destinationDefinition.getDestinationDefinitionId(), true));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -303,6 +313,35 @@ class DestinationDefinitionsHandlerTest {
   }
 
   @Test
+  @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out unentitled connectors")
+  void testListDestinationDefinitionsForWorkspaceWithUnentitledConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardDestinationDefinition unentitledDestinationDefinition = generateDestinationDefinition();
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
+        eq(List.of(destinationDefinition.getDestinationDefinitionId(), unentitledDestinationDefinition.getDestinationDefinitionId()))))
+            .thenReturn(Map.of(
+                destinationDefinition.getDestinationDefinitionId(), true,
+                unentitledDestinationDefinition.getDestinationDefinitionId(), false));
+
+    when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, unentitledDestinationDefinition));
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
+        .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
+
+    final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final List<UUID> expectedIds =
+        List.of(destinationDefinition.getDestinationDefinitionId());
+
+    assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
+        .map(DestinationDefinitionRead::getDestinationDefinitionId).toList()));
+  }
+
+  @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
   void testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardDestinationDefinition hiddenDestinationDefinition = generateDestinationDefinition();
@@ -311,6 +350,13 @@ class DestinationDefinitionsHandlerTest {
     when(featureFlagClient.boolVariation(HideActorDefinitionFromList.INSTANCE,
         new Multi(List.of(new DestinationDefinition(hiddenDestinationDefinition.getDestinationDefinitionId()), new Workspace(workspaceId)))))
             .thenReturn(true);
+
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
+        eq(List.of(destinationDefinition.getDestinationDefinitionId(), hiddenDestinationDefinition.getDestinationDefinitionId()))))
+            .thenReturn(Map.of(
+                destinationDefinition.getDestinationDefinitionId(), true,
+                hiddenDestinationDefinition.getDestinationDefinitionId(), true));
 
     when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition, hiddenDestinationDefinition));
     when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))

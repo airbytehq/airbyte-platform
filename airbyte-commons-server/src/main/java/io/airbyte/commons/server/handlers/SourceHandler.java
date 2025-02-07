@@ -34,6 +34,8 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -61,6 +63,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -95,8 +98,10 @@ public class SourceHandler {
   private final FeatureFlagClient featureFlagClient;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
+  private final WorkspaceHelper workspaceHelper;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
   private final Configs.DeploymentMode deploymentMode;
@@ -114,9 +119,11 @@ public class SourceHandler {
                        final FeatureFlagClient featureFlagClient,
                        final SourceService sourceService,
                        final WorkspaceService workspaceService,
+                       final WorkspaceHelper workspaceHelper,
                        final SecretPersistenceConfigService secretPersistenceConfigService,
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                        final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
+                       final LicenseEntitlementChecker licenseEntitlementChecker,
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
                        final Configs.DeploymentMode deploymentMode) {
@@ -132,9 +139,11 @@ public class SourceHandler {
     this.featureFlagClient = featureFlagClient;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
+    this.workspaceHelper = workspaceHelper;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
     this.deploymentMode = deploymentMode;
@@ -529,6 +538,9 @@ public class SourceHandler {
                                        final ConnectorSpecification spec,
                                        final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinitionId);
+
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
 
