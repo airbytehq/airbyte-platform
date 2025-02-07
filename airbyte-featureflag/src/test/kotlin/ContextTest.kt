@@ -69,6 +69,35 @@ class MultiTest {
   }
 
   @Test
+  fun `dedupes child contexts`() {
+    val result =
+      Multi(
+        listOf(
+          Workspace("workspace"),
+          Workspace("workspace"),
+          Workspace("workspace"),
+          Connection("connection"),
+          Connection("connection"),
+          Source("source"),
+          Destination("destination"),
+          Destination("destination"),
+        ),
+      )
+
+    val expected =
+      Multi(
+        listOf(
+          Workspace("workspace"),
+          Connection("connection"),
+          Source("source"),
+          Destination("destination"),
+        ),
+      )
+
+    assertEquals(expected, result)
+  }
+
+  @Test
   fun `orEmpty factory method returns Empty if provided contexts empty`() {
     val result = Multi.orEmpty(listOf())
     assertEquals(Empty, result)

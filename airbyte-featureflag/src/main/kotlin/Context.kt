@@ -65,8 +65,10 @@ data class EmailAttribute(
  *  @param [contexts] list of contexts, must not contain another Multi context
  */
 data class Multi(
-  val contexts: List<Context>,
+  val contexts: Set<Context>,
 ) : Context {
+  constructor(contexts: List<Context>) : this(contexts = contexts.toSet())
+
   /** This value MUST be "multi" to properly sync with the LaunchDarkly client. */
   override val kind = "multi"
 
@@ -372,21 +374,15 @@ data class CloudProviderRegion(
 }
 
 /**
- * Combines two contexts. Does not dedupe child contexts.
+ * Combines two contexts.
  */
 fun Context.merge(other: Context): Context =
-  if (this == other) {
-    this
-  } else if (other is Empty) {
-    this
-  } else if (this is Empty) {
-    other
-  } else if (this is Multi && other is Multi) {
-    Multi(this.contexts + other.contexts)
-  } else if (this is Multi) {
-    Multi(this.contexts + other)
-  } else if (other is Multi) {
-    Multi(other.contexts + this)
-  } else {
-    Multi(listOf(this, other))
+  when {
+    this == other -> this
+    other is Empty -> this
+    this is Empty -> other
+    this is Multi && other is Multi -> Multi(this.contexts + other.contexts)
+    this is Multi -> Multi(this.contexts + other)
+    other is Multi -> Multi(other.contexts + this)
+    else -> Multi(listOf(this, other))
   }

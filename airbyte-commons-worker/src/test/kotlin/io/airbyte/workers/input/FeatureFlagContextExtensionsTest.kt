@@ -43,7 +43,6 @@ class FeatureFlagContextExtensionsTest {
   @AfterEach
   fun cleanup() {
     unmockkStatic(IntegrationLauncherConfig::toFeatureFlagContext)
-    unmockkStatic(ActorContext::toFeatureFlagContext)
     unmockkStatic(ConnectionContext::toFeatureFlagContext)
   }
 
@@ -208,14 +207,18 @@ class FeatureFlagContextExtensionsTest {
 
   @Test
   fun `CheckConnectionInput#toFeatureFlagContext happy path`() {
-    val launcherConfig = IntegrationLauncherConfig()
-    val launcherFFContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
-    val actorContext = ActorContext()
-    val actorFFContext = Multi(listOf(Source(sourceId), SourceDefinition(sourceDefinitionId)))
-    mockkStatic(IntegrationLauncherConfig::toFeatureFlagContext)
-    mockkStatic(ActorContext::toFeatureFlagContext)
-    every { launcherConfig.toFeatureFlagContext() } returns launcherFFContext
-    every { actorContext.toFeatureFlagContext() } returns actorFFContext
+    val launcherConfig =
+      IntegrationLauncherConfig()
+        .withConnectionId(connectionId)
+        .withWorkspaceId(workspaceId)
+
+    val actorContext =
+      ActorContext()
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withActorId(destinationId)
+        .withActorDefinitionId(destinationDefinitionId)
+        .withActorType(ActorType.DESTINATION)
 
     val input =
       CheckConnectionInput(
@@ -231,10 +234,11 @@ class FeatureFlagContextExtensionsTest {
     val expected =
       Multi(
         listOf(
-          Source(sourceId),
-          SourceDefinition(sourceDefinitionId),
-          Connection(connectionId),
           Workspace(workspaceId),
+          Organization(organizationId),
+          Destination(destinationId),
+          DestinationDefinition(destinationDefinitionId),
+          Connection(connectionId),
         ),
       )
 
@@ -262,14 +266,18 @@ class FeatureFlagContextExtensionsTest {
 
   @Test
   fun `DiscoverCatalogInput#toFeatureFlagContext happy path`() {
-    val launcherConfig = IntegrationLauncherConfig()
-    val launcherFFContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
-    val actorContext = ActorContext()
-    val actorFFContext = Multi(listOf(Source(sourceId), SourceDefinition(sourceDefinitionId)))
-    mockkStatic(IntegrationLauncherConfig::toFeatureFlagContext)
-    mockkStatic(ActorContext::toFeatureFlagContext)
-    every { launcherConfig.toFeatureFlagContext() } returns launcherFFContext
-    every { actorContext.toFeatureFlagContext() } returns actorFFContext
+    val launcherConfig =
+      IntegrationLauncherConfig()
+        .withConnectionId(connectionId)
+        .withWorkspaceId(workspaceId)
+
+    val actorContext =
+      ActorContext()
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withActorId(destinationId)
+        .withActorDefinitionId(destinationDefinitionId)
+        .withActorType(ActorType.DESTINATION)
 
     val input =
       DiscoverCatalogInput(
@@ -285,10 +293,11 @@ class FeatureFlagContextExtensionsTest {
     val expected =
       Multi(
         listOf(
-          Source(sourceId),
-          SourceDefinition(sourceDefinitionId),
-          Connection(connectionId),
           Workspace(workspaceId),
+          Organization(organizationId),
+          Destination(destinationId),
+          DestinationDefinition(destinationDefinitionId),
+          Connection(connectionId),
         ),
       )
 
