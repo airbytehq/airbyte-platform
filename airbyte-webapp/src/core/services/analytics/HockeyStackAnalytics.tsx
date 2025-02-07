@@ -10,7 +10,8 @@ declare global {
 }
 
 export interface HockeyStackAnalyticsObject {
-  identify: (identifier: string) => void;
+  // https://docs.hockeystack.com/advanced-strategies-and-techniques/advanced-features/identifying-users
+  identify: (identifier: string, customProperties?: Record<string, string | number | boolean>) => void;
 }
 
 const HOCKEYSTACK_SCRIPT_ID = "hs-snippet";
