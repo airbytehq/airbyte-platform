@@ -9220,6 +9220,10 @@ components:
           description: Whether the connector is custom or not
           type: boolean
           default: false
+        enterprise:
+          description: Whether the connector is an enterprise connector
+          type: boolean
+          default: false
         supportLevel:
           $ref: "#/components/schemas/SupportLevel"
         releaseStage:
@@ -9634,6 +9638,8 @@ components:
           type: string
         isVersionOverrideApplied:
           type: boolean
+        isEntitled:
+          type: boolean
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
         supportState:
@@ -9822,6 +9828,10 @@ components:
           type: string
         custom:
           description: Whether the connector is custom or not
+          type: boolean
+          default: false
+        enterprise:
+          description: Whether the connector is an enterprise connector
           type: boolean
           default: false
         supportLevel:
@@ -10041,6 +10051,8 @@ components:
         icon:
           type: string
         isVersionOverrideApplied:
+          type: boolean
+        isEntitled:
           type: boolean
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"

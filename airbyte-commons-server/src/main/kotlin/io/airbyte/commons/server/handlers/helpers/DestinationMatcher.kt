@@ -28,6 +28,7 @@ class DestinationMatcher(
       workspaceId(search.workspaceId ?: query.workspaceId)
       icon(query.icon)
       isVersionOverrideApplied(query.isVersionOverrideApplied)
+      isEntitled(query.isEntitled)
       breakingChanges(query.breakingChanges)
       supportState(query.supportState)
       resourceAllocation(query.resourceAllocation)

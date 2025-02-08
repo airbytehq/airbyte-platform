@@ -145,6 +145,7 @@ public class SourceDefinitionsHandler {
           .cdkVersion(sourceVersion.getCdkVersion())
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
+          .enterprise(standardSourceDefinition.getEnterprise())
           .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
           .language(sourceVersion.getLanguage());

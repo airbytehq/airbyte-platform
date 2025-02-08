@@ -120,6 +120,7 @@ class SourceHandlerTest {
 
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
   private static final boolean IS_VERSION_OVERRIDE_APPLIED = true;
+  private static final boolean IS_ENTITLED = true;
   private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
   private static final String DEFAULT_MEMORY = "2 GB";
   private static final String DEFAULT_CPU = "2";
@@ -155,6 +156,8 @@ class SourceHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+
+    when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -229,7 +232,8 @@ class SourceHandlerTest {
     final SourceRead actualSourceRead = sourceHandler.createSource(sourceCreate);
 
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION)
+        SourceHelpers
+            .getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE, RESOURCE_ALLOCATION)
             .connectionConfiguration(sourceConnection.getConfiguration()).resourceAllocation(RESOURCE_ALLOCATION);
 
     assertEquals(expectedSourceRead, actualSourceRead);
@@ -357,7 +361,8 @@ class SourceHandlerTest {
     final SourceRead actualSourceRead = sourceHandler.updateSource(sourceUpdate);
     final SourceRead expectedSourceRead =
         SourceHelpers
-            .getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, newResourceAllocation)
+            .getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+                newResourceAllocation)
             .connectionConfiguration(newConfiguration);
 
     assertEquals(expectedSourceRead, actualSourceRead);
@@ -474,7 +479,8 @@ class SourceHandlerTest {
   @Test
   void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -506,9 +512,11 @@ class SourceHandlerTest {
         standardSourceDefinition.getSourceDefinitionId(),
         apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
     final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
     final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
 
     final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
 
@@ -544,9 +552,11 @@ class SourceHandlerTest {
         standardSourceDefinition.getSourceDefinitionId(),
         apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
     final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
     final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
 
     final SourceCloneConfiguration sourceCloneConfiguration = new SourceCloneConfiguration().name("Copy Name");
     final SourceCloneRequestBody sourceCloneRequestBody =
@@ -580,7 +590,8 @@ class SourceHandlerTest {
   void testListSourcesForWorkspace()
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
     expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
@@ -612,7 +623,8 @@ class SourceHandlerTest {
   void testListSourcesForSourceDefinition()
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
@@ -639,7 +651,8 @@ class SourceHandlerTest {
   @Test
   void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE, RESOURCE_ALLOCATION);
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            RESOURCE_ALLOCATION);
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(sourceService.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));

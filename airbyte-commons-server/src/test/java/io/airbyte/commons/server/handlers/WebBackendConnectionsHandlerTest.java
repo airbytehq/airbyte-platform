@@ -321,6 +321,8 @@ class WebBackendConnectionsHandlerTest {
     when(sourceService.getStandardSourceDefinition(source.getSourceDefinitionId())).thenReturn(sourceDefinition);
     when(destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId())).thenReturn(destinationDefinition);
 
+    when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
+
     final ConnectorSpecification mockSpec = mock(ConnectorSpecification.class);
     final ActorDefinitionVersion mockADV = new ActorDefinitionVersion().withSpec(mockSpec);
     final ActorDefinitionVersionWithOverrideStatus mockADVWithOverrideStatus = new ActorDefinitionVersionWithOverrideStatus(mockADV, false);

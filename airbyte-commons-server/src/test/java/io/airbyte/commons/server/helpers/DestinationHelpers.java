@@ -72,12 +72,13 @@ public class DestinationHelpers {
                                                    final StandardDestinationDefinition standardDestinationDefinition) {
     // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
     // if you want to override them.
-    return getDestinationRead(destination, standardDestinationDefinition, false, SupportState.SUPPORTED, null);
+    return getDestinationRead(destination, standardDestinationDefinition, false, true, SupportState.SUPPORTED, null);
   }
 
   public static DestinationRead getDestinationRead(final DestinationConnection destination,
                                                    final StandardDestinationDefinition standardDestinationDefinition,
                                                    final boolean isVersionOverrideApplied,
+                                                   final boolean isEntitled,
                                                    final SupportState supportState,
                                                    final io.airbyte.api.model.generated.ScopedResourceRequirements resourceAllocation) {
 
@@ -91,6 +92,7 @@ public class DestinationHelpers {
         .destinationName(standardDestinationDefinition.getName())
         .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(isVersionOverrideApplied)
+        .isEntitled(isEntitled)
         .supportState(supportState)
         .resourceAllocation(resourceAllocation);
   }

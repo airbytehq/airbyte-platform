@@ -457,6 +457,10 @@ public class DestinationHandler {
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion());
 
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.getWorkspaceId());
+    final boolean isEntitled = licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.DESTINATION_CONNECTOR,
+        standardDestinationDefinition.getDestinationDefinitionId());
+
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationId(destinationConnection.getDestinationId())
@@ -467,6 +471,7 @@ public class DestinationHandler {
         .destinationName(standardDestinationDefinition.getName())
         .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
+        .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
         .createdAt(destinationConnection.getCreatedAt())

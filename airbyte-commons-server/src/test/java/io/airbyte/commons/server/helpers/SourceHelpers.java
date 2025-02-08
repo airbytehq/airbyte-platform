@@ -64,12 +64,13 @@ public class SourceHelpers {
   public static SourceRead getSourceRead(final SourceConnection source, final StandardSourceDefinition standardSourceDefinition) {
     // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
     // if you want to override them.
-    return getSourceRead(source, standardSourceDefinition, false, SupportState.SUPPORTED, null);
+    return getSourceRead(source, standardSourceDefinition, false, true, SupportState.SUPPORTED, null);
   }
 
   public static SourceRead getSourceRead(final SourceConnection source,
                                          final StandardSourceDefinition standardSourceDefinition,
                                          final boolean isVersionOverrideApplied,
+                                         final boolean isEntitled,
                                          final SupportState supportState,
                                          final io.airbyte.api.model.generated.ScopedResourceRequirements resourceAllocation) {
 
@@ -83,6 +84,7 @@ public class SourceHelpers {
         .sourceName(standardSourceDefinition.getName())
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(isVersionOverrideApplied)
+        .isEntitled(isEntitled)
         .supportState(supportState)
         .resourceAllocation(resourceAllocation);
   }

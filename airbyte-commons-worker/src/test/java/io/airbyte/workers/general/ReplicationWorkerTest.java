@@ -260,6 +260,7 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
+        null,
         null));
     destinationApi = mock(DestinationApi.class);
     when(destinationApi.getDestination(any())).thenReturn(new DestinationRead(
@@ -270,6 +271,7 @@ abstract class ReplicationWorkerTest {
         "name",
         "destination-name",
         1L,
+        null,
         null,
         null,
         null,

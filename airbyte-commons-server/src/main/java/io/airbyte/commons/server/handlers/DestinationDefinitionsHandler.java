@@ -143,6 +143,7 @@ public class DestinationDefinitionsHandler {
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
+          .enterprise(standardDestinationDefinition.getEnterprise())
           .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
           .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {

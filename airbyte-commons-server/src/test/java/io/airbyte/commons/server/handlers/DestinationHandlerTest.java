@@ -98,6 +98,7 @@ class DestinationHandlerTest {
   // needs to match name of file in src/test/resources/icons
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
   private static final Boolean IS_VERSION_OVERRIDE_APPLIED = true;
+  private static final Boolean IS_ENTITLED = true;
   private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
   private static final String DEFAULT_MEMORY = "2 GB";
   private static final String DEFAULT_CPU = "2";
@@ -165,6 +166,8 @@ class DestinationHandlerTest {
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
 
     when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(UUID.randomUUID());
+
+    when(licenseEntitlementChecker.checkEntitlement(any(), eq(Entitlement.DESTINATION_CONNECTOR), any())).thenReturn(IS_ENTITLED);
   }
 
   @Test
@@ -204,6 +207,7 @@ class DestinationHandlerTest {
         .connectionConfiguration(DestinationHelpers.getTestDestinationJson())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
+        .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION);
@@ -329,7 +333,7 @@ class DestinationHandlerTest {
     final DestinationRead actualDestinationRead = destinationHandler.updateDestination(destinationUpdate);
 
     final DestinationRead expectedDestinationRead = DestinationHelpers
-        .getDestinationRead(expectedDestinationConnection, standardDestinationDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE,
+        .getDestinationRead(expectedDestinationConnection, standardDestinationDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
             newResourceAllocation)
         .connectionConfiguration(newConfiguration);
 
@@ -451,6 +455,7 @@ class DestinationHandlerTest {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
+        .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION);
@@ -491,6 +496,7 @@ class DestinationHandlerTest {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
+        .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .status(ActorStatus.INACTIVE)
@@ -578,6 +584,7 @@ class DestinationHandlerTest {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
+        .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION);
@@ -619,6 +626,7 @@ class DestinationHandlerTest {
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .isEntitled(IS_ENTITLED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION);
     final DestinationRead destinationRead = new DestinationRead()
@@ -667,6 +675,7 @@ class DestinationHandlerTest {
         .connectionConfiguration(clonedConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
+        .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION);

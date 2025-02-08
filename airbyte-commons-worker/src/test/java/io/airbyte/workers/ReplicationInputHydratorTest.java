@@ -185,6 +185,7 @@ class ReplicationInputHydratorTest {
       1L,
       "icon",
       false,
+      true,
       null,
       null,
       null,

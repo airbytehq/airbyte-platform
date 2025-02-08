@@ -569,6 +569,10 @@ public class SourceHandler {
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
 
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
+    final Boolean isEntitled =
+        licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, standardSourceDefinition.getSourceDefinitionId());
+
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .sourceName(standardSourceDefinition.getName())
@@ -579,6 +583,7 @@ public class SourceHandler {
         .name(sourceConnection.getName())
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
+        .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
         .createdAt(sourceConnection.getCreatedAt())
