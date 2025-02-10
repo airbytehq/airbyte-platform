@@ -14,11 +14,9 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.micronaut.security)
-  implementation(libs.failsafe)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
-  implementation(project(":oss:airbyte-api:problems-api"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
