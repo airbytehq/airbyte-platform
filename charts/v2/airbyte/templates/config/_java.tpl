@@ -12,7 +12,7 @@ Renders the java secret name
 {{- if .Values.global.java.secretName }}
     {{- .Values.global.java.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

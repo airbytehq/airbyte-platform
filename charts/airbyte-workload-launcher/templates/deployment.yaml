@@ -162,7 +162,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: JOB_KUBE_SERVICEACCOUNT
-          value: {{ .Values.global.serviceAccountName }}
+          value: {{ .Values.global.jobs.kube.serviceAccountName }}
         {{- if $.Values.global.jobs.kube.annotations }}
         - name: JOB_KUBE_ANNOTATIONS
           valueFrom:

@@ -37,6 +37,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -320,9 +321,7 @@ public class WebBackendConnectionsHandler {
         .schemaChange(schemaChange)
         .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
         .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
-        // Temporarily set to an empty list:
-        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
-        .tags(Collections.emptyList());
+        .tags(standardSync.getTags().stream().map(this::buildTag).toList());
 
     latestSyncJob.ifPresent(job -> {
       listItem.setLatestSyncJobCreatedAt(job.createdAt());
@@ -330,6 +329,10 @@ public class WebBackendConnectionsHandler {
     });
 
     return listItem;
+  }
+
+  private Tag buildTag(final io.airbyte.config.Tag tag) {
+    return new Tag().tagId(tag.getTagId()).workspaceId(tag.getWorkspaceId()).name(tag.getName()).color(tag.getColor());
   }
 
   /*
@@ -409,9 +412,7 @@ public class WebBackendConnectionsHandler {
         .createdAt(connectionRead.getCreatedAt())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
         .backfillPreference(connectionRead.getBackfillPreference())
-        // Temporarily set to an empty list:
-        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
-        .tags(Collections.emptyList());
+        .tags(connectionRead.getTags());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
@@ -847,6 +848,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
     connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
+    connectionCreate.tags(webBackendConnectionCreate.getTags());
 
     return connectionCreate;
   }
@@ -883,6 +885,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
     connectionPatch.backfillPreference(webBackendConnectionPatch.getBackfillPreference());
     connectionPatch.breakingChange(breakingChange);
+    connectionPatch.tags(webBackendConnectionPatch.getTags());
 
     connectionPatch.operationIds(finalOperationIds);
 

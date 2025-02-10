@@ -1,3 +1,4 @@
+{{- if .Values.temporal.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +9,8 @@ metadata:
     {{- if .Values.temporal.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.temporal.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.temporal.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.temporal.replicaCount }}
   selector:
@@ -137,3 +140,4 @@ spec:
       {{- if .Values.temporal.extraVolumes }}
       {{ toYaml .Values.temporal.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

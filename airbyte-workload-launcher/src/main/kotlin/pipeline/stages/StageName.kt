@@ -8,6 +8,7 @@ enum class StageName {
   CLAIM,
   CHECK_STATUS,
   BUILD,
+  LOAD_SHED,
   MUTEX,
   LAUNCH,
 }

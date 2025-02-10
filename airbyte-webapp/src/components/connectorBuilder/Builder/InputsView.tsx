@@ -7,24 +7,28 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import React, { useMemo, useState } from "react";
+import classNames from "classnames";
+import React, { useMemo, useState, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
+import { BuilderField } from "./BuilderField";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
+import { InputForm, InputInEditing, newInputInEditing, supportedTypes } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, useBuilderWatch } from "../types";
-
-const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
+import { BuilderFormInput } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -104,8 +108,8 @@ function getType(definition: BuilderFormInput["definition"]): InputInEditing["ty
   if (definition.format === "date-time") {
     return "date-time";
   }
-  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
-  if (supportedType !== "unknown" && definition.enum) {
+  const supportedType = supportedTypes.find((type) => type === definition.type);
+  if (supportedType && definition.enum) {
     return "enum";
   }
   return supportedType;
@@ -136,33 +140,116 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
   const canEdit = permission !== "readOnly";
 
   const style = {
-    // set x transform to 0 so that the inputs only move up and down
-    transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
+    // set x translate to 0 so that the inputs only move up and down
+    transform: CSS.Translate.toString(transform ? { ...transform, x: 0 } : null),
     transition,
     zIndex: isDragging ? 1 : undefined,
   };
 
+  const openInputForm = useCallback(
+    () => setInputInEditing(formInputToInputInEditing(input)),
+    [input, setInputInEditing]
+  );
+
   return (
-    <div ref={setNodeRef} style={style}>
-      <Card bodyClassName={styles.inputCard} {...(canEdit ? attributes : {})} {...(canEdit ? listeners : {})}>
-        {canEdit && <Icon type="drag" color="action" />}
-        <Text size="lg" className={styles.itemLabel}>
-          {input.definition.title || input.key}
-        </Text>
-        <Button
-          className={styles.itemButton}
-          size="sm"
-          variant="secondary"
-          aria-label="Edit"
-          type="button"
-          onClick={() => {
-            setInputInEditing(formInputToInputInEditing(input));
-          }}
-          data-no-dnd="true"
-        >
-          <Icon type="gear" color="action" />
-        </Button>
+    <div ref={setNodeRef} style={style} className={classNames({ [styles.dragging]: isDragging })}>
+      <Card bodyClassName={styles.inputCard}>
+        <FlexContainer direction="column" className={styles.fullWidth} gap="none">
+          <FlexContainer direction="row" alignItems="center">
+            {canEdit && (
+              <Icon
+                type="drag"
+                color="action"
+                {...listeners}
+                {...attributes}
+                className={classNames(styles.dragHandle, { [styles.dragging]: isDragging })}
+              />
+            )}
+            <ControlLabels
+              className={styles.itemLabel}
+              label={input.definition.title || input.key}
+              optional={!input.required}
+              infoTooltipContent={input.definition.description}
+            />
+            <Button
+              className={styles.itemButton}
+              size="sm"
+              variant="secondary"
+              aria-label="Edit"
+              type="button"
+              onClick={openInputForm}
+            >
+              <Icon type="gear" color="action" />
+            </Button>
+          </FlexContainer>
+          <InputFormControl builderInput={input} openInputForm={openInputForm} />
+        </FlexContainer>
       </Card>
     </div>
   );
+};
+
+const InputFormControl = ({
+  builderInput,
+  openInputForm,
+}: {
+  builderInput: BuilderFormInput;
+  openInputForm: () => void;
+}) => {
+  const { toggleUI } = useConnectorBuilderFormState();
+  const { definition } = builderInput;
+  const fieldPath = `testingValues.${builderInput.key}`;
+
+  switch (definition.type) {
+    case "string": {
+      if (definition.enum) {
+        const options = definition.enum.map((val) => ({ label: String(val), value: String(val) }));
+        return <BuilderField type="enum" options={options} path={fieldPath} />;
+      }
+
+      if (definition.format === "date" || definition.format === "date-time") {
+        return <BuilderField type={definition.format} path={fieldPath} />;
+      }
+
+      if (definition.airbyte_secret) {
+        return <BuilderField type="secret" path={fieldPath} />;
+      }
+
+      return <BuilderField type="string" path={fieldPath} />;
+    }
+    case "integer":
+    case "number":
+    case "boolean":
+    case "array":
+      return <BuilderField type={definition.type} path={fieldPath} />;
+    default:
+      return (
+        <Message
+          type="error"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.unsupportedInputType.primary"
+              values={{ type: definition.type ?? "undefined" }}
+            />
+          }
+          secondaryText={
+            <FormattedMessage
+              id="connectorBuilder.unsupportedInputType.secondary"
+              values={{
+                openInputButton: (children: React.ReactNode) => (
+                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={openInputForm}>
+                    {children}
+                  </Button>
+                ),
+                switchToYamlButton: (children: React.ReactNode) => (
+                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={() => toggleUI("yaml")}>
+                    {children}
+                  </Button>
+                ),
+              }}
+            />
+          }
+        />
+      );
+  }
 };

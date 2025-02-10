@@ -9,8 +9,8 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 
 import styles from "./StreamTestButton.module.scss";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
-import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;
@@ -62,7 +62,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestingValuesErrors) {
+  if ((mode === "ui" && hasErrors(relevantViews)) || (mode === "yaml" && hasTestingValuesErrors)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {
@@ -71,7 +71,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   }
 
   const executeTestRead = () => {
-    if (hasTestingValuesErrors) {
+    if (mode === "yaml" && hasTestingValuesErrors) {
       setTestingValuesInputOpen(true);
       return;
     }

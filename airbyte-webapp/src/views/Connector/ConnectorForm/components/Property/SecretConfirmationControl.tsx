@@ -16,6 +16,7 @@ interface SecretConfirmationControlProps {
   error?: boolean;
   onFocus?: () => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onBlur?: (value: string) => void;
 }
 
 const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
@@ -26,6 +27,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
   error,
   onChange,
   onFocus,
+  onBlur,
 }) => {
   const { field } = useController({
     name,
@@ -50,6 +52,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
         disabled={(showButtons && !isEditInProgress) || disabled}
         onUpload={(val) => field.onChange(val)}
         onFocus={onFocus}
+        onBlur={() => onBlur?.(field.value)}
       />
     ) : (
       <Input
@@ -62,6 +65,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
         ref={controlRef}
         disabled={(showButtons && !isEditInProgress) || disabled}
         onFocus={onFocus}
+        onBlur={() => onBlur?.(field.value)}
       />
     );
 

@@ -15,9 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
@@ -74,16 +76,20 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
@@ -108,6 +114,7 @@ import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.Cron;
@@ -207,6 +214,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -286,6 +295,7 @@ class ConnectionsHandlerTest {
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private ConnectionScheduleHelper connectionSchedulerHelper;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
@@ -306,10 +316,12 @@ class ConnectionsHandlerTest {
     otherOperationId = UUID.randomUUID();
     source = new SourceConnection()
         .withSourceId(sourceId)
+        .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(workspaceId)
         .withName("presto");
     destination = new DestinationConnection()
         .withDestinationId(destinationId)
+        .withDestinationDefinitionId(destinationDefinitionId)
         .withWorkspaceId(workspaceId)
         .withName("hudi")
         .withConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "123-abc")));
@@ -402,6 +414,7 @@ class ConnectionsHandlerTest {
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     statePersistence = mock(StatePersistence.class);
     mapperSecretHelper = mock(MapperSecretHelper.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -417,7 +430,10 @@ class ConnectionsHandlerTest {
             destinationService,
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
-            apiPojoConverters);
+            apiPojoConverters,
+            workspaceHelper,
+            licenseEntitlementChecker,
+            Configs.DeploymentMode.OSS);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -431,11 +447,14 @@ class ConnectionsHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
         catalogConverter,
-        apiPojoConverters);
+        apiPojoConverters,
+        Configs.DeploymentMode.OSS);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =
@@ -494,7 +513,8 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper);
+          mapperSecretHelper,
+          licenseEntitlementChecker);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -973,6 +993,29 @@ class ConnectionsHandlerTest {
             connectionsHandler.createConnection(connectionCreate));
       }
 
+      @ParameterizedTest
+      @ValueSource(strings = {"SOURCE_CONNECTOR", "DESTINATION_CONNECTOR"})
+      void testCreateConnectionWithUnentitledSourceShouldThrow(final Entitlement entitlement)
+          throws JsonValidationException, ConfigNotFoundException, IOException {
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withDefaultGeography(Geography.EU);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        doThrow(new LicenseEntitlementProblem())
+            .when(licenseEntitlementChecker)
+            .ensureEntitled(any(), eq(entitlement), any());
+
+        assertThrows(LicenseEntitlementProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+
+        verifyNoInteractions(connectionService);
+      }
+
       @Test
       void testCreateConnectionWithDuplicateStreamsShouldThrowException() {
 
@@ -1279,7 +1322,8 @@ class ConnectionsHandlerTest {
             .prefix(PRESTO_TO_HUDI_PREFIX)
             .status(ConnectionStatus.ACTIVE)
             .schedule(ConnectionHelpers.generateBasicConnectionSchedule())
-            .syncCatalog(catalog);
+            .syncCatalog(catalog)
+            .tags(Collections.emptyList());
 
         assertThrows(ConfigNotFoundException.class, () -> connectionsHandler.createConnection(connectionCreateBadDestination));
       }
@@ -1417,6 +1461,22 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalog);
 
         assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate, null, false));
+      }
+
+      @ParameterizedTest
+      @ValueSource(strings = {"SOURCE_CONNECTOR", "DESTINATION_CONNECTOR"})
+      void testUpdateConnectionWithUnentitledConnectorThrows(final Entitlement entitlement) {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        doThrow(new LicenseEntitlementProblem())
+            .when(licenseEntitlementChecker)
+            .ensureEntitled(any(), eq(entitlement), any());
+
+        assertThrows(LicenseEntitlementProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
@@ -1791,7 +1851,8 @@ class ConnectionsHandlerTest {
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
-            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
+            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class),
+            standardSync.getTags().stream().map(apiPojoConverters::toApiTag).toList())
             .status(ConnectionStatus.INACTIVE)
             .scheduleType(ConnectionScheduleType.MANUAL)
             .scheduleData(null)
@@ -1800,6 +1861,36 @@ class ConnectionsHandlerTest {
             .resourceRequirements(resourceRequirements);
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
+        verify(connectionService).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchTags() throws Exception {
+        final UUID workspaceId = UUID.randomUUID();
+        final Tag apiTag1 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag1").color("ABC123");
+        final Tag apiTag2 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag2").color("000000");
+        final Tag apiTag3 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag3").color("FFFFFF");
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final io.airbyte.config.Tag configTag1 = apiPojoConverters.toInternalTag(apiTag1);
+        final io.airbyte.config.Tag configTag2 = apiPojoConverters.toInternalTag(apiTag2);
+        final io.airbyte.config.Tag configTag3 = apiPojoConverters.toInternalTag(apiTag3);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withTags(List.of(configTag1, configTag2, configTag3));
+
+        when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
       }
@@ -1886,7 +1977,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2123,7 +2214,7 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
     }
 
     @Test
@@ -2898,12 +2989,17 @@ class ConnectionsHandlerTest {
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
 
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+          .withSourceDefinitionId(UUID.randomUUID());
+
       when(catalogService.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(source);
       when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(WORKSPACE);
-      when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(
-          new StandardDestinationDefinition().withDestinationDefinitionId(DESTINATION_DEFINITION_ID));
+      when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(destinationDefinition);
+      when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID)).thenReturn(sourceDefinition);
       when(connectorDefinitionSpecificationHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId()
           .workspaceId(WORKSPACE_ID).destinationDefinitionId(DESTINATION_DEFINITION_ID)))
               .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
@@ -2936,7 +3032,7 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
     }
 
     @Test
@@ -3262,7 +3358,8 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper);
+          mapperSecretHelper,
+          licenseEntitlementChecker);
     }
 
     @Test

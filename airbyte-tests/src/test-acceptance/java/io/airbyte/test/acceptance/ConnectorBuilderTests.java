@@ -244,6 +244,7 @@ public class ConnectorBuilderTests {
             new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}"),
             workspaceId,
             "A custom declarative source",
+            null,
             null));
   }
 
@@ -272,6 +273,7 @@ public class ConnectorBuilderTests {
             null,
             null,
             syncCatalog,
+            null,
             null,
             null,
             null,

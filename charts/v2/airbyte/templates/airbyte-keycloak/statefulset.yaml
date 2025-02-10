@@ -1,5 +1,6 @@
 # if Cloud or Pro/Enterprise, render the keycloak StatefulSet template.
 {{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if .Values.keycloak.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -9,6 +10,8 @@ metadata:
       {{- if .Values.keycloak.extraLabels }}
       {{ toYaml (mergeOverwrite .Values.keycloak.extraLabels .Values.global.extraLabels) | nindent 4 }}
       {{- end }}
+  annotations:
+    {{ toYaml .Values.keycloak.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.keycloak.replicaCount }}
   serviceName: {{.Release.Name }}-airbyte-keycloak-headless-svc
@@ -170,4 +173,5 @@ spec:
       resources:
         requests:
           storage: 1Gi
+{{- end }}
 {{- end }}

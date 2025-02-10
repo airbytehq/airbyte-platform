@@ -24,9 +24,9 @@ kotest = "5.9.1"
 kotlin-logging = "7.0.3"
 kubernetes-client = "7.0.1"
 logback = "1.5.15"
-micronaut = "4.7.4"
+micronaut = "4.7.5"
 micronaut-cache = "5.1.0"
-micronaut-core = "4.7.11"
+micronaut-core = "4.7.13"
 micronaut-data = "4.10.5"
 micronaut-email = "2.7.0"
 micronaut-jaxrs = "4.7.2"
@@ -34,7 +34,7 @@ micronaut-jdbc = "6.0.2"
 micronaut-kotlin = "4.5.0"
 micronaut-micrometer = "5.9.3"
 micronaut-openapi = "6.13.2"
-micronaut-security = "4.11.2"
+micronaut-security = "4.11.3"
 micronaut-test = "4.6.2"
 moshi = "1.15.0"
 mockito = "5.8.0"
@@ -251,7 +251,7 @@ micronaut-security-jwt = { module = "io.micronaut.security:micronaut-security-jw
 micronaut-security-oauth2 = { module = "io.micronaut.security:micronaut-security-oauth2", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
-micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.8.0" }
+micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.8.1" }
 
 [bundles]
 apache = ["apache-commons"]

@@ -179,3 +179,11 @@ object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instan
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
 
 object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
+
+object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable-temporal-ingestion", default = false)
+
+object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
+
+object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
+
+object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)

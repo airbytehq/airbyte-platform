@@ -12,7 +12,7 @@ Renders the auth secret name
 {{- if .Values.global.auth.secretName }}
     {{- .Values.global.auth.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -48,7 +48,7 @@ Renders the auth.bootstrap secret name
 {{- if .Values.global.auth.secretName }}
     {{- .Values.global.auth.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -305,7 +305,7 @@ Renders the auth.identityProvider secret name
 {{- if .Values.global.auth.identityProvider.secretName }}
     {{- .Values.global.auth.identityProvider.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -448,7 +448,7 @@ Renders the auth.instanceAdmin.enterprise secret name
 {{- if .Values.global.auth.instanceAdmin.secretName }}
     {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -571,7 +571,7 @@ Renders the auth.jwt secret name
 {{- if .Values.global.auth.instanceAdmin.secretName }}
     {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -607,7 +607,7 @@ Renders the auth.security secret name
 {{- if .Values.global.auth.security.secretName }}
     {{- .Values.global.auth.security.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

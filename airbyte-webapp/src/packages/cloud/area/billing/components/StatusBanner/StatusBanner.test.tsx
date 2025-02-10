@@ -72,7 +72,7 @@ describe("StatusBanner", () => {
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
     expect(wrapper.container.textContent).toContain("Your syncs are disabled.");
-    expect(wrapper.container.textContent).toContain("billing@airbyte.io");
+    expect(wrapper.container.textContent).toContain("Airbyte Support");
   });
 
   it("should render disabled banner w/o link", async () => {

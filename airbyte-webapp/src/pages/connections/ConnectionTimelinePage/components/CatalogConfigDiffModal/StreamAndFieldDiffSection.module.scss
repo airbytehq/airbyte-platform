@@ -1,0 +1,34 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$shift: variables.$spacing-md;
+$stream-name-shift: $shift + 3px;
+$fields-list-shift: $shift * 2;
+$list-item-height: variables.$spacing-xl;
+
+.diffSection {
+  &--enabled {
+    background-color: colors.$green-50;
+  }
+
+  &--disabled {
+    background-color: colors.$grey-100;
+  }
+
+  &__stream {
+    padding-left: $shift;
+    height: $list-item-height;
+  }
+
+  &__streamName {
+    padding-left: $stream-name-shift;
+    height: $list-item-height;
+    display: flex;
+    align-items: center;
+  }
+
+  &__field {
+    padding-left: $fields-list-shift;
+    height: $list-item-height;
+  }
+}

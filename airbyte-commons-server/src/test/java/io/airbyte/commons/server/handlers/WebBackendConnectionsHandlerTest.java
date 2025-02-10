@@ -66,6 +66,7 @@ import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -79,6 +80,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -90,6 +92,7 @@ import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobStatusSummary;
@@ -119,6 +122,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -169,9 +173,11 @@ class WebBackendConnectionsHandlerTest {
   private CatalogService catalogService;
   private ConnectionService connectionService;
   private WorkspaceService workspaceService;
+  private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private DestinationCatalogGenerator destinationCatalogGenerator;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
@@ -197,11 +203,13 @@ class WebBackendConnectionsHandlerTest {
     catalogService = mock(CatalogService.class);
     connectionService = mock(ConnectionService.class);
     workspaceService = mock(WorkspaceService.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -227,7 +235,10 @@ class WebBackendConnectionsHandlerTest {
         destinationService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
-        apiPojoConverters);
+        apiPojoConverters,
+        workspaceHelper,
+        licenseEntitlementChecker,
+        Configs.DeploymentMode.OSS);
 
     final SourceHandler sourceHandler = new SourceHandler(
         catalogService,
@@ -242,11 +253,14 @@ class WebBackendConnectionsHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
         catalogConverter,
-        apiPojoConverters);
+        apiPojoConverters,
+        Configs.DeploymentMode.OSS);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,
@@ -306,6 +320,8 @@ class WebBackendConnectionsHandlerTest {
 
     when(sourceService.getStandardSourceDefinition(source.getSourceDefinitionId())).thenReturn(sourceDefinition);
     when(destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+
+    when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
 
     final ConnectorSpecification mockSpec = mock(ConnectorSpecification.class);
     final ActorDefinitionVersion mockADV = new ActorDefinitionVersion().withSpec(mockSpec);
@@ -729,6 +745,7 @@ class WebBackendConnectionsHandlerTest {
   void testToConnectionCreate() throws IOException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final StandardSync standardSync = ConnectionHelpers.generateSyncWithSourceId(source.getSourceId());
+    final List<Tag> tags = List.of(new Tag().name("tag1"), new Tag().name("tag2"));
 
     final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
     catalog.getStreams().get(0).getStream().setName("azkaban_users");
@@ -752,7 +769,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
         .geography(Geography.US)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
+        .tags(tags);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -769,7 +787,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
         .geography(Geography.US)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
+        .tags(tags);
 
     final ConnectionCreate actual = WebBackendConnectionsHandler.toConnectionCreate(input, operationIds);
 
@@ -780,6 +799,7 @@ class WebBackendConnectionsHandlerTest {
   void testToConnectionPatch() throws IOException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final StandardSync standardSync = ConnectionHelpers.generateSyncWithSourceId(source.getSourceId());
+    final List<Tag> tags = List.of(new Tag().name("tag1"), new Tag().name("tag2"));
 
     final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
     catalog.getStreams().get(0).getStream().setName("azkaban_users");
@@ -800,7 +820,8 @@ class WebBackendConnectionsHandlerTest {
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
-        .notifySchemaChangesByEmail(true);
+        .notifySchemaChangesByEmail(true)
+        .tags(tags);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -818,7 +839,8 @@ class WebBackendConnectionsHandlerTest {
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
         .notifySchemaChangesByEmail(true)
-        .breakingChange(false);
+        .breakingChange(false)
+        .tags(tags);
 
     final ConnectionUpdate actual = WebBackendConnectionsHandler.toConnectionPatch(input, operationIds, false);
 
@@ -831,7 +853,7 @@ class WebBackendConnectionsHandlerTest {
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
             "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
-            "notifySchemaChangesByEmail", "backfillPreference");
+            "notifySchemaChangesByEmail", "backfillPreference", "tags", "addTagsItem", "removeTagsItem");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)
@@ -854,7 +876,7 @@ class WebBackendConnectionsHandlerTest {
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
             "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "notifySchemaChangesByEmail",
-            "nonBreakingChangesPreference", "backfillPreference");
+            "nonBreakingChangesPreference", "backfillPreference", "tags", "addTagsItem", "removeTagsItem");
 
     final Set<String> methods = Arrays.stream(ConnectionUpdate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionUpdate.class)

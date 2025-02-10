@@ -1,5 +1,6 @@
 {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
 {{- if eq .Values.global.deploymentMode "oss" }}
+{{- if .Values.keycloakSetup.enabled }}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -16,6 +17,9 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install, post-upgrade"
     "helm.sh/hook-delete-policy": "before-hook-creation"
+    {{- if .Values.keycloakSetup.annotations -}}
+    {{ toYaml .Values.keycloakSetup.annotations | nindent 4 }}
+    {{- end }}
 spec:
   completions: 1
   template:
@@ -56,6 +60,7 @@ spec:
             {{- include "airbyte.keycloak.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.admin.client.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.admin.user.envs" . | nindent 12 }}
+            {{- include "airbyte.keycloak.client.envs" . | nindent 12 }}
 
             {{- if (eq .Values.global.edition "enterprise") }}
             {{- include "airbyte.enterprise.envs" . | nindent 12 }}
@@ -125,5 +130,6 @@ spec:
         {{- if .Values.keycloakSetup.extraVolumes }}
         {{- toYaml .Values.keycloakSetup.extraVolumes | nindent 8 }}
         {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

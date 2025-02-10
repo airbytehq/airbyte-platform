@@ -1,3 +1,4 @@
+{{- if .Values.connectorBuilderServer.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -5,6 +6,8 @@ metadata:
   name: {{ .Release.Name }}-connector-builder-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    {{ toYaml .Values.connectorBuilderServer.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.connectorBuilderServer.replicaCount }}
   selector:
@@ -61,11 +64,17 @@ spec:
         {{- end}}
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.connectorBuilder.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- end }}
+
+        {{- if (ne .Values.global.deploymentMode "oss") }}
+        {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret
@@ -148,3 +157,4 @@ spec:
       {{- if .Values.connectorBuilderServer.extraVolumes }}
 {{ toYaml .Values.connectorBuilderServer.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

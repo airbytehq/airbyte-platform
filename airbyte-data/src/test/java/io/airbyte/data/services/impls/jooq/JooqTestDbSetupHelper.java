@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.TAG;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,6 +21,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.Tag;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -29,6 +31,7 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
@@ -36,9 +39,12 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import org.jooq.impl.DSL;
 
 public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
@@ -60,6 +66,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private ActorDefinitionVersion destinationDefinitionVersion;
   private SourceConnection source;
   private DestinationConnection destination;
+  private List<Tag> tags;
 
   public JooqTestDbSetupHelper() {
     this.featureFlagClient = mock(TestClient.class);
@@ -138,7 +145,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
   }
 
-  public void setUpDependencies() throws IOException, JsonValidationException, ConfigNotFoundException {
+  public void setUpDependencies() throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
     // Create org
     organization = createBaseOrganization();
     organizationServiceJooqImpl.writeOrganization(organization);
@@ -176,6 +183,9 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final UUID initialDestinationDefinitionDefaultVersionId =
         destinationServiceJooqImpl.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID).getDefaultVersionId();
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
+
+    // Create connection tags
+    tags = createTags(workspace.getWorkspaceId());
   }
 
   public void setupForGetActorDefinitionVersionByDockerRepositoryAndDockerImageTagTests(UUID sourceDefinitionId, String name, String version)
@@ -188,6 +198,32 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId(), version);
     sourceDefinitionVersion.withDockerRepository(name).withDockerImageTag(version);
     createActorDefinition(sourceDefinition, sourceDefinitionVersion);
+  }
+
+  // It's kind of ugly and brittle to create the tags in this way, but since TagService is a micronaut
+  // data service, we cannot instantiate it here and use it to create the tags
+  public List<Tag> createTags(final UUID workspaceId) throws SQLException {
+    final Tag tagOne = new Tag().withName("tag_one").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("111111");
+    final Tag tagTwo = new Tag().withName("tag_two").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("222222");
+    final Tag tagThree = new Tag().withName("tag_three").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("333333");
+    final List<Tag> tags = List.of(tagOne, tagTwo, tagThree);
+
+    database.query(ctx -> {
+      final List<TagRecord> records = tags.stream()
+          .map(tag -> {
+            final TagRecord record = DSL.using(ctx.configuration()).newRecord(TAG);
+            record.setId(tag.getTagId());
+            record.setWorkspaceId(workspaceId);
+            record.setName(tag.getName());
+            record.setColor(tag.getColor());
+            return record;
+          })
+          .collect(Collectors.toList());
+
+      return ctx.batchInsert(records).execute();
+    });
+
+    return tags;
   }
 
   public void createActorDefinition(final StandardSourceDefinition sourceDefinition, final ActorDefinitionVersion actorDefinitionVersion)
@@ -287,6 +323,10 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
   public ActorDefinitionVersion getDestinationDefinitionVersion() {
     return destinationDefinitionVersion;
+  }
+
+  public List<Tag> getTags() {
+    return tags;
   }
 
 }

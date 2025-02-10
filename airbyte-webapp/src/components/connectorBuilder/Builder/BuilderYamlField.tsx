@@ -10,8 +10,8 @@ import { useFormatError } from "core/errors";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderYamlField.module.scss";
-import { useBuilderWatchWithPreview } from "../preview";
 import { BuilderState } from "../types";
+import { useBuilderWatchWithPreview } from "../useBuilderWatch";
 import { YamlEditor } from "../YamlEditor";
 
 interface BuilderYamlFieldProps {
@@ -55,7 +55,7 @@ export const BuilderYamlField: React.FC<BuilderYamlFieldProps> = ({ path, setLoc
     <>
       <div className={styles.yamlEditor} ref={elementRef}>
         <YamlEditor
-          value={localYamlValue}
+          value={String(localYamlValue)}
           readOnly={isPreview}
           onChange={(val: string | undefined) => {
             setLocalYamlValue(val);

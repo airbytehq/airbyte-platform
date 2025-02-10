@@ -74,6 +74,7 @@ export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  componentsFileContent?: string;
   contributionPullRequestUrl?: string;
   contributionActorDefinitionId?: string;
 }
@@ -270,7 +271,14 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
+    ({
+      name,
+      manifest,
+      yamlManifest,
+      contributionActorDefinitionId,
+      contributionPullRequestUrl,
+      componentsFileContent,
+    }) =>
       updateConnectorBuilderProject(
         {
           workspaceId,
@@ -281,6 +289,7 @@ export const useUpdateBuilderProject = (projectId: string) => {
             yamlManifest,
             contributionActorDefinitionId,
             contributionPullRequestUrl,
+            componentsFileContent,
           },
         },
         requestOptions
@@ -553,10 +562,7 @@ const transformSlices = (
   };
 };
 
-export const useBuilderProjectUpdateTestingValues = (
-  builderProjectId: string,
-  onSuccess: (data: ConnectorBuilderProjectTestingValues) => void
-) => {
+export const useBuilderProjectUpdateTestingValues = (builderProjectId: string, onSettled?: () => void) => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
@@ -571,7 +577,7 @@ export const useBuilderProjectUpdateTestingValues = (
         requestOptions
       ),
     {
-      onSuccess,
+      onSettled,
     }
   );
 };

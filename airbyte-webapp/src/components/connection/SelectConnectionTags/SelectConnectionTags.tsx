@@ -1,7 +1,7 @@
 import { autoUpdate, flip, offset, useFloating } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import classNames from "classnames";
-import { useDeferredValue, useState, useMemo } from "react";
+import { useDeferredValue, useState, useMemo, useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { CheckBox } from "components/ui/CheckBox";
@@ -13,39 +13,43 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Tag } from "core/api/types/AirbyteClient";
+import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
+import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SelectConnectionTags.module.scss";
 
 export interface SelectConnectionTagsProps {
-  selectedTags: Tag[];
   availableTags: Tag[];
-  createTag: (name: string, color: string) => void;
-  selectTag: (id: string) => void;
-  deselectTag: (id: string) => void;
+  selectedTags: Tag[];
+  createTag: (name: string, color: string) => Promise<void>;
+  selectTag: (tag: Tag) => void;
+  deselectTag: (tag: Tag) => void;
   disabled?: boolean; // intent
+  onClose?: () => void;
 }
 
-const THEMED_HEX_OPTIONS = [
-  "#FBECB1",
-  "#FEC9BE",
-  "#FFE5E9",
-  "#FFD0B2",
-  "#DDF6F8",
-  "#CAC7FF",
-  "#D4DFFC",
-  "#75DCFF",
-  "#BDFFC3",
-  "#DFD5CE",
+export const THEMED_HEX_OPTIONS = [
+  "FBECB1",
+  "FEC9BE",
+  "FFE5E9",
+  "FFD0B2",
+  "DDF6F8",
+  "CAC7FF",
+  "D4DFFC",
+  "75DCFF",
+  "BDFFC3",
+  "DFD5CE",
 ];
 
 const CONNECTION_TAGS_LIMIT = 10;
 
 const CreateTagControl: React.FC<{
+  createTagLoading: boolean;
   tagName: string;
   handleCreateTag: (tagName: string, color: string) => void;
   color: string;
   disabled?: boolean;
-}> = ({ tagName, handleCreateTag, color, disabled }) => {
+}> = ({ createTagLoading, tagName, handleCreateTag, color, disabled }) => {
   return (
     <button
       className={classNames(styles.selectConnectionTags__tagRow, {
@@ -53,8 +57,10 @@ const CreateTagControl: React.FC<{
       })}
       onClick={() => handleCreateTag(tagName, color)}
       disabled={disabled}
+      type="button"
     >
       <FlexContainer gap="sm" alignItems="center" justifyContent="flex-start">
+        {createTagLoading && <Icon size="xs" type="loading" />}
         <Text>
           <FormattedMessage id="connection.tags.create" />
         </Text>
@@ -66,7 +72,7 @@ const CreateTagControl: React.FC<{
 
 interface TagRowProps {
   disabled?: boolean;
-  handleTagChange: (isChecked: boolean, tagId: string) => void;
+  handleTagChange: (isChecked: boolean, tag: Tag) => void;
   isSelected: boolean;
   tag: Tag;
 }
@@ -78,16 +84,16 @@ const TagRow: React.FC<TagRowProps> = ({ disabled, handleTagChange, isSelected, 
       className={classNames(styles.selectConnectionTags__tagRow, {
         [styles["selectConnectionTags__tagRow--disabled"]]: disabled,
       })}
-      onClick={() => handleTagChange(!isSelected, tag.tagId)}
+      onClick={() => handleTagChange(!isSelected, tag)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
-          handleTagChange(isSelected, tag.tagId);
+          handleTagChange(isSelected, tag);
         }
       }}
       disabled={disabled}
     >
-      <FlexContainer gap="sm" alignItems="center">
-        <CheckBox disabled={disabled} id={`tag-checkbox-${tag.tagId}`} checked={isSelected} />
+      <FlexContainer gap="md" alignItems="center">
+        <CheckBox readOnly disabled={disabled} id={`tag-checkbox-${tag.tagId}`} checked={isSelected} />
         <TagBadge color={tag.color} text={tag.name} />
       </FlexContainer>
     </button>
@@ -111,23 +117,35 @@ const TriggerButton: React.FC<TriggerButtonProps> = ({ icon }) => {
 };
 
 export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
-  selectedTags,
   availableTags,
+  selectedTags,
   createTag,
   selectTag,
   deselectTag,
   disabled,
+  onClose,
 }) => {
+  const [tagsSelectedOnOpen, setTagsSelectedOnOpen] = useState(selectedTags);
   const [query, setQuery] = useState("");
+  const [createTagLoading, setCreateTagLoading] = useState(false);
+  const notificationService = useNotificationService();
+
+  const onClosePopover = useCallback(() => {
+    setQuery("");
+    onClose?.();
+    setTagsSelectedOnOpen(selectedTags);
+  }, [onClose, selectedTags]);
+
+  const { targetRef } = useHeadlessUiOnClose(onClosePopover);
 
   const deferredQueryValue = useDeferredValue(query);
   const { formatMessage } = useIntl();
 
-  const handleTagChange = (isNowSelected: boolean, tagId: string) => {
+  const handleTagChange = (isNowSelected: boolean, tag: Tag) => {
     if (isNowSelected) {
-      selectTag(tagId);
+      selectTag(tag);
     } else {
-      deselectTag(tagId);
+      deselectTag(tag);
     }
   };
 
@@ -136,9 +154,24 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   const tagLimitReached = !(selectedTags.length < CONNECTION_TAGS_LIMIT);
 
   const filteredTags = useMemo(
-    () => availableTags.filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.toLocaleLowerCase())),
+    () =>
+      availableTags
+        .filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.toLocaleLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [availableTags, deferredQueryValue]
   );
+
+  // For better UX, the originally selected tags should always be at the top of the list
+  const sortedTags = useMemo(() => {
+    const selectedTagsSet = new Set(tagsSelectedOnOpen.map((tag) => tag.tagId));
+
+    const topSection: Tag[] = [];
+    const bottomSection: Tag[] = [];
+
+    filteredTags.forEach((tag) => (selectedTagsSet.has(tag.tagId) ? topSection.push(tag) : bottomSection.push(tag)));
+
+    return [...topSection, ...bottomSection];
+  }, [tagsSelectedOnOpen, filteredTags]);
 
   const tagDoesNotExist = useMemo(
     () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue),
@@ -151,18 +184,25 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     placement: "bottom-start",
   });
 
-  const handleCreateTag = (deferredQueryValue: string, color: string) => {
-    createTag(deferredQueryValue, color);
-    setQuery("");
+  const handleCreateTag = async (deferredQueryValue: string, color: string) => {
+    setCreateTagLoading(true);
+    try {
+      await createTag(deferredQueryValue, color);
+    } catch (e) {
+      notificationService.registerNotification({
+        id: "create-tag-error",
+        text: formatMessage({ id: "connection.tags.creationError" }),
+        type: "error",
+      });
+    } finally {
+      setCreateTagLoading(false);
+      setQuery("");
+    }
   };
 
   return (
-    <Popover>
-      {({ open }) => {
-        if (!open) {
-          setQuery("");
-        }
-
+    <Popover ref={targetRef}>
+      {() => {
         return (
           <>
             <PopoverButton ref={reference} as="span">
@@ -194,16 +234,18 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               {tagDoesNotExist &&
                 (!tagLimitReached ? (
                   <CreateTagControl
+                    createTagLoading={createTagLoading}
                     handleCreateTag={handleCreateTag}
                     tagName={deferredQueryValue}
                     color={color}
-                    disabled={disabled}
+                    disabled={disabled || createTagLoading}
                   />
                 ) : (
                   <Tooltip
                     containerClassName={styles.selectConnectionTags__tagRowTooltip}
                     control={
                       <CreateTagControl
+                        createTagLoading={createTagLoading}
                         handleCreateTag={handleCreateTag}
                         tagName={deferredQueryValue}
                         color={color}
@@ -214,8 +256,8 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
                     <FormattedMessage id="connection.tags.limitReached" />
                   </Tooltip>
                 ))}
-              <ul>
-                {filteredTags.map((tag) => {
+              <ul className={styles.selectConnectionTags__tags}>
+                {sortedTags.map((tag) => {
                   const isSelected = selectedTags.some((selectedTag) => selectedTag.tagId === tag.tagId);
 
                   return (

@@ -56,6 +56,7 @@ create table "public"."actor_definition" (
   "default_version_id" uuid,
   "icon_url" varchar(256),
   "metrics" jsonb,
+  "enterprise" boolean not null default false,
   constraint "actor_definition_pkey" primary key ("id")
 );
 create table "public"."actor_definition_breaking_change" (
@@ -539,6 +540,7 @@ create index "connection_destination_id_idx" on "public"."connection"("destinati
 create index "connection_source_id_idx" on "public"."connection"("source_id" asc);
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
+create index "connection_tag_connection_id_idx" on "public"."connection_tag"("connection_id" asc);
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc)

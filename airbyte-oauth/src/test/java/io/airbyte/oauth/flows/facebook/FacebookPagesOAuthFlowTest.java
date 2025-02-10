@@ -20,7 +20,7 @@ public class FacebookPagesOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected String getExpectedConsentUrl() {
-    return "https://www.facebook.com/v19.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=pages_manage_ads%2Cpages_manage_metadata%2Cpages_read_engagement%2Cpages_read_user_content";
+    return "https://www.facebook.com/v21.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=pages_manage_ads%2Cpages_manage_metadata%2Cpages_read_engagement%2Cpages_read_user_content";
   }
 
   @Override

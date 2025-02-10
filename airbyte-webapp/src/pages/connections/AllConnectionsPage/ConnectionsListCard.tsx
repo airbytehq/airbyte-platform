@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -20,6 +20,8 @@ import ConnectionsTable from "./ConnectionsTable";
 export const ConnectionsListCard = () => {
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const tagFilterSet = useMemo(() => new Set(tagFilters), [tagFilters]);
 
   const [filterValues, setFilterValue, resetFilters] = useFilters<FilterValues>({
     search: "",
@@ -95,6 +97,16 @@ export const ConnectionsListCard = () => {
     filterValues.destination,
   ]);
 
+  const filteredConnectionsByTags = useMemo(() => {
+    if (tagFilterSet.size === 0) {
+      return filteredConnections;
+    }
+
+    return filteredConnections.filter((connection) => {
+      return connection.tags.some((tag) => tagFilterSet.has(tag.tagId));
+    });
+  }, [filteredConnections, tagFilterSet]);
+
   return (
     <Card noPadding className={styles.connections}>
       <div className={styles.filters}>
@@ -104,11 +116,16 @@ export const ConnectionsListCard = () => {
           setSearchFilter={(search) => setFilterValue("search", search)}
           filterValues={filterValues}
           setFilterValue={setFilterValue}
-          resetFilters={resetFilters}
+          resetFilters={() => {
+            resetFilters();
+            setTagFilters([]);
+          }}
+          tagFilters={tagFilters}
+          setTagFilters={setTagFilters}
         />
       </div>
       <div className={styles.table}>
-        <ConnectionsTable connections={filteredConnections} variant="white" />
+        <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />
       </div>
       {filteredConnections.length === 0 && (
         <Box pt="xl" pb="lg">

@@ -12,7 +12,7 @@ Renders the customerio secret name
 {{- if .Values.global.customerio.secretName }}
     {{- .Values.global.customerio.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

@@ -12,7 +12,7 @@ Renders the database secret name
 {{- if .Values.global.database.secretName }}
     {{- .Values.global.database.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -175,7 +175,7 @@ Renders the database.migrations secret name
 {{- if .Values.global.migrations.secretName }}
     {{- .Values.global.migrations.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

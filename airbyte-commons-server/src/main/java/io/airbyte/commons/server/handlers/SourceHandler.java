@@ -4,9 +4,13 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.metrics.lib.MetricTags.SOURCE_ID;
+import static io.airbyte.metrics.lib.MetricTags.WORKSPACE_ID;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorStatus;
@@ -30,10 +34,14 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
@@ -54,6 +62,8 @@ import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -63,6 +73,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -87,10 +98,13 @@ public class SourceHandler {
   private final FeatureFlagClient featureFlagClient;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
+  private final WorkspaceHelper workspaceHelper;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
+  private final Configs.DeploymentMode deploymentMode;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -105,11 +119,14 @@ public class SourceHandler {
                        final FeatureFlagClient featureFlagClient,
                        final SourceService sourceService,
                        final WorkspaceService workspaceService,
+                       final WorkspaceHelper workspaceHelper,
                        final SecretPersistenceConfigService secretPersistenceConfigService,
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                        final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
+                       final LicenseEntitlementChecker licenseEntitlementChecker,
                        final CatalogConverter catalogConverter,
-                       final ApiPojoConverters apiPojoConverters) {
+                       final ApiPojoConverters apiPojoConverters,
+                       final Configs.DeploymentMode deploymentMode) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -122,11 +139,14 @@ public class SourceHandler {
     this.featureFlagClient = featureFlagClient;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
+    this.workspaceHelper = workspaceHelper;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
+    this.deploymentMode = deploymentMode;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -144,9 +164,13 @@ public class SourceHandler {
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
+  @Trace
   public SourceRead updateSourceWithOptionalSecret(final PartialSourceUpdate partialSourceUpdate)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final ConnectorSpecification spec = getSpecFromSourceId(partialSourceUpdate.getSourceId());
+    ApmTraceUtils.addTagsToTrace(
+        Map.of(
+            SOURCE_ID, partialSourceUpdate.getSourceId().toString()));
     if (partialSourceUpdate.getSecretId() != null && !partialSourceUpdate.getSecretId().isBlank()) {
       final SourceConnection sourceConnection;
       try {
@@ -159,6 +183,9 @@ public class SourceHandler {
       partialSourceUpdate.setConnectionConfiguration(
           OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret,
               Optional.ofNullable(partialSourceUpdate.getConnectionConfiguration()).orElse(Jsons.emptyObject())));
+      ApmTraceUtils.addTagsToTrace(
+          Map.of(
+              "oauth_secret", true));
     } else {
       // We aren't using a secret to update the source so no server provided credentials should have been
       // passed in.
@@ -170,6 +197,10 @@ public class SourceHandler {
   @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
+    if (sourceCreate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
+
     // validate configuration
     final ConnectorSpecification spec = getSpecFromSourceDefinitionIdForWorkspace(
         sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
@@ -184,7 +215,8 @@ public class SourceHandler {
         sourceId,
         false,
         sourceCreate.getConnectionConfiguration(),
-        spec);
+        spec,
+        sourceCreate.getResourceAllocation());
 
     // read configuration from db
     return buildSourceRead(sourceService.getSourceConnection(sourceId), spec);
@@ -192,6 +224,9 @@ public class SourceHandler {
 
   public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    if (partialSourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
 
     final UUID sourceId = partialSourceUpdate.getSourceId();
     final SourceConnection updatedSource = configurationUpdate
@@ -200,6 +235,8 @@ public class SourceHandler {
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
     validateSource(spec, updatedSource.getConfiguration());
 
+    ApmTraceUtils.addTagsToTrace(Map.of(WORKSPACE_ID, updatedSource.getWorkspaceId().toString()));
+
     // persist
     persistSourceConnection(
         updatedSource.getName(),
@@ -208,14 +245,19 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec);
+        spec,
+        partialSourceUpdate.getResourceAllocation());
 
     // read configuration from db
     return buildSourceRead(sourceService.getSourceConnection(sourceId), spec);
   }
 
+  @Trace
   public SourceRead updateSource(final SourceUpdate sourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
+    if (sourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    }
 
     final UUID sourceId = sourceUpdate.getSourceId();
     final SourceConnection updatedSource = configurationUpdate
@@ -224,6 +266,11 @@ public class SourceHandler {
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
     validateSource(spec, sourceUpdate.getConnectionConfiguration());
 
+    ApmTraceUtils.addTagsToTrace(
+        Map.of(
+            WORKSPACE_ID, updatedSource.getWorkspaceId().toString(),
+            SOURCE_ID, sourceId.toString()));
+
     // persist
     persistSourceConnection(
         updatedSource.getName(),
@@ -232,7 +279,8 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec);
+        spec,
+        sourceUpdate.getResourceAllocation());
 
     // read configuration from db
     return buildSourceRead(sourceService.getSourceConnection(sourceId), spec);
@@ -280,7 +328,8 @@ public class SourceHandler {
         .name(sourceName)
         .sourceDefinitionId(sourceToClone.getSourceDefinitionId())
         .connectionConfiguration(sourceToClone.getConnectionConfiguration())
-        .workspaceId(sourceToClone.getWorkspaceId());
+        .workspaceId(sourceToClone.getWorkspaceId())
+        .resourceAllocation(sourceToClone.getResourceAllocation());
 
     if (sourceCloneConfiguration != null) {
       if (sourceCloneConfiguration.getName() != null) {
@@ -486,17 +535,23 @@ public class SourceHandler {
                                        final UUID sourceId,
                                        final boolean tombstone,
                                        final JsonNode configurationJson,
-                                       final ConnectorSpecification spec)
+                                       final ConnectorSpecification spec,
+                                       final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinitionId);
+
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
+
     final SourceConnection sourceConnection = new SourceConnection()
         .withName(name)
         .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(workspaceId)
         .withSourceId(sourceId)
         .withTombstone(tombstone)
-        .withConfiguration(oAuthMaskedConfigurationJson);
+        .withConfiguration(oAuthMaskedConfigurationJson)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
     try {
       sourceService.writeSourceConnectionWithSecrets(sourceConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
@@ -514,6 +569,10 @@ public class SourceHandler {
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
 
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
+    final Boolean isEntitled =
+        licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, standardSourceDefinition.getSourceDefinitionId());
+
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .sourceName(standardSourceDefinition.getName())
@@ -524,9 +583,11 @@ public class SourceHandler {
         .name(sourceConnection.getName())
         .icon(standardSourceDefinition.getIconUrl())
         .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
+        .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
-        .createdAt(sourceConnection.getCreatedAt());
+        .createdAt(sourceConnection.getCreatedAt())
+        .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(sourceConnection.getResourceRequirements()));
   }
 
   protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {

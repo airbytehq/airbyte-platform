@@ -72,6 +72,8 @@ import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.entitlements.Entitlement;
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper.UpdateSchemaResult;
@@ -213,6 +215,7 @@ public class ConnectionsHandler {
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
   private final WorkspaceService workspaceService;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final CatalogConverter catalogConverter;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
@@ -250,7 +253,8 @@ public class ConnectionsHandler {
                             final ApplySchemaChangeHelper applySchemaChangeHelper,
                             final ApiPojoConverters apiPojoConverters,
                             final ConnectionScheduleHelper connectionScheduleHelper,
-                            final MapperSecretHelper mapperSecretHelper) {
+                            final MapperSecretHelper mapperSecretHelper,
+                            final LicenseEntitlementChecker licenseEntitlementChecker) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -280,6 +284,7 @@ public class ConnectionsHandler {
     this.apiPojoConverters = apiPojoConverters;
     this.connectionScheduleHelper = connectionScheduleHelper;
     this.mapperSecretHelper = mapperSecretHelper;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
   }
 
   /**
@@ -368,6 +373,10 @@ public class ConnectionsHandler {
     if (patch.getBackfillPreference() != null) {
       sync.setBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
     }
+
+    if (patch.getTags() != null) {
+      sync.setTags(patch.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
+    }
   }
 
   private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
@@ -436,6 +445,12 @@ public class ConnectionsHandler {
         operationIds);
 
     final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+
+    // Ensure org is entitled to use source and destination
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceConnection.getSourceDefinitionId());
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationConnection.getDestinationDefinitionId());
+
     final UUID connectionId = uuidGenerator.get();
 
     // If not specified, default the NamespaceDefinition to 'source'
@@ -461,7 +476,8 @@ public class ConnectionsHandler {
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
-        .withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
+        .withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()))
+        .withTags(connectionCreate.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
     if (connectionCreate.getResourceRequirements() != null) {
       standardSync.withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }
@@ -623,6 +639,13 @@ public class ConnectionsHandler {
 
     final StandardSync sync = connectionService.getStandardSync(connectionId);
     LOGGER.debug("initial StandardSync: {}", sync);
+
+    // Ensure org is entitled to use source and destination
+    final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(sync.getConnectionId());
+    final StandardDestinationDefinition destinationDefinition = destinationService.getDestinationDefinitionFromConnection(sync.getConnectionId());
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinition.getSourceDefinitionId());
+    licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinition.getDestinationDefinitionId());
 
     validateConnectionPatch(workspaceHelper, sync, connectionPatch);
 

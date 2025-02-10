@@ -345,18 +345,19 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   }
 
   private void logLargeRecordWarning(final String line) {
+    if (line.length() < MAXIMUM_CHARACTERS_ALLOWED) {
+      return;
+    }
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
-      if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
-        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
-            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
-        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
-        if (invalidLineFailureConfiguration.printLongRecordPks) {
-          logger.warn("[LARGE RECORD] Risk of Destinations not being able to properly handle: " + line.length());
-          configuredAirbyteCatalog.ifPresent(
-              airbyteCatalog -> logger
-                  .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
-        }
+      connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+          () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
+      MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+      if (invalidLineFailureConfiguration.printLongRecordPks) {
+        logger.warn("[LARGE RECORD] Risk of Destinations not being able to properly handle: " + line.length());
+        configuredAirbyteCatalog.ifPresent(
+            airbyteCatalog -> logger
+                .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
       }
     } catch (final Exception e) {
       throw e;

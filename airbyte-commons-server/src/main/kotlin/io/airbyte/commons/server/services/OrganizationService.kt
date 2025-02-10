@@ -101,6 +101,7 @@ open class OrganizationServiceImpl(
     }
 
     orgPaymentConfig.paymentStatus = PaymentStatus.DISABLED
+    orgPaymentConfig.gracePeriodEndAt = null
     organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
 
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVALID_PAYMENT_METHOD)

@@ -37,14 +37,16 @@ interface MappingContextType {
 export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
 
 const MappingContext = createContext<MappingContextType | undefined>(undefined);
-export const getKeyForStream = (stream: AirbyteStream) => `${stream.namespace}-${stream.name}`;
-export const getStreamDescriptorForKey = (key: string): StreamDescriptor => {
-  const [namespace, name] = key.split("-");
 
-  if (namespace === "undefined") {
-    return { namespace: undefined, name };
-  }
-  return { namespace, name };
+export const getKeyForStream = (stream: AirbyteStream) => `${stream.namespace ?? "null"}:::${stream.name}`;
+
+export const getStreamDescriptorForKey = (key: string): StreamDescriptor => {
+  const [namespace, name] = key.split(":::");
+
+  return {
+    namespace: namespace === "null" ? undefined : namespace,
+    name,
+  };
 };
 
 export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }) => {

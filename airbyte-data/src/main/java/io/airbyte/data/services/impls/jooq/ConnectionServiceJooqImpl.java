@@ -9,16 +9,19 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_TAG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
+import static io.airbyte.db.instance.configs.jooq.generated.tables.Tag.TAG;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -28,6 +31,7 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -42,8 +46,10 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ConnectionTagRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -67,6 +73,7 @@ import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.TableField;
+import org.jooq.impl.DSL;
 import org.jooq.impl.TableImpl;
 
 @Singleton
@@ -181,7 +188,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -238,7 +246,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -300,7 +309,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
-    return getWorkspaceIdToStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getWorkspaceIdToStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -328,7 +338,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -356,7 +367,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -386,7 +398,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -418,7 +431,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -457,7 +471,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds));
   }
 
   /**
@@ -665,6 +680,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       return query.fetch();
     });
 
+    final List<UUID> connectionIds = result.map(record -> record.get(CONNECTION.ID));
+    final Map<UUID, List<TagRecord>> tagsByConnection = getTagsByConnectionIds(connectionIds);
+
     final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
     for (final Record record : result) {
       final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
@@ -679,7 +697,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       });
 
       final StandardSync standardSync =
-          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
+          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords,
+              tagsByConnection.get(record.get(CONNECTION.ID)));
       if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
         throw new RuntimeException("unexpected schedule type mismatch");
       }
@@ -754,6 +773,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
           standardSync.getBackfillPreference(), timestamp,
           ctx);
+      updateOrCreateConnectionTags(standardSync.getConnectionId(), standardSync.getTags(), ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
           .where(CONNECTION_OPERATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
@@ -805,6 +825,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
           standardSync.getBackfillPreference(), timestamp,
           ctx);
+      updateOrCreateConnectionTags(standardSync.getConnectionId(), standardSync.getTags(), ctx);
 
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
         ctx.insertInto(CONNECTION_OPERATION)
@@ -815,6 +836,45 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
             .set(CONNECTION_OPERATION.UPDATED_AT, timestamp)
             .execute();
       }
+    }
+  }
+
+  private void updateOrCreateConnectionTags(final UUID connectionId, final List<Tag> tags, final DSLContext ctx) {
+    if (tags == null) {
+      return;
+    }
+
+    final Set<UUID> newTagIds = tags.stream().map(Tag::getTagId).collect(Collectors.toSet());
+
+    final Set<UUID> existingTagIds = new HashSet<>(ctx.select(CONNECTION_TAG.TAG_ID)
+        .from(CONNECTION_TAG)
+        .where(CONNECTION_TAG.CONNECTION_ID.eq(connectionId))
+        .fetchSet(CONNECTION_TAG.TAG_ID));
+
+    final Set<UUID> tagsToDelete = Sets.difference(existingTagIds, newTagIds);
+    final Set<UUID> tagsToInsert = Sets.difference(newTagIds, existingTagIds);
+
+    // Bulk delete any removed tags
+    if (!tagsToDelete.isEmpty()) {
+      ctx.deleteFrom(CONNECTION_TAG)
+          .where(CONNECTION_TAG.CONNECTION_ID.eq(connectionId))
+          .and(CONNECTION_TAG.TAG_ID.in(tagsToDelete))
+          .execute();
+    }
+
+    // Bulk insert new tags
+    if (!tagsToInsert.isEmpty()) {
+      final List<ConnectionTagRecord> records = tagsToInsert.stream()
+          .map(tagId -> {
+            final ConnectionTagRecord record = DSL.using(ctx.configuration()).newRecord(CONNECTION_TAG);
+            record.setId(UUID.randomUUID());
+            record.setConnectionId(connectionId);
+            record.setTagId(tagId);
+            return record;
+          })
+          .collect(Collectors.toList());
+
+      ctx.batchInsert(records).execute();
     }
   }
 
@@ -952,7 +1012,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
-                                                        final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
+                                                        final List<NotificationConfigurationRecord> allNeededNotificationConfigurations,
+                                                        final Map<UUID, List<TagRecord>> tagsByConnectionId) {
     final List<StandardSync> standardSyncs = new ArrayList<>();
 
     for (final Record record : connectionAndOperationIdsResult) {
@@ -967,7 +1028,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       final List<NotificationConfigurationRecord> notificationConfigurationsForConnection = allNeededNotificationConfigurations.stream()
           .filter(notificationConfiguration -> notificationConfiguration.getConnectionId().equals(connectionId))
           .toList();
-      standardSyncs.add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
+      standardSyncs
+          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId.get(connectionId)));
     }
 
     return standardSyncs;
@@ -979,9 +1041,32 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .fetch());
   }
 
+  private Map<UUID, List<TagRecord>> getTagsByConnectionIds(final List<UUID> connectionIds) throws IOException {
+    final List<Record> records = database.query(ctx -> ctx.select(TAG.asterisk(), CONNECTION_TAG.CONNECTION_ID)
+        .from(CONNECTION_TAG)
+        .join(TAG).on(TAG.ID.eq(CONNECTION_TAG.TAG_ID))
+        .where(CONNECTION_TAG.CONNECTION_ID.in(connectionIds))
+        .fetch());
+
+    final Map<UUID, List<TagRecord>> tagsByConnectionId = new HashMap<>();
+
+    for (final UUID connectionId : connectionIds) {
+      tagsByConnectionId.put(connectionId, new ArrayList<>());
+    }
+
+    for (final Record record : records) {
+      final UUID connectionId = record.get(CONNECTION_TAG.CONNECTION_ID, UUID.class);
+      tagsByConnectionId.putIfAbsent(connectionId, new ArrayList<>());
+      tagsByConnectionId.get(connectionId).add(record.into(TagRecord.class));
+    }
+
+    return tagsByConnectionId;
+  }
+
   @SuppressWarnings("LineLength")
   private Map<UUID, List<StandardSync>> getWorkspaceIdToStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
-                                                                                final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
+                                                                                final List<NotificationConfigurationRecord> allNeededNotificationConfigurations,
+                                                                                final Map<UUID, List<TagRecord>> tagsByConnectionId) {
     final Map<UUID, List<StandardSync>> workspaceIdToStandardSync = new HashMap<>();
 
     for (final Record record : connectionAndOperationIdsResult) {
@@ -998,7 +1083,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .toList();
       workspaceIdToStandardSync.computeIfAbsent(
           record.get(ACTOR.WORKSPACE_ID), v -> new ArrayList<>())
-          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
+          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId.get(connectionId)));
     }
 
     return workspaceIdToStandardSync;

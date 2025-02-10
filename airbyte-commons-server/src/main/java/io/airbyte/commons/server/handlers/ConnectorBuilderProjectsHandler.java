@@ -175,7 +175,8 @@ public class ConnectorBuilderProjectsHandler {
         .sourceDefinitionId(project.getActorDefinitionId())
         .activeDeclarativeManifestVersion(
             project.getActiveDeclarativeManifestVersion())
-        .hasDraft(project.getHasDraft());
+        .hasDraft(project.getHasDraft())
+        .componentsFileContent(project.getComponentsFileContent());
 
     if (project.getContributionPullRequestUrl() != null) {
       detailsRead.setContributionInfo(new ContributionInfo().pullRequestUrl(project.getContributionPullRequestUrl())
@@ -354,7 +355,8 @@ public class ConnectorBuilderProjectsHandler {
             .name(project.getName())
             .hasDraft(project.getHasDraft())
             .activeDeclarativeManifestVersion(project.getActiveDeclarativeManifestVersion())
-            .sourceDefinitionId(project.getSourceDefinitionId()))
+            .sourceDefinitionId(project.getSourceDefinitionId())
+            .componentsFileContent(project.getComponentsFileContent()))
         .declarativeManifest(new DeclarativeManifestRead()
             .isDraft(false)
             .manifest(project.getManifest())

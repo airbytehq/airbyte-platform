@@ -72,7 +72,7 @@ export function environmentVariables(): Plugin {
       return {
         define: {
           ...processEnv,
-          // This lets us set the verison in a meta tag in index.html
+          // This lets us set the version in a meta tag in index.html
           "import.meta.env.VERSION": version,
         },
       };

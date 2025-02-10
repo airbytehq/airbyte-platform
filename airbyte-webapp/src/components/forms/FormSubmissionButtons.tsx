@@ -1,6 +1,5 @@
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { useEffectOnce } from "react-use";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
@@ -33,12 +32,6 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   // reset is a stable function so it's fine to get it from useFormContext
   const { reset } = useFormContext();
   const { isValid, isDirty, isSubmitting } = useFormState<FormConnectionFormValues>();
-
-  // need to trigger validation on mount to make error message exist
-  const { trigger } = useFormContext();
-  useEffectOnce(() => {
-    trigger("syncCatalog.streams");
-  });
 
   return (
     <FlexContainer justifyContent={justify} className={reversed ? styles.reversed : undefined}>

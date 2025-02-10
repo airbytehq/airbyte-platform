@@ -1,12 +1,24 @@
+import { Listbox } from "@headlessui/react";
 import React, { useMemo } from "react";
+import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
+import { CheckBox } from "components/ui/CheckBox";
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
+import { ListboxButton } from "components/ui/ListBox/ListboxButton";
+import { ListboxOption } from "components/ui/ListBox/ListboxOption";
+import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { SearchInput } from "components/ui/SearchInput";
+import { TagBadge } from "components/ui/TagBadge";
+import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useTagsList } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionsFilters.module.scss";
 import {
@@ -31,6 +43,8 @@ interface ConnectionsTableFiltersProps {
   filterValues: FilterValues;
   setFilterValue: (key: keyof FilterValues, value: string | null) => void;
   resetFilters: () => void;
+  tagFilters: string[];
+  setTagFilters: (selectedTagIds: string[]) => void;
 }
 
 export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
@@ -40,7 +54,11 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   filterValues,
   setFilterValue,
   resetFilters,
+  tagFilters,
+  setTagFilters,
 }) => {
+  const isConnectionTagsEnabled = useExperiment("connection.tags");
+
   const availableSourceOptions = useMemo(
     () => getAvailableSourceOptions(connections, filterValues.destination),
     [connections, filterValues.destination]
@@ -55,6 +73,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
     !!filterValues.source ||
     !!filterValues.state ||
     !!filterValues.destination ||
+    tagFilters.length > 0 ||
     searchFilter;
 
   return (
@@ -104,6 +123,11 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
               onSelect={(value) => setFilterValue("destination", value)}
             />
           </FlexItem>
+          {isConnectionTagsEnabled && (
+            <FlexItem>
+              <TagFilterDropdown selectedTagIds={tagFilters} setSelectedTagIds={(values) => setTagFilters(values)} />
+            </FlexItem>
+          )}
           {hasAnyFilterSelected && (
             <FlexItem>
               <ClearFiltersButton onClick={resetFilters} />
@@ -112,5 +136,52 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
         </FlexContainer>
       </FlexContainer>
     </Box>
+  );
+};
+
+interface TagFilterDropdownProps {
+  selectedTagIds: string[];
+  setSelectedTagIds: (selectedTagIds: string[]) => void;
+}
+
+const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, setSelectedTagIds }) => {
+  const workspaceId = useCurrentWorkspaceId();
+  const tags = useTagsList(workspaceId);
+
+  return (
+    <Listbox multiple onChange={setSelectedTagIds} value={selectedTagIds}>
+      <FloatLayout
+        shift={5} // $spacing-sm
+      >
+        <ListboxButton>
+          <FlexContainer gap="sm" alignItems="center">
+            {selectedTagIds.length === 0 && (
+              <Text bold color="grey">
+                <FormattedMessage id="connection.tags.title" />
+              </Text>
+            )}
+            {selectedTagIds.length > 0 &&
+              selectedTagIds?.map((tagId) => {
+                const tag = tags.find((t) => t.tagId === tagId);
+                return tag ? <TagBadge key={tagId} color={tag.color} text={tag.name} /> : null;
+              })}
+          </FlexContainer>
+        </ListboxButton>
+        <ListboxOptions>
+          {tags.map((tag) => (
+            <ListboxOption key={tag.tagId} value={tag.tagId}>
+              {({ selected }) => (
+                <Box p="md">
+                  <FlexContainer alignItems="center" as="span">
+                    <CheckBox checked={selected} readOnly />
+                    <TagBadge color={tag.color} text={tag.name} />
+                  </FlexContainer>
+                </Box>
+              )}
+            </ListboxOption>
+          ))}
+        </ListboxOptions>
+      </FloatLayout>
+    </Listbox>
   );
 };

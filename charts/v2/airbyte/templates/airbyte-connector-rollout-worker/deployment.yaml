@@ -1,4 +1,5 @@
 {{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.connectorRolloutOptIn true)}}
+{{- if .Values.connectorRolloutWorker.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,6 +9,8 @@ metadata:
     {{- if .Values.connectorRolloutWorker.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.connectorRolloutWorker.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.connectorRolloutWorker.replicaCount }}
   selector:
@@ -153,4 +156,5 @@ spec:
       {{- if .Values.connectorRolloutWorker.extraVolumes }}
   {{ toYaml .Values.connectorRolloutWorker.extraVolumes | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}

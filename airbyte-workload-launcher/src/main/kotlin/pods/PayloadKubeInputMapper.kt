@@ -16,6 +16,7 @@ import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrganizationId
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -25,10 +26,6 @@ import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.ResourceConversionUtils
-import io.airbyte.workload.launcher.model.getAttemptId
-import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrganizationId
-import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar

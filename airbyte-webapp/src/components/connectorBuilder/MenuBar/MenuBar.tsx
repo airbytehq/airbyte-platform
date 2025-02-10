@@ -22,7 +22,7 @@ import { PublishButton } from "./PublishButton";
 import AssistConfigButton from "../Builder/Assist/AssistConfigButton";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
 import { NameInput } from "../NameInput";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 export const MenuBar: React.FC = () => {
   const {

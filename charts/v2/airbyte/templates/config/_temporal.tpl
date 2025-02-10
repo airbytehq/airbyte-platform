@@ -208,6 +208,24 @@ Renders the temporal.configFilePath environment variable
 {{- end }}
 
 {{/*
+Renders the temporal.prometheus.endpoint value
+*/}}
+{{- define "airbyte.temporal.prometheus.endpoint" }}
+    {{- .Values.temporal.prometheus.endpoint | default "0.0.0.0:9090" }}
+{{- end }}
+
+{{/*
+Renders the temporal.prometheus.endpoint environment variable
+*/}}
+{{- define "airbyte.temporal.prometheus.endpoint.env" }}
+- name: PROMETHEUS_ENDPOINT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: PROMETHEUS_ENDPOINT
+{{- end }}
+
+{{/*
 Renders the set of all temporal environment variables
 */}}
 {{- define "airbyte.temporal.envs" }}
@@ -223,6 +241,7 @@ Renders the set of all temporal environment variables
 {{- include "airbyte.temporal.database.sqlTlsDisableHostVerification.env" . }}
 {{- include "airbyte.temporal.host.env" . }}
 {{- include "airbyte.temporal.configFilePath.env" . }}
+{{- include "airbyte.temporal.prometheus.endpoint.env" . }}
 {{- end }}
 
 {{/*
@@ -237,16 +256,17 @@ SQL_TLS_ENABLED: {{ include "airbyte.temporal.database.sqlTlsEnabled" . | quote 
 SQL_TLS_DISABLE_HOST_VERIFICATION: {{ include "airbyte.temporal.database.sqlTlsDisableHostVerification" . | quote }}
 TEMPORAL_HOST: {{ include "airbyte.temporal.host" . | quote }}
 DYNAMIC_CONFIG_FILE_PATH: {{ include "airbyte.temporal.configFilePath" . | quote }}
+PROMETHEUS_ENDPOINT: {{ include "airbyte.temporal.prometheus.endpoint" . | quote }}
 {{- end }}
 
 {{/*
 Renders the temporal.cli secret name
 */}}
 {{- define "airbyte.temporal.cli.secretName" }}
-{{- if .Values.global.temporal.cli.secretName }}
-    {{- .Values.global.temporal.cli.secretName }}
+{{- if .Values.global.temporal.secretName }}
+    {{- .Values.global.temporal.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -369,7 +389,7 @@ Renders the temporal.cloud secret name
 {{- if .Values.global.temporal.cloud.secretName }}
     {{- .Values.global.temporal.cloud.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -581,7 +601,7 @@ TEMPORAL_SDK_RPC_QUERY_TIMEOUT: {{ include "airbyte.temporal.sdk.rpc.queryTimeou
 Renders the temporal.worker.ports value
 */}}
 {{- define "airbyte.temporal.worker.ports" }}
-    {{- .Values.temporal.worker.ports }}
+    {{- join "," (seq 9000 9040) }}
 {{- end }}
 
 {{/*

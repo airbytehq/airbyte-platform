@@ -34,8 +34,8 @@ private val UTC = ZoneId.of("UTC")
 
 @Controller("/api/v1/organization_payment_config")
 open class OrganizationPaymentConfigController(
-  private val organizationService: OrganizationService,
-  private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
+  protected val organizationService: OrganizationService,
+  protected val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
 ) : OrganizationPaymentConfigApi {
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")

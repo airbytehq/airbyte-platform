@@ -12,7 +12,7 @@ Renders the workloads secret name
 {{- if .Values.global.workloads.secretName }}
     {{- .Values.global.workloads.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -92,7 +92,7 @@ Renders the workloads.containerOrchestrator.javaOpts environment variable
 Renders the global.workloads.containerOrchestrator.secretMountPath value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretMountPath" }}
-    {{- .Values.global.workloads.containerOrchestrator.secretMountPath }}
+    {{- .Values.global.workloads.containerOrchestrator.secretMountPath | default "/secrets/gcp-creds" }}
 {{- end }}
 
 {{/*
@@ -143,6 +143,24 @@ Renders the workloads.kuberentesClientMaxRetries environment variable
 {{- end }}
 
 {{/*
+Renders the global.workloads.namespace value
+*/}}
+{{- define "airbyte.workloads.namespace" }}
+    {{- .Values.global.workloads.namespace | default .Release.Namespace }}
+{{- end }}
+
+{{/*
+Renders the workloads.namespace environment variable
+*/}}
+{{- define "airbyte.workloads.namespace.env" }}
+- name: WORKLOADS_NAMESPACE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WORKLOADS_NAMESPACE
+{{- end }}
+
+{{/*
 Renders the global.workloads.pubSub.enabled value
 */}}
 {{- define "airbyte.workloads.pubSub.enabled" }}
@@ -189,6 +207,7 @@ Renders the set of all workloads environment variables
 {{- include "airbyte.workloads.containerOrchestrator.secretMountPath.env" . }}
 {{- include "airbyte.workloads.kubernetesClientMaxIdleConnections.env" . }}
 {{- include "airbyte.workloads.kuberentesClientMaxRetries.env" . }}
+{{- include "airbyte.workloads.namespace.env" . }}
 {{- include "airbyte.workloads.pubSub.enabled.env" . }}
 {{- include "airbyte.workloads.pubSub.topicName.env" . }}
 {{- end }}
@@ -204,6 +223,7 @@ CONTAINER_ORCHESTRATOR_JAVA_OPTS: {{ include "airbyte.workloads.containerOrchest
 CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.secretMountPath" . | quote }}
 KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: {{ include "airbyte.workloads.kubernetesClientMaxIdleConnections" . | quote }}
 KUBERNETES_CLIENT_MAX_RETRIES: {{ include "airbyte.workloads.kuberentesClientMaxRetries" . | quote }}
+WORKLOADS_NAMESPACE: {{ include "airbyte.workloads.namespace" . | quote }}
 PUB_SUB_ENABLED: {{ include "airbyte.workloads.pubSub.enabled" . | quote }}
 PUB_SUB_TOPIC_NAME: {{ include "airbyte.workloads.pubSub.topicName" . | quote }}
 {{- end }}
@@ -215,7 +235,7 @@ Renders the workloads.queues secret name
 {{- if .Values.global.workloads.queues.secretName }}
     {{- .Values.global.workloads.queues.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -298,7 +318,7 @@ Renders the workloads.resources secret name
 {{- if .Values.global.workloads.resources.secretName }}
     {{- .Values.global.workloads.resources.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

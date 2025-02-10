@@ -9,14 +9,12 @@
   background: colors.$foreground;
   border-radius: variables.$border-radius-sm;
   box-shadow: variables.$box-shadow-raised;
-  max-height: variables.$height-long-listbox-options-list;
   overflow: auto;
 
-  // We shoould use a <Button> variant instead of this class, but the current component is not flexible enough
+  // We should use a <Button> variant instead of this class, but the current component is not flexible enough
   // https://github.com/airbytehq/airbyte-internal-issues/issues/11481
   &__trigger {
     cursor: pointer;
-    opacity: 0;
     padding: 0;
     font-size: variables.$font-size-xs;
     height: variables.$tag-height;
@@ -26,9 +24,13 @@
     justify-content: center;
     background-color: transparent;
     color: colors.$grey-400;
-    border: 1px solid colors.$grey-300;
+    border: variables.$border-thin solid colors.$grey-200;
     box-shadow: none;
     border-radius: variables.$border-radius-sm;
+
+    tr & {
+      opacity: 0;
+    }
 
     tr:hover & {
       opacity: 1;
@@ -46,6 +48,11 @@
     border-radius: 0;
     border: none;
     border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+
+  &__tags {
+    overflow: auto;
+    max-height: variables.$height-long-listbox-options-list;
   }
 
   &__tagRow {

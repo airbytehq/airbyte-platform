@@ -14,7 +14,7 @@ runs:
   steps:
     - name: Pip Caching
       if: ${{ inputs.cache_python }} == 'true'
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/pip
@@ -23,7 +23,7 @@ runs:
           ${{ inputs.cache-key }}-pip-${{ runner.os }}-
 
     - name: Npm Caching
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.npm
@@ -32,7 +32,7 @@ runs:
           ${{ inputs.cache-key }}-npm-${{ runner.os }}-
 
     - name: pnpm Caching
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.local/share/pnpm/store
@@ -41,12 +41,11 @@ runs:
         restore-keys: |
           ${{ inputs.cache-key }}-pnpm-${{ runner.os }}-
 
-    # this intentionally does not use restore-keys so we don't mess with gradle caching
-    - name: Gradle and Python Caching
-      uses: actions/cache@v3
+    # gradle caching is handled by the gradle/actions/setup-gradle action
+    # see https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#incompatibility-with-other-caching-mechanisms
+    - name: Python Caching
+      uses: actions/cache@v4
       with:
         path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
           **/.venv
-        key: ${{ inputs.cache-key }}-${{ runner.os }}-${{ hashFiles('**/*.gradle*') }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/setup.py') }}-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ inputs.cache-key }}-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/setup.py') }}-${{ hashFiles('**/requirements.txt') }}

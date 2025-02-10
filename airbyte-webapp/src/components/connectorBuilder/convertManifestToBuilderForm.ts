@@ -47,6 +47,7 @@ import {
   GzipJsonDecoderType,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
   CheckDynamicStreamType,
+  RequestOptionInjectInto,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -502,7 +503,11 @@ export function manifestListPartitionRouterToBuilder(
     streamName
   );
   if (listPartitionRouter.request_option) {
-    filterRequestOption(listPartitionRouter.request_option, `${partitionRouter.type}.request_option`, streamName);
+    listPartitionRouter.request_option = validateAndConvertRequestOption(
+      listPartitionRouter.request_option,
+      `${partitionRouter.type}.request_option`,
+      streamName
+    );
   }
 
   return [
@@ -590,9 +595,10 @@ export function manifestSubstreamPartitionRouterToBuilder(
     streamName
   );
   if (parentStreamConfig.request_option) {
-    filterRequestOption(
+    parentStreamConfig.request_option = validateAndConvertRequestOption(
       parentStreamConfig.request_option,
-      `${partitionRouter.type}.parent_stream_configs.request_option`
+      `${partitionRouter.type}.parent_stream_configs.request_option`,
+      streamName
     );
   }
 
@@ -839,14 +845,18 @@ export function manifestIncrementalSyncToBuilder(
     streamName
   );
   if (datetimeBasedCursor.start_time_option) {
-    filterRequestOption(
+    datetimeBasedCursor.start_time_option = validateAndConvertRequestOption(
       datetimeBasedCursor.start_time_option,
       `${datetimeBasedCursor.type}.start_time_option`,
       streamName
     );
   }
   if (datetimeBasedCursor.end_time_option) {
-    filterRequestOption(datetimeBasedCursor.end_time_option, `${datetimeBasedCursor.type}.end_time_option`, streamName);
+    datetimeBasedCursor.end_time_option = validateAndConvertRequestOption(
+      datetimeBasedCursor.end_time_option,
+      `${datetimeBasedCursor.type}.end_time_option`,
+      streamName
+    );
   }
 
   if (datetimeBasedCursor.partition_field_start || datetimeBasedCursor.partition_field_end) {
@@ -1020,24 +1030,27 @@ export function manifestPaginatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
-  const pageSizeOption = paginator.page_size_option
-    ? filterRequestOption(paginator.page_size_option, `${paginator.type}.page_size_option`, streamName)
-    : undefined;
+  let pageSizeOption: RequestOption | undefined = undefined;
+
+  if (paginator.page_size_option) {
+    pageSizeOption = validateAndConvertRequestOption(
+      paginator.page_size_option,
+      `${paginator.type}.page_size_option`,
+      streamName
+    );
+  }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
+
   if (paginator.page_token_option?.type === "RequestPath") {
     filterKnownFields(paginator.page_token_option, ["type"], paginator.page_token_option.type, streamName);
     pageTokenOption = { inject_into: "path" };
   } else if (paginator.page_token_option?.type === "RequestOption") {
-    const requestOption = filterRequestOption(
+    pageTokenOption = validateAndConvertRequestOption(
       paginator.page_token_option,
       `${paginator.type}.page_token_option`,
       streamName
     );
-    pageTokenOption = {
-      inject_into: requestOption.inject_into,
-      field_name: requestOption.field_name,
-    };
   }
 
   return {
@@ -1132,17 +1145,25 @@ export function manifestAuthenticatorToBuilder(
         ["type", "api_token", "inject_into", "header"],
         authenticator.type
       );
-      if (authenticator.inject_into) {
-        filterRequestOption(authenticator.inject_into, `${authenticator.type}.inject_into`);
+
+      let inject_into = apiKeyAuth.inject_into;
+      if (authenticator.inject_into && apiKeyAuth.inject_into) {
+        inject_into = validateAndConvertRequestOption(
+          apiKeyAuth.inject_into,
+          `${authenticator.type}.inject_into`,
+          undefined
+        );
+      } else {
+        inject_into = {
+          type: "RequestOption",
+          field_name: apiKeyAuth.header || "",
+          inject_into: "header",
+        };
       }
 
       return {
         ...apiKeyAuth,
-        inject_into: apiKeyAuth.inject_into ?? {
-          type: "RequestOption",
-          field_name: apiKeyAuth.header || "",
-          inject_into: "header",
-        },
+        inject_into,
         api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], apiKeyAuth, spec)),
       };
     }
@@ -1613,7 +1634,12 @@ const extractAndValidateSpecKey = (
 };
 
 function filterRequestOption(requestOption: RequestOption, componentName: string, streamName?: string) {
-  return filterKnownFields(requestOption, ["type", "field_name", "inject_into"], componentName, streamName);
+  return filterKnownFields(
+    requestOption,
+    ["type", "field_name", "field_path", "inject_into"],
+    componentName,
+    streamName
+  );
 }
 
 function filterKnownFields<T extends object, K extends keyof T>(
@@ -1676,4 +1702,45 @@ function convertToNumber(
     throw new ManifestCompatibilityError(streamName, `${fieldName} must be a number; found '${value}'`);
   }
   return numericValue;
+}
+
+function convertRequestOptionLegacyFieldNameToFieldPath(option: RequestOption, streamName?: string): RequestOption {
+  // We are introducing a new field_path (type: string[]) to the RequestOption type, to support nested field injection.
+  // Eventually, we should deprecate field_name (type: string), since field_path is more flexible.
+  // However, because existing builder projects already use field_name and we trigger stream change warnings on any schema change,
+  // we need to support both fields for now to avoid triggering unnecessary and potentially confusing warnings.
+  // This function converts a manifest field_name into a single element field_path array for the UI component:
+  // RequestOption.field_name: 'page_size' -> RequestOption.field_path: ['page_size']
+
+  // TODO: Remove this function once we are ready to fully deprecate RequestOption.field_name
+
+  const base = filterRequestOption(option, `${option.type}`, streamName);
+  if (option.inject_into === RequestOptionInjectInto.body_json && option.field_name) {
+    const value = {
+      ...base,
+      field_path: [option.field_name],
+      field_name: undefined,
+    };
+
+    return value;
+  }
+
+  return base;
+}
+
+function validateRequestOptionFieldExclusivity(option: RequestOption, componentPath: string, streamName?: string) {
+  // Validates that a RequestOption has either a field_name OR field_path
+  if (option.field_name && option.field_path) {
+    throw new ManifestCompatibilityError(streamName, `${componentPath} cannot have both field_name and field_path`);
+  }
+}
+
+function validateAndConvertRequestOption(
+  // Helper function combining the validation and conversion of a RequestOption field_name to field_path
+  option: RequestOption,
+  componentPath: string,
+  streamName?: string
+): RequestOption {
+  validateRequestOptionFieldExclusivity(option, componentPath, streamName);
+  return convertRequestOptionLegacyFieldNameToFieldPath(option, streamName);
 }

@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -177,7 +178,8 @@ public class ConnectionHelpers {
                                                               final boolean breaking,
                                                               final Boolean notifySchemaChange,
                                                               final Boolean notifySchemaChangeByEmail,
-                                                              final SchemaChangeBackfillPreference backfillPreference) {
+                                                              final SchemaChangeBackfillPreference backfillPreference,
+                                                              final List<Tag> tags) {
 
     return new ConnectionRead()
         .connectionId(connectionId)
@@ -202,7 +204,8 @@ public class ConnectionHelpers {
         .breakingChange(breaking)
         .notifySchemaChanges(notifySchemaChange)
         .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
-        .backfillPreference(backfillPreference);
+        .backfillPreference(backfillPreference)
+        .tags(tags);
   }
 
   public static ConnectionRead generateExpectedConnectionRead(final StandardSync standardSync) {
@@ -216,7 +219,8 @@ public class ConnectionHelpers {
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
         standardSync.getNotifySchemaChangesByEmail(),
-        Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
+        Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class),
+        standardSync.getTags().stream().map(apiPojoConverters::toApiTag).toList());
 
     if (standardSync.getSchedule() == null) {
       connectionRead.schedule(null);

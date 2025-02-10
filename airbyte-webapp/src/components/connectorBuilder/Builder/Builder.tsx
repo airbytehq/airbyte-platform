@@ -12,20 +12,22 @@ import {
 
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
+import { ComponentsView } from "./ComponentsView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { BuilderFormValues, convertToManifest, useBuilderWatch } from "../types";
+import { BuilderFormValues, convertToManifest } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface BuilderProps {
   hasMultipleStreams: boolean;
 }
 
 function getView(
-  selectedView: "global" | "inputs" | { streamNum: number; streamId: string },
+  selectedView: "global" | "inputs" | "components" | { streamNum: number; streamId: string },
   hasMultipleStreams: boolean
 ) {
   switch (selectedView) {
@@ -33,6 +35,8 @@ function getView(
       return <GlobalConfigView />;
     case "inputs":
       return <InputsView />;
+    case "components":
+      return <ComponentsView />;
     default:
       // re-mount on changing stream
       return (
@@ -83,7 +87,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
 
   const selectedView = useMemo(
     () =>
-      view !== "global" && view !== "inputs"
+      view !== "global" && view !== "inputs" && view !== "components"
         ? {
             streamNum: view,
             streamId: streams[view]?.id ?? view,

@@ -13,8 +13,8 @@ import { BaseConnectorInfo } from "./BaseConnectorInfo";
 import { NameInput } from "./NameInput";
 import { SavingIndicator } from "./SavingIndicator";
 import styles from "./Sidebar.module.scss";
-import { useBuilderWatch } from "./types";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
+import { useBuilderWatch } from "./useBuilderWatch";
 
 interface SidebarProps {
   className?: string;

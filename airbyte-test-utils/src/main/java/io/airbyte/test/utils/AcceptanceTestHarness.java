@@ -667,6 +667,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null));
   }
 
@@ -699,6 +700,7 @@ public class AcceptanceTestHarness {
             null,
             create.getCatalogId(),
             create.getGeography(),
+            null,
             null,
             null,
             null,
@@ -740,6 +742,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -753,6 +756,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -784,6 +788,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -839,7 +844,8 @@ public class AcceptanceTestHarness {
             workspaceId,
             name,
             destinationDefId,
-            destinationConfig));
+            destinationConfig,
+            null));
     destinationIds.add(destination.getDestinationId());
     return destination;
   }
@@ -1023,6 +1029,7 @@ public class AcceptanceTestHarness {
             sourceConfig,
             workspaceId,
             name,
+            null,
             null)));
     sourceIds.add(source.getSourceId());
     return source;
@@ -1103,6 +1110,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             ConnectionStatus.DEPRECATED,
+            null,
             null,
             null,
             null,
@@ -1335,6 +1343,7 @@ public class AcceptanceTestHarness {
             null,
             nonBreakingChangesPreference,
             backfillPreference,
+            null,
             null));
   }
 

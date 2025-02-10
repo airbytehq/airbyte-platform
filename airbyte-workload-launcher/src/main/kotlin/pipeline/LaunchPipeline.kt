@@ -31,9 +31,10 @@ import kotlin.time.toJavaDuration
 @Singleton
 class LaunchPipeline(
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
+  @Named("build") private val build: LaunchStage,
+  @Named("loadShed") private val loadShed: LaunchStage,
   @Named("claim") private val claim: LaunchStage,
   @Named("check") private val check: LaunchStage,
-  @Named("build") private val build: LaunchStage,
   @Named("mutex") private val mutex: LaunchStage,
   @Named("launch") private val launch: LaunchStage,
   private val successHandler: SuccessHandler,
@@ -67,9 +68,10 @@ class LaunchPipeline(
 
     return input
       .toMono()
+      .flatMap(build)
+      .flatMap(loadShed)
       .flatMap(claim)
       .flatMap(check)
-      .flatMap(build)
       .flatMap(mutex)
       .flatMap(launch)
       .onErrorResume { e -> failureHandler.apply(e, input) }

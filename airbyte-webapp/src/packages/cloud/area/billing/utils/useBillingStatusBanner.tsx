@@ -1,10 +1,12 @@
 import dayjs from "dayjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCurrentOrganizationInfo, useOrganizationTrialStatus } from "core/api";
+import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -53,9 +55,9 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
       content: formatMessage(
         { id: "billing.banners.lockedPaymentStatus" },
         {
-          mail: (
-            <ExternalLink href="mailto:billing@airbyte.io" variant="primary">
-              billing@airbyte.io
+          lnk: (node: React.ReactNode) => (
+            <ExternalLink href={links.supportPortal} opensInNewTab>
+              {node}
             </ExternalLink>
           ),
         }

@@ -5,6 +5,8 @@ metadata:
   name: airbyte-featureflag-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    {{ toYaml .Values.featureflagServer.annotations | nindent 4 }}
 spec:
   minReadySeconds: 30
   replicas: {{ .Values.featureflagServer.replicaCount }}

@@ -38,8 +38,7 @@ import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } fr
 import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestAuthenticatorToBuilder } from "../convertManifestToBuilderForm";
-import { useBuilderWatchWithPreview } from "../preview";
-import { useTestingValuesErrors } from "../StreamTestingPanel";
+import { useTestingValuesErrors } from "../StreamTestingPanel/TestingValuesMenu";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -47,7 +46,6 @@ import {
   OAUTH_AUTHENTICATOR,
   DeclarativeOAuthAuthenticatorType,
   SESSION_TOKEN_AUTHENTICATOR,
-  useBuilderWatch,
   BuilderErrorHandler,
   LARGE_DURATION_OPTIONS,
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
@@ -61,6 +59,8 @@ import {
   BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES,
   extractInterpolatedConfigKey,
 } from "../types";
+import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch, useBuilderWatchWithPreview } from "../useBuilderWatch";
 import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
   getAuthKeyToDesiredLockedInput,
@@ -322,13 +322,9 @@ const payloadHasField = <FieldKey extends string>(
 
 const DeclarativeOAuthForm = () => {
   const { projectId } = useInitializedBuilderProject();
-  const {
-    jsonManifest: { spec },
-  } = useConnectorBuilderFormState();
   const { setValue, getValues } = useFormContext();
-  const testingValues = useBuilderWatch("testingValues");
-  const testingValuesErrors = useTestingValuesErrors(testingValues, spec);
-  const { updateTestingValues, savingState } = useConnectorBuilderFormState();
+  const testingValuesErrors = useTestingValuesErrors();
+  const { savingState } = useConnectorBuilderFormState();
 
   const canPerformOauthFlow = savingState === "saved";
 
@@ -343,7 +339,8 @@ const DeclarativeOAuthForm = () => {
   const { registerNotification } = useNotificationService();
   const hasNecessaryTestingValues = testingValuesErrors === 0;
 
-  const { setTestingValuesInputOpen, handleScrollToField } = useConnectorBuilderFormManagementState();
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
+  const { validateAndTouch } = useBuilderErrors();
 
   const authButtonBuilderRef = useRef(null);
   useEffect(() => {
@@ -369,7 +366,8 @@ const DeclarativeOAuthForm = () => {
                       text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
                       type: "info",
                     });
-                    setTestingValuesInputOpen(true);
+                    setValue("view", "inputs");
+                    validateAndTouch(undefined, ["inputs"]);
                   }
             }
             onComplete={async (payload) => {
@@ -381,14 +379,18 @@ const DeclarativeOAuthForm = () => {
                 if (payloadHasField(payload, accessTokenKey)) {
                   // update testing values with the returned access token
                   const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField)!;
-                  const response = await updateTestingValues({
-                    spec: spec?.connection_specification ?? {},
-                    testingValues: {
+                  setValue(
+                    "testingValues",
+                    {
                       ...testingValues,
                       [accessTokenConfigKey]: payload[accessTokenKey],
                     },
-                  });
-                  setValue("testingValues", response);
+                    {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    }
+                  );
                 } else {
                   registerNotification({
                     id: "connectorBuilder.authentication.oauthButton.noAccessToken",
@@ -404,14 +406,18 @@ const DeclarativeOAuthForm = () => {
               } else if (payloadHasField(payload, "refresh_token")) {
                 // update testing values with the returned refresh token
                 const refreshTokenConfigKey = extractInterpolatedConfigKey(authenticatorRefreshTokenValueField)!;
-                const response = await updateTestingValues({
-                  spec: spec?.connection_specification ?? {},
-                  testingValues: {
+                setValue(
+                  "testingValues",
+                  {
                     ...testingValues,
                     [refreshTokenConfigKey]: payload.refresh_token,
                   },
-                });
-                setValue("testingValues", response);
+                  {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  }
+                );
               } else {
                 registerNotification({
                   id: "connectorBuilder.authentication.oauthButton.noRefreshToken",
@@ -561,7 +567,6 @@ const SessionTokenForm = () => {
     formatMessage({ id: "connectorBuilder.authentication.loginRequester.label" }),
     undefined,
     "SessionTokenAuthenticator.properties.login_requester",
-    authPath("login_requester"),
     true
   );
   const getUniqueKey = useGetUniqueKey();

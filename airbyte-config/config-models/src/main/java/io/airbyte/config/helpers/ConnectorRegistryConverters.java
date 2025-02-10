@@ -65,6 +65,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withEnterprise(def.getAbInternal() != null ? def.getAbInternal().getIsEnterprise() : false)
         .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
@@ -91,6 +92,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withEnterprise(def.getAbInternal() != null ? def.getAbInternal().getIsEnterprise() : false)
         .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements());
   }

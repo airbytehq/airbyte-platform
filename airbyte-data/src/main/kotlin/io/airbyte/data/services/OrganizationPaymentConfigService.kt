@@ -13,4 +13,13 @@ interface OrganizationPaymentConfigService {
   fun findByPaymentProviderId(paymentProviderId: String): OrganizationPaymentConfig?
 
   fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig)
+
+  fun saveDefaultPaymentConfig(organizationId: UUID) {
+    val paymentConfig =
+      OrganizationPaymentConfig()
+        .withOrganizationId(organizationId)
+        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
+    savePaymentConfig(paymentConfig)
+  }
 }

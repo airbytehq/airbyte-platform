@@ -5,7 +5,8 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
+import { BuilderRequestBody, concatPath } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 type RequestOptionSectionProps =
   | {
@@ -20,7 +21,8 @@ type RequestOptionSectionProps =
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
-  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
+
+  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody")) as BuilderRequestBody;
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
     {

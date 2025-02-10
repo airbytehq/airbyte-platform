@@ -1,5 +1,3 @@
-import classNames from "classnames";
-import capitalize from "lodash/capitalize";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
@@ -12,7 +10,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamSelectorProps {
   className?: string;
@@ -26,7 +24,7 @@ const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOp
           {selectedOption.label}
         </Heading>
       )}
-      <Icon type="caretDown" color="primary" />
+      <Icon className={styles.caret} type="caretDown" color="primary" />
     </>
   );
 };
@@ -51,8 +49,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   }
 
   const options = streamNames.map((streamName) => {
-    const label =
-      streamName && streamName.trim() ? capitalize(streamName) : formatMessage({ id: "connectorBuilder.emptyName" });
+    const label = streamName && streamName.trim() ? streamName : formatMessage({ id: "connectorBuilder.emptyName" });
     return { label, value: streamName ?? "" };
   });
 
@@ -73,7 +70,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   return (
     <ListBox
-      className={classNames(className, styles.container)}
+      className={className}
       options={options}
       selectedValue={streamNames[testStreamIndex] ?? formatMessage({ id: "connectorBuilder.noStreamSelected" })}
       onSelect={handleStreamSelect}

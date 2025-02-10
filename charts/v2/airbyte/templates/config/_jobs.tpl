@@ -12,7 +12,7 @@ Renders the jobs secret name
 {{- if .Values.global.jobs.secretName }}
     {{- .Values.global.jobs.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -71,16 +71,16 @@ Renders the jobs.kube.localVolume.enabled environment variable
 {{- end }}
 
 {{/*
-Renders the global.jobs.kube.main_container_image_pull_secret value
+Renders the global.jobs.kube.mainContainerImagePullSecret value
 */}}
-{{- define "airbyte.jobs.kube.main_container_image_pull_secret" }}
-    {{- join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.main_container_image_pull_secret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.main_container_image_pull_secret)) }}
+{{- define "airbyte.jobs.kube.mainContainerImagePullSecret" }}
+    {{- join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.mainContainerImagePullSecret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.mainContainerImagePullSecret)) }}
 {{- end }}
 
 {{/*
-Renders the jobs.kube.main_container_image_pull_secret environment variable
+Renders the jobs.kube.mainContainerImagePullSecret environment variable
 */}}
-{{- define "airbyte.jobs.kube.main_container_image_pull_secret.env" }}
+{{- define "airbyte.jobs.kube.mainContainerImagePullSecret.env" }}
 - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
   valueFrom:
     configMapKeyRef:
@@ -167,7 +167,7 @@ Renders the set of all jobs environment variables
 {{- include "airbyte.jobs.kube.serviceAccount.env" . }}
 {{- include "airbyte.jobs.kube.namespace.env" . }}
 {{- include "airbyte.jobs.kube.localVolume.enabled.env" . }}
-{{- include "airbyte.jobs.kube.main_container_image_pull_secret.env" . }}
+{{- include "airbyte.jobs.kube.mainContainerImagePullSecret.env" . }}
 {{- include "airbyte.jobs.kube.annotations.env" . }}
 {{- include "airbyte.jobs.kube.labels.env" . }}
 {{- include "airbyte.jobs.kube.nodeSelector.env" . }}
@@ -181,7 +181,7 @@ Renders the set of all jobs config map variables
 JOB_KUBE_SERVICEACCOUNT: {{ include "airbyte.jobs.kube.serviceAccount" . | quote }}
 JOB_KUBE_NAMESPACE: {{ include "airbyte.jobs.kube.namespace" . | quote }}
 JOB_KUBE_LOCAL_VOLUME_ENABLED: {{ include "airbyte.jobs.kube.localVolume.enabled" . | quote }}
-JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ include "airbyte.jobs.kube.main_container_image_pull_secret" . | quote }}
+JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ include "airbyte.jobs.kube.mainContainerImagePullSecret" . | quote }}
 JOB_KUBE_ANNOTATIONS: {{ include "airbyte.jobs.kube.annotations" . | quote }}
 JOB_KUBE_LABELS: {{ include "airbyte.jobs.kube.labels" . | quote }}
 JOB_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.kube.nodeSelector" . | quote }}
@@ -195,7 +195,7 @@ Renders the jobs.errors secret name
 {{- if .Values.global.jobs.errors.secretName }}
     {{- .Values.global.jobs.errors.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

@@ -16,6 +16,7 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 
 import {
   API_KEY_AUTHENTICATOR,
+  BuilderFormInput,
   BuilderStream,
   CURSOR_PAGINATION,
   CUSTOM_PARTITION_ROUTER,
@@ -210,6 +211,52 @@ export const useBuilderValidationSchema = () => {
     [globalSchema, streamSchema]
   );
 
+  const testingValuesSchema = useMemo(
+    () =>
+      yup
+        .object()
+        .shape({})
+        .when("formValues.inputs", (inputs: BuilderFormInput[], schema) => {
+          if (!inputs) {
+            return schema; // If inputs are not available, return the existing schema
+          }
+
+          // Build the dynamic schema for `testingValues`
+          const fields: Record<string, yup.AnySchema> = {};
+
+          inputs.forEach((input: BuilderFormInput) => {
+            let fieldSchema: yup.AnySchema;
+
+            switch (input.definition.type) {
+              case "string":
+                fieldSchema = yup.string();
+                break;
+              case "number":
+              case "integer":
+                fieldSchema = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+                break;
+              case "boolean":
+                fieldSchema = yup.boolean();
+                break;
+              case "array":
+                fieldSchema = yup.array().of(yup.string());
+                break;
+              default:
+                fieldSchema = yup.mixed().test("invalid-type", `Invalid type: ${input.definition.type}`, () => false);
+            }
+
+            if (input.required) {
+              fieldSchema = fieldSchema.required(REQUIRED_ERROR);
+            }
+
+            fields[input.key] = fieldSchema;
+          });
+
+          return yup.object().shape(fields);
+        }),
+    []
+  );
+
   const builderStateValidationSchema = useMemo(
     () =>
       yup.object().shape({
@@ -221,12 +268,13 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs"
+            'Must be "global", "inputs", "components", or a number',
+            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
           ),
         testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
+        testingValues: testingValuesSchema,
       }),
-    [builderFormValidationSchema]
+    [builderFormValidationSchema, testingValuesSchema]
   );
 
   return {
@@ -234,6 +282,7 @@ export const useBuilderValidationSchema = () => {
     streamSchema,
     builderFormValidationSchema,
     builderStateValidationSchema,
+    testingValuesSchema,
   };
 };
 
@@ -283,7 +332,16 @@ const nonPathRequestOptionSchema = yup
   .object()
   .shape({
     inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required(REQUIRED_ERROR),
+    field_name: yup.mixed().when("inject_into", {
+      is: (val: string) => val !== "body_json",
+      then: yup.string().required(REQUIRED_ERROR),
+      otherwise: strip,
+    }),
+    field_path: yup.mixed().when("inject_into", {
+      is: (val: string) => val === "body_json",
+      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+      otherwise: strip,
+    }),
   })
   .notRequired()
   .default(undefined);
@@ -545,9 +603,14 @@ const paginatorSchema = yup
       .shape({
         inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
         field_name: yup.mixed().when("inject_into", {
-          is: "path",
-          then: strip,
-          otherwise: yup.string().required(REQUIRED_ERROR),
+          is: (val: string) => val !== "body_json" && val !== "path",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        field_path: yup.mixed().when("inject_into", {
+          is: "body_json",
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+          otherwise: strip,
         }),
       })
       .notRequired()

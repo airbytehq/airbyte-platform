@@ -1,3 +1,4 @@
+{{- if .Values.worker.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +8,8 @@ metadata:
     {{- if .Values.worker.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.worker.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.worker.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.worker.replicaCount }}
   selector:
@@ -71,7 +74,7 @@ spec:
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.admin.client.realmIssuer.env" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
@@ -212,3 +215,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

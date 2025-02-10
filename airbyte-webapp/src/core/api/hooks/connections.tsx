@@ -381,6 +381,76 @@ export const useDeleteConnection = () => {
   );
 };
 
+export const useUpdateConnectionOptimistically = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const notificationService = useNotificationService();
+  const { formatMessage } = useIntl();
+
+  return useMutation(async (connectionTagsUpdate: WebBackendConnectionUpdate) => {
+    queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (oldData) => {
+      if (!oldData) {
+        return oldData;
+      }
+
+      // Necessary because some properties on WebBackendConnectionUpdate could be null according to the openapi spec,
+      // but we don't want to overwrite cached WebBackendConnectionReadListItem properties with null values - we
+      // should just ignore them instead
+      const nonNullConnectionTagsUpdateProperties = Object.fromEntries(
+        Object.entries(connectionTagsUpdate).filter(([_key, value]) => value !== null)
+      );
+
+      return {
+        connections: oldData.connections.map((connection) =>
+          connection.connectionId === connectionTagsUpdate.connectionId
+            ? { ...connection, ...nonNullConnectionTagsUpdateProperties }
+            : connection
+        ),
+      };
+    });
+
+    queryClient.setQueryData<WebBackendConnectionRead>(
+      connectionsKeys.detail(connectionTagsUpdate.connectionId),
+      (oldData) => {
+        if (!oldData) {
+          return oldData;
+        }
+
+        // Necessary because some properties on WebBackendConnectionUpdate could be null according to the openapi spec,
+        // but we don't want to overwrite cached WebBackendConnectionRead properties with null values - we
+        // should just ignore them instead
+        const nonNullConnectionTagsUpdateProperties = Object.fromEntries(
+          Object.entries(connectionTagsUpdate).filter(([_key, value]) => value !== null)
+        );
+
+        return {
+          ...oldData,
+          ...nonNullConnectionTagsUpdateProperties,
+        };
+      }
+    );
+
+    try {
+      const result = await webBackendUpdateConnection(connectionTagsUpdate, requestOptions);
+      return result;
+    } catch (e) {
+      notificationService.registerNotification({
+        id: "update-connection-error",
+        type: "error",
+        text: formatMessage({ id: "connection.updateFailed" }),
+      });
+
+      // If the request fails, we need to revert the optimistic update
+      queryClient.invalidateQueries<WebBackendConnectionReadList>(connectionsKeys.lists());
+      queryClient.invalidateQueries<WebBackendConnectionRead>(
+        connectionsKeys.detail(connectionTagsUpdate.connectionId)
+      );
+
+      throw e;
+    }
+  });
+};
+
 export const useUpdateConnection = () => {
   const navigate = useNavigate();
   const formatError = useFormatError();

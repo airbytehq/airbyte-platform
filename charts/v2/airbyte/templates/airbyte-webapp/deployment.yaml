@@ -1,3 +1,4 @@
+{{- if .Values.webapp.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +9,8 @@ metadata:
     {{- if .Values.webapp.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.webapp.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.webapp.replicaCount }}
   selector:
@@ -139,3 +142,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{ toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

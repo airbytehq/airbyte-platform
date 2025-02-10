@@ -12,7 +12,7 @@ Renders the logging secret name
 {{- if .Values.global.logging.secretName }}
     {{- .Values.global.logging.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 

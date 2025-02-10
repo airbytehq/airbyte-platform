@@ -258,7 +258,10 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null, null));
+        null,
+        null,
+        null,
+        null));
     destinationApi = mock(DestinationApi.class);
     when(destinationApi.getDestination(any())).thenReturn(new DestinationRead(
         DESTINATION_DEFINITION_ID,
@@ -271,7 +274,10 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null, null));
+        null,
+        null,
+        null,
+        null));
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
     streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
     when(streamStatusTrackerFactory.create(any())).thenReturn(mock(StreamStatusTracker.class));
