@@ -15,7 +15,7 @@ import { WorkspacesPickerList } from "./WorkspacesPickerList";
 const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonHTMLAttributes<HTMLButtonElement>>(
   ({ children, ...props }, ref) => {
     return (
-      <button ref={ref} className={styles.workspacesPicker__button} {...props}>
+      <button ref={ref} className={styles.workspacesPicker__button} {...props} data-testid="workspaces-picker">
         {children}
       </button>
     );

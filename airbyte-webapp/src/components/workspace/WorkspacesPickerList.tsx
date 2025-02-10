@@ -23,7 +23,11 @@ interface WorkspacePickerListProps {
 
 const ListRow: ItemContent<WorkspaceRead, null> = (_index, workspace) => {
   return (
-    <Link variant="primary" to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}>
+    <Link
+      variant="primary"
+      to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}
+      data-testid={`workspace-picker-item-${workspace.workspaceId}`}
+    >
       <Box py="md" px="md" className={styles.workspacesPickerList__item}>
         <FlexContainer direction="column" justifyContent="center" gap="sm">
           <Text align="left" color="blue" bold size="md">
@@ -86,7 +90,12 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
 
   return (
     <>
-      <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} inline />
+      <SearchInput
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
+        inline
+        data-testid="workspaces-picker-input"
+      />
 
       {isLoading ? (
         <Box p="lg">
@@ -132,7 +141,7 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
             </Box>
           )}
           <Box py="lg">
-            <Link variant="primary" to={`/${RoutePaths.Workspaces}`}>
+            <Link variant="primary" to={`/${RoutePaths.Workspaces}`} data-testid="workspaces-picker-see-all">
               <Text color="blue" size="md" bold align="center">
                 <FormattedMessage id="workspaces.seeAll" />
               </Text>
