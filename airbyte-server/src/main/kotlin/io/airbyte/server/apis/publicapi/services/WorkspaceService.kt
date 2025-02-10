@@ -5,13 +5,21 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.model.generated.NotificationItem
+import io.airbyte.api.model.generated.NotificationSettings
+import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.Pagination
+import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceUpdateName
+import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
+import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
+import io.airbyte.publicApi.server.generated.models.NotificationConfig
+import io.airbyte.publicApi.server.generated.models.NotificationsConfig
+import io.airbyte.publicApi.server.generated.models.WebhookNotificationConfig
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
@@ -99,10 +107,11 @@ open class WorkspaceServiceImpl(
 
     val workspaceCreate =
       WorkspaceCreate()
-        .name(
-          workspaceCreateRequest.name,
-        ).email(currentUserService.currentUser.email)
+        .name(workspaceCreateRequest.name)
+        .email(currentUserService.currentUser.email)
         .organizationId(organizationId)
+        .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
+
     val result =
       kotlin
         .runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
@@ -146,13 +155,15 @@ open class WorkspaceServiceImpl(
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): WorkspaceResponse {
     val workspaceUpdate =
-      WorkspaceUpdateName().apply {
+      WorkspaceUpdate().apply {
         this.name = workspaceUpdateRequest.name
         this.workspaceId = workspaceId
+        this.notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig()
       }
+
     val result =
       kotlin
-        .runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
+        .runCatching { workspacesHandler.updateWorkspace(workspaceUpdate) }
         .onFailure {
           log.error("Error for updateWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -336,3 +347,52 @@ open class WorkspaceServiceImpl(
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
   ): Response = Response.status(Response.Status.NOT_IMPLEMENTED).build()
 }
+
+private fun NotificationsConfig.toNotificationSettings() =
+  NotificationSettings()
+    .sendOnFailure(failure?.toNotificationItem())
+    .sendOnSuccess(success?.toNotificationItem())
+    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem())
+    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem())
+    .sendOnSyncDisabled(syncDisabled?.toNotificationItem())
+    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem())
+
+private fun NotificationsConfig?.toInternalNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .NotificationsConfig()
+      .success(it.success?.toInternalNotificationConfig())
+      .failure(it.failure?.toInternalNotificationConfig())
+      .connectionUpdate(it.connectionUpdate?.toInternalNotificationConfig())
+      .connectionUpdateActionRequired(it.connectionUpdateActionRequired?.toInternalNotificationConfig())
+      .syncDisabled(it.syncDisabled?.toInternalNotificationConfig())
+      .syncDisabledWarning(it.syncDisabledWarning?.toInternalNotificationConfig())
+  }
+
+private fun NotificationConfig?.toInternalNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .NotificationConfig()
+      .email(it.email?.toInternalEmailNotificationConfig())
+      .webhook(it.webhook?.toInternalWebhookNotificationConfig())
+  }
+
+private fun EmailNotificationConfig?.toInternalEmailNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .EmailNotificationConfig()
+      .enabled(it.enabled)
+  }
+
+private fun WebhookNotificationConfig?.toInternalWebhookNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .WebhookNotificationConfig()
+      .enabled(it.enabled)
+      .url(it.url)
+  }
+
+private fun NotificationConfig.toNotificationItem() =
+  NotificationItem()
+    .notificationType(if (this.webhook?.enabled == true) listOf(NotificationType.SLACK) else emptyList())
+    .slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))

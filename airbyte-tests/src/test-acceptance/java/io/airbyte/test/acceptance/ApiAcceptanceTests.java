@@ -48,14 +48,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class tests api functionality.
- * <p>
- * Due to the number of tests here, this set runs only on the docker deployment for speed. The tests
- * here are disabled for Kubernetes as operations take much longer due to Kubernetes pod spin up
- * times and there is little value in re-running these tests since this part of the system does not
- * vary between deployments.
- * <p>
- * We order tests such that earlier tests test more basic behavior relied upon in later tests. e.g.
- * We test that we can create a destination before we test whether we can sync data to it.
  */
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "SqlDialectInspection", "SqlNoDataSourceInspection",
   "PMD.AvoidDuplicateLiterals"})

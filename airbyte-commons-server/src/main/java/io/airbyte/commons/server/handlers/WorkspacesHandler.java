@@ -13,15 +13,19 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
+import io.airbyte.api.model.generated.EmailNotificationConfig;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
+import io.airbyte.api.model.generated.NotificationConfig;
 import io.airbyte.api.model.generated.NotificationItem;
 import io.airbyte.api.model.generated.NotificationSettings;
 import io.airbyte.api.model.generated.NotificationType;
+import io.airbyte.api.model.generated.NotificationsConfig;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.UserRead;
+import io.airbyte.api.model.generated.WebhookNotificationConfig;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
@@ -32,6 +36,9 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem;
+import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.random.RandomKt;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -46,8 +53,10 @@ import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.slug.Slug;
+import io.airbyte.config.Notification;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -66,6 +75,7 @@ import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -193,6 +203,8 @@ public class WorkspacesHandler {
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
     }
+
+    validateWorkspace(workspace);
 
     return persistStandardWorkspace(workspace);
   }
@@ -436,12 +448,11 @@ public class WorkspacesHandler {
 
     final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     LOGGER.debug("Initial workspace: {}", workspace);
-
-    validateWorkspacePatch(workspace, workspacePatch);
-
     LOGGER.debug("Initial WorkspaceRead: {}", WorkspaceConverter.domainToApiModel(workspace));
 
     applyPatchToStandardWorkspace(workspace, workspacePatch);
+    validateWorkspacePatch(workspace, workspacePatch);
+    validateWorkspace(workspace);
 
     LOGGER.debug("Patched Workspace before persisting: {}", workspace);
 
@@ -529,6 +540,39 @@ public class WorkspacesHandler {
     return resolvedSlug;
   }
 
+  private void validateWorkspace(final StandardWorkspace workspace) {
+    if (workspace.getNotificationSettings() != null) {
+      final io.airbyte.config.NotificationSettings settings = workspace.getNotificationSettings();
+      validateNotificationItem(settings.getSendOnSuccess(), "success");
+      validateNotificationItem(settings.getSendOnFailure(), "failure");
+      validateNotificationItem(settings.getSendOnConnectionUpdate(), "connectionUpdate");
+      validateNotificationItem(settings.getSendOnConnectionUpdateActionRequired(), "connectionUpdateActionRequired");
+      validateNotificationItem(settings.getSendOnSyncDisabled(), "syncDisabled");
+      validateNotificationItem(settings.getSendOnSyncDisabledWarning(), "syncDisabledWarning");
+    }
+  }
+
+  private void validateNotificationItem(final io.airbyte.config.NotificationItem item, final String notificationName) {
+    if (item == null) {
+      return;
+    }
+
+    if (item.getNotificationType() != null && item.getNotificationType().contains(Notification.NotificationType.SLACK)) {
+      if (item.getSlackConfiguration() == null || Strings.isNullOrEmpty(item.getSlackConfiguration().getWebhook())) {
+        throw new NotificationMissingUrlProblem(
+            new ProblemMessageData().message(String.format("The '%s' notification is enabled but is missing a URL.", notificationName)));
+      }
+    }
+
+    // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
+    if ("connectionUpdateActionRequired".equals(notificationName) || "syncDisabled".equals(notificationName)) {
+      if (!item.getNotificationType().contains(Notification.NotificationType.CUSTOMERIO)) {
+        throw new NotificationRequiredProblem(
+            new ProblemMessageData().message(String.format("The '%s' email notification can't be disabled", notificationName)));
+      }
+    }
+  }
+
   private void validateWorkspacePatch(final StandardWorkspace persistedWorkspace, final WorkspaceUpdate workspacePatch) {
     Preconditions.checkArgument(persistedWorkspace.getWorkspaceId().equals(workspacePatch.getWorkspaceId()));
   }
@@ -555,9 +599,22 @@ public class WorkspacesHandler {
     if (CollectionUtils.isNotEmpty(workspacePatch.getNotifications())) {
       workspace.setNotifications(NotificationConverter.toConfigList(workspacePatch.getNotifications()));
     }
+
+    // The updateWorkspace function that calls this code is overloaded with two different behaviors:
+    // it's mostly used for a PUT (complete overwrite) in the internal APIs, but also for PATCH in the
+    // public API.
+    //
+    // The internal PUT APIs use notificationSettings, so if that field is set, then replace those
+    // settings.
+    // The public PATCH APIs use notificationsConfig, so if that field is set, then merge that config
+    // into
+    // the notification settings.
     if (workspacePatch.getNotificationSettings() != null) {
       workspace.setNotificationSettings(NotificationSettingsConverter.toConfig(workspacePatch.getNotificationSettings()));
+    } else if (workspacePatch.getNotificationsConfig() != null) {
+      patchNotifications(workspace, workspacePatch.getNotificationsConfig());
     }
+
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
@@ -569,6 +626,90 @@ public class WorkspacesHandler {
     if (workspacePatch.getWebhookConfigs() != null) {
       workspace.setWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspacePatch.getWebhookConfigs(), uuidSupplier));
     }
+    if (workspacePatch.getName() != null) {
+      workspace.setName(workspacePatch.getName());
+    }
+  }
+
+  // Apply a patch to the internal notification config model (NotificationSettings).
+  private void patchNotifications(final StandardWorkspace workspace, final NotificationsConfig config) {
+    io.airbyte.config.NotificationSettings settings = workspace.getNotificationSettings();
+    if (settings == null) {
+      settings = new io.airbyte.config.NotificationSettings();
+      workspace.setNotificationSettings(settings);
+    }
+
+    settings.setSendOnSuccess(patchNotificationItem(settings.getSendOnSuccess(), config.getSuccess()));
+    settings.setSendOnFailure(patchNotificationItem(settings.getSendOnFailure(), config.getFailure()));
+    settings.setSendOnConnectionUpdate(patchNotificationItem(settings.getSendOnConnectionUpdate(), config.getConnectionUpdate()));
+    settings.setSendOnConnectionUpdateActionRequired(
+        patchNotificationItem(settings.getSendOnConnectionUpdateActionRequired(), config.getConnectionUpdateActionRequired()));
+    settings.setSendOnSyncDisabled(patchNotificationItem(settings.getSendOnSyncDisabled(), config.getSyncDisabled()));
+    settings.setSendOnSyncDisabledWarning(patchNotificationItem(settings.getSendOnSyncDisabledWarning(), config.getSyncDisabledWarning()));
+  }
+
+  // Apply a patch to a specific webhook from the public API to the internal notification config model
+  // (NotificationItem).
+  @SuppressWarnings("PMD.AvoidReassigningParameters")
+  private io.airbyte.config.NotificationItem patchNotificationItem(io.airbyte.config.NotificationItem item, final NotificationConfig config) {
+    if (config == null) {
+      return item;
+    }
+
+    final WebhookNotificationConfig webhook = config.getWebhook();
+    final EmailNotificationConfig email = config.getEmail();
+
+    if (webhook == null && email == null) {
+      return item;
+    }
+    if (item == null) {
+      item = new io.airbyte.config.NotificationItem();
+    }
+
+    if (email != null && email.getEnabled() != null) {
+      if (email.getEnabled()) {
+        addNotificationType(item, Notification.NotificationType.CUSTOMERIO);
+      } else {
+        removeNotificationType(item, Notification.NotificationType.CUSTOMERIO);
+      }
+    }
+
+    if (webhook != null) {
+      if (webhook.getEnabled() != null) {
+        if (webhook.getEnabled()) {
+          addNotificationType(item, Notification.NotificationType.SLACK);
+        } else {
+          removeNotificationType(item, Notification.NotificationType.SLACK);
+        }
+      }
+
+      if (webhook.getUrl() != null) {
+        if (item.getSlackConfiguration() != null) {
+          item.getSlackConfiguration().setWebhook(webhook.getUrl());
+        } else {
+          item.setSlackConfiguration(new SlackNotificationConfiguration().withWebhook(webhook.getUrl()));
+        }
+      }
+    }
+
+    return item;
+  }
+
+  private void addNotificationType(io.airbyte.config.NotificationItem item, final Notification.NotificationType type) {
+    if (item.getNotificationType() == null) {
+      item.setNotificationType(new ArrayList<>());
+    }
+    if (item.getNotificationType().contains(type)) {
+      return;
+    }
+    item.getNotificationType().add(type);
+  }
+
+  private void removeNotificationType(io.airbyte.config.NotificationItem item, final Notification.NotificationType type) {
+    if (item.getNotificationType() == null) {
+      return;
+    }
+    item.getNotificationType().remove(type);
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")

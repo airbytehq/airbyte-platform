@@ -4,8 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
+import io.airbyte.api.model.generated.NotificationItem
+import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.GeographyEnum
+import io.airbyte.publicApi.server.generated.models.NotificationConfig
+import io.airbyte.publicApi.server.generated.models.NotificationsConfig
+import io.airbyte.publicApi.server.generated.models.WebhookNotificationConfig
 import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
 
 /**
@@ -26,5 +32,27 @@ object WorkspaceResponseMapper {
         workspaceRead.defaultGeography?.let { defaultGeography ->
           GeographyEnum.valueOf(defaultGeography.toString().uppercase())
         } ?: GeographyEnum.AUTO,
+      notifications =
+        NotificationsConfig(
+          failure = workspaceRead.notificationSettings?.sendOnFailure?.toNotificationConfig(),
+          success = workspaceRead.notificationSettings?.sendOnSuccess?.toNotificationConfig(),
+          connectionUpdate = workspaceRead.notificationSettings?.sendOnConnectionUpdate?.toNotificationConfig(),
+          connectionUpdateActionRequired = workspaceRead.notificationSettings?.sendOnConnectionUpdateActionRequired?.toNotificationConfig(),
+          syncDisabled = workspaceRead.notificationSettings?.sendOnSyncDisabled?.toNotificationConfig(),
+          syncDisabledWarning = workspaceRead.notificationSettings?.sendOnSyncDisabledWarning?.toNotificationConfig(),
+        ),
+    )
+
+  private fun NotificationItem.toNotificationConfig() =
+    NotificationConfig(
+      email =
+        EmailNotificationConfig(
+          enabled = notificationType.contains(NotificationType.CUSTOMERIO),
+        ),
+      webhook =
+        WebhookNotificationConfig(
+          enabled = notificationType.contains(NotificationType.SLACK),
+          url = slackConfiguration?.webhook,
+        ),
     )
 }

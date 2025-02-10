@@ -8543,6 +8543,8 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
         email:
           type: string
           format: email
@@ -8556,14 +8558,14 @@ components:
           type: boolean
         securityUpdates:
           type: boolean
-        name:
-          type: string
         notifications:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
         notificationSettings:
           $ref: "#/components/schemas/NotificationSettings"
+        notificationsConfig:
+          $ref: "#/components/schemas/NotificationsConfig"
         defaultGeography:
           $ref: "#/components/schemas/Geography"
         webhookConfigs:
@@ -15775,20 +15777,23 @@ components:
           description: ID of organization to add workspace to.
           format: uuid
           type: string
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
     WorkspaceUpdateRequest:
-      required:
-        - name
       type: object
       properties:
         name:
           description: Name of the workspace
           type: string
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
+
     WorkspaceResponse:
       title: Root Type for WorkspaceResponse
       description: Provides details of a single workspace.
@@ -15797,6 +15802,7 @@ components:
         - workspaceId
         - name
         - dataResidency
+        - notifications
       properties:
         workspaceId:
           format: UUID
@@ -15805,6 +15811,62 @@ components:
           type: string
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    NotificationsConfig:
+      description: Configures workspace notifications.
+      type: object
+      properties:
+        failure:
+          $ref: "#/components/schemas/NotificationConfig"
+        success:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdate:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabled:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabledWarning:
+          $ref: "#/components/schemas/NotificationConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    NotificationConfig:
+      description: Configures a notification.
+      type: object
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationConfig"
+        webhook:
+          $ref: "#/components/schemas/WebhookNotificationConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    WebhookNotificationConfig:
+      description: Configures a webhook notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        url:
+          type: string
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    EmailNotificationConfig:
+      description: Configures an email notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true

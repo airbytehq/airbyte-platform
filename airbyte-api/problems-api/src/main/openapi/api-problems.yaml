@@ -958,7 +958,7 @@ components:
               default: Tag name too long
             detail:
               type: string
-              default: The tag name can be maximuim 30 characters.
+              default: The tag name can be maximum 30 characters.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     TagLimitForWorkspaceReachedProblemResponse:
@@ -1170,3 +1170,45 @@ components:
       properties:
         currentBalance:
           type: string
+    NotificationRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:notification/config/required
+            title:
+              type: string
+              default: Notification required
+            detail:
+              type: string
+              default: The notification is required and can't be disabled.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    NotificationMissingUrlProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:notification/config/missing-url
+            title:
+              type: string
+              default: Notification missing URL
+            detail:
+              type: string
+              default: The notification is missing a URL.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
