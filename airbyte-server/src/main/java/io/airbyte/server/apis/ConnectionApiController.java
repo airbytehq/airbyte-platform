@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
+import io.airbyte.api.model.generated.ConnectionContextRead;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
@@ -361,6 +362,14 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalogForConnection(@Body final PostprocessDiscoveredCatalogRequestBody req) {
     return ApiHelper.execute(() -> connectionsHandler.postprocessDiscoveredCatalog(req.getConnectionId(), req.getCatalogId()));
+  }
+
+  @Override
+  @Post(uri = "/get_context")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionContextRead getConnectionContext(@Body final ConnectionIdRequestBody req) {
+    return ApiHelper.execute(() -> connectionsHandler.getConnectionContext(req.getConnectionId()));
   }
 
 }

@@ -2538,6 +2538,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/get_context:
+    post:
+      tags:
+        - connection
+      summary: Retrieves the domain ids for all objects related to a connection.
+      operationId: getConnectionContext
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionContextRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/state/get:
     post:
       tags:
@@ -10738,6 +10761,39 @@ components:
           format: int64
         configType:
           $ref: "#/components/schemas/JobConfigType"
+    ConnectionContextRead:
+      description: Ids of related contextual domain models for a connection given connection.
+      type: object
+      additionalProperties: true
+      properties:
+        connectionId:
+          description: The ID of the relevant connection.
+          type: string
+          format: uuid
+        sourceId:
+          description: The ID of the relevant source.
+          type: string
+          format: uuid
+        destinationId:
+          description: The ID of the relevant destination.
+          type: string
+          format: uuid
+        sourceDefinitionId:
+          description: The ID of the relevant source definition.
+          type: string
+          format: uuid
+        destinationDefinitionId:
+          description: The ID of the relevant destination definition.
+          type: string
+          format: uuid
+        workspaceId:
+          description: The ID of the workspace related to this workflow
+          type: string
+          format: uuid
+        organizationId:
+          description: The ID of the organization related to this workflow
+          type: string
+          format: uuid
     StreamSyncProgressReadItem:
       type: object
       required:

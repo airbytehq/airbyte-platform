@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
+import io.airbyte.api.model.generated.ConnectionContextRead;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
@@ -65,6 +66,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ApiConverters;
+import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
@@ -80,6 +82,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper.Update
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
@@ -209,6 +212,7 @@ public class ConnectionsHandler {
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final StatePersistence statePersistence;
   private final MapperSecretHelper mapperSecretHelper;
+  private final ContextBuilder contextBuilder;
 
   private final CatalogService catalogService;
   private final SourceService sourceService;
@@ -254,7 +258,8 @@ public class ConnectionsHandler {
                             final ApiPojoConverters apiPojoConverters,
                             final ConnectionScheduleHelper connectionScheduleHelper,
                             final MapperSecretHelper mapperSecretHelper,
-                            final LicenseEntitlementChecker licenseEntitlementChecker) {
+                            final LicenseEntitlementChecker licenseEntitlementChecker,
+                            final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -285,6 +290,7 @@ public class ConnectionsHandler {
     this.connectionScheduleHelper = connectionScheduleHelper;
     this.mapperSecretHelper = mapperSecretHelper;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
+    this.contextBuilder = contextBuilder;
   }
 
   /**
@@ -1583,6 +1589,12 @@ public class ConnectionsHandler {
         .catalog(discoveredCatalog)
         .catalogId(discoveredCatalogId)
         .connectionStatus(updatedConnection.getStatus());
+  }
+
+  @SuppressWarnings("PMD.LooseCoupling")
+  public ConnectionContextRead getConnectionContext(final UUID connectionId) {
+    final var domainModel = contextBuilder.fromConnectionId(connectionId);
+    return CommonConvertersKt.toServerApi(domainModel);
   }
 
   private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)
