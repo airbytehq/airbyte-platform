@@ -37,7 +37,11 @@ public interface ConnectionService {
 
   List<StandardSync> listWorkspaceStandardSyncs(StandardSyncQuery standardSyncQuery) throws IOException;
 
-  Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(List<UUID> workspaceIds, boolean includeDeleted, int pageSize, int rowOffset)
+  Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(List<UUID> workspaceIds,
+                                                                    List<UUID> tagIds,
+                                                                    boolean includeDeleted,
+                                                                    int pageSize,
+                                                                    int rowOffset)
       throws IOException;
 
   Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(StandardSyncsQueryPaginated standardSyncsQueryPaginated) throws IOException;

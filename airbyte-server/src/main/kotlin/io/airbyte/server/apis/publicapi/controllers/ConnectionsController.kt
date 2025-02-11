@@ -79,6 +79,7 @@ open class ConnectionsController(
           nonBreakingSchemaUpdatesBehavior = connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
           destinationId = connectionCreateRequest.destinationId,
           sourceId = connectionCreateRequest.sourceId,
+          tags = connectionCreateRequest.tags,
         )
       }, CONNECTIONS_PATH, POST, userId)
 
@@ -259,6 +260,7 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listConnections(
     workspaceIds: List<UUID>?,
+    tagIds: List<UUID>?,
     includeDeleted: Boolean,
     limit: Int,
     offset: Int,
@@ -272,10 +274,13 @@ open class ConnectionsController(
     )
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
+    val safeTagIds = tagIds ?: emptyList()
+
     val connections =
       trackingHelper.callWithTracker({
         connectionService.listConnectionsForWorkspaces(
           safeWorkspaceIds,
+          safeTagIds,
           limit,
           offset,
           includeDeleted,
@@ -322,6 +327,7 @@ open class ConnectionsController(
             schedule = AirbyteCatalogHelper.normalizeCronExpression(connectionPatchRequest.schedule),
             prefix = connectionPatchRequest.prefix,
             nonBreakingSchemaUpdatesBehavior = connectionPatchRequest.nonBreakingSchemaUpdatesBehavior,
+            tags = connectionPatchRequest.tags,
           )
         },
         CONNECTIONS_WITH_ID_PATH,

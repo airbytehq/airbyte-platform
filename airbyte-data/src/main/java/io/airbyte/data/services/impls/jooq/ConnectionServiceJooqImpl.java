@@ -255,12 +255,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    */
   @Override
   public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final List<UUID> workspaceIds,
+                                                                           final List<UUID> tagIds,
                                                                            final boolean includeDeleted,
                                                                            final int pageSize,
                                                                            final int rowOffset)
       throws IOException {
     return listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
         workspaceIds,
+        tagIds,
         null,
         null,
         includeDeleted,
@@ -296,12 +298,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
         // The schema management can be non-existent for a connection id, thus we need to do a left join
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(CONNECTION_TAG).on(CONNECTION_TAG.CONNECTION_ID.eq(CONNECTION.ID))
         .where(ACTOR.WORKSPACE_ID.in(standardSyncsQueryPaginated.workspaceIds())
             .and(standardSyncsQueryPaginated.destinationId() == null || standardSyncsQueryPaginated.destinationId().isEmpty() ? noCondition()
                 : CONNECTION.DESTINATION_ID.in(standardSyncsQueryPaginated.destinationId()))
             .and(standardSyncsQueryPaginated.sourceId() == null || standardSyncsQueryPaginated.sourceId().isEmpty() ? noCondition()
                 : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId()))
-            .and(standardSyncsQueryPaginated.includeDeleted() ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+            .and(standardSyncsQueryPaginated.includeDeleted() ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
+            .and(standardSyncsQueryPaginated.tagIds() == null || standardSyncsQueryPaginated.tagIds().isEmpty()
+                ? noCondition()
+                : CONNECTION_TAG.TAG_ID.in(standardSyncsQueryPaginated.tagIds())))
         // group by connection.id so that the groupConcat above works
         .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE))
         .limit(standardSyncsQueryPaginated.pageSize())
@@ -773,7 +779,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
           standardSync.getBackfillPreference(), timestamp,
           ctx);
-      updateOrCreateConnectionTags(standardSync.getConnectionId(), standardSync.getTags(), ctx);
+      updateOrCreateConnectionTags(standardSync, ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
           .where(CONNECTION_OPERATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
@@ -825,7 +831,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
           standardSync.getBackfillPreference(), timestamp,
           ctx);
-      updateOrCreateConnectionTags(standardSync.getConnectionId(), standardSync.getTags(), ctx);
+      updateOrCreateConnectionTags(standardSync, ctx);
 
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
         ctx.insertInto(CONNECTION_OPERATION)
@@ -839,16 +845,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     }
   }
 
-  private void updateOrCreateConnectionTags(final UUID connectionId, final List<Tag> tags, final DSLContext ctx) {
-    if (tags == null) {
+  private void updateOrCreateConnectionTags(final StandardSync standardSync, final DSLContext ctx) {
+    if (standardSync.getTags() == null) {
       return;
     }
 
-    final Set<UUID> newTagIds = tags.stream().map(Tag::getTagId).collect(Collectors.toSet());
+    final Set<UUID> newTagIds = standardSync.getTags().stream().map(Tag::getTagId).collect(Collectors.toSet());
 
     final Set<UUID> existingTagIds = new HashSet<>(ctx.select(CONNECTION_TAG.TAG_ID)
         .from(CONNECTION_TAG)
-        .where(CONNECTION_TAG.CONNECTION_ID.eq(connectionId))
+        .where(CONNECTION_TAG.CONNECTION_ID.eq(standardSync.getConnectionId()))
         .fetchSet(CONNECTION_TAG.TAG_ID));
 
     final Set<UUID> tagsToDelete = Sets.difference(existingTagIds, newTagIds);
@@ -857,18 +863,29 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     // Bulk delete any removed tags
     if (!tagsToDelete.isEmpty()) {
       ctx.deleteFrom(CONNECTION_TAG)
-          .where(CONNECTION_TAG.CONNECTION_ID.eq(connectionId))
+          .where(CONNECTION_TAG.CONNECTION_ID.eq(standardSync.getConnectionId()))
           .and(CONNECTION_TAG.TAG_ID.in(tagsToDelete))
           .execute();
     }
 
     // Bulk insert new tags
     if (!tagsToInsert.isEmpty()) {
-      final List<ConnectionTagRecord> records = tagsToInsert.stream()
+      // We need to verify that the tags are associated with the workspace of the connection
+      final UUID workspaceId = ctx.select(ACTOR.WORKSPACE_ID)
+          .from(ACTOR)
+          .where(ACTOR.ID.eq(standardSync.getSourceId()))
+          .fetchOne(ACTOR.WORKSPACE_ID);
+
+      final List<ConnectionTagRecord> records = ctx.select(TAG.ID)
+          .from(TAG)
+          .where(TAG.ID.in(tagsToInsert))
+          .and(TAG.WORKSPACE_ID.eq(workspaceId)) // Ensure tag belongs to correct workspace
+          .fetchInto(UUID.class)
+          .stream()
           .map(tagId -> {
             final ConnectionTagRecord record = DSL.using(ctx.configuration()).newRecord(CONNECTION_TAG);
             record.setId(UUID.randomUUID());
-            record.setConnectionId(connectionId);
+            record.setConnectionId(standardSync.getConnectionId());
             record.setTagId(tagId);
             return record;
           })

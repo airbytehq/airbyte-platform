@@ -16,7 +16,9 @@ interface TagService {
     workspaceId: UUID,
   ): Tag
 
-  fun getTagsByWorkspaceId(workspaceId: UUID): List<Tag>
+  fun getTagById(tagId: UUID): Tag
+
+  fun getTagsByWorkspaceIds(workspaceIds: List<UUID>): List<Tag>
 
   fun updateTag(tag: Tag): Tag
 
