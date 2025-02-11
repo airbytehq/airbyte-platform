@@ -32,6 +32,8 @@ airbyte:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
+  license-key: ${AIRBYTE_LICENSE_KEY:}
   cron:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}

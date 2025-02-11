@@ -62,6 +62,11 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: AIRBYTE_VERSION
+          - name: AIRBYTE_EDITION
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: AIRBYTE_EDITION
           - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
             valueFrom:
               configMapKeyRef:
@@ -135,6 +140,7 @@ spec:
 
           # Database
           {{- include "airbyte.database.envs" . | nindent 10 }}
+          {{- include "airbyte.enterprise.license" . | nindent 10 }}
 
           {{- end }}
 
