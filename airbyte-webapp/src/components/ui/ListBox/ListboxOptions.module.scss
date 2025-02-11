@@ -1,3 +1,4 @@
+@use "scss/colors";
 @use "scss/variables";
 
 .listboxOptions {
@@ -8,6 +9,7 @@
   flex-direction: column;
   gap: 0;
   overflow: auto;
+  background: colors.$foreground;
 
   &:focus-visible {
     outline: none;

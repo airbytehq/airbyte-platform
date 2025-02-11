@@ -168,6 +168,13 @@ const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, s
           </FlexContainer>
         </ListboxButton>
         <ListboxOptions>
+          {tags.length === 0 && (
+            <Box p="md">
+              <Text color="grey" italicized>
+                <FormattedMessage id="connection.tags.empty" />
+              </Text>
+            </Box>
+          )}
           {tags.map((tag) => (
             <ListboxOption key={tag.tagId} value={tag.tagId}>
               {({ selected }) => (

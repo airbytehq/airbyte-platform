@@ -594,7 +594,7 @@
   "connection.fromTo": "{source} → {destination}",
   "connection.connectionSettings": "Connection settings",
   "connection.tags": "Connection tags",
-  "connection.tags.empty": "No tags yet",
+  "connection.tags.empty": "No tags found",
   "connection.tags.creationError": "Error creating tag",
   "connection.loadMoreJobs": "Load more",
   "connection.updateSchema": "Refresh source schema",
