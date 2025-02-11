@@ -37,7 +37,7 @@ interface JobsWithAttemptsRepository :
 object Specifications {
   fun jobWithAssociatedAttempts(
     configTypes: Set<JobConfigType>,
-    scope: String?,
+    scopes: Set<String>?,
     statuses: Set<JobStatus>,
     createdAtStart: OffsetDateTime?,
     createdAtEnd: OffsetDateTime?,
@@ -47,7 +47,7 @@ object Specifications {
     QuerySpecification { root, _, criteriaBuilder ->
       buildJobPredicate(
         configTypes = configTypes,
-        scope = scope,
+        scopes = scopes,
         statuses = statuses,
         createdAtStart = createdAtStart,
         createdAtEnd = createdAtEnd,
@@ -60,7 +60,7 @@ object Specifications {
 
   private fun buildJobPredicate(
     configTypes: Set<JobConfigType>,
-    scope: String?,
+    scopes: Set<String>?,
     statuses: Set<JobStatus>,
     createdAtStart: OffsetDateTime?,
     createdAtEnd: OffsetDateTime?,
@@ -73,8 +73,8 @@ object Specifications {
     if (configTypes.isNotEmpty()) {
       criteria.add(root.get<JobConfigType>("configType").`in`(configTypes))
     }
-    if (!scope.isNullOrBlank()) {
-      criteria.add(criteriaBuilder.equal(root.get<String>("scope"), scope))
+    if (!scopes.isNullOrEmpty()) {
+      criteria.add(root.get<String>("scope").`in`(scopes))
     }
     if (statuses.isNotEmpty()) {
       criteria.add(root.get<JobStatus>("status").`in`(statuses))
