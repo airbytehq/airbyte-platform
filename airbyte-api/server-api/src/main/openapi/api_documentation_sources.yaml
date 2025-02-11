@@ -490,6 +490,7 @@ components:
           EQUAL: "#/components/schemas/RowFilteringOperationEqual"
           NOT: "#/components/schemas/RowFilteringOperationNot"
       x-speakeasy-component: true
+      x-airbyte-circular-ref: true
     RowFilteringMapperConfiguration:
       title: "Row Filtering"
       type: "object"
@@ -1221,17 +1222,19 @@ components:
           description: "ID of organization to add workspace to."
           format: "uuid"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
-      required:
-      - "name"
       type: "object"
       properties:
         name:
           description: "Name of the workspace"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1243,6 +1246,7 @@ components:
       - "workspaceId"
       - "name"
       - "dataResidency"
+      - "notifications"
       properties:
         workspaceId:
           format: "UUID"
@@ -1251,6 +1255,58 @@ components:
           type: "string"
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationsConfig:
+      description: "Configures workspace notifications."
+      type: "object"
+      properties:
+        failure:
+          $ref: "#/components/schemas/NotificationConfig"
+        success:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdate:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabled:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabledWarning:
+          $ref: "#/components/schemas/NotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationConfig:
+      description: "Configures a notification."
+      type: "object"
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationConfig"
+        webhook:
+          $ref: "#/components/schemas/WebhookNotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    WebhookNotificationConfig:
+      description: "Configures a webhook notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
+        url:
+          type: "string"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    EmailNotificationConfig:
+      description: "Configures an email notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1922,6 +1978,118 @@ components:
           - "2022-01-01"
           format: "date"
           order: 2
+    source-keka:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "api_key"
+      - "grant_type"
+      - "scope"
+      - "sourceType"
+      properties:
+        scope:
+          type: "string"
+          order: 4
+          title: "Scope"
+        api_key:
+          type: "string"
+          order: 2
+          title: "API Key"
+        client_id:
+          type: "string"
+          description: "Your client identifier for authentication."
+          order: 0
+          title: "Client ID"
+        grant_type:
+          type: "string"
+          order: 3
+          title: "Grant Type"
+        client_secret:
+          type: "string"
+          description: "Your client secret for secure authentication."
+          order: 1
+          title: "Client Secret"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "keka"
+          const: "keka"
+          enum:
+          - "keka"
+          order: 0
+          type: "string"
+    source-keka-update:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "api_key"
+      - "grant_type"
+      - "scope"
+      properties:
+        scope:
+          type: "string"
+          order: 4
+          title: "Scope"
+        api_key:
+          type: "string"
+          order: 2
+          title: "API Key"
+        client_id:
+          type: "string"
+          description: "Your client identifier for authentication."
+          order: 0
+          title: "Client ID"
+        grant_type:
+          type: "string"
+          order: 3
+          title: "Grant Type"
+        client_secret:
+          type: "string"
+          description: "Your client secret for secure authentication."
+          order: 1
+          title: "Client Secret"
+          airbyte_secret: true
+    source-payfit:
+      type: "object"
+      required:
+      - "api_key"
+      - "company_id"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        company_id:
+          type: "string"
+          order: 1
+          title: "Company ID"
+        sourceType:
+          title: "payfit"
+          const: "payfit"
+          enum:
+          - "payfit"
+          order: 0
+          type: "string"
+    source-payfit-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "company_id"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        company_id:
+          type: "string"
+          order: 1
+          title: "Company ID"
     source-simplesat:
       type: "object"
       required:
@@ -2557,73 +2725,69 @@ components:
     source-quickbooks:
       type: "object"
       required:
-      - "credentials"
+      - "client_id"
+      - "client_secret"
+      - "refresh_token"
+      - "access_token"
+      - "token_expiry_date"
+      - "realm_id"
       - "start_date"
       - "sandbox"
       - "sourceType"
       properties:
-        credentials:
-          type: "object"
-          oneOf:
-          - type: "object"
-            title: "OAuth2.0"
-            required:
-            - "client_id"
-            - "client_secret"
-            - "refresh_token"
-            - "access_token"
-            - "token_expiry_date"
-            - "realm_id"
-            properties:
-              realm_id:
-                type: "string"
-                title: "Realm ID"
-                description: "Labeled Company ID. The Make API Calls panel is populated\
-                  \ with the realm id and the current access token."
-                airbyte_secret: true
-                x-speakeasy-param-sensitive: true
-              auth_type:
-                type: "string"
-                const: "oauth2.0"
-                enum:
-                - "oauth2.0"
-              client_id:
-                type: "string"
-                title: "Client ID"
-                description: "Identifies which app is making the request. Obtain this\
-                  \ value from the Keys tab on the app profile via My Apps on the\
-                  \ developer site. There are two versions of this key: development\
-                  \ and production."
-              access_token:
-                type: "string"
-                title: "Access Token"
-                description: "Access token for making authenticated requests."
-                airbyte_secret: true
-                x-speakeasy-param-sensitive: true
-              client_secret:
-                type: "string"
-                title: "Client Secret"
-                description: " Obtain this value from the Keys tab on the app profile\
-                  \ via My Apps on the developer site. There are two versions of this\
-                  \ key: development and production."
-                airbyte_secret: true
-                x-speakeasy-param-sensitive: true
-              refresh_token:
-                type: "string"
-                title: "Refresh Token"
-                description: "A token used when refreshing the access token."
-                airbyte_secret: true
-                x-speakeasy-param-sensitive: true
-              token_expiry_date:
-                type: "string"
-                title: "Token Expiry Date"
-                format: "date-time"
-                description: "The date-time when the access token should be refreshed."
+        realm_id:
+          type: "string"
           order: 0
-          title: "Authorization Method"
-        start_date:
+          title: "Realm ID"
+          description: "Labeled Company ID. The Make API Calls panel is populated\
+            \ with the realm id and the current access token."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        auth_type:
           type: "string"
           order: 1
+          const: "oauth2.0"
+          enum:
+          - "oauth2.0"
+        client_id:
+          type: "string"
+          order: 2
+          title: "Client ID"
+          description: "Identifies which app is making the request. Obtain this value\
+            \ from the Keys tab on the app profile via My Apps on the developer site.\
+            \ There are two versions of this key: development and production."
+        access_token:
+          type: "string"
+          order: 3
+          title: "Access Token"
+          description: "Access token for making authenticated requests."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        client_secret:
+          type: "string"
+          order: 4
+          title: "Client Secret"
+          description: " Obtain this value from the Keys tab on the app profile via\
+            \ My Apps on the developer site. There are two versions of this key: development\
+            \ and production."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        refresh_token:
+          type: "string"
+          order: 5
+          title: "Refresh Token"
+          description: "A token used when refreshing the access token."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        token_expiry_date:
+          type: "string"
+          order: 6
+          title: "Token Expiry Date"
+          format: "date-time"
+          description: "The date-time when the access token should be refreshed."
+        start_date:
+          type: "string"
+          order: 7
           title: "Start Date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -2634,7 +2798,7 @@ components:
             \ date will not be replicated."
         sandbox:
           type: "boolean"
-          order: 2
+          order: 8
           title: "Sandbox"
           default: false
           description: "Determines whether to use the sandbox or production environment."
@@ -2648,68 +2812,64 @@ components:
     source-quickbooks-update:
       type: "object"
       required:
-      - "credentials"
+      - "client_id"
+      - "client_secret"
+      - "refresh_token"
+      - "access_token"
+      - "token_expiry_date"
+      - "realm_id"
       - "start_date"
       - "sandbox"
       properties:
-        credentials:
-          type: "object"
-          oneOf:
-          - type: "object"
-            title: "OAuth2.0"
-            required:
-            - "client_id"
-            - "client_secret"
-            - "refresh_token"
-            - "access_token"
-            - "token_expiry_date"
-            - "realm_id"
-            properties:
-              realm_id:
-                type: "string"
-                title: "Realm ID"
-                description: "Labeled Company ID. The Make API Calls panel is populated\
-                  \ with the realm id and the current access token."
-                airbyte_secret: true
-              auth_type:
-                type: "string"
-                const: "oauth2.0"
-                enum:
-                - "oauth2.0"
-              client_id:
-                type: "string"
-                title: "Client ID"
-                description: "Identifies which app is making the request. Obtain this\
-                  \ value from the Keys tab on the app profile via My Apps on the\
-                  \ developer site. There are two versions of this key: development\
-                  \ and production."
-              access_token:
-                type: "string"
-                title: "Access Token"
-                description: "Access token for making authenticated requests."
-                airbyte_secret: true
-              client_secret:
-                type: "string"
-                title: "Client Secret"
-                description: " Obtain this value from the Keys tab on the app profile\
-                  \ via My Apps on the developer site. There are two versions of this\
-                  \ key: development and production."
-                airbyte_secret: true
-              refresh_token:
-                type: "string"
-                title: "Refresh Token"
-                description: "A token used when refreshing the access token."
-                airbyte_secret: true
-              token_expiry_date:
-                type: "string"
-                title: "Token Expiry Date"
-                format: "date-time"
-                description: "The date-time when the access token should be refreshed."
+        realm_id:
+          type: "string"
           order: 0
-          title: "Authorization Method"
-        start_date:
+          title: "Realm ID"
+          description: "Labeled Company ID. The Make API Calls panel is populated\
+            \ with the realm id and the current access token."
+          airbyte_secret: true
+        auth_type:
           type: "string"
           order: 1
+          const: "oauth2.0"
+          enum:
+          - "oauth2.0"
+        client_id:
+          type: "string"
+          order: 2
+          title: "Client ID"
+          description: "Identifies which app is making the request. Obtain this value\
+            \ from the Keys tab on the app profile via My Apps on the developer site.\
+            \ There are two versions of this key: development and production."
+        access_token:
+          type: "string"
+          order: 3
+          title: "Access Token"
+          description: "Access token for making authenticated requests."
+          airbyte_secret: true
+        client_secret:
+          type: "string"
+          order: 4
+          title: "Client Secret"
+          description: " Obtain this value from the Keys tab on the app profile via\
+            \ My Apps on the developer site. There are two versions of this key: development\
+            \ and production."
+          airbyte_secret: true
+        refresh_token:
+          type: "string"
+          order: 5
+          title: "Refresh Token"
+          description: "A token used when refreshing the access token."
+          airbyte_secret: true
+        token_expiry_date:
+          type: "string"
+          order: 6
+          title: "Token Expiry Date"
+          format: "date-time"
+          description: "The date-time when the access token should be refreshed."
+        start_date:
+          type: "string"
+          order: 7
           title: "Start Date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -2720,7 +2880,7 @@ components:
             \ date will not be replicated."
         sandbox:
           type: "boolean"
-          order: 2
+          order: 8
           title: "Sandbox"
           default: false
           description: "Determines whether to use the sandbox or production environment."
@@ -4393,10 +4553,11 @@ components:
         job_checkpoint_interval:
           type: "integer"
           title: "BULK Job checkpoint (rows collected)"
-          description: "The threshold, after which the single BULK Job should be checkpointed."
+          description: "The threshold, after which the single BULK Job should be checkpointed\
+            \ (min: 15k, max: 1M)"
           default: 100000
           minimum: 15000
-          maximum: 200000
+          maximum: 1000000
         sourceType:
           title: "shopify"
           const: "shopify"
@@ -4516,10 +4677,11 @@ components:
         job_checkpoint_interval:
           type: "integer"
           title: "BULK Job checkpoint (rows collected)"
-          description: "The threshold, after which the single BULK Job should be checkpointed."
+          description: "The threshold, after which the single BULK Job should be checkpointed\
+            \ (min: 15k, max: 1M)"
           default: 100000
           minimum: 15000
-          maximum: 200000
+          maximum: 1000000
     source-shippo:
       type: "object"
       required:
@@ -5225,6 +5387,39 @@ components:
             - "client_secret"
             - "refresh_token"
             - "auth_type"
+          - title: "Authenticate via Client Credentials"
+            type: "object"
+            properties:
+              auth_type:
+                title: "Auth Type"
+                default: "client_credentials"
+                const: "client_credentials"
+                enum:
+                - "client_credentials"
+                type: "string"
+              app_tenant_id:
+                title: "Tenant ID"
+                description: "Tenant ID of the Microsoft Azure Application"
+                airbyte_secret: true
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              app_client_id:
+                title: "Client ID"
+                description: "Client ID of your Microsoft developer application"
+                airbyte_secret: true
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              app_client_secret:
+                title: "Client Secret"
+                description: "Client Secret of your Microsoft developer application"
+                airbyte_secret: true
+                type: "string"
+                x-speakeasy-param-sensitive: true
+            required:
+            - "app_tenant_id"
+            - "app_client_id"
+            - "app_client_secret"
+            - "auth_type"
           - title: "Authenticate via Storage Account Key"
             type: "object"
             properties:
@@ -5692,6 +5887,36 @@ components:
             - "client_secret"
             - "refresh_token"
             - "auth_type"
+          - title: "Authenticate via Client Credentials"
+            type: "object"
+            properties:
+              auth_type:
+                title: "Auth Type"
+                default: "client_credentials"
+                const: "client_credentials"
+                enum:
+                - "client_credentials"
+                type: "string"
+              app_tenant_id:
+                title: "Tenant ID"
+                description: "Tenant ID of the Microsoft Azure Application"
+                airbyte_secret: true
+                type: "string"
+              app_client_id:
+                title: "Client ID"
+                description: "Client ID of your Microsoft developer application"
+                airbyte_secret: true
+                type: "string"
+              app_client_secret:
+                title: "Client Secret"
+                description: "Client Secret of your Microsoft developer application"
+                airbyte_secret: true
+                type: "string"
+            required:
+            - "app_tenant_id"
+            - "app_client_id"
+            - "app_client_secret"
+            - "auth_type"
           - title: "Authenticate via Storage Account Key"
             type: "object"
             properties:
@@ -5742,30 +5967,31 @@ components:
       - "azure_blob_storage_account_name"
       - "azure_blob_storage_container_name"
     source-close-com:
-      title: "Close.com Spec"
       type: "object"
       required:
       - "api_key"
       - "sourceType"
       properties:
         api_key:
-          title: "API Key"
           type: "string"
           description: "Close.com API key (usually starts with 'api_'; find yours\
             \ <a href=\"https://app.close.com/settings/api/\">here</a>)."
+          order: 0
+          title: "API Key"
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
         start_date:
-          title: "Replication Start Date"
           type: "string"
           description: "The start date to sync data; all data after this date will\
             \ be replicated. Leave blank to retrieve all the data available in the\
             \ account. Format: YYYY-MM-DD."
-          examples:
-          - "2021-01-01"
+          order: 1
+          title: "Replication Start Date"
+          format: "date"
           default: "2021-01-01"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-          format: "date"
+          examples:
+          - "2021-01-01"
         sourceType:
           title: "close-com"
           const: "close-com"
@@ -5774,28 +6000,29 @@ components:
           order: 0
           type: "string"
     source-close-com-update:
-      title: "Close.com Spec"
       type: "object"
       required:
       - "api_key"
       properties:
         api_key:
-          title: "API Key"
           type: "string"
           description: "Close.com API key (usually starts with 'api_'; find yours\
             \ <a href=\"https://app.close.com/settings/api/\">here</a>)."
+          order: 0
+          title: "API Key"
           airbyte_secret: true
         start_date:
-          title: "Replication Start Date"
           type: "string"
           description: "The start date to sync data; all data after this date will\
             \ be replicated. Leave blank to retrieve all the data available in the\
             \ account. Format: YYYY-MM-DD."
-          examples:
-          - "2021-01-01"
+          order: 1
+          title: "Replication Start Date"
+          format: "date"
           default: "2021-01-01"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-          format: "date"
+          examples:
+          - "2021-01-01"
     source-countercyclical:
       type: "object"
       required:
@@ -6062,6 +6289,49 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2021-01-01"
+    source-retailexpress-by-maropost:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "retailexpress-by-maropost"
+          const: "retailexpress-by-maropost"
+          enum:
+          - "retailexpress-by-maropost"
+          order: 0
+          type: "string"
+    source-retailexpress-by-maropost-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-microsoft-entra-id:
       type: "object"
       required:
@@ -6309,7 +6579,6 @@ components:
           - "2023-07-30T03:43:59.244Z"
           airbyte_secret: false
     source-instatus:
-      title: "Instatus Spec"
       type: "object"
       required:
       - "api_key"
@@ -6317,9 +6586,10 @@ components:
       properties:
         api_key:
           type: "string"
+          description: "Instatus REST API key"
           title: "Rest API Key"
           airbyte_secret: true
-          description: "Instatus REST API key"
+          order: 0
           x-speakeasy-param-sensitive: true
         sourceType:
           title: "instatus"
@@ -6329,16 +6599,16 @@ components:
           order: 0
           type: "string"
     source-instatus-update:
-      title: "Instatus Spec"
       type: "object"
       required:
       - "api_key"
       properties:
         api_key:
           type: "string"
+          description: "Instatus REST API key"
           title: "Rest API Key"
           airbyte_secret: true
-          description: "Instatus REST API key"
+          order: 0
     source-flexmail:
       type: "object"
       required:
@@ -6897,6 +7167,16 @@ components:
           order: 7
           title: "View Attribution Window"
           default: "1_DAY"
+        organization_ids:
+          type: "array"
+          description: "The IDs of the organizations to retrieve"
+          order: 8
+          title: "Organization IDs"
+        ad_account_ids:
+          type: "array"
+          description: "Ad Account IDs of the ad accounts to retrieve"
+          order: 9
+          title: "Ad Account IDs"
         sourceType:
           title: "snapchat-marketing"
           const: "snapchat-marketing"
@@ -6981,6 +7261,16 @@ components:
           order: 7
           title: "View Attribution Window"
           default: "1_DAY"
+        organization_ids:
+          type: "array"
+          description: "The IDs of the organizations to retrieve"
+          order: 8
+          title: "Organization IDs"
+        ad_account_ids:
+          type: "array"
+          description: "Ad Account IDs of the ad accounts to retrieve"
+          order: 9
+          title: "Ad Account IDs"
     source-gitlab:
       title: "Source Gitlab Spec"
       type: "object"
@@ -8415,25 +8705,24 @@ components:
       - "streams"
       - "credentials"
     source-amazon-sqs:
-      title: "Amazon SQS Source Spec"
       type: "object"
       required:
       - "queue_url"
       - "region"
-      - "delete_messages"
+      - "access_key"
+      - "secret_key"
       - "sourceType"
       properties:
         queue_url:
-          title: "Queue URL"
-          description: "URL of the SQS Queue"
           type: "string"
+          description: "URL of the SQS Queue"
+          order: 0
+          title: "Queue URL"
           examples:
           - "https://sqs.eu-west-1.amazonaws.com/1234567890/my-example-queue"
-          order: 0
         region:
-          title: "AWS Region"
-          description: "AWS Region of the SQS Queue"
           type: "string"
+          description: "AWS Region of the SQS Queue"
           enum:
           - "af-south-1"
           - "ap-east-1"
@@ -8469,63 +8758,70 @@ components:
           - "us-west-1"
           - "us-west-2"
           order: 1
-        delete_messages:
-          title: "Delete Messages After Read"
-          description: "If Enabled, messages will be deleted from the SQS Queue after\
-            \ being read. If Disabled, messages are left in the queue and can be read\
-            \ more than once. WARNING: Enabling this option can result in data loss\
-            \ in cases of failure, use with caution, see documentation for more detail. "
-          type: "boolean"
-          default: false
-          order: 2
+          title: "AWS Region"
+          default: "us-east-1"
         max_batch_size:
-          title: "Max Batch Size"
-          description: "Max amount of messages to get in one batch (10 max)"
           type: "integer"
+          description: "Max amount of messages to get in one batch (10 max)"
+          order: 2
+          title: "Max Batch Size"
+          default: 10
           examples:
-          - "5"
-          order: 3
+          - 5
         max_wait_time:
-          title: "Max Wait Time"
+          type: "integer"
           description: "Max amount of time in seconds to wait for messages in a single\
             \ poll (20 max)"
-          type: "integer"
+          order: 3
+          title: "Max Wait Time"
+          default: 20
           examples:
-          - "5"
-          order: 4
+          - 5
         attributes_to_return:
-          title: "Message Attributes To Return"
-          description: "Comma separated list of Mesage Attribute names to return"
           type: "string"
+          description: "Comma separated list of Mesage Attribute names to return"
+          order: 4
+          title: "Message Attributes To Return"
+          default: "All"
           examples:
           - "attr1,attr2"
-          order: 5
         visibility_timeout:
-          title: "Message Visibility Timeout"
+          type: "integer"
           description: "Modify the Visibility Timeout of the individual message from\
             \ the Queue's default (seconds)."
-          type: "integer"
+          order: 5
+          title: "Message Visibility Timeout"
+          default: 20
           examples:
-          - "15"
-          order: 6
+          - 20
         access_key:
-          title: "AWS IAM Access Key ID"
-          description: "The Access Key ID of the AWS IAM Role to use for pulling messages"
           type: "string"
+          description: "The Access Key ID of the AWS IAM Role to use for pulling messages"
+          order: 6
+          title: "AWS IAM Access Key ID"
           examples:
           - "xxxxxHRNxxx3TBxxxxxx"
           airbyte_secret: true
-          order: 7
           x-speakeasy-param-sensitive: true
         secret_key:
-          title: "AWS IAM Secret Key"
-          description: "The Secret Key of the AWS IAM Role to use for pulling messages"
           type: "string"
+          description: "The Secret Key of the AWS IAM Role to use for pulling messages"
+          order: 7
+          title: "AWS IAM Secret Key"
           examples:
           - "hu+qE5exxxxT6o/ZrKsxxxxxxBhxxXLexxxxxVKz"
           airbyte_secret: true
-          order: 8
           x-speakeasy-param-sensitive: true
+        target:
+          type: "string"
+          description: "Note - Different targets have different attribute enum requirements,\
+            \ please refer actions sections in https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/Welcome.html"
+          enum:
+          - "GetQueueAttributes"
+          - "ReceiveMessage"
+          order: 8
+          title: "The targeted action resource for the fetch"
+          default: "ReceiveMessage"
         sourceType:
           title: "amazon-sqs"
           const: "amazon-sqs"
@@ -8534,24 +8830,23 @@ components:
           order: 0
           type: "string"
     source-amazon-sqs-update:
-      title: "Amazon SQS Source Spec"
       type: "object"
       required:
       - "queue_url"
       - "region"
-      - "delete_messages"
+      - "access_key"
+      - "secret_key"
       properties:
         queue_url:
-          title: "Queue URL"
-          description: "URL of the SQS Queue"
           type: "string"
+          description: "URL of the SQS Queue"
+          order: 0
+          title: "Queue URL"
           examples:
           - "https://sqs.eu-west-1.amazonaws.com/1234567890/my-example-queue"
-          order: 0
         region:
-          title: "AWS Region"
-          description: "AWS Region of the SQS Queue"
           type: "string"
+          description: "AWS Region of the SQS Queue"
           enum:
           - "af-south-1"
           - "ap-east-1"
@@ -8587,61 +8882,68 @@ components:
           - "us-west-1"
           - "us-west-2"
           order: 1
-        delete_messages:
-          title: "Delete Messages After Read"
-          description: "If Enabled, messages will be deleted from the SQS Queue after\
-            \ being read. If Disabled, messages are left in the queue and can be read\
-            \ more than once. WARNING: Enabling this option can result in data loss\
-            \ in cases of failure, use with caution, see documentation for more detail. "
-          type: "boolean"
-          default: false
-          order: 2
+          title: "AWS Region"
+          default: "us-east-1"
         max_batch_size:
-          title: "Max Batch Size"
-          description: "Max amount of messages to get in one batch (10 max)"
           type: "integer"
+          description: "Max amount of messages to get in one batch (10 max)"
+          order: 2
+          title: "Max Batch Size"
+          default: 10
           examples:
-          - "5"
-          order: 3
+          - 5
         max_wait_time:
-          title: "Max Wait Time"
+          type: "integer"
           description: "Max amount of time in seconds to wait for messages in a single\
             \ poll (20 max)"
-          type: "integer"
+          order: 3
+          title: "Max Wait Time"
+          default: 20
           examples:
-          - "5"
-          order: 4
+          - 5
         attributes_to_return:
-          title: "Message Attributes To Return"
-          description: "Comma separated list of Mesage Attribute names to return"
           type: "string"
+          description: "Comma separated list of Mesage Attribute names to return"
+          order: 4
+          title: "Message Attributes To Return"
+          default: "All"
           examples:
           - "attr1,attr2"
-          order: 5
         visibility_timeout:
-          title: "Message Visibility Timeout"
+          type: "integer"
           description: "Modify the Visibility Timeout of the individual message from\
             \ the Queue's default (seconds)."
-          type: "integer"
+          order: 5
+          title: "Message Visibility Timeout"
+          default: 20
           examples:
-          - "15"
-          order: 6
+          - 20
         access_key:
-          title: "AWS IAM Access Key ID"
-          description: "The Access Key ID of the AWS IAM Role to use for pulling messages"
           type: "string"
+          description: "The Access Key ID of the AWS IAM Role to use for pulling messages"
+          order: 6
+          title: "AWS IAM Access Key ID"
           examples:
           - "xxxxxHRNxxx3TBxxxxxx"
           airbyte_secret: true
-          order: 7
         secret_key:
-          title: "AWS IAM Secret Key"
-          description: "The Secret Key of the AWS IAM Role to use for pulling messages"
           type: "string"
+          description: "The Secret Key of the AWS IAM Role to use for pulling messages"
+          order: 7
+          title: "AWS IAM Secret Key"
           examples:
           - "hu+qE5exxxxT6o/ZrKsxxxxxxBhxxXLexxxxxVKz"
           airbyte_secret: true
+        target:
+          type: "string"
+          description: "Note - Different targets have different attribute enum requirements,\
+            \ please refer actions sections in https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/Welcome.html"
+          enum:
+          - "GetQueueAttributes"
+          - "ReceiveMessage"
           order: 8
+          title: "The targeted action resource for the fetch"
+          default: "ReceiveMessage"
     source-sonar-cloud:
       type: "object"
       required:
@@ -13731,6 +14033,14 @@ components:
                 enum:
                 - "use_file_transfer"
                 type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
             description: "Copy raw files without parsing their contents. Bits are\
               \ copied into the destination exactly as they appeared in the source.\
               \ Recommended for use with unstructured text data, non-text and compressed\
@@ -14305,6 +14615,14 @@ components:
                 enum:
                 - "use_file_transfer"
                 type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
             description: "Copy raw files without parsing their contents. Bits are\
               \ copied into the destination exactly as they appeared in the source.\
               \ Recommended for use with unstructured text data, non-text and compressed\
@@ -16623,46 +16941,45 @@ components:
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-chargebee:
-      title: "Chargebee Spec"
       type: "object"
       required:
-      - "site"
       - "site_api_key"
+      - "site"
       - "start_date"
       - "sourceType"
       properties:
         site_api_key:
           type: "string"
-          title: "API Key"
           description: "Chargebee API Key. See the <a href=\"https://docs.airbyte.com/integrations/sources/chargebee\"\
             >docs</a> for more information on how to obtain this key."
+          title: "API Key"
           airbyte_secret: true
           order: 0
           x-speakeasy-param-sensitive: true
         site:
           type: "string"
-          title: "Site"
           description: "The site prefix for your Chargebee instance."
+          title: "Site"
           examples:
           - "airbyte-test"
           order: 1
         start_date:
           type: "string"
-          format: "date-time"
-          title: "Start Date"
           description: "UTC date and time in the format 2017-01-25T00:00:00.000Z.\
             \ Any data before this date will not be replicated."
+          format: "date-time"
+          title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2021-01-25T00:00:00Z"
           order: 2
         product_catalog:
           type: "string"
-          title: "Product Catalog"
           description: "Product Catalog version of your Chargebee site. Instructions\
             \ on how to find your version you may find <a href=\"https://apidocs.chargebee.com/docs/api?prod_cat_ver=2\"\
             >here</a> under `API Version` section. If left blank, the product catalog\
             \ version will be set to 2.0."
+          title: "Product Catalog"
           enum:
           - "1.0"
           - "2.0"
@@ -16692,44 +17009,43 @@ components:
           order: 0
           type: "string"
     source-chargebee-update:
-      title: "Chargebee Spec"
       type: "object"
       required:
-      - "site"
       - "site_api_key"
+      - "site"
       - "start_date"
       properties:
         site_api_key:
           type: "string"
-          title: "API Key"
           description: "Chargebee API Key. See the <a href=\"https://docs.airbyte.com/integrations/sources/chargebee\"\
             >docs</a> for more information on how to obtain this key."
+          title: "API Key"
           airbyte_secret: true
           order: 0
         site:
           type: "string"
-          title: "Site"
           description: "The site prefix for your Chargebee instance."
+          title: "Site"
           examples:
           - "airbyte-test"
           order: 1
         start_date:
           type: "string"
-          format: "date-time"
-          title: "Start Date"
           description: "UTC date and time in the format 2017-01-25T00:00:00.000Z.\
             \ Any data before this date will not be replicated."
+          format: "date-time"
+          title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2021-01-25T00:00:00Z"
           order: 2
         product_catalog:
           type: "string"
-          title: "Product Catalog"
           description: "Product Catalog version of your Chargebee site. Instructions\
             \ on how to find your version you may find <a href=\"https://apidocs.chargebee.com/docs/api?prod_cat_ver=2\"\
             >here</a> under `API Version` section. If left blank, the product catalog\
             \ version will be set to 2.0."
+          title: "Product Catalog"
           enum:
           - "1.0"
           - "2.0"
@@ -18464,8 +18780,9 @@ components:
           type: "integer"
           title: "Request time range"
           description: "According to <a href=\"https://www.docs.developers.amplitude.com/analytics/apis/export-api/#considerations\"\
-            >Considerations</a> too big time range in request can cause a timeout\
-            \ error. In this case, set shorter time interval in hours."
+            >Considerations</a> too large of a time range in te request can cause\
+            \ a timeout error. In this case, please provide a shorter time interval\
+            \ in hours.\n"
           default: 24
           minimum: 1
           maximum: 8760
@@ -18473,9 +18790,9 @@ components:
           type: "boolean"
           title: "Active Users Group by Country"
           description: "According to <a href=\"https://amplitude.com/docs/apis/analytics/dashboard-rest#query-parameters\"\
-            >Considerations</a> the grouping by `Country` is optional, if you're facing\
-            \ issues fetching the stream, or checking the connection please set this\
-            \ to `False` instead."
+            >Amplitude documentation</a>, grouping by `Country` is optional. If you\
+            \ face issues fetching the stream or checking the connection please set\
+            \ this field to `False`.\n"
           default: true
         sourceType:
           title: "amplitude"
@@ -18525,8 +18842,9 @@ components:
           type: "integer"
           title: "Request time range"
           description: "According to <a href=\"https://www.docs.developers.amplitude.com/analytics/apis/export-api/#considerations\"\
-            >Considerations</a> too big time range in request can cause a timeout\
-            \ error. In this case, set shorter time interval in hours."
+            >Considerations</a> too large of a time range in te request can cause\
+            \ a timeout error. In this case, please provide a shorter time interval\
+            \ in hours.\n"
           default: 24
           minimum: 1
           maximum: 8760
@@ -18534,9 +18852,9 @@ components:
           type: "boolean"
           title: "Active Users Group by Country"
           description: "According to <a href=\"https://amplitude.com/docs/apis/analytics/dashboard-rest#query-parameters\"\
-            >Considerations</a> the grouping by `Country` is optional, if you're facing\
-            \ issues fetching the stream, or checking the connection please set this\
-            \ to `False` instead."
+            >Amplitude documentation</a>, grouping by `Country` is optional. If you\
+            \ face issues fetching the stream or checking the connection please set\
+            \ this field to `False`.\n"
           default: true
     source-finnworlds:
       type: "object"
@@ -20123,7 +20441,6 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 1
     source-outreach:
-      title: "Source Outreach Spec"
       type: "object"
       required:
       - "client_id"
@@ -20135,35 +20452,40 @@ components:
       properties:
         client_id:
           type: "string"
-          title: "Client ID"
           description: "The Client ID of your Outreach developer application."
+          title: "Client ID"
+          order: 0
         client_secret:
           type: "string"
-          title: "Client Secret"
           description: "The Client Secret of your Outreach developer application."
+          title: "Client Secret"
           airbyte_secret: true
+          order: 1
           x-speakeasy-param-sensitive: true
         refresh_token:
           type: "string"
-          title: "Refresh Token"
           description: "The token for obtaining the new access token."
+          title: "Refresh Token"
           airbyte_secret: true
+          order: 2
           x-speakeasy-param-sensitive: true
         redirect_uri:
           type: "string"
-          title: "Redirect URI"
           description: "A Redirect URI is the location where the authorization server\
             \ sends the user once the app has been successfully authorized and granted\
             \ an authorization code or access token."
+          title: "Redirect URI"
+          order: 3
         start_date:
           type: "string"
-          title: "Start Date"
           description: "The date from which you'd like to replicate data for Outreach\
             \ API, in the format YYYY-MM-DDT00:00:00Z. All data generated after this\
             \ date will be replicated."
+          title: "Start Date"
           examples:
           - "2020-11-16T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 4
         sourceType:
           title: "outreach"
           const: "outreach"
@@ -20172,7 +20494,6 @@ components:
           order: 0
           type: "string"
     source-outreach-update:
-      title: "Source Outreach Spec"
       type: "object"
       required:
       - "client_id"
@@ -20183,33 +20504,38 @@ components:
       properties:
         client_id:
           type: "string"
-          title: "Client ID"
           description: "The Client ID of your Outreach developer application."
+          title: "Client ID"
+          order: 0
         client_secret:
           type: "string"
-          title: "Client Secret"
           description: "The Client Secret of your Outreach developer application."
+          title: "Client Secret"
           airbyte_secret: true
+          order: 1
         refresh_token:
           type: "string"
-          title: "Refresh Token"
           description: "The token for obtaining the new access token."
+          title: "Refresh Token"
           airbyte_secret: true
+          order: 2
         redirect_uri:
           type: "string"
-          title: "Redirect URI"
           description: "A Redirect URI is the location where the authorization server\
             \ sends the user once the app has been successfully authorized and granted\
             \ an authorization code or access token."
+          title: "Redirect URI"
+          order: 3
         start_date:
           type: "string"
-          title: "Start Date"
           description: "The date from which you'd like to replicate data for Outreach\
             \ API, in the format YYYY-MM-DDT00:00:00Z. All data generated after this\
             \ date will be replicated."
+          title: "Start Date"
           examples:
           - "2020-11-16T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 4
     source-primetric:
       title: "Primetric Spec"
       type: "object"
@@ -22141,6 +22467,66 @@ components:
             >here</a>."
           airbyte_secret: true
           order: 0
+    source-help-scout:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "start_date"
+      - "sourceType"
+      properties:
+        client_id:
+          type: "string"
+          name: "client_id"
+          title: "Application ID"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        client_secret:
+          type: "string"
+          name: "client_secret"
+          title: "Application Secret"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 2
+        sourceType:
+          title: "help-scout"
+          const: "help-scout"
+          enum:
+          - "help-scout"
+          order: 0
+          type: "string"
+    source-help-scout-update:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "start_date"
+      properties:
+        client_id:
+          type: "string"
+          name: "client_id"
+          title: "Application ID"
+          airbyte_secret: true
+          order: 0
+        client_secret:
+          type: "string"
+          name: "client_secret"
+          title: "Application Secret"
+          airbyte_secret: true
+          order: 1
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 2
     source-repairshopr:
       type: "object"
       required:
@@ -24383,7 +24769,6 @@ components:
           title: "Feature Name Prefix"
           order: 3
     source-braze:
-      title: "Braze Spec"
       type: "object"
       required:
       - "url"
@@ -24393,19 +24778,22 @@ components:
       properties:
         url:
           type: "string"
-          title: "URL"
           description: "Braze REST API endpoint"
+          title: "URL"
+          order: 0
         api_key:
           type: "string"
+          description: "Braze REST API key"
           title: "Rest API Key"
           airbyte_secret: true
-          description: "Braze REST API key"
+          order: 1
           x-speakeasy-param-sensitive: true
         start_date:
           type: "string"
+          description: "Rows after this date will be synced"
           format: "date"
           title: "Start date"
-          description: "Rows after this date will be synced"
+          order: 2
         sourceType:
           title: "braze"
           const: "braze"
@@ -24414,7 +24802,6 @@ components:
           order: 0
           type: "string"
     source-braze-update:
-      title: "Braze Spec"
       type: "object"
       required:
       - "url"
@@ -24423,18 +24810,21 @@ components:
       properties:
         url:
           type: "string"
-          title: "URL"
           description: "Braze REST API endpoint"
+          title: "URL"
+          order: 0
         api_key:
           type: "string"
+          description: "Braze REST API key"
           title: "Rest API Key"
           airbyte_secret: true
-          description: "Braze REST API key"
+          order: 1
         start_date:
           type: "string"
+          description: "Rows after this date will be synced"
           format: "date"
           title: "Start date"
-          description: "Rows after this date will be synced"
+          order: 2
     source-sftp:
       title: "SFTP Source Spec"
       type: "object"
@@ -25006,7 +25396,7 @@ components:
                       type: "boolean"
                   required:
                   - "filetype"
-                - title: "Document File Type Format (Experimental)"
+                - title: "Unstructured Document Format"
                   type: "object"
                   properties:
                     filetype:
@@ -25067,15 +25457,82 @@ components:
                     \ .pptx) and emit as one record per file."
                   required:
                   - "filetype"
+                - title: "Excel Format"
+                  type: "object"
+                  properties:
+                    filetype:
+                      title: "Filetype"
+                      default: "excel"
+                      const: "excel"
+                      type: "string"
+                      enum:
+                      - "excel"
+                  required:
+                  - "filetype"
               schemaless:
                 title: "Schemaless"
                 description: "When enabled, syncs will not validate or structure records\
                   \ against the stream's schema."
                 default: false
                 type: "boolean"
+              recent_n_files_to_read_for_schema_discovery:
+                title: "Files To Read For Schema Discover"
+                description: "The number of resent files which will be used to discover\
+                  \ the schema for this stream."
+                exclusiveMinimum: 0
+                type: "integer"
             required:
             - "name"
             - "format"
+        delivery_method:
+          title: "Delivery Method"
+          default: "use_records_transfer"
+          type: "object"
+          order: 1
+          display_type: "radio"
+          group: "advanced"
+          oneOf:
+          - title: "Replicate Records"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_records_transfer"
+                const: "use_records_transfer"
+                enum:
+                - "use_records_transfer"
+                type: "string"
+            description: "Recommended - Extract and load structured records into your\
+              \ destination of choice. This is the classic method of moving data in\
+              \ Airbyte. It allows for blocking and hashing individual fields or files\
+              \ from a structured schema. Data can be flattened, typed and deduped\
+              \ depending on the destination."
+            required:
+            - "delivery_type"
+          - title: "Copy Raw Files"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_file_transfer"
+                const: "use_file_transfer"
+                enum:
+                - "use_file_transfer"
+                type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
+            description: "Copy raw files without parsing their contents. Bits are\
+              \ copied into the destination exactly as they appeared in the source.\
+              \ Recommended for use with unstructured text data, non-text and compressed\
+              \ files."
+            required:
+            - "delivery_type"
         folder_url:
           title: "Folder Url"
           description: "URL for the folder you want to sync. Using individual streams\
@@ -25454,7 +25911,7 @@ components:
                       type: "boolean"
                   required:
                   - "filetype"
-                - title: "Document File Type Format (Experimental)"
+                - title: "Unstructured Document Format"
                   type: "object"
                   properties:
                     filetype:
@@ -25515,15 +25972,82 @@ components:
                     \ .pptx) and emit as one record per file."
                   required:
                   - "filetype"
+                - title: "Excel Format"
+                  type: "object"
+                  properties:
+                    filetype:
+                      title: "Filetype"
+                      default: "excel"
+                      const: "excel"
+                      type: "string"
+                      enum:
+                      - "excel"
+                  required:
+                  - "filetype"
               schemaless:
                 title: "Schemaless"
                 description: "When enabled, syncs will not validate or structure records\
                   \ against the stream's schema."
                 default: false
                 type: "boolean"
+              recent_n_files_to_read_for_schema_discovery:
+                title: "Files To Read For Schema Discover"
+                description: "The number of resent files which will be used to discover\
+                  \ the schema for this stream."
+                exclusiveMinimum: 0
+                type: "integer"
             required:
             - "name"
             - "format"
+        delivery_method:
+          title: "Delivery Method"
+          default: "use_records_transfer"
+          type: "object"
+          order: 1
+          display_type: "radio"
+          group: "advanced"
+          oneOf:
+          - title: "Replicate Records"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_records_transfer"
+                const: "use_records_transfer"
+                enum:
+                - "use_records_transfer"
+                type: "string"
+            description: "Recommended - Extract and load structured records into your\
+              \ destination of choice. This is the classic method of moving data in\
+              \ Airbyte. It allows for blocking and hashing individual fields or files\
+              \ from a structured schema. Data can be flattened, typed and deduped\
+              \ depending on the destination."
+            required:
+            - "delivery_type"
+          - title: "Copy Raw Files"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_file_transfer"
+                const: "use_file_transfer"
+                enum:
+                - "use_file_transfer"
+                type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
+            description: "Copy raw files without parsing their contents. Bits are\
+              \ copied into the destination exactly as they appeared in the source.\
+              \ Recommended for use with unstructured text data, non-text and compressed\
+              \ files."
+            required:
+            - "delivery_type"
         folder_url:
           title: "Folder Url"
           description: "URL for the folder you want to sync. Using individual streams\
@@ -28400,9 +28924,9 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         api_key:
           type: "string"
+          order: 1
           title: "API Key"
           airbyte_secret: true
-          order: 1
           x-speakeasy-param-sensitive: true
         sourceType:
           title: "pennylane"
@@ -28425,9 +28949,9 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         api_key:
           type: "string"
+          order: 1
           title: "API Key"
           airbyte_secret: true
-          order: 1
     source-factorial:
       type: "object"
       required:
@@ -32630,10 +33154,10 @@ components:
       properties:
         api_key:
           type: "string"
-          title: "API Key"
-          airbyte_secret: true
           description: "API Key"
           order: 0
+          title: "API Key"
+          airbyte_secret: true
           x-speakeasy-param-sensitive: true
         sourceType:
           title: "omnisend"
@@ -32649,10 +33173,10 @@ components:
       properties:
         api_key:
           type: "string"
-          title: "API Key"
-          airbyte_secret: true
           description: "API Key"
           order: 0
+          title: "API Key"
+          airbyte_secret: true
     source-mongodb-v2:
       title: "MongoDb Source Spec"
       type: "object"
@@ -33373,6 +33897,18 @@ components:
           airbyte_secret: true
           type: "string"
           x-speakeasy-param-sensitive: true
+        client_id:
+          title: "Client Id"
+          description: "The Client ID for your Oauth application"
+          airbyte_secret: true
+          type: "string"
+          x-speakeasy-param-sensitive: true
+        client_secret:
+          title: "Client Secret"
+          description: "The Client Secret for your Oauth application"
+          airbyte_secret: true
+          type: "string"
+          x-speakeasy-param-sensitive: true
         sourceType:
           title: "instagram"
           const: "instagram"
@@ -33404,6 +33940,16 @@ components:
             \ instagram_manage_insights, pages_show_list, pages_read_engagement, Instagram\
             \ Public Content Access</b> permissions. See the <a href=\"https://docs.airbyte.com/integrations/sources/instagram/#step-1-set-up-instagram\"\
             >docs</a> for more information"
+          airbyte_secret: true
+          type: "string"
+        client_id:
+          title: "Client Id"
+          description: "The Client ID for your Oauth application"
+          airbyte_secret: true
+          type: "string"
+        client_secret:
+          title: "Client Secret"
+          description: "The Client Secret for your Oauth application"
           airbyte_secret: true
           type: "string"
       required:
@@ -33978,6 +34524,14 @@ components:
                 enum:
                 - "use_file_transfer"
                 type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
             description: "Copy raw files without parsing their contents. Bits are\
               \ copied into the destination exactly as they appeared in the source.\
               \ Recommended for use with unstructured text data, non-text and compressed\
@@ -34460,6 +35014,14 @@ components:
                 enum:
                 - "use_file_transfer"
                 type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
             description: "Copy raw files without parsing their contents. Bits are\
               \ copied into the destination exactly as they appeared in the source.\
               \ Recommended for use with unstructured text data, non-text and compressed\
@@ -37749,387 +38311,375 @@ components:
           order: 1
           format: "date-time"
     source-mysql:
-      title: "MySql Source Spec"
+      title: "MySQL Source Spec"
       type: "object"
-      required:
-      - "host"
-      - "port"
-      - "database"
-      - "username"
-      - "replication_method"
-      - "sourceType"
       properties:
         host:
-          description: "The host name of the database."
-          title: "Host"
           type: "string"
-          order: 0
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
         port:
-          description: "The port to connect to."
-          title: "Port"
           type: "integer"
+          default: 3306
+          description: "Port of the database."
+          title: "Port"
+          order: 2
           minimum: 0
           maximum: 65536
-          default: 3306
-          examples:
-          - "3306"
-          order: 1
         database:
+          type: "string"
           description: "The database name."
           title: "Database"
-          type: "string"
-          order: 2
-        username:
-          description: "The username which is used to access the database."
-          title: "Username"
-          type: "string"
-          order: 3
-        password:
-          description: "The password associated with the username."
-          title: "Password"
-          type: "string"
-          airbyte_secret: true
-          order: 4
-          always_show: true
-          x-speakeasy-param-sensitive: true
-        jdbc_url_params:
-          description: "Additional properties to pass to the JDBC URL string when\
-            \ connecting to the database formatted as 'key=value' pairs separated\
-            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3). For\
-            \ more information read about <a href=\"https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-jdbc-url-format.html\"\
-            >JDBC URL parameters</a>."
-          title: "JDBC URL Parameters (Advanced)"
-          type: "string"
-          order: 5
-        ssl:
-          title: "SSL Connection"
-          description: "Encrypt data using SSL."
-          type: "boolean"
-          default: true
           order: 6
-        ssl_mode:
-          title: "SSL modes"
-          description: "SSL connection modes. Read more <a href=\"https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-using-ssl.html\"\
-            > in the docs</a>."
-          type: "object"
-          order: 7
-          oneOf:
-          - title: "preferred"
-            description: "Automatically attempt SSL connection. If the MySQL server\
-              \ does not support SSL, continue with a regular connection."
-            required:
-            - "mode"
-            properties:
-              mode:
-                type: "string"
-                const: "preferred"
-                order: 0
-                enum:
-                - "preferred"
-          - title: "required"
-            description: "Always connect with SSL. If the MySQL server doesn’t support\
-              \ SSL, the connection will not be established. Certificate Authority\
-              \ (CA) and Hostname are not verified."
-            required:
-            - "mode"
-            properties:
-              mode:
-                type: "string"
-                const: "required"
-                order: 0
-                enum:
-                - "required"
-          - title: "Verify CA"
-            description: "Always connect with SSL. Verifies CA, but allows connection\
-              \ even if Hostname does not match."
-            required:
-            - "mode"
-            - "ca_certificate"
-            properties:
-              mode:
-                type: "string"
-                const: "verify_ca"
-                order: 0
-                enum:
-                - "verify_ca"
-              ca_certificate:
-                type: "string"
-                title: "CA certificate"
-                description: "CA certificate"
-                airbyte_secret: true
-                multiline: true
-                order: 1
-                x-speakeasy-param-sensitive: true
-              client_certificate:
-                type: "string"
-                title: "Client certificate"
-                description: "Client certificate (this is not a required field, but\
-                  \ if you want to use it, you will need to add the <b>Client key</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 2
-                always_show: true
-                x-speakeasy-param-sensitive: true
-              client_key:
-                type: "string"
-                title: "Client key"
-                description: "Client key (this is not a required field, but if you\
-                  \ want to use it, you will need to add the <b>Client certificate</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 3
-                always_show: true
-                x-speakeasy-param-sensitive: true
-              client_key_password:
-                type: "string"
-                title: "Client key password"
-                description: "Password for keystorage. This field is optional. If\
-                  \ you do not add it - the password will be generated automatically."
-                airbyte_secret: true
-                order: 4
-                x-speakeasy-param-sensitive: true
-          - title: "Verify Identity"
-            description: "Always connect with SSL. Verify both CA and Hostname."
-            required:
-            - "mode"
-            - "ca_certificate"
-            properties:
-              mode:
-                type: "string"
-                const: "verify_identity"
-                order: 0
-                enum:
-                - "verify_identity"
-              ca_certificate:
-                type: "string"
-                title: "CA certificate"
-                description: "CA certificate"
-                airbyte_secret: true
-                multiline: true
-                order: 1
-                x-speakeasy-param-sensitive: true
-              client_certificate:
-                type: "string"
-                title: "Client certificate"
-                description: "Client certificate (this is not a required field, but\
-                  \ if you want to use it, you will need to add the <b>Client key</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 2
-                always_show: true
-                x-speakeasy-param-sensitive: true
-              client_key:
-                type: "string"
-                title: "Client key"
-                description: "Client key (this is not a required field, but if you\
-                  \ want to use it, you will need to add the <b>Client certificate</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 3
-                always_show: true
-                x-speakeasy-param-sensitive: true
-              client_key_password:
-                type: "string"
-                title: "Client key password"
-                description: "Password for keystorage. This field is optional. If\
-                  \ you do not add it - the password will be generated automatically."
-                airbyte_secret: true
-                order: 4
-                x-speakeasy-param-sensitive: true
+          always_show: true
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
         replication_method:
-          type: "object"
-          title: "Update Method"
-          description: "Configures how data is extracted from the database."
-          order: 8
-          default: "CDC"
-          display_type: "radio"
           oneOf:
-          - title: "Read Changes using Binary Log (CDC)"
-            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
-              \ and deletes using the MySQL <a href=\"https://docs.airbyte.com/integrations/sources/mysql/#change-data-capture-cdc\"\
-              >binary log</a>. This must be enabled on your database."
-            required:
-            - "method"
-            properties:
-              method:
-                type: "string"
-                const: "CDC"
-                order: 0
-                enum:
-                - "CDC"
-              initial_waiting_seconds:
-                type: "integer"
-                title: "Initial Waiting Time in Seconds (Advanced)"
-                description: "The amount of time the connector will wait when it launches\
-                  \ to determine if there is new data to sync or not. Defaults to\
-                  \ 300 seconds. Valid range: 120 seconds to 1200 seconds. Read about\
-                  \ <a href=\"https://docs.airbyte.com/integrations/sources/mysql/#change-data-capture-cdc\"\
-                  >initial waiting time</a>."
-                default: 300
-                min: 120
-                max: 1200
-                order: 1
-                always_show: true
-              server_time_zone:
-                type: "string"
-                title: "Configured server timezone for the MySQL source (Advanced)"
-                description: "Enter the configured MySQL server timezone. This should\
-                  \ only be done if the configured timezone in your MySQL instance\
-                  \ does not conform to IANNA standard."
-                order: 2
-                always_show: true
-              invalid_cdc_cursor_position_behavior:
-                type: "string"
-                title: "Invalid CDC position behavior (Advanced)"
-                description: "Determines whether Airbyte should fail or re-sync data\
-                  \ in case of an stale/invalid cursor value into the WAL. If 'Fail\
-                  \ sync' is chosen, a user will have to manually reset the connection\
-                  \ before being able to continue syncing data. If 'Re-sync data'\
-                  \ is chosen, Airbyte will automatically trigger a refresh but could\
-                  \ lead to higher cloud costs and data loss."
-                enum:
-                - "Fail sync"
-                - "Re-sync data"
-                default: "Fail sync"
-                order: 3
-                always_show: true
-              initial_load_timeout_hours:
-                type: "integer"
-                title: "Initial Load Timeout in Hours (Advanced)"
-                description: "The amount of time an initial load is allowed to continue\
-                  \ for before catching up on CDC logs."
-                default: 8
-                min: 4
-                max: 24
-                order: 4
-                always_show: true
           - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
             description: "Incrementally detects new inserts and updates using the\
               \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
               >cursor column</a> chosen when configuring a connection (e.g. created_at,\
               \ updated_at)."
-            required:
-            - "method"
             properties:
               method:
                 type: "string"
-                const: "STANDARD"
-                order: 0
                 enum:
                 - "STANDARD"
-        tunnel_method:
+                default: "STANDARD"
+            required:
+            - "method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using MySQL's <a href=\"https://docs.airbyte.com/integrations/sources/mssql/#change-data-capture-cdc\"\
+              > change data capture feature</a>. This must be enabled on your database."
+            properties:
+              method:
+                type: "string"
+                enum:
+                - "CDC"
+                default: "CDC"
+              server_timezone:
+                type: "string"
+                description: "Enter the configured MySQL server timezone. This should\
+                  \ only be done if the configured timezone in your MySQL instance\
+                  \ does not conform to IANNA standard."
+                title: "Configured server timezone for the MySQL source (Advanced)"
+                order: 1
+                always_show: true
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 2
+                always_show: true
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC logs."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 3
+                max: 24
+                min: 4
+                always_show: true
+            required:
+            - "method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
           type: "object"
-          title: "SSH Tunnel Method"
-          description: "Whether to initiate an SSH tunnel before connecting to the\
-            \ database, and if so, which kind of authentication to use."
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+        ssl_mode:
+          oneOf:
+          - title: "preferred"
+            type: "object"
+            additionalProperties: true
+            description: "To allow unencrypted communication only when the source\
+              \ doesn't support encryption."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "preferred"
+                default: "preferred"
+            required:
+            - "mode"
+          - title: "required"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption. Note: The connection will\
+              \ fail if the source doesn't support encryption."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "required"
+                default: "required"
+            required:
+            - "mode"
+          - title: "verify_ca"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption and verify that the source\
+              \ has a valid SSL certificate."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "verify_ca"
+                default: "verify_ca"
+              ca_certificate:
+                type: "string"
+                description: "CA certificate"
+                title: "CA certificate"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_certificate:
+                type: "string"
+                description: "Client certificate (this is not a required field, but\
+                  \ if you want to use it, you will need to add the Client key as\
+                  \ well)"
+                title: "Client certificate File"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_key:
+                type: "string"
+                description: "Client key (this is not a required field, but if you\
+                  \ want to use it, you will need to add the Client certificate as\
+                  \ well)"
+                title: "Client Key"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_key_password:
+                type: "string"
+                description: "Password for keystorage. This field is optional. If\
+                  \ you do not add it - the password will be generated automatically."
+                title: "Client key password"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "mode"
+            - "ca_certificate"
+          - title: "verify_identity"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption and verify that the source\
+              \ has a valid SSL certificate."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "verify_identity"
+                default: "verify_identity"
+              ca_certificate:
+                type: "string"
+                description: "CA certificate"
+                title: "CA certificate"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_certificate:
+                type: "string"
+                description: "Client certificate (this is not a required field, but\
+                  \ if you want to use it, you will need to add the Client key as\
+                  \ well)"
+                title: "Client certificate File"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_key:
+                type: "string"
+                description: "Client key (this is not a required field, but if you\
+                  \ want to use it, you will need to add the Client certificate as\
+                  \ well)"
+                title: "Client Key"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+              client_key_password:
+                type: "string"
+                description: "Password for keystorage. This field is optional. If\
+                  \ you do not add it - the password will be generated automatically."
+                title: "Client key password"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "mode"
+            - "ca_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
           oneOf:
           - title: "No Tunnel"
-            required:
-            - "tunnel_method"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
             properties:
               tunnel_method:
-                description: "No ssh tunnel needed to connect to database"
                 type: "string"
-                const: "NO_TUNNEL"
-                order: 0
                 enum:
                 - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
           - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
             required:
             - "tunnel_method"
             - "tunnel_host"
             - "tunnel_port"
             - "tunnel_user"
             - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
             properties:
               tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
                 type: "string"
-                const: "SSH_KEY_AUTH"
-                order: 0
                 enum:
-                - "SSH_KEY_AUTH"
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
               tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
+                type: "string"
                 description: "Hostname of the jump server host that allows inbound\
                   \ ssh tunnel."
-                type: "string"
+                title: "SSH Tunnel Jump Server Host"
                 order: 1
               tunnel_port:
-                title: "SSH Connection Port"
+                type: "integer"
+                default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                type: "integer"
+                title: "SSH Connection Port"
+                order: 2
                 minimum: 0
                 maximum: 65536
-                default: 22
-                examples:
-                - "22"
-                order: 2
               tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
                 title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host."
-                type: "string"
                 order: 3
-              ssh_key:
-                title: "SSH Private Key"
-                description: "OS-level user account ssh key credentials in RSA PEM\
-                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+              tunnel_user_password:
                 type: "string"
-                airbyte_secret: true
-                multiline: true
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
                 order: 4
+                airbyte_secret: true
                 x-speakeasy-param-sensitive: true
-          - title: "Password Authentication"
             required:
             - "tunnel_method"
             - "tunnel_host"
             - "tunnel_port"
             - "tunnel_user"
             - "tunnel_user_password"
-            properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                type: "string"
-                const: "SSH_PASSWORD_AUTH"
-                order: 0
-                enum:
-                - "SSH_PASSWORD_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
-                type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
-                examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host"
-                type: "string"
-                order: 3
-              tunnel_user_password:
-                title: "Password"
-                description: "OS-level password for logging into the jump server host"
-                type: "string"
-                airbyte_secret: true
-                order: 4
-                x-speakeasy-param-sensitive: true
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
         sourceType:
           title: "mysql"
           const: "mysql"
@@ -38137,376 +38687,378 @@ components:
           - "mysql"
           order: 0
           type: "string"
-    source-mysql-update:
-      title: "MySql Source Spec"
-      type: "object"
       required:
       - "host"
       - "port"
       - "database"
       - "username"
       - "replication_method"
+      - "sourceType"
+    source-mysql-update:
+      title: "MySQL Source Spec"
+      type: "object"
       properties:
         host:
-          description: "The host name of the database."
-          title: "Host"
           type: "string"
-          order: 0
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
         port:
-          description: "The port to connect to."
-          title: "Port"
           type: "integer"
+          default: 3306
+          description: "Port of the database."
+          title: "Port"
+          order: 2
           minimum: 0
           maximum: 65536
-          default: 3306
-          examples:
-          - "3306"
-          order: 1
         database:
+          type: "string"
           description: "The database name."
           title: "Database"
-          type: "string"
-          order: 2
-        username:
-          description: "The username which is used to access the database."
-          title: "Username"
-          type: "string"
-          order: 3
-        password:
-          description: "The password associated with the username."
-          title: "Password"
-          type: "string"
-          airbyte_secret: true
-          order: 4
-          always_show: true
-        jdbc_url_params:
-          description: "Additional properties to pass to the JDBC URL string when\
-            \ connecting to the database formatted as 'key=value' pairs separated\
-            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3). For\
-            \ more information read about <a href=\"https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-jdbc-url-format.html\"\
-            >JDBC URL parameters</a>."
-          title: "JDBC URL Parameters (Advanced)"
-          type: "string"
-          order: 5
-        ssl:
-          title: "SSL Connection"
-          description: "Encrypt data using SSL."
-          type: "boolean"
-          default: true
           order: 6
-        ssl_mode:
-          title: "SSL modes"
-          description: "SSL connection modes. Read more <a href=\"https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-using-ssl.html\"\
-            > in the docs</a>."
-          type: "object"
-          order: 7
-          oneOf:
-          - title: "preferred"
-            description: "Automatically attempt SSL connection. If the MySQL server\
-              \ does not support SSL, continue with a regular connection."
-            required:
-            - "mode"
-            properties:
-              mode:
-                type: "string"
-                const: "preferred"
-                order: 0
-                enum:
-                - "preferred"
-          - title: "required"
-            description: "Always connect with SSL. If the MySQL server doesn’t support\
-              \ SSL, the connection will not be established. Certificate Authority\
-              \ (CA) and Hostname are not verified."
-            required:
-            - "mode"
-            properties:
-              mode:
-                type: "string"
-                const: "required"
-                order: 0
-                enum:
-                - "required"
-          - title: "Verify CA"
-            description: "Always connect with SSL. Verifies CA, but allows connection\
-              \ even if Hostname does not match."
-            required:
-            - "mode"
-            - "ca_certificate"
-            properties:
-              mode:
-                type: "string"
-                const: "verify_ca"
-                order: 0
-                enum:
-                - "verify_ca"
-              ca_certificate:
-                type: "string"
-                title: "CA certificate"
-                description: "CA certificate"
-                airbyte_secret: true
-                multiline: true
-                order: 1
-              client_certificate:
-                type: "string"
-                title: "Client certificate"
-                description: "Client certificate (this is not a required field, but\
-                  \ if you want to use it, you will need to add the <b>Client key</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 2
-                always_show: true
-              client_key:
-                type: "string"
-                title: "Client key"
-                description: "Client key (this is not a required field, but if you\
-                  \ want to use it, you will need to add the <b>Client certificate</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 3
-                always_show: true
-              client_key_password:
-                type: "string"
-                title: "Client key password"
-                description: "Password for keystorage. This field is optional. If\
-                  \ you do not add it - the password will be generated automatically."
-                airbyte_secret: true
-                order: 4
-          - title: "Verify Identity"
-            description: "Always connect with SSL. Verify both CA and Hostname."
-            required:
-            - "mode"
-            - "ca_certificate"
-            properties:
-              mode:
-                type: "string"
-                const: "verify_identity"
-                order: 0
-                enum:
-                - "verify_identity"
-              ca_certificate:
-                type: "string"
-                title: "CA certificate"
-                description: "CA certificate"
-                airbyte_secret: true
-                multiline: true
-                order: 1
-              client_certificate:
-                type: "string"
-                title: "Client certificate"
-                description: "Client certificate (this is not a required field, but\
-                  \ if you want to use it, you will need to add the <b>Client key</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 2
-                always_show: true
-              client_key:
-                type: "string"
-                title: "Client key"
-                description: "Client key (this is not a required field, but if you\
-                  \ want to use it, you will need to add the <b>Client certificate</b>\
-                  \ as well)"
-                airbyte_secret: true
-                multiline: true
-                order: 3
-                always_show: true
-              client_key_password:
-                type: "string"
-                title: "Client key password"
-                description: "Password for keystorage. This field is optional. If\
-                  \ you do not add it - the password will be generated automatically."
-                airbyte_secret: true
-                order: 4
+          always_show: true
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
         replication_method:
-          type: "object"
-          title: "Update Method"
-          description: "Configures how data is extracted from the database."
-          order: 8
-          default: "CDC"
-          display_type: "radio"
           oneOf:
-          - title: "Read Changes using Binary Log (CDC)"
-            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
-              \ and deletes using the MySQL <a href=\"https://docs.airbyte.com/integrations/sources/mysql/#change-data-capture-cdc\"\
-              >binary log</a>. This must be enabled on your database."
-            required:
-            - "method"
-            properties:
-              method:
-                type: "string"
-                const: "CDC"
-                order: 0
-                enum:
-                - "CDC"
-              initial_waiting_seconds:
-                type: "integer"
-                title: "Initial Waiting Time in Seconds (Advanced)"
-                description: "The amount of time the connector will wait when it launches\
-                  \ to determine if there is new data to sync or not. Defaults to\
-                  \ 300 seconds. Valid range: 120 seconds to 1200 seconds. Read about\
-                  \ <a href=\"https://docs.airbyte.com/integrations/sources/mysql/#change-data-capture-cdc\"\
-                  >initial waiting time</a>."
-                default: 300
-                min: 120
-                max: 1200
-                order: 1
-                always_show: true
-              server_time_zone:
-                type: "string"
-                title: "Configured server timezone for the MySQL source (Advanced)"
-                description: "Enter the configured MySQL server timezone. This should\
-                  \ only be done if the configured timezone in your MySQL instance\
-                  \ does not conform to IANNA standard."
-                order: 2
-                always_show: true
-              invalid_cdc_cursor_position_behavior:
-                type: "string"
-                title: "Invalid CDC position behavior (Advanced)"
-                description: "Determines whether Airbyte should fail or re-sync data\
-                  \ in case of an stale/invalid cursor value into the WAL. If 'Fail\
-                  \ sync' is chosen, a user will have to manually reset the connection\
-                  \ before being able to continue syncing data. If 'Re-sync data'\
-                  \ is chosen, Airbyte will automatically trigger a refresh but could\
-                  \ lead to higher cloud costs and data loss."
-                enum:
-                - "Fail sync"
-                - "Re-sync data"
-                default: "Fail sync"
-                order: 3
-                always_show: true
-              initial_load_timeout_hours:
-                type: "integer"
-                title: "Initial Load Timeout in Hours (Advanced)"
-                description: "The amount of time an initial load is allowed to continue\
-                  \ for before catching up on CDC logs."
-                default: 8
-                min: 4
-                max: 24
-                order: 4
-                always_show: true
           - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
             description: "Incrementally detects new inserts and updates using the\
               \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
               >cursor column</a> chosen when configuring a connection (e.g. created_at,\
               \ updated_at)."
-            required:
-            - "method"
             properties:
               method:
                 type: "string"
-                const: "STANDARD"
-                order: 0
                 enum:
                 - "STANDARD"
-        tunnel_method:
+                default: "STANDARD"
+            required:
+            - "method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using MySQL's <a href=\"https://docs.airbyte.com/integrations/sources/mssql/#change-data-capture-cdc\"\
+              > change data capture feature</a>. This must be enabled on your database."
+            properties:
+              method:
+                type: "string"
+                enum:
+                - "CDC"
+                default: "CDC"
+              server_timezone:
+                type: "string"
+                description: "Enter the configured MySQL server timezone. This should\
+                  \ only be done if the configured timezone in your MySQL instance\
+                  \ does not conform to IANNA standard."
+                title: "Configured server timezone for the MySQL source (Advanced)"
+                order: 1
+                always_show: true
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 2
+                always_show: true
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC logs."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 3
+                max: 24
+                min: 4
+                always_show: true
+            required:
+            - "method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
           type: "object"
-          title: "SSH Tunnel Method"
-          description: "Whether to initiate an SSH tunnel before connecting to the\
-            \ database, and if so, which kind of authentication to use."
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+        ssl_mode:
+          oneOf:
+          - title: "preferred"
+            type: "object"
+            additionalProperties: true
+            description: "To allow unencrypted communication only when the source\
+              \ doesn't support encryption."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "preferred"
+                default: "preferred"
+            required:
+            - "mode"
+          - title: "required"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption. Note: The connection will\
+              \ fail if the source doesn't support encryption."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "required"
+                default: "required"
+            required:
+            - "mode"
+          - title: "verify_ca"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption and verify that the source\
+              \ has a valid SSL certificate."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "verify_ca"
+                default: "verify_ca"
+              ca_certificate:
+                type: "string"
+                description: "CA certificate"
+                title: "CA certificate"
+                airbyte_secret: true
+                multiline: true
+              client_certificate:
+                type: "string"
+                description: "Client certificate (this is not a required field, but\
+                  \ if you want to use it, you will need to add the Client key as\
+                  \ well)"
+                title: "Client certificate File"
+                airbyte_secret: true
+                multiline: true
+              client_key:
+                type: "string"
+                description: "Client key (this is not a required field, but if you\
+                  \ want to use it, you will need to add the Client certificate as\
+                  \ well)"
+                title: "Client Key"
+                airbyte_secret: true
+                multiline: true
+              client_key_password:
+                type: "string"
+                description: "Password for keystorage. This field is optional. If\
+                  \ you do not add it - the password will be generated automatically."
+                title: "Client key password"
+                airbyte_secret: true
+                multiline: true
+            required:
+            - "mode"
+            - "ca_certificate"
+          - title: "verify_identity"
+            type: "object"
+            additionalProperties: true
+            description: "To always require encryption and verify that the source\
+              \ has a valid SSL certificate."
+            properties:
+              mode:
+                type: "string"
+                enum:
+                - "verify_identity"
+                default: "verify_identity"
+              ca_certificate:
+                type: "string"
+                description: "CA certificate"
+                title: "CA certificate"
+                airbyte_secret: true
+                multiline: true
+              client_certificate:
+                type: "string"
+                description: "Client certificate (this is not a required field, but\
+                  \ if you want to use it, you will need to add the Client key as\
+                  \ well)"
+                title: "Client certificate File"
+                airbyte_secret: true
+                multiline: true
+              client_key:
+                type: "string"
+                description: "Client key (this is not a required field, but if you\
+                  \ want to use it, you will need to add the Client certificate as\
+                  \ well)"
+                title: "Client Key"
+                airbyte_secret: true
+                multiline: true
+              client_key_password:
+                type: "string"
+                description: "Password for keystorage. This field is optional. If\
+                  \ you do not add it - the password will be generated automatically."
+                title: "Client key password"
+                airbyte_secret: true
+                multiline: true
+            required:
+            - "mode"
+            - "ca_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
           oneOf:
           - title: "No Tunnel"
-            required:
-            - "tunnel_method"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
             properties:
               tunnel_method:
-                description: "No ssh tunnel needed to connect to database"
                 type: "string"
-                const: "NO_TUNNEL"
-                order: 0
                 enum:
                 - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
           - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
             required:
             - "tunnel_method"
             - "tunnel_host"
             - "tunnel_port"
             - "tunnel_user"
             - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
             properties:
               tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
                 type: "string"
-                const: "SSH_KEY_AUTH"
-                order: 0
                 enum:
-                - "SSH_KEY_AUTH"
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
               tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
+                type: "string"
                 description: "Hostname of the jump server host that allows inbound\
                   \ ssh tunnel."
-                type: "string"
+                title: "SSH Tunnel Jump Server Host"
                 order: 1
               tunnel_port:
-                title: "SSH Connection Port"
+                type: "integer"
+                default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                type: "integer"
+                title: "SSH Connection Port"
+                order: 2
                 minimum: 0
                 maximum: 65536
-                default: 22
-                examples:
-                - "22"
-                order: 2
               tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
                 title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host."
-                type: "string"
                 order: 3
-              ssh_key:
-                title: "SSH Private Key"
-                description: "OS-level user account ssh key credentials in RSA PEM\
-                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+              tunnel_user_password:
                 type: "string"
-                airbyte_secret: true
-                multiline: true
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
                 order: 4
-          - title: "Password Authentication"
+                airbyte_secret: true
             required:
             - "tunnel_method"
             - "tunnel_host"
             - "tunnel_port"
             - "tunnel_user"
             - "tunnel_user_password"
-            properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                type: "string"
-                const: "SSH_PASSWORD_AUTH"
-                order: 0
-                enum:
-                - "SSH_PASSWORD_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
-                type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
-                examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host"
-                type: "string"
-                order: 3
-              tunnel_user_password:
-                title: "Password"
-                description: "OS-level password for logging into the jump server host"
-                type: "string"
-                airbyte_secret: true
-                order: 4
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+      required:
+      - "host"
+      - "port"
+      - "database"
+      - "username"
+      - "replication_method"
     source-rollbar:
       type: "object"
       required:
@@ -38657,67 +39209,6 @@ components:
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-    source-orbit:
-      type: "object"
-      required:
-      - "api_token"
-      - "workspace"
-      - "sourceType"
-      properties:
-        api_token:
-          type: "string"
-          airbyte_secret: true
-          title: "API Token"
-          description: "Authorizes you to work with Orbit workspaces associated with\
-            \ the token."
-          order: 0
-          x-speakeasy-param-sensitive: true
-        workspace:
-          type: "string"
-          title: "Workspace"
-          description: "The unique name of the workspace that your API token is associated\
-            \ with."
-          order: 1
-        start_date:
-          type: "string"
-          title: "Start Date"
-          description: "Date in the format 2022-06-26. Only load members whose last\
-            \ activities are after this date."
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-          order: 2
-        sourceType:
-          title: "orbit"
-          const: "orbit"
-          enum:
-          - "orbit"
-          order: 0
-          type: "string"
-    source-orbit-update:
-      type: "object"
-      required:
-      - "api_token"
-      - "workspace"
-      properties:
-        api_token:
-          type: "string"
-          airbyte_secret: true
-          title: "API Token"
-          description: "Authorizes you to work with Orbit workspaces associated with\
-            \ the token."
-          order: 0
-        workspace:
-          type: "string"
-          title: "Workspace"
-          description: "The unique name of the workspace that your API token is associated\
-            \ with."
-          order: 1
-        start_date:
-          type: "string"
-          title: "Start Date"
-          description: "Date in the format 2022-06-26. Only load members whose last\
-            \ activities are after this date."
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-          order: 2
     source-apify-dataset:
       title: "Apify Dataset Spec"
       type: "object"
@@ -39690,18 +40181,17 @@ components:
         batch_size:
           type: "integer"
           title: "Row Batch Size"
-          description: "Default value is 200. An integer representing row batch size\
-            \ for each sent request to Google Sheets API. Row batch size means how\
-            \ many rows are processed from the google sheet, for example default value\
-            \ 200 would process rows 1-201, then 201-401 and so on. Based on <a href='https://developers.google.com/sheets/api/limits'>Google\
+          description: "Default value is 1000000. An integer representing row batch\
+            \ size for each sent request to Google Sheets API. Row batch size means\
+            \ how many rows are processed from the google sheet, for example default\
+            \ value 1000000 would process rows 2-1000002, then 1000003-2000003 and\
+            \ so on. Based on <a href='https://developers.google.com/sheets/api/limits'>Google\
             \ Sheets API limits documentation</a>, it is possible to send up to 300\
             \ requests per minute, but each individual request has to be processed\
             \ under 180 seconds, otherwise the request returns a timeout error. In\
             \ regards to this information, consider network speed and number of columns\
-            \ of the google sheet when deciding a batch_size value. Default value\
-            \ should cover most of the cases, but if a google sheet has over 100,000\
-            \ records or more, consider increasing batch_size value."
-          default: 200
+            \ of the google sheet when deciding a batch_size value."
+          default: 1000000
         spreadsheet_id:
           type: "string"
           title: "Spreadsheet Link"
@@ -39797,18 +40287,17 @@ components:
         batch_size:
           type: "integer"
           title: "Row Batch Size"
-          description: "Default value is 200. An integer representing row batch size\
-            \ for each sent request to Google Sheets API. Row batch size means how\
-            \ many rows are processed from the google sheet, for example default value\
-            \ 200 would process rows 1-201, then 201-401 and so on. Based on <a href='https://developers.google.com/sheets/api/limits'>Google\
+          description: "Default value is 1000000. An integer representing row batch\
+            \ size for each sent request to Google Sheets API. Row batch size means\
+            \ how many rows are processed from the google sheet, for example default\
+            \ value 1000000 would process rows 2-1000002, then 1000003-2000003 and\
+            \ so on. Based on <a href='https://developers.google.com/sheets/api/limits'>Google\
             \ Sheets API limits documentation</a>, it is possible to send up to 300\
             \ requests per minute, but each individual request has to be processed\
             \ under 180 seconds, otherwise the request returns a timeout error. In\
             \ regards to this information, consider network speed and number of columns\
-            \ of the google sheet when deciding a batch_size value. Default value\
-            \ should cover most of the cases, but if a google sheet has over 100,000\
-            \ records or more, consider increasing batch_size value."
-          default: 200
+            \ of the google sheet when deciding a batch_size value."
+          default: 1000000
         spreadsheet_id:
           type: "string"
           title: "Spreadsheet Link"
@@ -40090,6 +40579,35 @@ components:
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    source-huntr:
+      type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "huntr"
+          const: "huntr"
+          enum:
+          - "huntr"
+          order: 0
+          type: "string"
+    source-huntr-update:
+      type: "object"
+      required:
+      - "api_key"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
     source-asana:
       title: "Asana Spec"
       type: "object"
@@ -40894,14 +41412,6 @@ components:
                 - "GET_XML_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL"
                 - "GET_XML_BROWSE_TREE_DATA"
                 - "GET_VENDOR_REAL_TIME_INVENTORY_REPORT"
-                - "GET_BRAND_ANALYTICS_MARKET_BASKET_REPORT"
-                - "GET_BRAND_ANALYTICS_SEARCH_TERMS_REPORT"
-                - "GET_BRAND_ANALYTICS_REPEAT_PURCHASE_REPORT"
-                - "GET_SALES_AND_TRAFFIC_REPORT"
-                - "GET_VENDOR_SALES_REPORT"
-                - "GET_VENDOR_INVENTORY_REPORT"
-                - "GET_VENDOR_NET_PURE_PRODUCT_MARGIN_REPORT"
-                - "GET_VENDOR_TRAFFIC_REPORT"
               stream_name:
                 title: "Stream Name"
                 type: "string"
@@ -41112,14 +41622,6 @@ components:
                 - "GET_XML_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL"
                 - "GET_XML_BROWSE_TREE_DATA"
                 - "GET_VENDOR_REAL_TIME_INVENTORY_REPORT"
-                - "GET_BRAND_ANALYTICS_MARKET_BASKET_REPORT"
-                - "GET_BRAND_ANALYTICS_SEARCH_TERMS_REPORT"
-                - "GET_BRAND_ANALYTICS_REPEAT_PURCHASE_REPORT"
-                - "GET_SALES_AND_TRAFFIC_REPORT"
-                - "GET_VENDOR_SALES_REPORT"
-                - "GET_VENDOR_INVENTORY_REPORT"
-                - "GET_VENDOR_NET_PURE_PRODUCT_MARGIN_REPORT"
-                - "GET_VENDOR_TRAFFIC_REPORT"
               stream_name:
                 title: "Stream Name"
                 type: "string"
@@ -41316,6 +41818,45 @@ components:
           order: 1
           title: "Company ID"
           airbyte_secret: true
+    source-hoorayhr:
+      type: "object"
+      required:
+      - "hoorayhrusername"
+      - "hoorayhrpassword"
+      - "sourceType"
+      properties:
+        hoorayhrpassword:
+          type: "string"
+          order: 1
+          title: "HoorayHR Password"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        hoorayhrusername:
+          type: "string"
+          order: 0
+          title: "HoorayHR Username"
+        sourceType:
+          title: "hoorayhr"
+          const: "hoorayhr"
+          enum:
+          - "hoorayhr"
+          order: 0
+          type: "string"
+    source-hoorayhr-update:
+      type: "object"
+      required:
+      - "hoorayhrusername"
+      - "hoorayhrpassword"
+      properties:
+        hoorayhrpassword:
+          type: "string"
+          order: 1
+          title: "HoorayHR Password"
+          airbyte_secret: true
+        hoorayhrusername:
+          type: "string"
+          order: 0
+          title: "HoorayHR Username"
     source-us-census:
       type: "object"
       required:
@@ -48012,68 +48553,68 @@ components:
             \ before this date will not be replicated. If omitted, defaults to 3 days\
             \ ago."
     source-intercom:
-      title: "Source Intercom Spec"
       type: "object"
       required:
-      - "start_date"
       - "access_token"
+      - "start_date"
       - "sourceType"
       properties:
-        start_date:
-          type: "string"
-          title: "Start date"
-          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
-            \ data before this date will not be replicated."
-          examples:
-          - "2020-11-16T00:00:00Z"
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          format: "date-time"
         access_token:
-          title: "Access token"
           type: "string"
           description: "Access token for making authenticated requests. See the <a\
             \ href=\"https://developers.intercom.com/building-apps/docs/authentication-types#how-to-get-your-access-token\"\
             >Intercom docs</a> for more information."
-          airbyte_secret: true
           order: 0
+          title: "Access token"
+          airbyte_secret: true
           x-speakeasy-param-sensitive: true
         client_id:
-          title: "Client Id"
           type: "string"
           description: "Client Id for your Intercom application."
-          airbyte_secret: true
           order: 1
+          title: "Client Id"
+          airbyte_secret: true
           x-speakeasy-param-sensitive: true
         client_secret:
-          title: "Client Secret"
           type: "string"
           description: "Client Secret for your Intercom application."
-          airbyte_secret: true
           order: 2
+          title: "Client Secret"
+          airbyte_secret: true
           x-speakeasy-param-sensitive: true
         activity_logs_time_step:
           type: "integer"
-          default: 30
-          minimum: 1
-          maximum: 91
-          title: "Activity logs stream slice step size (in days)"
           description: "Set lower value in case of failing long running sync of Activity\
             \ Logs stream."
+          order: 3
+          title: "Activity logs stream slice step size (in days)"
+          default: 30
+          maximum: 91
+          minimum: 1
           examples:
           - 30
           - 10
           - 5
-          order: 3
         lookback_window:
-          title: "Lookback window"
+          type: "integer"
           description: "The number of days to shift the state value backward for record\
             \ sync"
-          examples:
-          - 60
+          order: 4
+          title: "Lookback window"
           default: 0
           minimum: 0
-          type: "integer"
-          order: 4
+          examples:
+          - 60
+        start_date:
+          type: "string"
+          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
+            \ data before this date will not be replicated."
+          order: 5
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2020-11-16T00:00:00Z"
         sourceType:
           title: "intercom"
           const: "intercom"
@@ -48082,64 +48623,64 @@ components:
           order: 0
           type: "string"
     source-intercom-update:
-      title: "Source Intercom Spec"
       type: "object"
       required:
-      - "start_date"
       - "access_token"
+      - "start_date"
       properties:
-        start_date:
-          type: "string"
-          title: "Start date"
-          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
-            \ data before this date will not be replicated."
-          examples:
-          - "2020-11-16T00:00:00Z"
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          format: "date-time"
         access_token:
-          title: "Access token"
           type: "string"
           description: "Access token for making authenticated requests. See the <a\
             \ href=\"https://developers.intercom.com/building-apps/docs/authentication-types#how-to-get-your-access-token\"\
             >Intercom docs</a> for more information."
-          airbyte_secret: true
           order: 0
+          title: "Access token"
+          airbyte_secret: true
         client_id:
-          title: "Client Id"
           type: "string"
           description: "Client Id for your Intercom application."
-          airbyte_secret: true
           order: 1
+          title: "Client Id"
+          airbyte_secret: true
         client_secret:
-          title: "Client Secret"
           type: "string"
           description: "Client Secret for your Intercom application."
-          airbyte_secret: true
           order: 2
+          title: "Client Secret"
+          airbyte_secret: true
         activity_logs_time_step:
           type: "integer"
-          default: 30
-          minimum: 1
-          maximum: 91
-          title: "Activity logs stream slice step size (in days)"
           description: "Set lower value in case of failing long running sync of Activity\
             \ Logs stream."
+          order: 3
+          title: "Activity logs stream slice step size (in days)"
+          default: 30
+          maximum: 91
+          minimum: 1
           examples:
           - 30
           - 10
           - 5
-          order: 3
         lookback_window:
-          title: "Lookback window"
+          type: "integer"
           description: "The number of days to shift the state value backward for record\
             \ sync"
-          examples:
-          - 60
+          order: 4
+          title: "Lookback window"
           default: 0
           minimum: 0
-          type: "integer"
-          order: 4
+          examples:
+          - 60
+        start_date:
+          type: "string"
+          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
+            \ data before this date will not be replicated."
+          order: 5
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2020-11-16T00:00:00Z"
     source-coassemble:
       type: "object"
       required:
@@ -49319,6 +49860,7 @@ components:
                   - "auction_bid"
                   - "auction_competitiveness"
                   - "auction_max_competitor_bid"
+                  - "average_purchases_conversion_value"
                   - "buying_type"
                   - "campaign_id"
                   - "campaign_name"
@@ -49386,9 +49928,17 @@ components:
                   - "location"
                   - "marketing_messages_cost_per_delivered"
                   - "marketing_messages_cost_per_link_btn_click"
+                  - "marketing_messages_delivery_rate"
+                  - "marketing_messages_link_btn_click_rate"
+                  - "marketing_messages_media_view_rate"
+                  - "marketing_messages_phone_call_btn_click_rate"
+                  - "marketing_messages_quick_reply_btn_click_rate"
+                  - "marketing_messages_read_rate"
                   - "marketing_messages_spend"
+                  - "marketing_messages_website_purchase_values"
                   - "mobile_app_purchase_roas"
                   - "objective"
+                  - "onsite_conversion_messaging_detected_purchase_deduped"
                   - "optimization_goal"
                   - "outbound_clicks"
                   - "outbound_clicks_ctr"
@@ -49397,6 +49947,7 @@ components:
                   - "qualifying_question_qualify_answer_rate"
                   - "quality_ranking"
                   - "reach"
+                  - "shops_assisted_purchases"
                   - "social_spend"
                   - "spend"
                   - "total_postbacks"
@@ -49446,8 +49997,10 @@ components:
                   - "age"
                   - "app_id"
                   - "body_asset"
+                  - "breakdown_reporting_ad_id"
                   - "call_to_action_asset"
                   - "coarse_conversion_value"
+                  - "conversion_destination"
                   - "country"
                   - "description_asset"
                   - "device_platform"
@@ -49461,6 +50014,7 @@ components:
                   - "image_asset"
                   - "impression_device"
                   - "is_conversion_id_modeled"
+                  - "is_rendered_as_delayed_skip_ad"
                   - "landing_destination"
                   - "link_url_asset"
                   - "marketing_messages_btn_name"
@@ -49471,6 +50025,7 @@ components:
                   - "media_format"
                   - "media_origin_url"
                   - "media_text_content"
+                  - "media_type"
                   - "mmm"
                   - "place_page_id"
                   - "platform_position"
@@ -49479,11 +50034,19 @@ components:
                   - "publisher_platform"
                   - "redownload"
                   - "region"
+                  - "signal_source_bucket"
                   - "skan_campaign_id"
                   - "skan_conversion_id"
                   - "skan_version"
+                  - "sot_attribution_model_type"
+                  - "sot_attribution_window"
+                  - "sot_channel"
+                  - "sot_event_type"
+                  - "sot_source"
                   - "standard_event_content_type"
                   - "title_asset"
+                  - "user_persona_id"
+                  - "user_persona_name"
                   - "video_asset"
               action_breakdowns:
                 title: "Action Breakdowns"
@@ -49504,6 +50067,10 @@ components:
                   - "action_type"
                   - "action_video_sound"
                   - "action_video_type"
+                  - "conversion_destination"
+                  - "matched_persona_id"
+                  - "matched_persona_name"
+                  - "signal_source_bucket"
                   - "standard_event_content_type"
               action_report_time:
                 title: "Action Report Time"
@@ -49857,6 +50424,7 @@ components:
                   - "auction_bid"
                   - "auction_competitiveness"
                   - "auction_max_competitor_bid"
+                  - "average_purchases_conversion_value"
                   - "buying_type"
                   - "campaign_id"
                   - "campaign_name"
@@ -49924,9 +50492,17 @@ components:
                   - "location"
                   - "marketing_messages_cost_per_delivered"
                   - "marketing_messages_cost_per_link_btn_click"
+                  - "marketing_messages_delivery_rate"
+                  - "marketing_messages_link_btn_click_rate"
+                  - "marketing_messages_media_view_rate"
+                  - "marketing_messages_phone_call_btn_click_rate"
+                  - "marketing_messages_quick_reply_btn_click_rate"
+                  - "marketing_messages_read_rate"
                   - "marketing_messages_spend"
+                  - "marketing_messages_website_purchase_values"
                   - "mobile_app_purchase_roas"
                   - "objective"
+                  - "onsite_conversion_messaging_detected_purchase_deduped"
                   - "optimization_goal"
                   - "outbound_clicks"
                   - "outbound_clicks_ctr"
@@ -49935,6 +50511,7 @@ components:
                   - "qualifying_question_qualify_answer_rate"
                   - "quality_ranking"
                   - "reach"
+                  - "shops_assisted_purchases"
                   - "social_spend"
                   - "spend"
                   - "total_postbacks"
@@ -49984,8 +50561,10 @@ components:
                   - "age"
                   - "app_id"
                   - "body_asset"
+                  - "breakdown_reporting_ad_id"
                   - "call_to_action_asset"
                   - "coarse_conversion_value"
+                  - "conversion_destination"
                   - "country"
                   - "description_asset"
                   - "device_platform"
@@ -49999,6 +50578,7 @@ components:
                   - "image_asset"
                   - "impression_device"
                   - "is_conversion_id_modeled"
+                  - "is_rendered_as_delayed_skip_ad"
                   - "landing_destination"
                   - "link_url_asset"
                   - "marketing_messages_btn_name"
@@ -50009,6 +50589,7 @@ components:
                   - "media_format"
                   - "media_origin_url"
                   - "media_text_content"
+                  - "media_type"
                   - "mmm"
                   - "place_page_id"
                   - "platform_position"
@@ -50017,11 +50598,19 @@ components:
                   - "publisher_platform"
                   - "redownload"
                   - "region"
+                  - "signal_source_bucket"
                   - "skan_campaign_id"
                   - "skan_conversion_id"
                   - "skan_version"
+                  - "sot_attribution_model_type"
+                  - "sot_attribution_window"
+                  - "sot_channel"
+                  - "sot_event_type"
+                  - "sot_source"
                   - "standard_event_content_type"
                   - "title_asset"
+                  - "user_persona_id"
+                  - "user_persona_name"
                   - "video_asset"
               action_breakdowns:
                 title: "Action Breakdowns"
@@ -50042,6 +50631,10 @@ components:
                   - "action_type"
                   - "action_video_sound"
                   - "action_video_type"
+                  - "conversion_destination"
+                  - "matched_persona_id"
+                  - "matched_persona_name"
+                  - "signal_source_bucket"
                   - "standard_event_content_type"
               action_report_time:
                 title: "Action Report Time"
@@ -53164,6 +53757,18 @@ components:
           examples:
           - "2017-01-25 00:00:00Z"
           type: "string"
+        num_workers:
+          title: "Number of concurrent workers"
+          description: "Number of concurrent workers to be used in the sync. This\
+            \ number should be set according to your Pipedrive subscription plan and\
+            \ its rate limits, which coule be found <a href=\"https://pipedrive.readme.io/docs/core-api-concepts-rate-limiting\"\
+            >here</a> on Pipedrive Rate limiting page. Please note that Pipedrive\
+            \ API rate limits are reset daily. If you experience rate limiting issues,\
+            \ please lower the number of workers according to your plan."
+          type: "integer"
+          default: 10
+          minimum: 1
+          maximum: 40
         sourceType:
           title: "pipedrive"
           const: "pipedrive"
@@ -53191,6 +53796,18 @@ components:
           examples:
           - "2017-01-25 00:00:00Z"
           type: "string"
+        num_workers:
+          title: "Number of concurrent workers"
+          description: "Number of concurrent workers to be used in the sync. This\
+            \ number should be set according to your Pipedrive subscription plan and\
+            \ its rate limits, which coule be found <a href=\"https://pipedrive.readme.io/docs/core-api-concepts-rate-limiting\"\
+            >here</a> on Pipedrive Rate limiting page. Please note that Pipedrive\
+            \ API rate limits are reset daily. If you experience rate limiting issues,\
+            \ please lower the number of workers according to your plan."
+          type: "integer"
+          default: 10
+          minimum: 1
+          maximum: 40
     source-gocardless:
       type: "object"
       required:
@@ -54717,6 +55334,45 @@ components:
             \ page"
           order: 1
           title: "Organization ID"
+    source-shipstation:
+      type: "object"
+      required:
+      - "username"
+      - "sourceType"
+      properties:
+        username:
+          type: "string"
+          order: 0
+          title: "API Key"
+        password:
+          type: "string"
+          order: 1
+          title: "API Secret"
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "shipstation"
+          const: "shipstation"
+          enum:
+          - "shipstation"
+          order: 0
+          type: "string"
+    source-shipstation-update:
+      type: "object"
+      required:
+      - "username"
+      properties:
+        username:
+          type: "string"
+          order: 0
+          title: "API Key"
+        password:
+          type: "string"
+          order: 1
+          title: "API Secret"
+          always_show: true
+          airbyte_secret: true
     source-braintree:
       title: "Braintree Spec"
       type: "object"
@@ -55573,55 +56229,68 @@ components:
     source-pardot:
       type: "object"
       required:
+      - "pardot_business_unit_id"
       - "client_id"
       - "client_secret"
       - "refresh_token"
-      - "pardot_business_unit_id"
       - "sourceType"
       properties:
+        pardot_business_unit_id:
+          type: "string"
+          description: "Pardot Business ID, can be found at Setup > Pardot > Pardot\
+            \ Account Setup"
+          order: 0
+          title: "Pardot Business Unit ID"
         client_id:
           type: "string"
           description: "The Consumer Key that can be found when viewing your app in\
             \ Salesforce"
-          airbyte_secret: true
-          order: 0
-          x-speakeasy-param-sensitive: true
-        is_sandbox:
-          type: "boolean"
-          description: "Whether or not the the app is in a Salesforce sandbox. If\
-            \ you do not know what this, assume it is false."
-          default: false
           order: 1
-        start_date:
-          type: "string"
-          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
-            \ data before this date will not be replicated. Leave blank to skip this\
-            \ filter"
-          default: null
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          examples:
-          - "2021-07-25T00:00:00Z"
-          order: 2
+          title: "Client ID"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
         client_secret:
           type: "string"
           description: "The Consumer Secret that can be found when viewing your app\
             \ in Salesforce"
+          order: 2
+          title: "Client Secret"
           airbyte_secret: true
-          order: 3
           x-speakeasy-param-sensitive: true
         refresh_token:
           type: "string"
           description: "Salesforce Refresh Token used for Airbyte to access your Salesforce\
             \ account. If you don't know what this is, follow this <a href=\"https://medium.com/@bpmmendis94/obtain-access-refresh-tokens-from-salesforce-rest-api-a324fe4ccd9b\"\
             >guide</a> to retrieve it."
+          order: 3
+          title: "Refresh Token"
           airbyte_secret: true
-          order: 4
           x-speakeasy-param-sensitive: true
-        pardot_business_unit_id:
+        start_date:
           type: "string"
-          description: "Pardot Business ID, can be found at Setup > Pardot > Pardot\
-            \ Account Setup"
+          description: "UTC date and time in the format 2000-01-01T00:00:00Z. Any\
+            \ data before this date will not be replicated. Defaults to the year Pardot\
+            \ was released."
+          order: 4
+          title: "Start Date"
+          format: "date-time"
+          default: "2007-01-01T00:00:00Z"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2021-07-25T00:00:00Z"
+        page_size:
+          type: "string"
+          description: "The maximum number of records to return per request"
           order: 5
+          title: "Page Size Limit"
+          default: "1000"
+        is_sandbox:
+          type: "boolean"
+          description: "Whether or not the the app is in a Salesforce sandbox. If\
+            \ you do not know what this, assume it is false."
+          order: 6
+          title: "Is Sandbox App?"
+          default: false
         sourceType:
           title: "pardot"
           const: "pardot"
@@ -55632,51 +56301,64 @@ components:
     source-pardot-update:
       type: "object"
       required:
+      - "pardot_business_unit_id"
       - "client_id"
       - "client_secret"
       - "refresh_token"
-      - "pardot_business_unit_id"
       properties:
+        pardot_business_unit_id:
+          type: "string"
+          description: "Pardot Business ID, can be found at Setup > Pardot > Pardot\
+            \ Account Setup"
+          order: 0
+          title: "Pardot Business Unit ID"
         client_id:
           type: "string"
           description: "The Consumer Key that can be found when viewing your app in\
             \ Salesforce"
-          airbyte_secret: true
-          order: 0
-        is_sandbox:
-          type: "boolean"
-          description: "Whether or not the the app is in a Salesforce sandbox. If\
-            \ you do not know what this, assume it is false."
-          default: false
           order: 1
-        start_date:
-          type: "string"
-          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
-            \ data before this date will not be replicated. Leave blank to skip this\
-            \ filter"
-          default: null
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          examples:
-          - "2021-07-25T00:00:00Z"
-          order: 2
+          title: "Client ID"
+          airbyte_secret: true
         client_secret:
           type: "string"
           description: "The Consumer Secret that can be found when viewing your app\
             \ in Salesforce"
+          order: 2
+          title: "Client Secret"
           airbyte_secret: true
-          order: 3
         refresh_token:
           type: "string"
           description: "Salesforce Refresh Token used for Airbyte to access your Salesforce\
             \ account. If you don't know what this is, follow this <a href=\"https://medium.com/@bpmmendis94/obtain-access-refresh-tokens-from-salesforce-rest-api-a324fe4ccd9b\"\
             >guide</a> to retrieve it."
+          order: 3
+          title: "Refresh Token"
           airbyte_secret: true
-          order: 4
-        pardot_business_unit_id:
+        start_date:
           type: "string"
-          description: "Pardot Business ID, can be found at Setup > Pardot > Pardot\
-            \ Account Setup"
+          description: "UTC date and time in the format 2000-01-01T00:00:00Z. Any\
+            \ data before this date will not be replicated. Defaults to the year Pardot\
+            \ was released."
+          order: 4
+          title: "Start Date"
+          format: "date-time"
+          default: "2007-01-01T00:00:00Z"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2021-07-25T00:00:00Z"
+        page_size:
+          type: "string"
+          description: "The maximum number of records to return per request"
           order: 5
+          title: "Page Size Limit"
+          default: "1000"
+        is_sandbox:
+          type: "boolean"
+          description: "Whether or not the the app is in a Salesforce sandbox. If\
+            \ you do not know what this, assume it is false."
+          order: 6
+          title: "Is Sandbox App?"
+          default: false
     source-nytimes:
       title: "Nytimes Spec"
       type: "object"
@@ -56252,13 +56934,11 @@ components:
           title: "Client Id"
           description: "The Client ID for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
         client_secret:
           title: "Client Secret"
           description: "The Client Secret for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
     snowflake:
@@ -56432,21 +57112,6 @@ components:
               airbyte_secret: true
               order: 2
       title: "Google Analytics (Data API) Spec"
-    intercom:
-      properties:
-        client_id:
-          title: "Client Id"
-          type: "string"
-          description: "Client Id for your Intercom application."
-          airbyte_secret: true
-          order: 1
-        client_secret:
-          title: "Client Secret"
-          type: "string"
-          description: "Client Secret for your Intercom application."
-          airbyte_secret: true
-          order: 2
-      title: "Source Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -56566,8 +57231,6 @@ components:
           $ref: "#/components/schemas/hubspot"
         - title: instagram
           $ref: "#/components/schemas/instagram"
-        - title: intercom
-          $ref: "#/components/schemas/intercom"
         - title: lever-hiring
           $ref: "#/components/schemas/lever-hiring"
         - title: linkedin-ads
@@ -56958,10 +57621,14 @@ components:
           $ref: "#/components/schemas/source-harvest"
         - title: source-height
           $ref: "#/components/schemas/source-height"
+        - title: source-help-scout
+          $ref: "#/components/schemas/source-help-scout"
         - title: source-hibob
           $ref: "#/components/schemas/source-hibob"
         - title: source-high-level
           $ref: "#/components/schemas/source-high-level"
+        - title: source-hoorayhr
+          $ref: "#/components/schemas/source-hoorayhr"
         - title: source-hubplanner
           $ref: "#/components/schemas/source-hubplanner"
         - title: source-hubspot
@@ -56970,6 +57637,8 @@ components:
           $ref: "#/components/schemas/source-hugging-face-datasets"
         - title: source-humanitix
           $ref: "#/components/schemas/source-humanitix"
+        - title: source-huntr
+          $ref: "#/components/schemas/source-huntr"
         - title: source-illumina-basespace
           $ref: "#/components/schemas/source-illumina-basespace"
         - title: source-incident-io
@@ -57006,6 +57675,8 @@ components:
           $ref: "#/components/schemas/source-k6-cloud"
         - title: source-katana
           $ref: "#/components/schemas/source-katana"
+        - title: source-keka
+          $ref: "#/components/schemas/source-keka"
         - title: source-kisi
           $ref: "#/components/schemas/source-kisi"
         - title: source-kissmetrics
@@ -57152,8 +57823,6 @@ components:
           $ref: "#/components/schemas/source-oracle"
         - title: source-orb
           $ref: "#/components/schemas/source-orb"
-        - title: source-orbit
-          $ref: "#/components/schemas/source-orbit"
         - title: source-oura
           $ref: "#/components/schemas/source-oura"
         - title: source-outbrain-amplify
@@ -57172,6 +57841,8 @@ components:
           $ref: "#/components/schemas/source-papersign"
         - title: source-pardot
           $ref: "#/components/schemas/source-pardot"
+        - title: source-payfit
+          $ref: "#/components/schemas/source-payfit"
         - title: source-paypal-transaction
           $ref: "#/components/schemas/source-paypal-transaction"
         - title: source-paystack
@@ -57258,6 +57929,8 @@ components:
           $ref: "#/components/schemas/source-repairshopr"
         - title: source-reply-io
           $ref: "#/components/schemas/source-reply-io"
+        - title: source-retailexpress-by-maropost
+          $ref: "#/components/schemas/source-retailexpress-by-maropost"
         - title: source-retently
           $ref: "#/components/schemas/source-retently"
         - title: source-revenuecat
@@ -57318,6 +57991,8 @@ components:
           $ref: "#/components/schemas/source-sharetribe"
         - title: source-shippo
           $ref: "#/components/schemas/source-shippo"
+        - title: source-shipstation
+          $ref: "#/components/schemas/source-shipstation"
         - title: source-shopify
           $ref: "#/components/schemas/source-shopify"
         - title: source-shortcut
@@ -57599,7 +58274,6 @@ components:
         - google-sheets
         - hubspot
         - instagram
-        - intercom
         - lever-hiring
         - linkedin-ads
         - mailchimp

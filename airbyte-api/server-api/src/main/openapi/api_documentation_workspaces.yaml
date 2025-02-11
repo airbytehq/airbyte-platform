@@ -435,6 +435,7 @@ components:
           EQUAL: "#/components/schemas/RowFilteringOperationEqual"
           NOT: "#/components/schemas/RowFilteringOperationNot"
       x-speakeasy-component: true
+      x-airbyte-circular-ref: true
     RowFilteringMapperConfiguration:
       title: "Row Filtering"
       type: "object"
@@ -1166,17 +1167,19 @@ components:
           description: "ID of organization to add workspace to."
           format: "uuid"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
-      required:
-      - "name"
       type: "object"
       properties:
         name:
           description: "Name of the workspace"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1188,6 +1191,7 @@ components:
       - "workspaceId"
       - "name"
       - "dataResidency"
+      - "notifications"
       properties:
         workspaceId:
           format: "UUID"
@@ -1196,6 +1200,58 @@ components:
           type: "string"
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationsConfig:
+      description: "Configures workspace notifications."
+      type: "object"
+      properties:
+        failure:
+          $ref: "#/components/schemas/NotificationConfig"
+        success:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdate:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabled:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabledWarning:
+          $ref: "#/components/schemas/NotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationConfig:
+      description: "Configures a notification."
+      type: "object"
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationConfig"
+        webhook:
+          $ref: "#/components/schemas/WebhookNotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    WebhookNotificationConfig:
+      description: "Configures a webhook notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
+        url:
+          type: "string"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    EmailNotificationConfig:
+      description: "Configures an email notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1971,13 +2027,11 @@ components:
           title: "Client Id"
           description: "The Client ID for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
         client_secret:
           title: "Client Secret"
           description: "The Client Secret for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
     snowflake:
@@ -2151,21 +2205,6 @@ components:
               airbyte_secret: true
               order: 2
       title: "Google Analytics (Data API) Spec"
-    intercom:
-      properties:
-        client_id:
-          title: "Client Id"
-          type: "string"
-          description: "Client Id for your Intercom application."
-          airbyte_secret: true
-          order: 1
-        client_secret:
-          title: "Client Secret"
-          type: "string"
-          description: "Client Secret for your Intercom application."
-          airbyte_secret: true
-          order: 2
-      title: "Source Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -2285,8 +2324,6 @@ components:
           $ref: "#/components/schemas/hubspot"
         - title: instagram
           $ref: "#/components/schemas/instagram"
-        - title: intercom
-          $ref: "#/components/schemas/intercom"
         - title: lever-hiring
           $ref: "#/components/schemas/lever-hiring"
         - title: linkedin-ads
@@ -2403,7 +2440,6 @@ components:
         - google-sheets
         - hubspot
         - instagram
-        - intercom
         - lever-hiring
         - linkedin-ads
         - mailchimp
