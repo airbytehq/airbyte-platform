@@ -31,6 +31,7 @@ dependencies {
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
