@@ -931,7 +931,6 @@ public class ConnectionsHandler {
 
     final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = connectionService.listWorkspaceStandardSyncsPaginated(
         listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
-        listConnectionsForWorkspacesRequestBody.getTagIds(),
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
         PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
         PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));

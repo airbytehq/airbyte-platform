@@ -84,7 +84,7 @@ class TagRepositoryTest : AbstractConfigRepositoryTest() {
     tagRepository.save(tag2)
     tagRepository.save(tag3)
 
-    val retrievedTags = tagRepository.findByWorkspaceIdIn(listOf(workspaceId))
+    val retrievedTags = tagRepository.findByWorkspaceId(workspaceId)
 
     assertEquals(2, retrievedTags.size)
     assertThat(retrievedTags)

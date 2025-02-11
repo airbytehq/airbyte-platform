@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.model.generated.Tag
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -97,7 +96,6 @@ object ConnectionReadMapper {
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,
       createdAt = connectionRead.createdAt,
-      tags = connectionRead.tags?.let { t -> convertTags(t) } ?: emptyList(),
     )
   }
 
@@ -136,16 +134,6 @@ object ConnectionReadMapper {
         id = mapper.id,
         type = StreamMapperType.decode(mapper.type.toString()) ?: throw IllegalArgumentException("Invalid stream mapper type"),
         mapperConfiguration = mapper.mapperConfiguration,
-      )
-    }
-
-  private fun convertTags(tags: List<Tag>): List<io.airbyte.publicApi.server.generated.models.Tag> =
-    tags.map {
-      io.airbyte.publicApi.server.generated.models.Tag(
-        tagId = it.tagId,
-        name = it.name,
-        color = it.color,
-        workspaceId = it.workspaceId,
       )
     }
 

@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.TagCreateRequestBody
-import io.airbyte.api.model.generated.TagDeleteRequestBody
-import io.airbyte.api.model.generated.TagListRequestBody
-import io.airbyte.api.model.generated.TagUpdateRequestBody
+import io.airbyte.api.client.model.generated.TagCreateRequestBody
+import io.airbyte.api.client.model.generated.TagDeleteRequestBody
+import io.airbyte.api.client.model.generated.TagListRequestBody
+import io.airbyte.api.client.model.generated.TagUpdateRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -26,7 +26,7 @@ class TagController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   fun listTags(
     @Body tagListRequestBody: TagListRequestBody,
-  ) = tagHandler.getTagsForWorkspaces(listOf(tagListRequestBody.workspaceId))
+  ) = tagHandler.getTagsForWorkspace(tagListRequestBody.workspaceId)
 
   @Post("/create")
   @RequiresIntent(Intent.CreateOrEditConnection)

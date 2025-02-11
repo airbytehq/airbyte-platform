@@ -4,9 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Tag
-import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.TagRepository
 import io.airbyte.data.services.TagService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
@@ -19,18 +17,12 @@ import java.util.UUID
 open class TagServiceDataImpl(
   private val tagRepository: TagRepository,
 ) : TagService {
-  override fun getTagsByWorkspaceIds(workspaceIds: List<UUID>): List<Tag> = tagRepository.findByWorkspaceIdIn(workspaceIds).map { it.toConfigModel() }
+  override fun getTagsByWorkspaceId(workspaceId: UUID): List<Tag> = tagRepository.findByWorkspaceId(workspaceId).map { it.toConfigModel() }
 
   override fun getTag(
     tagId: UUID,
     workspaceId: UUID,
   ): Tag = tagRepository.findByIdAndWorkspaceId(tagId, workspaceId).toConfigModel()
-
-  override fun getTagById(tagId: UUID): Tag =
-    tagRepository
-      .findById(tagId)
-      .orElseThrow { throw ConfigNotFoundException(ConfigSchema.TAG, tagId) }
-      .toConfigModel()
 
   @Transactional("config")
   override fun updateTag(tag: Tag): Tag {

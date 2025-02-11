@@ -6,7 +6,6 @@ package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.Tag
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnumNoDefault
 import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
@@ -58,14 +57,5 @@ object ConnectionHelper {
       NonBreakingChangesPreference.DISABLE
     } else {
       NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
-    }
-
-  fun convertTags(tags: List<io.airbyte.publicApi.server.generated.models.Tag>): List<Tag> =
-    tags.map {
-      Tag()
-        .tagId(it.tagId)
-        .name(it.name)
-        .color(it.color)
-        .workspaceId(it.workspaceId)
     }
 }

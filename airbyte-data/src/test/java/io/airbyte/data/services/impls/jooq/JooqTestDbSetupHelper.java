@@ -67,7 +67,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private SourceConnection source;
   private DestinationConnection destination;
   private List<Tag> tags;
-  private List<Tag> tagsFromAnotherWorkspace;
 
   public JooqTestDbSetupHelper() {
     this.featureFlagClient = mock(TestClient.class);
@@ -187,9 +186,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
     // Create connection tags
     tags = createTags(workspace.getWorkspaceId());
-    final StandardWorkspace secondWorkspace = createSecondWorkspace();
-    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(secondWorkspace);
-    tagsFromAnotherWorkspace = createTags(secondWorkspace.getWorkspaceId());
   }
 
   public void setupForGetActorDefinitionVersionByDockerRepositoryAndDockerImageTagTests(UUID sourceDefinitionId, String name, String version)
@@ -285,17 +281,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withDefaultGeography(Geography.US);
   }
 
-  private StandardWorkspace createSecondWorkspace() {
-    return new StandardWorkspace()
-        .withWorkspaceId(UUID.randomUUID())
-        .withOrganizationId(ORGANIZATION_ID)
-        .withName("second")
-        .withSlug("second-workspace-slug")
-        .withInitialSetupComplete(false)
-        .withTombstone(false)
-        .withDefaultGeography(Geography.US);
-  }
-
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefId)
@@ -342,10 +327,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
   public List<Tag> getTags() {
     return tags;
-  }
-
-  public List<Tag> getTagsFromAnotherWorkspace() {
-    return tagsFromAnotherWorkspace;
   }
 
 }

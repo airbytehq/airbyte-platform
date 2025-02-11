@@ -20,7 +20,6 @@ import java.util.UUID;
  */
 public record StandardSyncsQueryPaginated(
                                           @Nonnull List<UUID> workspaceIds,
-                                          List<UUID> tagIds,
                                           List<UUID> sourceId,
                                           List<UUID> destinationId,
                                           boolean includeDeleted,

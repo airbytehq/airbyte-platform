@@ -86,9 +86,6 @@ object ConnectionUpdateMapper {
     if (connectionPatchRequest.status != null) {
       connectionUpdateOss.status = ConnectionStatus.fromValue(connectionPatchRequest.status.toString())
     }
-    if (connectionPatchRequest.tags != null) {
-      connectionUpdateOss.tags = ConnectionHelper.convertTags(connectionPatchRequest.tags ?: emptyList())
-    }
     return connectionUpdateOss
   }
 }

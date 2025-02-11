@@ -12,7 +12,7 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface TagRepository : PageableRepository<Tag, UUID> {
-  fun findByWorkspaceIdIn(workspaceIds: List<UUID>): List<Tag>
+  fun findByWorkspaceId(workspaceId: UUID): List<Tag>
 
   fun countByWorkspaceId(workspaceId: UUID): Int
 

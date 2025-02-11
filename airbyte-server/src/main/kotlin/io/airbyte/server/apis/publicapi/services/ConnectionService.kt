@@ -53,7 +53,6 @@ interface ConnectionService {
 
   fun listConnectionsForWorkspaces(
     workspaceIds: List<UUID> = Collections.emptyList(),
-    tagIds: List<UUID> = Collections.emptyList(),
     limit: Int = 20,
     offset: Int = 0,
     includeDeleted: Boolean = false,
@@ -193,7 +192,6 @@ class ConnectionServiceImpl(
    */
   override fun listConnectionsForWorkspaces(
     workspaceIds: List<UUID>,
-    tagIds: List<UUID>,
     limit: Int,
     offset: Int,
     includeDeleted: Boolean,
@@ -204,7 +202,6 @@ class ConnectionServiceImpl(
     val listConnectionsForWorkspacesRequestBody =
       ListConnectionsForWorkspacesRequestBody()
         .workspaceIds(workspaceIdsToQuery)
-        .tagIds(tagIds)
         .includeDeleted(includeDeleted)
         .pagination(pagination)
 

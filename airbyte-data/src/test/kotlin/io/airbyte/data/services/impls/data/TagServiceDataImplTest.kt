@@ -44,9 +44,9 @@ class TagServiceDataImplTest {
   @Test
   fun `getTagsByWorkspaceId returns tags when workspace id exists`() {
     val mockWorkspaceId = UUID.randomUUID()
-    every { tagRepository.findByWorkspaceIdIn(listOf(mockWorkspaceId)) } returns listOf(MOCK_TAG_ONE.toEntity(), MOCK_TAG_TWO.toEntity())
+    every { tagRepository.findByWorkspaceId(mockWorkspaceId) } returns listOf(MOCK_TAG_ONE.toEntity(), MOCK_TAG_TWO.toEntity())
 
-    val result = tagServiceDataImpl.getTagsByWorkspaceIds(listOf(mockWorkspaceId))
+    val result = tagServiceDataImpl.getTagsByWorkspaceId(mockWorkspaceId)
 
     assertEquals(result.size, 2)
   }
