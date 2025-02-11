@@ -128,6 +128,14 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
     return ApiHelper.execute(enterpriseSourceStubsHandler::listEnterpriseSourceStubs);
   }
 
+  @Post("/list_enterprise_stubs_for_workspace")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public EnterpriseSourceStubsReadList listEnterpriseSourceStubsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> enterpriseSourceStubsHandler.listEnterpriseSourceStubsForWorkspace(workspaceIdRequestBody.getWorkspaceId()));
+  }
+
   @Post("/list_latest")
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)

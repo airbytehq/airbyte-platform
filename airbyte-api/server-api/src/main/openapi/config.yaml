@@ -661,6 +661,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
 
+  /v1/source_definitions/list_enterprise_stubs_for_workspace:
+    post:
+      tags:
+        - source_definition
+      summary: List all enterprise source connector stubs for a specified workspace.
+      operationId: listEnterpriseSourceStubsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+
   /v1/source_definitions/create_custom:
     post:
       tags:
@@ -9303,6 +9322,9 @@ components:
         id:
           type: string
           description: The id of the enterprise source connector stub. We use "source-<name>-enterprise" as the ID since these connectors do not necessarily exist yet, and do not have a guaranteed definitionId
+        definitionId:
+          type: string
+          description: The id of the source definition associated with the enterprise connector, if one exists
         name:
           type: string
           description: The name of the enterprise connector

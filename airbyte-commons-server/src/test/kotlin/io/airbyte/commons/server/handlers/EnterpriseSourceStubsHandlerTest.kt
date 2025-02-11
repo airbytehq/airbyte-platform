@@ -4,21 +4,26 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.fasterxml.jackson.core.JsonParseException
+import io.airbyte.commons.server.entitlements.Entitlement
+import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker
+import io.airbyte.persistence.job.WorkspaceHelper
+import io.mockk.every
+import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import java.io.IOException
+import java.util.UUID
 
 class EnterpriseSourceStubsHandlerTest {
   private lateinit var enterpriseSourceHandler: EnterpriseSourceStubsHandler
   private lateinit var mockWebServer: MockWebServer
+  private val workspaceHelper = mockk<WorkspaceHelper>()
+  private val licenseEntitlementChecker = mockk<LicenseEntitlementChecker>()
 
   @BeforeEach
   fun setUp() {
@@ -26,7 +31,7 @@ class EnterpriseSourceStubsHandlerTest {
     mockWebServer.start()
     val baseUrl = mockWebServer.url("/").toString()
 
-    enterpriseSourceHandler = EnterpriseSourceStubsHandler(baseUrl, 5000)
+    enterpriseSourceHandler = EnterpriseSourceStubsHandler(baseUrl, 5000, workspaceHelper, licenseEntitlementChecker)
   }
 
   @AfterEach
@@ -36,7 +41,7 @@ class EnterpriseSourceStubsHandlerTest {
 
   @Test
   fun testListEnterpriseSourceStubs_Success() {
-    val mockJsonResponse = "[{\"name\":\"Test Source\",\"id\":\"test-id\"}]"
+    val mockJsonResponse = "[{\"name\":\"Test Source\",\"type\":\"enterprise_source\",\"id\":\"test-id\",\"unknownField\":\"value\"}]"
     mockWebServer.enqueue(
       MockResponse()
         .setResponseCode(200)
@@ -60,9 +65,8 @@ class EnterpriseSourceStubsHandlerTest {
         .setBody("Bad Request"),
     )
 
-    assertThrows<IOException> {
-      enterpriseSourceHandler.listEnterpriseSourceStubs()
-    }
+    val result = enterpriseSourceHandler.listEnterpriseSourceStubs()
+    assertEquals(0, result.enterpriseSourceStubs.size)
   }
 
   @Test
@@ -75,16 +79,8 @@ class EnterpriseSourceStubsHandlerTest {
         .addHeader("Content-Type", "application/json"),
     )
 
-    val exception =
-      assertThrows<IOException> {
-        enterpriseSourceHandler.listEnterpriseSourceStubs()
-      }
-
-    // Check that the exception message matches what we expect
-    assertEquals("HTTP error fetching enterprise sources", exception.message)
-
-    // If you want to verify that the cause is indeed a JsonParseException, you can do:
-    assertTrue(exception.cause is JsonParseException)
+    val result = enterpriseSourceHandler.listEnterpriseSourceStubs()
+    assertEquals(0, result.enterpriseSourceStubs.size)
   }
 
   @Test
@@ -96,8 +92,66 @@ class EnterpriseSourceStubsHandlerTest {
         .addHeader("Content-Type", "application/json"),
     )
 
-    assertThrows<IOException> {
-      enterpriseSourceHandler.listEnterpriseSourceStubs()
-    }
+    val result = enterpriseSourceHandler.listEnterpriseSourceStubs()
+    assertEquals(0, result.enterpriseSourceStubs.size)
+  }
+
+  @Test
+  fun testListEnterpriseSourceStubsForWorkspace() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+
+    val licensedDefinitionId = UUID.randomUUID()
+    val unlicensedDefinitionId = UUID.randomUUID()
+
+    val mockJsonResponse =
+      """
+      [
+        {
+          "name": "Test Source",
+          "type": "enterprise_source",
+          "id": "test-id",
+          "definitionId": "$unlicensedDefinitionId"
+        },
+        {
+          "name": "Test Fake Source",
+          "type": "enterprise_source",
+          "id": "test-fake-id"
+        },
+        {
+          "name": "Test Already Licensed Source",
+          "type": "enterprise_source",
+          "id": "test-other-id",
+          "definitionId": "$licensedDefinitionId"
+        }
+      ]
+      """.trimIndent()
+
+    mockWebServer.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setBody(mockJsonResponse)
+        .addHeader("Content-Type", "application/json"),
+    )
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
+    every {
+      licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.SOURCE_CONNECTOR, listOf(unlicensedDefinitionId, licensedDefinitionId))
+    } returns
+      mapOf(
+        licensedDefinitionId to true,
+        unlicensedDefinitionId to false,
+      )
+
+    val result = enterpriseSourceHandler.listEnterpriseSourceStubsForWorkspace(workspaceId)
+
+    assertNotNull(result)
+    assertEquals(2, result.enterpriseSourceStubs.size)
+    assertEquals("Test Source", result.enterpriseSourceStubs[0].name)
+    assertEquals("test-id", result.enterpriseSourceStubs[0].id)
+    assertEquals(unlicensedDefinitionId.toString(), result.enterpriseSourceStubs[0].definitionId)
+    assertEquals("Test Fake Source", result.enterpriseSourceStubs[1].name)
+    assertEquals("test-fake-id", result.enterpriseSourceStubs[1].id)
+    assertNull(result.enterpriseSourceStubs[1].definitionId)
   }
 }
