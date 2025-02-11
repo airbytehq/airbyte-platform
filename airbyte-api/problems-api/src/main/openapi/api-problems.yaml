@@ -980,6 +980,25 @@ components:
             detail:
               type: string
               default: The workspace has reached the maximum number of tags.
+    RequestTimeoutExceededProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 408
+            type:
+              type: string
+              default: error:request-timeout-exceeded
+            title:
+              type: string
+              default: Request timeout exceeded
+            detail:
+              type: string
+              default: The request has exceeded the timeout associated with this endpoint.
     ProblemCronData:
       type: object
       properties:
