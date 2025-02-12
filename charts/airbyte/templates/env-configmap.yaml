@@ -160,4 +160,4 @@ data:
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""
-  ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v0/connector_stubs.json" }}
+  ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v1/connector_stubs.json" }}

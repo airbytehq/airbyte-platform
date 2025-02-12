@@ -38,7 +38,7 @@ Renders the connector.seedProvider environment variable
 Renders the global.connectorRegistry.enterpriseSourceStubsUrl value
 */}}
 {{- define "airbyte.connector.enterpriseSourceStubsUrl" }}
-    {{- .Values.global.connectorRegistry.enterpriseSourceStubsUrl | default "https://connectors.airbyte.com/files/resources/connector_stubs/v0/connector_stubs.json" }}
+    {{- .Values.global.connectorRegistry.enterpriseSourceStubsUrl | default "https://connectors.airbyte.com/files/resources/connector_stubs/v1/connector_stubs.json" }}
 {{- end }}
 
 {{/*
