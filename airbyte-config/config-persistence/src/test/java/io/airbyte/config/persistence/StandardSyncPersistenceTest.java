@@ -303,6 +303,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         List.of(workspaceId),
         null,
         null,
+        null,
         true,
         1000,
         0

@@ -76,6 +76,11 @@ object ConnectionCreateMapper {
     } else {
       connectionCreateOss.status = ConnectionStatus.ACTIVE
     }
+
+    if (connectionCreateRequest.tags != null) {
+      connectionCreateOss.tags = ConnectionHelper.convertTags(connectionCreateRequest.tags ?: emptyList())
+    }
+
     return connectionCreateOss
   }
 }

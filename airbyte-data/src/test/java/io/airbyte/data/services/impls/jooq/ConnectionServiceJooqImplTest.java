@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
@@ -166,6 +167,30 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final StandardSync standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.getConnectionId());
 
     assertEquals(updatedTags, standardSyncPersisted.getTags());
+  }
+
+  @Test
+  void testUpdateConnectionWithTagsFromMultipleWorkspaces() throws JsonValidationException, ConfigNotFoundException, IOException, SQLException {
+    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setUpDependencies();
+
+    final DestinationConnection destination = jooqTestDbSetupHelper.getDestination();
+    final SourceConnection source = jooqTestDbSetupHelper.getSource();
+    final List<ConfiguredAirbyteStream> streams =
+        List.of(catalogHelpers.createConfiguredAirbyteStream("stream_a", "namespace", Field.of("field_name", JsonSchemaType.STRING)));
+
+    final StandardSync standardSyncToCreate = createStandardSync(source, destination, streams);
+
+    final List<Tag> tags = jooqTestDbSetupHelper.getTags();
+    final List<Tag> tagsFromAnotherWorkspace = jooqTestDbSetupHelper.getTagsFromAnotherWorkspace();
+    final List<Tag> tagsFromMultipleWorkspaces = Stream.concat(tags.stream(), tagsFromAnotherWorkspace.stream()).toList();
+
+    standardSyncToCreate.setTags(tagsFromMultipleWorkspaces);
+    connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate);
+    final StandardSync standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.getConnectionId());
+
+    assertNotEquals(tagsFromMultipleWorkspaces, standardSyncPersisted.getTags());
+    assertEquals(tags, standardSyncPersisted.getTags());
   }
 
 }
