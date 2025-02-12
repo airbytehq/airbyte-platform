@@ -1,13 +1,22 @@
 import { mockDestinationDefinition } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition } from "test-utils/mock-data/mockSource";
 
+import { JobType } from "core/api/types/AirbyteClient";
+
 import { getResourceOptions } from "./ResourceAllocationMenu";
 
 describe("#getOptions", () => {
   it("uses values from actor definition, if present, for source connector", () => {
     const sourceDefinition = {
       ...mockSourceDefinition,
-      resourceRequirements: { default: { memory_request: "9", cpu_request: "7" } },
+      resourceRequirements: {
+        jobSpecific: [
+          {
+            jobType: JobType.sync,
+            resourceRequirements: { memory_request: "9", cpu_request: "7" },
+          },
+        ],
+      },
     };
     const options = getResourceOptions(sourceDefinition);
     expect(options[0].value).toEqual({ memory: "9", cpu: "7" });
@@ -21,7 +30,14 @@ describe("#getOptions", () => {
   it("uses values from actor definition, if present, for destination connector", () => {
     const destinationDefinition = {
       ...mockDestinationDefinition,
-      resourceRequirements: { default: { memory_request: "9", cpu_request: "7" } },
+      resourceRequirements: {
+        jobSpecific: [
+          {
+            jobType: JobType.sync,
+            resourceRequirements: { memory_request: "9", cpu_request: "7" },
+          },
+        ],
+      },
     };
     const options = getResourceOptions(destinationDefinition);
     expect(options[0].value).toEqual({ memory: "9", cpu: "7" });

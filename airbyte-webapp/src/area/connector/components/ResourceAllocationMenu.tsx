@@ -1,7 +1,7 @@
 import uniq from "lodash/uniq";
 import uniqueId from "lodash/uniqueId";
 import { useCallback, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, Controller } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { LabelInfo } from "components";
@@ -11,6 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { JobType, ScopedResourceRequirements } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -18,7 +19,7 @@ import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 import { PropertyError } from "views/Connector/ConnectorForm/components/Property/PropertyError";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
-export const API_RESOURCE_DEFAULTS = {
+export const API_RESOURCE_DEFAULTS: Record<string, SimpleResourceRequirement> = {
   default: {
     memory: "2",
     cpu: "1",
@@ -61,12 +62,12 @@ export const getResourceOptions = (selectedConnectorDefinition?: ConnectorDefini
   const hardcodedValues = connectorType === "api" ? API_RESOURCE_DEFAULTS : DB_RESOURCE_DEFAULTS;
 
   const definitionResources = selectedConnectorDefinition?.resourceRequirements;
-
   const valuesToUse = {
     ...hardcodedValues,
     default: {
-      memory: definitionResources?.default?.memory_request || hardcodedValues.default.memory,
-      cpu: definitionResources?.default?.cpu_request ?? hardcodedValues.default.cpu,
+      memory:
+        definitionResources?.jobSpecific?.[0]?.resourceRequirements?.memory_request ?? hardcodedValues.default.memory,
+      cpu: definitionResources?.jobSpecific?.[0]?.resourceRequirements?.cpu_request ?? hardcodedValues.default.cpu,
     },
   };
 
@@ -121,17 +122,48 @@ export const useConnectorResourceAllocation = () => {
   return { isHiddenResourceAllocationField };
 };
 
-/**
- * TODO: when we add support for reading the current value from the SourceRead/DestinationRead
- * we will want to (a) map from the current value to one of the selectable options AND ALSO
- * (b) support values that do not fit the preconfigured options (and just show them in the UI).
- * We do not need to support a custom input yet, though.
- */
+interface SimpleResourceRequirement {
+  memory: string;
+  cpu: string;
+}
+
+const toScopedRequirements = (simple?: SimpleResourceRequirement): ScopedResourceRequirements | undefined => {
+  if (!simple) {
+    return undefined;
+  }
+
+  return {
+    jobSpecific: [
+      {
+        jobType: JobType.sync,
+        resourceRequirements: {
+          memory_request: simple.memory,
+          cpu_request: simple.cpu,
+        },
+      },
+    ],
+  };
+};
+
+const fromScopedRequirements = (scoped?: ScopedResourceRequirements): SimpleResourceRequirement | undefined => {
+  if (!scoped?.jobSpecific?.[0]?.resourceRequirements) {
+    return undefined;
+  }
+  const syncJob = scoped.jobSpecific.find((job) => job.jobType === JobType.sync);
+  if (!syncJob) {
+    return undefined;
+  }
+  return {
+    memory: syncJob.resourceRequirements.memory_request ?? "",
+    cpu: syncJob.resourceRequirements.cpu_request ?? "",
+  };
+};
+
 export const ResourceAllocationMenu: React.FC = () => {
   const { selectedConnectorDefinition } = useConnectorForm();
   const [controlId] = useState(`resource-listbox-control-${uniqueId()}`);
 
-  const { getValues, setValue, formState, getFieldState } = useFormContext<ConnectorFormValues>();
+  const { control, formState, getFieldState } = useFormContext<ConnectorFormValues>();
   const meta = getFieldState("resourceAllocation", formState);
 
   const options = getResourceOptions(selectedConnectorDefinition);
@@ -168,11 +200,19 @@ export const ResourceAllocationMenu: React.FC = () => {
           />
         }
       />
-      <ListBox
-        id={controlId}
-        options={options}
-        selectedValue={getValues("resourceAllocation")}
-        onSelect={(selectedValue) => setValue("resourceAllocation", selectedValue, { shouldDirty: true })}
+      <Controller
+        name="resourceAllocation"
+        control={control}
+        render={({ field: { onChange, value } }) => (
+          <ListBox
+            id={controlId}
+            options={options}
+            selectedValue={fromScopedRequirements(value)}
+            onSelect={(selectedValue: SimpleResourceRequirement) => {
+              onChange(toScopedRequirements(selectedValue));
+            }}
+          />
+        )}
       />
       {errorMessage}
     </Box>
