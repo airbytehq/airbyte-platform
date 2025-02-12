@@ -1,5 +1,5 @@
 import { Listbox } from "@headlessui/react";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -17,7 +17,9 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useTagsList } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { Tag, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { naturalComparatorBy } from "core/utils/objects";
+import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionsFilters.module.scss";
@@ -145,14 +147,35 @@ interface TagFilterDropdownProps {
 }
 
 const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, setSelectedTagIds }) => {
+  const [selectedTagIdsOnOpen, setSelectedTagIdsOnOpen] = useState(selectedTagIds);
   const workspaceId = useCurrentWorkspaceId();
   const tags = useTagsList(workspaceId);
 
+  const alphabeticallySortedTags = useMemo(() => tags.sort(naturalComparatorBy((tag) => tag.name)), [tags]);
+
+  // For better UX, the originally selected tags should always be at the top of the list
+  const sortedTags = useMemo(() => {
+    const selectedTagsSet = new Set(selectedTagIdsOnOpen);
+
+    const topSection: Tag[] = [];
+    const bottomSection: Tag[] = [];
+
+    alphabeticallySortedTags.forEach((tag) =>
+      selectedTagsSet.has(tag.tagId) ? topSection.push(tag) : bottomSection.push(tag)
+    );
+
+    return [...topSection, ...bottomSection];
+  }, [selectedTagIdsOnOpen, alphabeticallySortedTags]);
+
+  const onCloseListbox = () => {
+    setSelectedTagIdsOnOpen(selectedTagIds);
+  };
+
+  const { targetRef } = useHeadlessUiOnClose(onCloseListbox);
+
   return (
-    <Listbox multiple onChange={setSelectedTagIds} value={selectedTagIds}>
-      <FloatLayout
-        shift={5} // $spacing-sm
-      >
+    <Listbox as="div" multiple onChange={setSelectedTagIds} value={selectedTagIds} ref={targetRef}>
+      <FloatLayout>
         <ListboxButton>
           <FlexContainer gap="sm" alignItems="center">
             {selectedTagIds.length === 0 && (
@@ -167,7 +190,7 @@ const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, s
               })}
           </FlexContainer>
         </ListboxButton>
-        <ListboxOptions>
+        <ListboxOptions className={styles.tagListboxOptions}>
           {tags.length === 0 && (
             <Box p="md">
               <Text color="grey" italicized>
@@ -175,7 +198,7 @@ const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, s
               </Text>
             </Box>
           )}
-          {tags.map((tag) => (
+          {sortedTags.map((tag) => (
             <ListboxOption key={tag.tagId} value={tag.tagId}>
               {({ selected }) => (
                 <Box p="md">
