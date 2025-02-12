@@ -9,8 +9,8 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.api.model.generated.EnterpriseSourceStub
 import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList
-import io.airbyte.commons.server.entitlements.Entitlement
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton

@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.commons.server.entitlements.Entitlement
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.mockk.every
 import io.mockk.mockk
