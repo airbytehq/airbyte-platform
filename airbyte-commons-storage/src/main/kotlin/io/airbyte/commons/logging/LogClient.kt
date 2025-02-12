@@ -201,7 +201,7 @@ class LogClient(
           byteCounter?.increment(events?.length?.toDouble() ?: 0.0)
           extractEvents(events = events)
         }.flatMap { it.events }
-        .takeWhile {
+        .takeWhile { _ ->
           count++
           lineCounter?.increment()
           count <= numLines

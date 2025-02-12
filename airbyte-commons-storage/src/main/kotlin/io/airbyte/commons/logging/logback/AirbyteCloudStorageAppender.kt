@@ -6,6 +6,7 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
+import ch.qos.logback.core.status.ErrorStatus
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.storage.AzureStorageClient
@@ -105,17 +106,21 @@ class AirbyteCloudStorageAppender(
   }
 
   private fun upload() {
-    synchronized(uploadLock) {
-      val events = mutableListOf<ILoggingEvent>()
-      buffer.drainTo(events)
+    try {
+      synchronized(uploadLock) {
+        val events = mutableListOf<ILoggingEvent>()
+        buffer.drainTo(events)
 
-      if (events.isNotEmpty()) {
-        val document = encoder.bulkEncode(loggingEvents = events)
-        storageClient.write(id = currentStorageId, document = document)
+        if (events.isNotEmpty()) {
+          val document = encoder.bulkEncode(loggingEvents = events)
+          storageClient.write(id = currentStorageId, document = document)
 
-        // Move to next file to avoid overwriting in log storage that doesn't support append mode
-        this.currentStorageId = createFileId(baseId = baseStorageId)
+          // Move to next file to avoid overwriting in log storage that doesn't support append mode
+          this.currentStorageId = createFileId(baseId = baseStorageId)
+        }
       }
+    } catch (t: Throwable) {
+      addStatus(ErrorStatus("Failed to upload logs to cloud storage location $currentStorageId.", this, t))
     }
   }
 }
