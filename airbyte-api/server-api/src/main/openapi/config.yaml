@@ -10786,7 +10786,6 @@ components:
     ConnectionContextRead:
       description: Ids of related contextual domain models for a connection given connection.
       type: object
-      additionalProperties: true
       properties:
         connectionId:
           description: The ID of the relevant connection.

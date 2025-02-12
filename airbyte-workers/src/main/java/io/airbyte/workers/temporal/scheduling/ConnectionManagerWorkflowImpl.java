@@ -180,7 +180,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
        */
       final var hydratedContext = runMandatoryActivityWithOutput(configFetchActivity::getConnectionContext,
           new GetConnectionContextInput(connectionUpdaterInput.getConnectionId()));
-      setConnectionConnection(hydratedContext.getConnectionContext());
+      setConnectionContext(hydratedContext.getConnectionContext());
 
       /*
        * Sleep and periodically check in a loop until we're no longer load shed.
@@ -1117,7 +1117,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
   }
 
-  private void setConnectionConnection(final ConnectionContext ctx) {
+  private void setConnectionContext(final ConnectionContext ctx) {
     connectionContext = Objects.requireNonNull(ctx);
   }
 
