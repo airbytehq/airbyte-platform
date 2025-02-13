@@ -34,6 +34,7 @@ import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/Workspace/GeneralWorkspaceSettingsPage";
+import { WorkspaceMembersPage } from "./SettingsPage/Workspace/WorkspaceMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -114,6 +115,9 @@ const MainViewRoutes: React.FC = () => {
             )}
             {(canViewWorkspaceSettings && multiWorkspaceUI) || showConnectionTags ? (
               <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
+            ) : null}
+            {canViewWorkspaceSettings && multiWorkspaceUI ? (
+              <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
             ) : null}
             {canViewWorkspaceSettings && (
               <>

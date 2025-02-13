@@ -21,38 +21,38 @@ import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormCon
 
 export const API_RESOURCE_DEFAULTS: Record<string, SimpleResourceRequirement> = {
   default: {
-    memory: "2",
+    memory: "2Gi",
     cpu: "1",
   },
   large: {
-    memory: "3",
+    memory: "3Gi",
     cpu: "2",
   },
   memoryIntensive: {
-    memory: "6",
+    memory: "6Gi",
     cpu: "2",
   },
   maximum: {
-    memory: "8",
+    memory: "8Gi",
     cpu: "4",
   },
 };
 
 export const DB_RESOURCE_DEFAULTS = {
   default: {
-    memory: "2",
+    memory: "2Gi",
     cpu: "2",
   },
   large: {
-    memory: "3",
-    cpu: "3",
+    memory: "3Gi",
+    cpu: "3 ",
   },
   memoryIntensive: {
-    memory: "6",
+    memory: "6Gi",
     cpu: "3",
   },
   maximum: {
-    memory: "8",
+    memory: "8Gi",
     cpu: "4",
   },
 };
