@@ -13,12 +13,11 @@ import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
@@ -86,6 +85,7 @@ public class BufferedReplicationWorker {
   private final StreamStatusCompletionTracker streamStatusCompletionTracker;
   private final MetricClient metricClient;
   private final ReplicationInput replicationInput;
+  private final MetricClient metricsClient;
 
   private static final int executorShutdownGracePeriodInSeconds = 10;
 
@@ -102,7 +102,8 @@ public class BufferedReplicationWorker {
                                    final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                    final BufferConfiguration bufferConfiguration,
                                    final MetricClient metricClient,
-                                   final ReplicationInput replicationInput) {
+                                   final ReplicationInput replicationInput,
+                                   final MetricClient metricsClient) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -131,6 +132,7 @@ public class BufferedReplicationWorker {
     this.streamStatusCompletionTracker = streamStatusCompletionTracker;
     this.metricClient = metricClient;
     this.replicationInput = replicationInput;
+    this.metricsClient = metricsClient;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -180,8 +182,7 @@ public class BufferedReplicationWorker {
           // Best effort to mark as complete when the Worker is actually done.
           executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
           if (!executors.isTerminated()) {
-            final MetricClient metricClient = MetricClientFactory.getMetricClient();
-            metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR, 1,
+            metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR,
                 new MetricAttribute(MetricTags.IMPLEMENTATION, "buffered"));
           }
         } catch (final InterruptedException e) {
@@ -555,7 +556,7 @@ public class BufferedReplicationWorker {
   }
 
   private void recordErrorExitValue(final String connectionId, final String connectorType, final String connectorImage, final String exitValue) {
-    metricClient.count(OssMetricsRegistry.CONNECTOR_FAILURE_EXIT_VALUE, 1L,
+    metricClient.count(OssMetricsRegistry.CONNECTOR_FAILURE_EXIT_VALUE,
         new MetricAttribute("connection_id", connectionId),
         new MetricAttribute("connector", connectorType),
         new MetricAttribute("image", connectorImage),

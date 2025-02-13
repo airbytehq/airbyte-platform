@@ -36,6 +36,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.EncryptionMapper
 import io.airbyte.mappers.transformations.HashingMapper
 import io.airbyte.mappers.transformations.Mapper
+import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -60,6 +61,7 @@ internal class MapperSecretHelperTest {
   private val secretsRepositoryReader = mockk<SecretsRepositoryReader>()
   private val secretsProcessor = mockk<JsonSecretsProcessor>()
   private val featureFlagClient = mockk<TestClient>()
+  private val metricClient = mockk<MetricClient>(relaxed = true)
 
   private val hashingMapper = HashingMapper()
   private val encryptionMapper = EncryptionMapper()
@@ -74,6 +76,7 @@ internal class MapperSecretHelperTest {
       featureFlagClient = featureFlagClient,
       secretsProcessor = secretsProcessor,
       deploymentMode = DeploymentMode.CLOUD,
+      metricClient = metricClient,
     )
 
   @BeforeEach
@@ -381,6 +384,7 @@ internal class MapperSecretHelperTest {
         featureFlagClient = featureFlagClient,
         secretsProcessor = secretsProcessor,
         deploymentMode = DeploymentMode.OSS,
+        metricClient = metricClient,
       )
 
     val mapperConfig =

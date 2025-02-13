@@ -7,14 +7,15 @@ package io.airbyte.commons.temporal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.MetricsRegistry;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
@@ -58,7 +59,7 @@ class WorkflowClientWrappedTest {
 
     assertThrows(StatusRuntimeException.class, () -> workflowClient.newWorkflowStub(MyWorkflow.class, "fail"));
     verify(temporalWorkflowClient, times(3)).newWorkflowStub(any(), anyString());
-    verify(metricClient, times(2)).count(any(), anyLong(), any(), any(), any());
+    verify(metricClient, times(2)).count(any(MetricsRegistry.class), any(MetricAttribute[].class));
   }
 
   @Test

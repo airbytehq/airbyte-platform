@@ -13,8 +13,6 @@ import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -28,9 +26,7 @@ import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
@@ -107,7 +103,8 @@ public class ApplicationBeanFactory {
                                  final SourceService sourceService,
                                  final DestinationService destinationService,
                                  final ConnectionService connectionService,
-                                 final WorkspaceService workspaceService) {
+                                 final WorkspaceService workspaceService,
+                                 final MetricClient metricClient) {
     return new JobNotifier(
         webUrlHelper,
         connectionService,
@@ -116,7 +113,8 @@ public class ApplicationBeanFactory {
         workspaceService,
         workspaceHelper,
         trackingClient,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        metricClient);
   }
 
   @Singleton
@@ -163,12 +161,6 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public MetricClient metricClient() {
-    MetricClientFactory.initialize(MetricEmittingApps.SERVER);
-    return MetricClientFactory.getMetricClient();
-  }
-
-  @Singleton
   @Named("workspaceRoot")
   public Path workspaceRoot(@Value("${airbyte.workspace.root}") final String workspaceRoot) {
     return Path.of(workspaceRoot);
@@ -204,13 +196,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public JsonSchemaValidator jsonSchemaValidator() {
     return new JsonSchemaValidator();
-  }
-
-  @Singleton
-  public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
-                                                                 @Value("${airbyte.protocol.min-version}") final String minVersion,
-                                                                 @Value("${airbyte.protocol.max-version}") final String maxVersion) {
-    return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
   }
 
   @Singleton

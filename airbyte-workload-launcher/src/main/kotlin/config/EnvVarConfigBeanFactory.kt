@@ -357,25 +357,27 @@ class EnvVarConfigBeanFactory {
   fun metricsEnvMap(
     @Value("\${datadog.agent.host}") dataDogAgentHost: String,
     @Value("\${datadog.agent.port}") dataDogStatsdPort: String,
-    @Value("\${airbyte.metric.client}") metricClient: String,
-    @Value("\${airbyte.metric.should-publish}") shouldPublishMetrics: String,
-    @Value("\${airbyte.metric.otel-collector-endpoint}") otelCollectorEndPoint: String,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
     @Value("\${datadog.env}") ddEnv: String,
     @Value("\${datadog.version}") ddVersion: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[EnvVarConstants.METRIC_CLIENT_ENV_VAR] = metricClient
     envMap[EnvVarConstants.DD_AGENT_HOST_ENV_VAR] = dataDogAgentHost
     envMap[EnvVarConstants.DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
-    envMap[EnvVarConstants.PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
-    envMap[EnvVarConstants.OTEL_COLLECTOR_ENDPOINT_ENV_VAR] = otelCollectorEndPoint
     if (ddEnv.isNotBlank()) {
       envMap[EnvVarConstants.DD_ENV_ENV_VAR] = ddEnv
     }
     if (ddVersion.isNotBlank()) {
       envMap[EnvVarConstants.DD_VERSION_ENV_VAR] = ddVersion
     }
+    // Copy all Micrometer environment variables
+    envMap.putAll(
+      System.getenv().filter {
+        it.key.startsWith(EnvVarConstants.MICROMETER_ENV_VAR_PREFIX) ||
+          it.key == EnvVarConstants.OTEL_COLLECTOR_ENDPOINT ||
+          it.key.startsWith(EnvVarConstants.STATSD_ENV_VAR_PREFIX)
+      },
+    )
 
     // Disable DD agent integrations based on the configuration
     if (StringUtils.isNotEmpty(disabledIntegrations)) {
@@ -513,11 +515,13 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("airbyteMetadataEnvMap")
   fun airbyteMetadataEnvMap(
+    @Value("\${airbyte.edition}") edition: String,
     @Value("\${airbyte.version}") version: String,
     @Value("\${airbyte.role}") role: String,
     @Value("\${airbyte.deployment-mode}") deploymentMode: String,
   ): Map<String, String> =
     mapOf(
+      EnvVarConstants.AIRBYTE_EDITION_ENV_VAR to edition,
       EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version,
       EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to role,
       EnvVarConstants.DEPLOYMENT_MODE_ENV_VAR to deploymentMode,

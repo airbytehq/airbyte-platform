@@ -13,11 +13,10 @@ import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
@@ -97,13 +96,14 @@ class SyncPersistenceImpl
       connectionId: UUID,
       jobId: Long,
       attemptNumber: Int,
+      metricClient: MetricClient,
     ) : this(
       airbyteApiClient = airbyteApiClient,
       stateAggregatorFactory = stateAggregatorFactory,
       stateFlushExecutorService = scheduledExecutorService,
       stateFlushPeriodInSeconds = stateFlushPeriodInSeconds,
       syncStatsTracker = syncStatsTracker,
-      metricClient = MetricClientFactory.getMetricClient(),
+      metricClient = metricClient,
       connectionId = connectionId,
       jobId = jobId,
       attemptNumber = attemptNumber,
@@ -124,7 +124,7 @@ class SyncPersistenceImpl
         "Invalid connectionId $connectionId, expected ${this.connectionId}"
       }
 
-      metricClient.count(OssMetricsRegistry.STATE_BUFFERING, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_BUFFERING)
       stateBuffer.ingest(stateMessage)
     }
 
@@ -205,7 +205,7 @@ class SyncPersistenceImpl
 
       // At this point, the final state flush is either successful or there was no state left to flush.
       // From a connection point of view, it should be considered a success since no state are lost.
-      metricClient.count(OssMetricsRegistry.STATE_COMMIT_CLOSE_SUCCESSFUL, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_CLOSE_SUCCESSFUL)
 
       // On close, this check is independent of hasDataToFlush. We could be in a state where state flush
       // was successful but stats flush failed, so we should check for stats to flush regardless of the
@@ -218,7 +218,7 @@ class SyncPersistenceImpl
           throw e
         }
       }
-      metricClient.count(OssMetricsRegistry.STATS_COMMIT_CLOSE_SUCCESSFUL, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_CLOSE_SUCCESSFUL)
     }
 
     /**
@@ -274,7 +274,7 @@ class SyncPersistenceImpl
       val state = stateToFlush?.getAggregated() ?: return
       val maybeStateWrapper = StateMessageHelper.getTypedState(state.state).getOrNull() ?: return
 
-      metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT)
 
       val stateApiRequest =
         ConnectionStateCreateOrUpdate(connectionId = connectionId, connectionState = StateConverter.toClient(connectionId, maybeStateWrapper))
@@ -282,13 +282,13 @@ class SyncPersistenceImpl
       try {
         airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
       } catch (e: Exception) {
-        metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FAILED, 1)
+        metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FAILED)
         throw e
       }
 
       // Only reset stateToFlush if the API call was successful
       stateToFlush = null
-      metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL)
     }
 
     private fun doFlushStats() {
@@ -296,17 +296,17 @@ class SyncPersistenceImpl
         return
       }
 
-      metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT)
       try {
         airbyteApiClient.attemptApi.saveStats(statsToPersist!!)
       } catch (e: Exception) {
-        metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_FAILED, 1)
+        metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT_FAILED)
         throw e
       }
 
       persistedStats = statsToPersist
       statsToPersist = null
-      metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_SUCCESSFUL, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT_SUCCESSFUL)
     }
 
     private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
@@ -372,10 +372,10 @@ private fun SyncStats.toAttemptStats(): AttemptStats =
 
 private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
   val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
-  count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1, attribute)
+  count(metric = OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, attributes = arrayOf(attribute))
 }
 
 private fun MetricClient.emitFailedStatsCloseMetrics(connectionId: UUID?) {
   val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
-  count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1, attribute)
+  count(metric = OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, attributes = arrayOf(attribute))
 }

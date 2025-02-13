@@ -132,10 +132,17 @@ global:
     #  connectionStringSecretKey: <secret coordinate containing an existing connection-string secret>
 
   metrics:
-    # -- The metric client to configure globally. Supports "otel"
-    metricClient: ""
-    # -- The open-telemetry-collector endpoint that metrics will be sent to
-    otelCollectorEndpoint: ""
+    enabled: "false"
+    step: ""
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
 
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious

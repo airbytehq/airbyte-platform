@@ -19,6 +19,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +50,8 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
         mock(TestClient.class),
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
-        mock(SecretPersistenceConfigService.class));
+        mock(SecretPersistenceConfigService.class),
+        mock(MetricClient.class));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace);

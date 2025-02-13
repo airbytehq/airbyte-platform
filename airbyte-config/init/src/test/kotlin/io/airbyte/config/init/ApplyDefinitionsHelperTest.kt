@@ -30,9 +30,9 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
@@ -105,7 +105,7 @@ internal class ApplyDefinitionsHelperTest {
     justRun { sourceService.updateStandardSourceDefinition(any()) }
     justRun { destinationService.writeConnectorMetadata(any(), any(), any()) }
     justRun { destinationService.updateStandardDestinationDefinition(any()) }
-    justRun { metricClient.count(any(), any(), *anyVararg<MetricAttribute>()) }
+    justRun { metricClient.count(metric = any(), value = any(), attributes = anyVararg<MetricAttribute>()) }
     justRun { supportStateUpdater.updateSupportStates() }
   }
 

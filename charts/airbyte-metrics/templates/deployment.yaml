@@ -61,16 +61,46 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-        - name: METRIC_CLIENT
+        - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: METRIC_CLIENT
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STEP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STEP
+        - name: MICROMETER_METRICS_OTLP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_OTLP_ENABLED
         - name: OTEL_COLLECTOR_ENDPOINT
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: OTEL_COLLECTOR_ENDPOINT
+        - name: MICROMETER_METRICS_STATSD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
 
         {{- include "airbyte.database.envs" . | nindent 8 }}
 

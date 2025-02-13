@@ -9,10 +9,10 @@ import static java.lang.Thread.sleep;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -235,7 +235,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on accept call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;
@@ -254,7 +254,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on notifyEndOfInput call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;

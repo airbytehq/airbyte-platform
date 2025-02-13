@@ -11,7 +11,7 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusRunState
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.context.ReplicationContext
 import io.mockk.every
 import io.mockk.mockk

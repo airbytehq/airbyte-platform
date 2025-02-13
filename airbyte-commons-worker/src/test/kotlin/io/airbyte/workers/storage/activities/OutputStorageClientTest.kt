@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.storage.activities
 
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.ATTEMPT_NUMBER
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.CONNECTION_ID
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.JOB_ID
@@ -38,7 +38,7 @@ class OutputStorageClientTest {
   fun setup() {
     client = OutputStorageClient(storageClient, metricClient, TEST_PAYLOAD_NAME, TestClass::class.java)
 
-    every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns Unit
   }
 
   @Test

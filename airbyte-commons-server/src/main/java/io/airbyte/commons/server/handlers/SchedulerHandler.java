@@ -85,10 +85,10 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -155,6 +155,7 @@ public class SchedulerHandler {
 
   private final CatalogConverter catalogConverter;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
+  private final MetricClient metricClient;
 
   @VisibleForTesting
   public SchedulerHandler(final ActorDefinitionService actorDefinitionService,
@@ -185,7 +186,8 @@ public class SchedulerHandler {
                           final SourceService sourceService,
                           final DestinationService destinationService,
                           final CatalogConverter catalogConverter,
-                          final ApplySchemaChangeHelper applySchemaChangeHelper) {
+                          final ApplySchemaChangeHelper applySchemaChangeHelper,
+                          final MetricClient metricClient) {
     this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
@@ -215,11 +217,13 @@ public class SchedulerHandler {
         connectionService,
         jobNotifier,
         jobTracker,
-        connectionTimelineEventHelper);
+        connectionTimelineEventHelper,
+        metricClient);
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.catalogConverter = catalogConverter;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
+    this.metricClient = metricClient;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -503,7 +507,7 @@ public class SchedulerHandler {
     if (sourceAutoPropagateChange.getWorkspaceId() == null
         || sourceAutoPropagateChange.getCatalogId() == null
         || sourceAutoPropagateChange.getCatalog() == null) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT, 1,
+      metricClient.count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT,
           new MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.getSourceId().toString()));
       log.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
           sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId(), sourceAutoPropagateChange.getCatalogId(),
@@ -787,7 +791,7 @@ public class SchedulerHandler {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
       return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
+          new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
     } else {
       return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(), null);
     }

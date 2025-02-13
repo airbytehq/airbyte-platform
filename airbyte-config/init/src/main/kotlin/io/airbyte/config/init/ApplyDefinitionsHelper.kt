@@ -28,8 +28,8 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.context.annotation.Requires
@@ -465,7 +465,7 @@ class ApplyDefinitionsHelper(
     outcome: DefinitionProcessingOutcome,
   ) {
     val attributes = getMetricAttributes(dockerRepository, dockerImageTag, outcome)
-    metricClient.count(OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, *attributes)
+    metricClient.count(metric = OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED, attributes = attributes)
   }
 
   companion object {

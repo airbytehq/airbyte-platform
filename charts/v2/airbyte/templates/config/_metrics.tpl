@@ -24,17 +24,6 @@ Renders the global.metrics.client value
 {{- end }}
 
 {{/*
-Renders the metrics.client environment variable
-*/}}
-{{- define "airbyte.metrics.client.env" }}
-- name: METRIC_CLIENT
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: METRIC_CLIENT
-{{- end }}
-
-{{/*
 Renders the global.metrics.micrometer.enabled value
 */}}
 {{- define "airbyte.metrics.micrometer.enabled" }}
@@ -55,6 +44,60 @@ Renders the metrics.micrometer.enabled environment variable
 {{/*
 Renders the global.metrics.micrometer.statsdFlavor value
 */}}
+{{- define "airbyte.metrics.micrometer.step" }}
+    {{- .Values.global.metrics.micrometer.statsdFlavor | default "PT1M" }}
+{{- end }}
+
+{{/*
+Renders the metrics.micrometer.step environment variable
+*/}}
+{{- define "airbyte.metrics.micrometer.step.env" }}
+- name: MICROMETER_METRICS_STEP
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: MICROMETER_METRICS_STEP
+{{- end }}
+
+{{/*
+Renders the global.metrics.micrometer.otlp.enabled value
+*/}}
+{{- define "airbyte.metrics.micrometer.otlp.enabled" }}
+    {{- .Values.global.metrics.micrometer.enabled | default false }}
+{{- end }}
+
+{{/*
+Renders the metrics.micrometer.otlp.enabled environment variable
+*/}}
+{{- define "airbyte.metrics.micrometer.otlp.enabled.env" }}
+- name: MICROMETER_METRICS_OTLP_ENABLED
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: MICROMETER_METRICS_OTLP_ENABLED
+{{- end }}
+
+{{/*
+Renders the global.metrics.micrometer.statsd.enabled value
+*/}}
+{{- define "airbyte.metrics.micrometer.statsd.enabled" }}
+    {{- .Values.global.metrics.micrometer.enabled | default false }}
+{{- end }}
+
+{{/*
+Renders the metrics.micrometer.statsd.enabled environment variable
+*/}}
+{{- define "airbyte.metrics.micrometer.statsd.enabled.env" }}
+- name: MICROMETER_METRICS_STATSD_ENABLED
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: MICROMETER_METRICS_STATSD_ENABLED
+{{- end }}
+
+{{/*
+Renders the global.metrics.micrometer.statsdFlavor value
+*/}}
 {{- define "airbyte.metrics.micrometer.statsdFlavor" }}
     {{- .Values.global.metrics.micrometer.statsdFlavor | default "datadog" }}
 {{- end }}
@@ -68,24 +111,6 @@ Renders the metrics.micrometer.statsdFlavor environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: MICROMETER_METRICS_STATSD_FLAVOR
-{{- end }}
-
-{{/*
-Renders the global.metrics.otel.collector.endpoint value
-*/}}
-{{- define "airbyte.metrics.otel.collector.endpoint" }}
-    {{- .Values.global.metrics.otel.collector.endpoint }}
-{{- end }}
-
-{{/*
-Renders the metrics.otel.collector.endpoint environment variable
-*/}}
-{{- define "airbyte.metrics.otel.collector.endpoint.env" }}
-- name: OTEL_COLLECTOR_ENDPOINT
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: OTEL_COLLECTOR_ENDPOINT
 {{- end }}
 
 {{/*
@@ -125,13 +150,29 @@ Renders the metrics.statsd.port environment variable
 {{- end }}
 
 {{/*
+Renders the global.metrics.otel.collector.endpoint value
+*/}}
+{{- define "airbyte.metrics.otel.collector.endpoint" }}
+    {{- .Values.global.metrics.otel.collector.endpoint }}
+{{- end }}
+
+{{/*
+Renders the metrics.otel.collector.endpoint environment variable
+*/}}
+{{- define "airbyte.metrics.otel.collector.endpoint.env" }}
+- name: OTEL_COLLECTOR_ENDPOINT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: OTEL_COLLECTOR_ENDPOINT
+{{- end }}
+
+{{/*
 Renders the set of all metrics environment variables
 */}}
 {{- define "airbyte.metrics.envs" }}
-{{- include "airbyte.metrics.client.env" . }}
 {{- include "airbyte.metrics.micrometer.enabled.env" . }}
 {{- include "airbyte.metrics.micrometer.statsdFlavor.env" . }}
-{{- include "airbyte.metrics.otel.collector.endpoint.env" . }}
 {{- include "airbyte.metrics.statsd.host.env" . }}
 {{- include "airbyte.metrics.statsd.port.env" . }}
 {{- end }}
@@ -140,10 +181,8 @@ Renders the set of all metrics environment variables
 Renders the set of all metrics config map variables
 */}}
 {{- define "airbyte.metrics.configVars" }}
-METRIC_CLIENT: {{ include "airbyte.metrics.client" . | quote }}
 MICROMETER_METRICS_ENABLED: {{ include "airbyte.metrics.micrometer.enabled" . | quote }}
 MICROMETER_METRICS_STATSD_FLAVOR: {{ include "airbyte.metrics.micrometer.statsdFlavor" . | quote }}
-OTEL_COLLECTOR_ENDPOINT: {{ include "airbyte.metrics.otel.collector.endpoint" . | quote }}
 STATSD_HOST: {{ include "airbyte.metrics.statsd.host" . | quote }}
 STATSD_PORT: {{ include "airbyte.metrics.statsd.port" . | quote }}
 {{- end }}

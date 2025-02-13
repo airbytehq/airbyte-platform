@@ -50,11 +50,51 @@ spec:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: AIRBYTE_VERSION
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STEP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STEP
+        - name: MICROMETER_METRICS_OTLP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_OTLP_ENABLED
+        - name: OTEL_COLLECTOR_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: OTEL_COLLECTOR_ENDPOINT
+        - name: MICROMETER_METRICS_STATSD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
         - name: RUN_DATABASE_MIGRATION_ON_STARTUP
           valueFrom:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: RUN_DATABASE_MIGRATION_ON_STARTUP
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
 
         # Airbyte auth secret keys and values
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}

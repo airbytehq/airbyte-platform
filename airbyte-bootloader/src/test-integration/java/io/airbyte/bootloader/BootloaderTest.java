@@ -55,7 +55,7 @@ import io.airbyte.db.instance.jobs.JobsDatabaseMigrator;
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.NotImplementedMetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import java.util.Map;
 import java.util.Optional;
@@ -151,6 +151,7 @@ class BootloaderTest {
     var actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     var scopedConfigurationService = mock(ScopedConfigurationService.class);
     var connectionTimelineService = mock(ConnectionTimelineEventService.class);
+    var metricClient = mock(MetricClient.class);
     var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -163,19 +164,22 @@ class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
     var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -195,7 +199,6 @@ class BootloaderTest {
     var supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangeHelper,
             breakingChangeNotificationHelper, featureFlagClient);
-    var metricClient = new NotImplementedMetricClient();
     var actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     var airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     var connectorRolloutService = mock(ConnectorRolloutService.class);
@@ -240,6 +243,7 @@ class BootloaderTest {
   @SuppressWarnings("VariableDeclarationUsageDistance")
   @Test
   void testRequiredVersionUpgradePredicate() throws Exception {
+    var metricClient = mock(MetricClient.class);
     var currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
     var airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
     var runMigrationOnStartup = true;
@@ -268,19 +272,22 @@ class BootloaderTest {
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
-        mock(SecretPersistenceConfigService.class));
+        mock(SecretPersistenceConfigService.class),
+        metricClient);
     var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -300,7 +307,6 @@ class BootloaderTest {
     var protocolVersionChecker =
         new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, actorDefinitionService, definitionsProvider, sourceService,
             destinationService);
-    var metricClient = new NotImplementedMetricClient();
     var actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     var airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     var connectorRolloutService = mock(ConnectorRolloutService.class);
@@ -369,6 +375,7 @@ class BootloaderTest {
 
   @Test
   void testPostLoadExecutionExecutes() throws Exception {
+    var metricClient = mock(MetricClient.class);
     final var testTriggered = new AtomicBoolean();
     var currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
     var airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
@@ -400,21 +407,24 @@ class BootloaderTest {
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
     var sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     var configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     var configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));

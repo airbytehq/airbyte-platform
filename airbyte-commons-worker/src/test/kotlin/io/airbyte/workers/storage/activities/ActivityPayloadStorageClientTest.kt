@@ -7,8 +7,8 @@ package io.airbyte.workers.storage.activities
 import io.airbyte.commons.json.JsonSerde
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.StandardSyncOutput
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -38,7 +38,7 @@ class ActivityPayloadStorageClientTest {
   fun setup() {
     client = ActivityPayloadStorageClient(storageClientRaw, serde, metricClient)
 
-    every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns Unit
 
     every { storageClientRaw.write(any(), any()) } returns Unit
 

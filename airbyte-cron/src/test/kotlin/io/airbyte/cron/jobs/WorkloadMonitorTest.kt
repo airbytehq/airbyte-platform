@@ -4,10 +4,10 @@
 
 package io.airbyte.cron.jobs
 
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
@@ -43,7 +43,7 @@ class WorkloadMonitorTest {
   fun beforeEach() {
     metricClient =
       mockk<MetricClient>().also {
-        every { it.count(any(), any(), *anyVararg()) } returns Unit
+        every { it.count(metric = any(), value = any(), attributes = anyVararg()) } returns Unit
       }
     workloadApi = mockk()
     workloadApiClient = mockk()

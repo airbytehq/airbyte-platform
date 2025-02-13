@@ -9,9 +9,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import java.util.HashSet;
 import org.junit.jupiter.api.Test;
@@ -88,7 +88,6 @@ class WorkerMetricReporterTest {
 
     verify(metricClient).count(
         eq(OssMetricsRegistry.STATE_METRIC_TRACKER_ERROR),
-        eq(1L),
         any(MetricAttribute.class), // new MetricAttribute("docker_repo", "scratch"),
         any(MetricAttribute.class) // new MetricAttribute("docker_version", "")
     );

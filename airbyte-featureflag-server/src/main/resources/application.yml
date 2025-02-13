@@ -17,6 +17,7 @@ micronaut:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
 
 airbyte:
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     path: ${FEATURE_FLAG_PATH:/flags}
 

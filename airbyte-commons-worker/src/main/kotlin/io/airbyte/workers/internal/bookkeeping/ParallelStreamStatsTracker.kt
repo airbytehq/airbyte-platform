@@ -6,7 +6,7 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage

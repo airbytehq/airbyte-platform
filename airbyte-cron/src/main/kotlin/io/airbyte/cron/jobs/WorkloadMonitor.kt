@@ -5,12 +5,12 @@
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
@@ -186,11 +186,13 @@ open class WorkloadMonitor(
         logger.warn(e) { "Failed to cancel workload ${it.id}" }
       } finally {
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_CANCEL,
-          1,
-          MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
-          MetricAttribute(MetricTags.STATUS, status),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
+          metric = OssMetricsRegistry.WORKLOADS_CANCEL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
+              MetricAttribute(MetricTags.STATUS, status),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
+            ),
         )
       }
     }

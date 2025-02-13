@@ -10,6 +10,7 @@ import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper
 import java.io.IOException
 import java.lang.RuntimeException
@@ -22,6 +23,7 @@ class ConnectorSecretsHydrator(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val airbyteApiClient: AirbyteApiClient,
   private val useRuntimeSecretPersistence: Boolean,
+  private val metricClient: MetricClient,
 ) {
   fun hydrateConfig(
     jsonConfig: JsonNode,
@@ -53,7 +55,7 @@ class ConnectorSecretsHydrator(
 
     val runtimeSecretPersistence =
       SecretPersistenceConfigHelper
-        .fromApiSecretPersistenceConfig(secretPersistenceConfig)
+        .fromApiSecretPersistenceConfig(secretPersistenceConfig, metricClient)
 
     return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
       jsonConfig,

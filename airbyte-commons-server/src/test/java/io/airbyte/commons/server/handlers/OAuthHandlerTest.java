@@ -33,6 +33,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -64,9 +65,11 @@ class OAuthHandlerTest {
   private OAuthService oauthService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private WorkspaceService workspaceService;
+  private MetricClient metricClient;
 
   @BeforeEach
   public void init() {
+    metricClient = mock(MetricClient.class);
     trackingClient = mock(TrackingClient.class);
     oauthImplementationFactory = mock(OAuthImplementationFactory.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -88,7 +91,8 @@ class OAuthHandlerTest {
         destinationService,
         oauthService,
         secretPersistenceConfigService,
-        workspaceService);
+        workspaceService,
+        metricClient);
   }
 
   @Test

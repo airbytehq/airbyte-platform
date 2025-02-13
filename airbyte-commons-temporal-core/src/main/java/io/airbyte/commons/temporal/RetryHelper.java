@@ -7,10 +7,10 @@ package io.airbyte.commons.temporal;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
@@ -52,7 +52,7 @@ public class RetryHelper {
         .handleIf(this::shouldRetry)
         .withMaxAttempts(maxAttempt)
         .withBackoff(Duration.ofMillis(backoffDelayInMillis), Duration.ofMillis(backoffMaxDelayInMillis))
-        .onRetry((a) -> metricClient.count(OssMetricsRegistry.TEMPORAL_API_TRANSIENT_ERROR_RETRY, 1,
+        .onRetry((a) -> metricClient.count(OssMetricsRegistry.TEMPORAL_API_TRANSIENT_ERROR_RETRY,
             new MetricAttribute(MetricTags.ATTEMPT_NUMBER, String.valueOf(a.getAttemptCount())),
             new MetricAttribute(MetricTags.FAILURE_ORIGIN, name),
             new MetricAttribute(MetricTags.FAILURE_TYPE, a.getLastException().getClass().getName())))

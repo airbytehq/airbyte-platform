@@ -36,6 +36,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
@@ -137,7 +138,8 @@ class ReplicationWorkerHelperTest {
         streamStatusTrackerFactory,
         recordMapper,
         featureFlagClient,
-        destinationCatalogGenerator));
+        destinationCatalogGenerator,
+        mock(MetricClient.class)));
   }
 
   @AfterEach

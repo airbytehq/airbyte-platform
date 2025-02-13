@@ -6,6 +6,7 @@ package io.airbyte.metrics.config
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.statsd.StatsdMeterRegistry
+import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
 import io.micronaut.core.util.StringUtils
@@ -24,6 +25,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("statsDRegistryConfigurer")
 @io.micronaut.configuration.metrics.annotation.RequiresMetrics
+@Requires(property = "micronaut.metrics.export.statsd.enabled", value = "true", defaultValue = "false")
 class StatsDRegistryConfigurer :
   io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer<StatsdMeterRegistry>,
   Ordered {
@@ -41,7 +43,9 @@ class StatsDRegistryConfigurer :
 
       logger.debug { "Adding common tags to the StatsD Micrometer meter registry configuration: $tags" }
 
-      registry.config().commonTags(*tags.toTypedArray())
+      if (tags.isNotEmpty()) {
+        registry.config().commonTags(*tags.toTypedArray())
+      }
     }
   }
 

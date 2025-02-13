@@ -15,5 +15,5 @@ import io.micronaut.kotlin.context.getBean
  * functionality behind a license. This will likely change in the future.
  */
 class AirbyteProEnabledCondition : Condition {
-  override fun matches(context: ConditionContext<*>): Boolean = context.getBean<AirbyteEdition>() == AirbyteEdition.PRO
+  override fun matches(context: ConditionContext<*>): Boolean = context.getBean<AirbyteEdition>() == AirbyteEdition.ENTERPRISE
 }
