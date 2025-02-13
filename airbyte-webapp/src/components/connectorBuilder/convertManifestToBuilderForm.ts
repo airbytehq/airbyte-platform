@@ -44,7 +44,6 @@ import {
   XmlDecoderType,
   IterableDecoderType,
   SimpleRetrieverDecoder,
-  GzipJsonDecoderType,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
   CheckDynamicStreamType,
   RequestOptionInjectInto,
@@ -409,7 +408,6 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
     JsonlDecoderType.JsonlDecoder,
     XmlDecoderType.XmlDecoder,
     IterableDecoderType.IterableDecoder,
-    GzipJsonDecoderType.GzipJsonDecoder,
   ];
   const decoderType = decoder?.type;
   if (!supportedDecoderTypes.includes(decoderType)) {
@@ -425,8 +423,6 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
       return "JSON Lines";
     case IterableDecoderType.IterableDecoder:
       return "Iterable";
-    case GzipJsonDecoderType.GzipJsonDecoder:
-      return "gzip JSON";
     default:
       return "JSON";
   }
