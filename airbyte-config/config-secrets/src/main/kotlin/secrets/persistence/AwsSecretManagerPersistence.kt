@@ -45,10 +45,10 @@ class AwsSecretManagerPersistence(
   override fun read(coordinate: SecretCoordinate): String {
     var secretString = ""
     try {
-      logger.debug { "Reading secret ${coordinate.fullCoordinate}" }
-      secretString = awsCache.cache.getSecretString(coordinate.fullCoordinate)
+      logger.debug { "Reading secret ${coordinate.coordinateBase}" }
+      secretString = awsCache.cache.getSecretString(coordinate.coordinateBase)
     } catch (e: ResourceNotFoundException) {
-      logger.warn { "Secret ${coordinate.fullCoordinate} not found" }
+      logger.warn { "Secret ${coordinate.coordinateBase} not found" }
     }
     return secretString
   }
@@ -69,17 +69,17 @@ class AwsSecretManagerPersistence(
         // 1. Update and create are distinct actions, and we can't create over an already existing secret, so we should get an error and no-op
         // 2. If the secret does exist, we will get an error and no-op
         if (e.localizedMessage.contains("assumed-role")) {
-          logger.info { "AWS exception caught - Secret ${coordinate.fullCoordinate} not found" }
+          logger.info { "AWS exception caught - Secret ${coordinate.coordinateBase} not found" }
           ""
         } else {
           throw e
         }
       }
     if (existingSecret.isNotEmpty()) {
-      logger.debug { "Secret ${coordinate.fullCoordinate} found updating payload." }
+      logger.debug { "Secret ${coordinate.coordinateBase} found updating payload." }
       val request =
         UpdateSecretRequest()
-          .withSecretId(coordinate.fullCoordinate)
+          .withSecretId(coordinate.coordinateBase)
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
 
@@ -91,10 +91,10 @@ class AwsSecretManagerPersistence(
 
       awsClient.client.updateSecret(request)
     } else {
-      logger.debug { "Secret ${coordinate.fullCoordinate} not found, creating a new one." }
+      logger.debug { "Secret ${coordinate.coordinateBase} not found, creating a new one." }
       val secretRequest =
         CreateSecretRequest()
-          .withName(coordinate.fullCoordinate)
+          .withName(coordinate.coordinateBase)
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
 
@@ -124,7 +124,7 @@ class AwsSecretManagerPersistence(
   override fun delete(coordinate: SecretCoordinate) {
     awsClient.client.deleteSecret(
       DeleteSecretRequest()
-        .withSecretId(coordinate.fullCoordinate)
+        .withSecretId(coordinate.coordinateBase)
         .withForceDeleteWithoutRecovery(true),
     )
   }
