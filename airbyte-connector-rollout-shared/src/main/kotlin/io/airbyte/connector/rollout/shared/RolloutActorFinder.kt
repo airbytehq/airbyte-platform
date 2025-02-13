@@ -36,7 +36,6 @@ import java.util.UUID
 import kotlin.math.ceil
 
 private val logger = KotlinLogging.logger {}
-private const val JOB_FETCH_LIMIT = 1000
 
 data class ActorSelectionInfo(
   val actorIdsToPin: List<UUID>,
@@ -205,39 +204,6 @@ class RolloutActorFinder(
     )
   }
 
-  private fun fetchAndProcessJobsForScopes(
-    jobService: JobService,
-    configTypes: Set<JobConfig.ConfigType>,
-    scopes: Set<String>,
-    createdAt: OffsetDateTime?,
-    processJobs: (Map<UUID, List<Job>>) -> Unit,
-  ) {
-    var offset = 0
-
-    while (true) {
-      logger.info { "fetchAndProcessJobsForScopes fetching $offset - ${offset + JOB_FETCH_LIMIT}" }
-      val jobs =
-        jobService.listJobsForScopes(
-          configTypes = configTypes,
-          scope = scopes,
-          limit = JOB_FETCH_LIMIT,
-          offset = offset,
-          statuses = listOf(),
-          createdAtStart = createdAt ?: OffsetDateTime.now().minusDays(1),
-          createdAtEnd = null,
-          updatedAtStart = null,
-          updatedAtEnd = null,
-        )
-
-      if (jobs.isEmpty()) break
-
-      val jobsByConnectionId = jobs.groupBy { UUID.fromString(it.scope) }
-      processJobs(jobsByConnectionId)
-
-      offset += jobs.size
-    }
-  }
-
   @Trace
   @VisibleForTesting
   fun getActorJobInfo(
@@ -248,75 +214,53 @@ class RolloutActorFinder(
     versionId: UUID?,
   ): Map<UUID, ActorSyncJobInfo> {
     val actorSyncJobInfoMap = mutableMapOf<UUID, ActorSyncJobInfo>()
-    val connectionIdToActorId =
-      actorSyncs.associate {
-        it.connectionId to (if (actorType == ActorType.SOURCE) it.sourceId else it.destinationId)
-      }
 
     logger.info {
-      "Connector rollout getting actorSyncJobInfo connectorRollout.id=${connectorRollout.id} actorSyncs.size=${actorSyncs.size} versionId=$versionId"
+      "Connector rollout getting actorSyncJobInfo connectorRollout.id=${connectorRollout.id} actorSyncs=${actorSyncs.size} versionId=$versionId"
     }
 
-    // Fetch jobs in batches and for each batch find the sync info for the actor
-    fetchAndProcessJobsForScopes(
-      jobService,
-      setOf(JobConfig.ConfigType.SYNC),
-      actorSyncs.map { it.connectionId.toString() }.toSet(),
-      createdAt,
-    ) { jobsByConnectionId ->
+    for (connection in actorSyncs) {
+      val actorId = (if (actorType == ActorType.SOURCE) connection.sourceId else connection.destinationId) ?: continue
+      val allConnectionJobs =
+        jobService.listJobs(
+          setOf(JobConfig.ConfigType.SYNC),
+          connection.connectionId.toString(),
+          1,
+          0,
+          listOf(),
+          createdAt ?: OffsetDateTime.now().minusDays(1),
+          null,
+          null,
+          null,
+        )
+      logger.info { "connectorRollout.id=${connectorRollout.id} actorId=$actorId allConnectionJobs.size=${allConnectionJobs.size}" }
 
-      for ((connectionId, jobs) in jobsByConnectionId) {
-        val actorId = connectionIdToActorId[connectionId]
-        if (actorId == null) {
-          logger.debug {
-            "ActorID not found in connectorRollout.id=${connectorRollout.id} connectionIdToActorId actorId=$actorId connectionId=$connectionId"
-          }
-          continue
-        }
-
-        // Select only the most recent job per connection in the batch
-        val latestJob = jobs.maxByOrNull { it.createdAtInSecond }
-        if (latestJob == null) {
-          logger.debug { "No latest job found for connectorRollout.id=${connectorRollout.id} actorId=$actorId connectionId=$connectionId, skipping." }
-          continue
-        }
-
-        // Filter out jobs that did not use the docker image that we want (either default or pinned)
-        val isJobValid =
-          if (versionId == null) {
-            jobDockerImageIsDefault(actorType, latestJob)
+      val filteredConnectionJobs =
+        allConnectionJobs.filter {
+          if (versionId != null) {
+            jobDefinitionVersionIdEq(actorType, it, versionId)
           } else {
-            jobDefinitionVersionIdEq(actorType, latestJob, versionId)
-          }
-
-        if (!isJobValid) {
-          logger.debug {
-            "Skipping latest job for connectorRollout.id=${connectorRollout.id} actorId=$actorId connectionId=$connectionId expected versionId=$versionId."
-          }
-          continue
-        }
-
-        val nSucceeded = if (latestJob.status == JobStatus.SUCCEEDED) 1 else 0
-        val nFailed = if (latestJob.status == JobStatus.FAILED) 1 else 0
-
-        logger.debug {
-          "connectorRollout.id=${connectorRollout.id} actorId=$actorId latestJob.status=${latestJob.status} nSucceeded=$nSucceeded nFailed=$nFailed"
-        }
-
-        actorSyncJobInfoMap.compute(actorId) { _, existingInfo ->
-          if (existingInfo == null) {
-            ActorSyncJobInfo(nSucceeded = nSucceeded, nFailed = nFailed, nConnections = 1)
-          } else {
-            existingInfo.nSucceeded += nSucceeded
-            existingInfo.nFailed += nFailed
-            existingInfo.nConnections++
-            existingInfo
+            jobDockerImageIsDefault(actorType, it)
           }
         }
+      val nSucceeded = filteredConnectionJobs.filter { it.status == JobStatus.SUCCEEDED }.size
+      val nFailed = filteredConnectionJobs.filter { it.status == JobStatus.FAILED }.size
+      logger.info {
+        "connectorRollout.id=${connectorRollout.id} actorId=$actorId " +
+          "filteredConnectionJobs.size=${filteredConnectionJobs.size} nSucceeded=$nSucceeded nFailed=$nFailed"
       }
+
+      if (actorSyncJobInfoMap.containsKey(actorId)) {
+        actorSyncJobInfoMap[actorId]!!.nSucceeded += nSucceeded
+        actorSyncJobInfoMap[actorId]!!.nFailed += nSucceeded
+      } else {
+        actorSyncJobInfoMap[actorId] = ActorSyncJobInfo(nSucceeded = nSucceeded, nFailed = nFailed)
+      }
+      actorSyncJobInfoMap[actorId]!!.nConnections++
     }
 
     logger.info { "connectorRollout.id=${connectorRollout.id} actorActorSyncJobInfoMap=$actorSyncJobInfoMap" }
+
     return actorSyncJobInfoMap
   }
 
@@ -538,16 +482,8 @@ class RolloutActorFinder(
   ): List<ConfigScopeMapWithId> {
     // If any of the actor's connections failed we don't want to use the actor for the rollout
     val actorJobInfo = getActorJobInfo(connectorRollout, actorDefinitionConnections, actorType, null, null)
-    logger.info { "Actor Job Info: $actorJobInfo" }
-
-    return candidates.filter { candidate ->
-      val jobInfo = actorJobInfo[candidate.id]
-      logger.info { "Candidate ID: ${candidate.id}, Job Info: $jobInfo" }
-
-      val passesFilter = jobInfo != null && jobInfo.nFailed == 0 && jobInfo.nSucceeded > 0
-      logger.info { "Candidate ${candidate.id} passes filter: $passesFilter" }
-
-      passesFilter
+    return candidates.filter {
+      actorJobInfo.containsKey(it.id) && actorJobInfo[it.id]!!.nFailed == 0 && actorJobInfo[it.id]!!.nSucceeded > 0
     }
   }
 
