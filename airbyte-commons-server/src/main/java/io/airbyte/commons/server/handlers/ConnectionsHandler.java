@@ -518,17 +518,17 @@ public class ConnectionsHandler {
     }
     if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
-      LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
+      LOGGER.info("Entered into Dark Launch Code for Check with Catalog for connectionId {}", connectionId);
     }
     connectionService.writeStandardSync(standardSync);
 
     trackNewConnection(standardSync);
 
     try {
-      LOGGER.info("Starting a connection manager workflow");
+      LOGGER.info("Starting a connection manager workflow for connectionId {}", connectionId);
       eventRunner.createConnectionManagerWorkflow(connectionId);
     } catch (final Exception e) {
-      LOGGER.error("Start of the connection manager workflow failed", e);
+      LOGGER.error("Start of the connection manager workflow failed; deleting connectionId {}", connectionId, e);
       // deprecate the newly created connection and also delete the newly created workflow.
       deleteConnection(connectionId);
       throw e;
@@ -884,8 +884,11 @@ public class ConnectionsHandler {
 
   public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
     connectionHelper.deleteConnection(connectionId);
+    LOGGER.info("Marked connectionId {} as deleted in postgres", connectionId);
     eventRunner.forceDeleteConnection(connectionId);
+    LOGGER.info("Force-deleted connectionId {} workflow", connectionId);
     streamRefreshesHandler.deleteRefreshesForConnection(connectionId);
+    LOGGER.info("Deleted connectionId {} stream refreshes", connectionId);
   }
 
   public ConnectionRead buildConnectionRead(final UUID connectionId)

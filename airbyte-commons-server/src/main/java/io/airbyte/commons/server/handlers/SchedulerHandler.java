@@ -650,6 +650,7 @@ public class SchedulerHandler {
   }
 
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) throws IOException {
+    log.info("Canceling job {}", jobIdRequestBody.getId());
     return submitCancellationToWorker(jobIdRequestBody.getId());
   }
 
@@ -696,6 +697,8 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(jobId);
 
     final ManualOperationResult cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.getScope()));
+    log.info("Cancellation result for job {}: failingReason={} errorCode={}",
+        jobId, cancellationResult.getFailingReason(), cancellationResult.getErrorCode());
     if (cancellationResult.getFailingReason() != null) {
       throw new IllegalStateException(cancellationResult.getFailingReason());
     }
@@ -704,6 +707,7 @@ public class SchedulerHandler {
     for (final Attempt attempt : job.getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
     }
+    log.info("Adding connection timeline event for job {} attemptStats={}", jobId, attemptStats);
     connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats);
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));

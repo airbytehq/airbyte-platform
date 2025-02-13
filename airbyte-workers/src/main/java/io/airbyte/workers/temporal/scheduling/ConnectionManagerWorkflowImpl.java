@@ -694,6 +694,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   public void deleteConnection() {
     traceConnectionId();
     workflowState.setDeleted(true);
+    log.info("Set as deleted and canceling job for connection {}", connectionId);
     cancelJob();
   }
 
