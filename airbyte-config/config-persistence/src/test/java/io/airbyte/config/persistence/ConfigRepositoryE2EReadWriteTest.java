@@ -69,7 +69,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
@@ -122,7 +121,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
-    final MetricClient metricClient = mock(MetricClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
@@ -143,8 +141,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     oauthService = spy(new OAuthServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
-        secretPersistenceConfigService,
-        metricClient));
+        secretPersistenceConfigService));
     sourceService = spy(new SourceServiceJooqImpl(
         database,
         featureFlagClient,
@@ -152,8 +149,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater,
-        metricClient));
+        actorDefinitionVersionUpdater));
     destinationService = spy(new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
@@ -161,15 +157,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater,
-        metricClient));
+        actorDefinitionVersionUpdater));
     workspaceService = spy(new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService,
-        metricClient));
+        secretPersistenceConfigService));
     operationService = spy(new OperationServiceJooqImpl(database));
 
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {

@@ -6,11 +6,11 @@ package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
 import io.airbyte.commons.storage.StorageClient
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
@@ -42,7 +42,7 @@ class ActivityPayloadStorageClient(
     uri: ActivityPayloadURI,
     target: Class<T>,
   ): T? {
-    metricClient.count(metric = OssMetricsRegistry.ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE)
+    metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE, 1)
 
     return storageClientRaw
       .read(uri.id)
@@ -59,7 +59,7 @@ class ActivityPayloadStorageClient(
     uri: ActivityPayloadURI,
     payload: T,
   ) {
-    metricClient.count(metric = OssMetricsRegistry.ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE)
+    metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE, 1)
 
     return storageClientRaw.write(uri.id, jsonSerde.serialize(payload))
   }
@@ -81,7 +81,7 @@ class ActivityPayloadStorageClient(
   ): T {
     if (uri == null) {
       val baseAttrs = attrs + MetricAttribute(MetricTags.URI_NULL, true.toString())
-      metricClient.count(metric = OssMetricsRegistry.PAYLOAD_FAILURE_READ, attributes = baseAttrs.toTypedArray())
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *baseAttrs.toTypedArray())
 
       return expected
     }
@@ -107,7 +107,7 @@ class ActivityPayloadStorageClient(
       val attrsWithException =
         baseAttrs + MetricAttribute(MetricTags.FAILURE_CAUSE, e.javaClass.simpleName)
 
-      metricClient.count(metric = OssMetricsRegistry.PAYLOAD_FAILURE_READ, attributes = attrsWithException.toTypedArray())
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *attrsWithException.toTypedArray())
 
       return expected
     }
@@ -120,7 +120,7 @@ class ActivityPayloadStorageClient(
         MetricAttribute(MetricTags.IS_MATCH, match.toString()) +
         MetricAttribute(MetricTags.IS_MISS, miss.toString())
 
-    metricClient.count(metric = OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, attributes = attrsWithMatch.toTypedArray())
+    metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *attrsWithMatch.toTypedArray())
 
     return expected
   }

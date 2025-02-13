@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.pipeline.handlers
 
 import fixtures.RecordFixtures
-import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
@@ -24,7 +24,7 @@ class SuccessHandlerTest {
   @ValueSource(booleans = [true, false])
   fun `workload status updated to launched if not skipped`(skipped: Boolean) {
     val apiClient: WorkloadApiClient = mockk()
-    val metricClient: MetricClient = mockk()
+    val metricClient: CustomMetricPublisher = mockk()
     val logMsgTmp: Optional<Function<String, String>> = Optional.empty()
 
     val handler = SuccessHandler(apiClient, metricClient, logMsgTmp)
@@ -35,9 +35,9 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        metric = any(),
-        value = any(),
-        attributes = anyVararg(),
+        any(),
+        any(),
+        any(),
       )
     } returns Unit
 
@@ -59,7 +59,7 @@ class SuccessHandlerTest {
   @Test
   fun `does not throw if update to launched call fails`() {
     val apiClient: WorkloadApiClient = mockk()
-    val metricClient: MetricClient = mockk()
+    val metricClient: CustomMetricPublisher = mockk()
     val logMsgTmp: Optional<Function<String, String>> = Optional.empty()
 
     val handler = SuccessHandler(apiClient, metricClient, logMsgTmp)
@@ -69,9 +69,9 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        metric = any(),
-        value = any(),
-        attributes = anyVararg(),
+        any(),
+        any(),
+        any(),
       )
     } returns Unit
 

@@ -5,7 +5,7 @@
 package io.airbyte.commons.temporal;
 
 import dev.failsafe.function.CheckedSupplier;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest;

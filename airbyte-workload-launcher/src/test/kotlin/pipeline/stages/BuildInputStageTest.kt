@@ -12,7 +12,6 @@ import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -23,6 +22,7 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.serde.PayloadDeserializer
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -51,7 +51,7 @@ class BuildInputStageTest {
   private lateinit var ffCtxMapper: InputFeatureFlagContextMapper
 
   @MockK
-  private lateinit var metricClient: MetricClient
+  private lateinit var metricPublisher: CustomMetricPublisher
 
   private lateinit var stage: BuildInputStage
 
@@ -61,8 +61,8 @@ class BuildInputStageTest {
       BuildInputStage(
         replicationInputMapper,
         deserializer,
-        metricClient,
         ffCtxMapper,
+        metricPublisher,
         "dataplane-id",
       )
 

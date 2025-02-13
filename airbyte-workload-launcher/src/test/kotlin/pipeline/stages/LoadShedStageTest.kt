@@ -10,8 +10,8 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LoadShedWorkloadLauncher
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.LoadShedStage.Companion.LOAD_SHED_FAILURE_REASON
 import io.airbyte.workload.launcher.pipeline.stages.LoadShedStageTest.Fixtures.ffContext
 import io.airbyte.workload.launcher.pipeline.stages.LoadShedStageTest.Fixtures.input
@@ -37,7 +37,7 @@ class LoadShedStageTest {
   private lateinit var workloadClient: WorkloadApiClient
 
   @MockK
-  private lateinit var metricClient: MetricClient
+  private lateinit var metricPublisher: CustomMetricPublisher
 
   private lateinit var stage: LoadShedStage
 
@@ -47,8 +47,8 @@ class LoadShedStageTest {
       LoadShedStage(
         ffClient,
         workloadClient,
+        metricPublisher,
         "dataplane-id",
-        metricClient,
       )
   }
 

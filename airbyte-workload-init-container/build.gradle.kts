@@ -33,13 +33,11 @@ dependencies {
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
   implementation(libs.micronaut.jooq)
-  implementation(libs.bundles.micronaut.metrics)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-commons-converters"))
-  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-mappers"))

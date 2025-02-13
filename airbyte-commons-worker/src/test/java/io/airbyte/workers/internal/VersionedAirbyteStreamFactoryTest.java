@@ -25,7 +25,6 @@ import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV1Deserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
 import io.airbyte.commons.version.Version;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
@@ -182,8 +181,7 @@ class VersionedAirbyteStreamFactoryTest {
               logger,
               new Builder(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class));
+              gsonPksExtractor);
     }
 
     private static final String VALID_MESSAGE_TEMPLATE =
@@ -241,8 +239,7 @@ class VersionedAirbyteStreamFactoryTest {
               logger,
               new Builder(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class))
+              gsonPksExtractor)
           .create(bufferedReader);
       verifyStreamHeader();
       return stream;
@@ -286,8 +283,7 @@ class VersionedAirbyteStreamFactoryTest {
       final VersionedAirbyteStreamFactory<?> streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class));
+              gsonPksExtractor);
 
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
       streamFactory.create(bufferedReader);
@@ -301,8 +297,7 @@ class VersionedAirbyteStreamFactoryTest {
       final VersionedAirbyteStreamFactory<?> streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class))
+              gsonPksExtractor)
                   .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
@@ -319,8 +314,7 @@ class VersionedAirbyteStreamFactoryTest {
       final VersionedAirbyteStreamFactory<?> streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class))
+              gsonPksExtractor)
                   .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
@@ -337,8 +331,7 @@ class VersionedAirbyteStreamFactoryTest {
       final VersionedAirbyteStreamFactory<?> streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
-              gsonPksExtractor,
-              mock(MetricClient.class))
+              gsonPksExtractor)
                   .withDetectVersion(true);
 
       final BufferedReader bufferedReader =

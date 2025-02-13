@@ -10,10 +10,10 @@ import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.config.OidcEndpointConfig
 import io.airbyte.commons.auth.config.OidcFieldMappingConfig
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Replaces
@@ -165,17 +165,15 @@ open class OidcTokenValidator(
   ) {
     metricClient.ifPresent { m: MetricClient ->
       m.count(
-        metric = OssMetricsRegistry.OIDC_TOKEN_VALIDATION,
-        attributes =
-          arrayOf(
-            if (success) {
-              MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "success")
-            } else {
-              MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "failure")
-            },
-            MetricAttribute(MetricTags.USER_TYPE, EXTERNAL_USER),
-            MetricAttribute(MetricTags.AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.uri.path),
-          ),
+        OssMetricsRegistry.OIDC_TOKEN_VALIDATION,
+        1,
+        if (success) {
+          MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "success")
+        } else {
+          MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "failure")
+        },
+        MetricAttribute(MetricTags.USER_TYPE, EXTERNAL_USER),
+        MetricAttribute(MetricTags.AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.uri.path),
       )
     }
   }

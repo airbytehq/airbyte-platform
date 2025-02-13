@@ -56,7 +56,7 @@ class AuthModeFactory(
   fun defaultAuthMode(): AuthMode =
     when {
       deploymentMode == DeploymentMode.CLOUD -> AuthMode.OIDC
-      airbyteEdition == Configs.AirbyteEdition.ENTERPRISE -> AuthMode.OIDC
+      airbyteEdition == Configs.AirbyteEdition.PRO -> AuthMode.OIDC
       deploymentMode == DeploymentMode.OSS -> AuthMode.NONE
       else -> throw IllegalStateException("Unknown or unspecified deployment mode: $deploymentMode")
     }

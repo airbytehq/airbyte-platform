@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.general.performance;
 
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.general.BufferConfiguration;
@@ -50,7 +50,7 @@ class BufferedReplicationWorkerPerformanceTest extends ReplicationWorkerPerforma
                                                         final ReplicationInput replicationInput) {
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
         srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor,
-        streamStatusCompletionTracker, BufferConfiguration.withDefaultConfiguration(), metricClient, replicationInput, metricClient);
+        streamStatusCompletionTracker, BufferConfiguration.withDefaultConfiguration(), metricClient, replicationInput);
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

@@ -22,7 +22,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.lib.MetricClient
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -50,7 +50,7 @@ internal class CatalogValidatorTest {
   @BeforeEach
   internal fun setup() {
     every { featureFlagClient.intVariation(ConnectionFieldLimitOverride, any()) } returns -1
-    every { metricClient.distribution(metric = any(), any(), *anyVararg()) } returns Unit
+    every { metricClient.distribution(any(), any(), *anyVararg()) } returns Unit
 
     validator = CatalogValidator(MAX_FIELD_LIMIT, metricClient, featureFlagClient)
   }

@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.temporal.sync
 
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput
 import jakarta.inject.Singleton
 
@@ -24,31 +24,12 @@ class ReportRunTimeActivityImpl(
     val sourceDefinitionTag = MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, input.sourceDefinitionId.toString())
 
     metricClient.count(
-      metric = OssMetricsRegistry.DISCOVER_CATALOG_RUN_TIME,
-      value = runTimeRefresh,
-      attributes =
-        arrayOf(
-          connectionTag,
-          sourceDefinitionTag,
-        ),
+      OssMetricsRegistry.DISCOVER_CATALOG_RUN_TIME,
+      runTimeRefresh,
+      connectionTag,
+      sourceDefinitionTag,
     )
-    metricClient.count(
-      metric = OssMetricsRegistry.REPLICATION_RUN_TIME,
-      value = runTimeReplication,
-      attributes =
-        arrayOf(
-          connectionTag,
-          sourceDefinitionTag,
-        ),
-    )
-    metricClient.count(
-      metric = OssMetricsRegistry.SYNC_TOTAL_TIME,
-      value = totalWorkflowRunTime,
-      attributes =
-        arrayOf(
-          connectionTag,
-          sourceDefinitionTag,
-        ),
-    )
+    metricClient.count(OssMetricsRegistry.REPLICATION_RUN_TIME, runTimeReplication, connectionTag, sourceDefinitionTag)
+    metricClient.count(OssMetricsRegistry.SYNC_TOTAL_TIME, totalWorkflowRunTime, connectionTag, sourceDefinitionTag)
   }
 }

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.temporal.exception.SizeLimitException;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import org.junit.jupiter.api.Test;
 
 class PayloadCheckerTest {

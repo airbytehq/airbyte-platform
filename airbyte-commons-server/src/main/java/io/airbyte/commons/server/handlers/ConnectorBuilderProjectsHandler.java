@@ -79,7 +79,6 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
@@ -130,7 +129,6 @@ public class ConnectorBuilderProjectsHandler {
   private final ActorDefinitionService actorDefinitionService;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final OAuthImplementationFactory oAuthImplementationFactory;
-  private final MetricClient metricClient;
 
   public static final String SPEC_FIELD = "spec";
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
@@ -151,8 +149,7 @@ public class ConnectorBuilderProjectsHandler {
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient,
                                          final ActorDefinitionService actorDefinitionService,
                                          final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                         @Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory,
-                                         final MetricClient metricClient) {
+                                         @Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory) {
     this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
@@ -169,7 +166,6 @@ public class ConnectorBuilderProjectsHandler {
     this.actorDefinitionService = actorDefinitionService;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.oAuthImplementationFactory = oauthImplementationFactory;
-    this.metricClient = metricClient;
   }
 
   private ConnectorBuilderProjectDetailsRead getProjectDetailsWithoutBaseAdvInfo(final ConnectorBuilderProject project) {
@@ -568,7 +564,7 @@ public class ConnectorBuilderProjectsHandler {
                                                    final Optional<SecretPersistenceConfig> secretPersistenceConfig)
       throws JsonValidationException {
 
-    final var secretPersistence = secretPersistenceConfig.map(c -> new RuntimeSecretPersistence(c, metricClient)).orElse(null);
+    final var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
     if (existingTestingValues.isPresent()) {
       return secretsRepositoryWriter.updateFromConfig(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }
@@ -595,7 +591,7 @@ public class ConnectorBuilderProjectsHandler {
     return testingValues.isPresent()
         ? secretPersistenceConfigOptional.isPresent()
             ? Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(testingValues.get(),
-                new RuntimeSecretPersistence(secretPersistenceConfigOptional.get(), metricClient)))
+                new RuntimeSecretPersistence(secretPersistenceConfigOptional.get())))
             : Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(project.getTestingValues()))
         : Optional.empty();
   }

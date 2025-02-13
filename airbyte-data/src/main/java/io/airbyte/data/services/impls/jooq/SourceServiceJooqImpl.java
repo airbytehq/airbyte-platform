@@ -47,7 +47,6 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -91,7 +90,6 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
-  private final MetricClient metricClient;
 
   // TODO: This has too many dependencies.
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -100,8 +98,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                final SecretsRepositoryWriter secretsRepositoryWriter,
                                final SecretPersistenceConfigService secretPersistenceConfigService,
                                final ConnectionService connectionService,
-                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
-                               final MetricClient metricClient) {
+                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
@@ -109,7 +106,6 @@ public class SourceServiceJooqImpl implements SourceService {
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
-    this.metricClient = metricClient;
   }
 
   /**
@@ -716,7 +712,7 @@ public class SourceServiceJooqImpl implements SourceService {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(source.getConfiguration(),
-          new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
+          new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       hydratedConfig = secretRepositoryReader.hydrateConfigFromDefaultSecretPersistence(source.getConfiguration());
     }
@@ -747,7 +743,7 @@ public class SourceServiceJooqImpl implements SourceService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
     secretsRepositoryWriter.deleteFromConfig(
         config,
@@ -787,7 +783,7 @@ public class SourceServiceJooqImpl implements SourceService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
     final JsonNode partialConfig;
     if (previousSourceConnection.isPresent()) {

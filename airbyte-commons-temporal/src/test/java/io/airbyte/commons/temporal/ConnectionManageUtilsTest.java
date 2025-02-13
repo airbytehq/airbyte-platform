@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.temporal.client.BatchRequest;
 import io.temporal.client.WorkflowOptions;
 import java.util.UUID;

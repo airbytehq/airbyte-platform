@@ -45,7 +45,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -85,7 +84,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
-    final MetricClient metricClient = mock(MetricClient.class);
 
     actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -104,8 +102,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 connectionService,
                 actorDefinitionService,
                 scopedConfigurationService,
-                connectionTimelineEventService),
-            metricClient));
+                connectionTimelineEventService)));
     destinationService = spy(
         new DestinationServiceJooqImpl(
             database,
@@ -119,11 +116,9 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 connectionService,
                 actorDefinitionService,
                 scopedConfigurationService,
-                connectionTimelineEventService),
-            metricClient));
+                connectionTimelineEventService)));
     workspaceService = spy(
-        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-            metricClient));
+        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService));
     organizationService.writeOrganization(MockData.defaultOrganization());
   }
 

@@ -59,7 +59,6 @@ import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.oauth.OAuthFlowImplementation;
@@ -101,7 +100,6 @@ public class OAuthHandler {
   private final OAuthService oAuthService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final WorkspaceService workspaceService;
-  private final MetricClient metricClient;
 
   public OAuthHandler(@Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory,
                       final TrackingClient trackingClient,
@@ -112,8 +110,7 @@ public class OAuthHandler {
                       final DestinationService destinationService,
                       final OAuthService oauthService,
                       final SecretPersistenceConfigService secretPersistenceConfigService,
-                      final WorkspaceService workspaceService,
-                      final MetricClient metricClient) {
+                      final WorkspaceService workspaceService) {
     this.oAuthImplementationFactory = oauthImplementationFactory;
     this.trackingClient = trackingClient;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -124,7 +121,6 @@ public class OAuthHandler {
     this.oAuthService = oauthService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.workspaceService = workspaceService;
-    this.metricClient = metricClient;
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -567,7 +563,7 @@ public class OAuthHandler {
           secretCoordinate = secretsRepositoryWriter.store(
               generateOAuthSecretCoordinate(workspaceId),
               payloadString,
-              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
+              new RuntimeSecretPersistence(secretPersistenceConfig));
         } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
@@ -739,7 +735,7 @@ public class OAuthHandler {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
+        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }

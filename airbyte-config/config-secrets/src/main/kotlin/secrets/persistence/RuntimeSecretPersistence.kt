@@ -9,7 +9,8 @@ import io.airbyte.config.AwsAccessKeySecretPersistenceConfig
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
-import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.lib.MetricEmittingApps
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlin.jvm.optionals.getOrElse
 
@@ -23,7 +24,6 @@ private val log = KotlinLogging.logger {}
  */
 class RuntimeSecretPersistence(
   private val secretPersistenceConfig: SecretPersistenceConfig,
-  private val metricClient: MetricClient,
 ) : SecretPersistence {
   private val awsAccessKey: String? = System.getenv(AWS_ASSUME_ROLE_ACCESS_KEY_ID)
   private val awsSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
@@ -37,10 +37,11 @@ class RuntimeSecretPersistence(
       SecretPersistenceConfig.SecretPersistenceType.GOOGLE -> {
         // We cannot use the @Singleton here because this class is not managed by Micronaut.
         // Manually create the client for now.
+        MetricClientFactory.initialize(MetricEmittingApps.SERVER)
         GoogleSecretManagerPersistence(
           secretPersistenceConfig.configuration["gcpProjectId"]!!,
           GoogleSecretManagerServiceClient(secretPersistenceConfig.configuration["gcpCredentialsJson"]!!),
-          metricClient,
+          MetricClientFactory.getMetricClient(),
         )
       }
 

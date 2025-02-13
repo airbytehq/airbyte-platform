@@ -36,14 +36,12 @@ dependencies {
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.jakarta.ws.rs.api)
-  implementation(libs.bundles.micronaut.metrics)
 
   // OpenAPI code generation(dependencies)
   implementation(libs.swagger.annotations)
 
   // Internal dependencies)
   implementation(project(":oss:airbyte-commons"))
-  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-server"))
   implementation(project(":oss:airbyte-commons-storage"))

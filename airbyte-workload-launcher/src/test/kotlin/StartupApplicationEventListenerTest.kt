@@ -24,7 +24,7 @@ class StartupApplicationEventListenerTest {
       StartupApplicationEventListener(
         claimedProcessor = claimedProcessor,
         claimProcessorTracker = mockk(relaxed = true),
-        metricClient = mockk(relaxed = true),
+        customMetricPublisher = mockk(relaxed = true),
         temporalWorkerController = mockk(relaxed = true),
         launcherShutdownHelper = launcherShutdownHelper,
       )

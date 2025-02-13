@@ -32,7 +32,6 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.mappers.transformations.MapperSpec
-import io.airbyte.metrics.MetricClient
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -49,7 +48,6 @@ class MapperSecretHelper(
   @Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
   private val featureFlagClient: FeatureFlagClient,
   private val deploymentMode: DeploymentMode,
-  private val metricClient: MetricClient,
 ) {
   @Inject
   constructor(
@@ -61,7 +59,6 @@ class MapperSecretHelper(
     @Named("jsonSecretsProcessorWithCopy") secretsProcessor: JsonSecretsProcessor,
     featureFlagClient: FeatureFlagClient,
     deploymentMode: DeploymentMode,
-    metricClient: MetricClient,
   ) : this(
     mappers.associateBy { it.name },
     workspaceService,
@@ -71,7 +68,6 @@ class MapperSecretHelper(
     secretsProcessor,
     featureFlagClient,
     deploymentMode,
-    metricClient,
   )
 
   private fun getMapper(name: String): Mapper<MapperConfig> = mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
@@ -102,7 +98,7 @@ class MapperSecretHelper(
       return null
     }
     val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
-    return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+    return RuntimeSecretPersistence(secretPersistenceConfig)
   }
 
   private fun assertConfigHasNoMaskedSecrets(

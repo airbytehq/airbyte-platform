@@ -24,7 +24,6 @@ import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -100,7 +99,6 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    final MetricClient metricClient = mock(MetricClient.class);
     new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
 
     final StandardWorkspace workspace = new StandardWorkspace()
@@ -111,9 +109,8 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
-    new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-        metricClient)
-            .writeStandardWorkspaceNoSecrets(workspace);
+    new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService)
+        .writeStandardWorkspaceNoSecrets(workspace);
   }
 
 }

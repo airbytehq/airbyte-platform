@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;

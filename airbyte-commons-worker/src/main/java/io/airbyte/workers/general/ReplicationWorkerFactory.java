@@ -35,7 +35,7 @@ import io.airbyte.featureflag.SourceType;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -411,11 +411,11 @@ public class ReplicationWorkerFactory {
         new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
             msgEventPublisher, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
             analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker,
-            streamStatusTrackerFactory, recordMapper, featureFlagClient, destinationCatalogGenerator, metricClient);
+            streamStatusTrackerFactory, recordMapper, featureFlagClient, destinationCatalogGenerator);
 
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
         srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout, streamStatusCompletionTracker,
-        bufferConfiguration, metricClient, replicationInput, metricClient);
+        bufferConfiguration, metricClient, replicationInput);
 
   }
 
@@ -436,7 +436,7 @@ public class ReplicationWorkerFactory {
                                                 final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
         Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder,
-        invalidLineFailureConfiguration, gsonPksExtractor, metricClient);
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
 }

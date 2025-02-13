@@ -25,12 +25,8 @@ micronaut:
         client:
           percentiles: "0.95"
     export:
-      otlp:
-        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
-        step: ${MICROMETER_METRICS_STEP:PT30S}
-        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -62,7 +58,6 @@ micronaut:
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
-  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}

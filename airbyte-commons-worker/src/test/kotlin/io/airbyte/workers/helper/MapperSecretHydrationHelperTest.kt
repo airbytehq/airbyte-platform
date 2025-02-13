@@ -28,7 +28,6 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.mappers.transformations.EncryptionMapper
 import io.airbyte.mappers.transformations.HashingMapper
 import io.airbyte.mappers.transformations.Mapper
-import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -49,15 +48,12 @@ internal class MapperSecretHydrationHelperTest {
 
   private val hashingMapper = HashingMapper()
   private val encryptionMapper = EncryptionMapper()
-  private val metricClient = mockk<MetricClient>(relaxed = true)
 
-  @Suppress("UNCHECKED_CAST")
   private val mapperSecretHydrationHelper =
     MapperSecretHydrationHelper(
       mappers = listOf(encryptionMapper as Mapper<MapperConfig>, hashingMapper as Mapper<MapperConfig>),
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
-      metricClient = metricClient,
     )
 
   @BeforeEach

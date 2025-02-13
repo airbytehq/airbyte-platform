@@ -121,7 +121,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -512,9 +511,7 @@ public class AcceptanceTestHarness {
   }
 
   private WorkflowClient getWorkflowClient() {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null,
-        null, null, null,
-        null, Optional.empty());
+    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
         TemporalWorkflowUtils.getAirbyteTemporalOptions(TEMPORAL_HOST, new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);

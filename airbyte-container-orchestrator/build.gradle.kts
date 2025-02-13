@@ -73,7 +73,6 @@ dependencies {
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)
-  testImplementation(libs.mockk)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

@@ -4,11 +4,11 @@
 
 package io.airbyte.workers.storage.activities
 
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
 import io.airbyte.config.ActivityPayloadURI as OpenApiURI
@@ -61,7 +61,7 @@ class OutputStorageClient<T : Any>
         logger.error { "Message: ${e.message}" }
         logger.error { "Stack Trace: ${e.stackTrace}" }
 
-        metricClient.count(metric = OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, attributes = attrs.toTypedArray())
+        metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, *attrs.toTypedArray())
       }
 
       return uri.toOpenApi()

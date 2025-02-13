@@ -85,7 +85,6 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
-          mockk(),
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(
@@ -112,7 +111,6 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           actorDefinitionUpdate,
-          mockk(),
         )
 
       val sourceDefinitionId = UUID.randomUUID()
@@ -157,7 +155,6 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           actorDefinitionUpdate,
-          mockk(),
         )
 
       val destinationDefinitionId = UUID.randomUUID()

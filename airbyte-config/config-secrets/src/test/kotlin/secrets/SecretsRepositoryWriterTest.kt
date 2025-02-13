@@ -10,10 +10,10 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.mockk.every
@@ -54,8 +54,8 @@ internal class SecretsRepositoryWriterTest {
 
   @Test
   fun testDeleteSecrets() {
-    every { metricClient.count(metric = any(), value = any()) } returns Unit
-    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns Unit
+    every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), any()) } returns Unit
     val secret = "test-secret"
     val coordinate = "existing_coordinate_v1"
     secretPersistence.write(SecretCoordinate.fromFullCoordinate(coordinate), secret)
@@ -74,8 +74,8 @@ internal class SecretsRepositoryWriterTest {
   inner class TestUpdateSecrets {
     @BeforeEach
     fun setup() {
-      every { metricClient.count(metric = any(), value = any()) } returns Unit
-      every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns Unit
+      every { metricClient.count(any(), any()) } returns Unit
+      every { metricClient.count(any(), any(), any()) } returns Unit
       every { featureFlagClient.boolVariation(any(), any()) } returns true
     }
 

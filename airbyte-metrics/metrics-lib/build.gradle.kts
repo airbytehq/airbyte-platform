@@ -16,11 +16,10 @@ dependencies {
 
   implementation(libs.guava)
   implementation(libs.google.cloud.storage)
-  implementation(libs.bundles.micronaut.kotlin)
+
+  implementation(libs.otel.semconv)
   implementation(libs.otel.sdk)
   implementation(libs.otel.sdk.testing)
-  implementation(libs.otel.semconv)
-  implementation(libs.micrometer.otlp)
   implementation(libs.micrometer.statsd)
   implementation(platform(libs.otel.bom))
   implementation(("io.opentelemetry:opentelemetry-api"))
@@ -37,7 +36,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
-  testImplementation(libs.junit.jupiter.system.stubs)
   testImplementation((variantOf(libs.opentracing.util) { classifier("tests") }))
 
   testImplementation(libs.junit.pioneer)

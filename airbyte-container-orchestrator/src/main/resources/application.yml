@@ -22,12 +22,8 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
-      otlp:
-        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
-        step: ${MICROMETER_METRICS_STEP:PT30S}
-        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -41,7 +37,6 @@ airbyte:
   job-id: ${JOB_ID:}
   attempt-id: ${ATTEMPT_ID:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
-  edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   config-dir: ${AIRBYTE_CONFIG_DIR:/config}

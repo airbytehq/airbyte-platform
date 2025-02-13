@@ -28,11 +28,11 @@ import io.airbyte.config.Metadata;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -81,22 +81,19 @@ public class JobCreationAndStatusUpdateHelper {
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
-  private final MetricClient metricClient;
 
   public JobCreationAndStatusUpdateHelper(final JobPersistence jobPersistence,
                                           final ActorDefinitionService actorDefinitionService,
                                           final ConnectionService connectionService,
                                           final JobNotifier jobNotifier,
                                           final JobTracker jobTracker,
-                                          final ConnectionTimelineEventHelper connectionTimelineEventHelper,
-                                          final MetricClient metricClient) {
+                                          final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.jobPersistence = jobPersistence;
     this.actorDefinitionService = actorDefinitionService;
     this.connectionService = connectionService;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
-    this.metricClient = metricClient;
   }
 
   @VisibleForTesting
@@ -198,15 +195,10 @@ public class JobCreationAndStatusUpdateHelper {
     final var releaseStagesOrdered = orderByReleaseStageAsc(releaseStages);
     final var connectionId = job.getScope() == null ? null : UUID.fromString(job.getScope());
     final var geography = connectionService.getGeographyForConnection(connectionId);
-    final var parsedAttemptNumber = parseAttemptNumberOrNull(attemptNumber);
 
     final List<MetricAttribute> baseMetricAttributes = new ArrayList<>();
-    if (geography != null) {
-      baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, geography.toString()));
-    }
-    if (parsedAttemptNumber != null) {
-      baseMetricAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parsedAttemptNumber));
-    }
+    baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, geography == null ? null : geography.toString()));
+    baseMetricAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parseAttemptNumberOrNull(attemptNumber)));
     baseMetricAttributes
         .add(new MetricAttribute(MetricTags.MIN_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 0))));
     baseMetricAttributes
@@ -218,7 +210,7 @@ public class JobCreationAndStatusUpdateHelper {
     final MetricAttribute[] allMetricAttributes = Stream.concat(baseMetricAttributes.stream(), additionalAttributes.stream())
         .toList()
         .toArray(new MetricAttribute[baseMetricAttributes.size() + additionalAttributes.size()]);
-    metricClient.count(metric, allMetricAttributes);
+    MetricClientFactory.getMetricClient().count(metric, 1, allMetricAttributes);
   }
 
   public void emitAttemptCreatedEvent(final Job job, final int attemptNumber) throws IOException {
@@ -275,21 +267,11 @@ public class JobCreationAndStatusUpdateHelper {
 
     final List<MetricAttribute> additionalAttributes = new ArrayList<>();
     additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()));
-    failureOrigin.ifPresent(o -> {
-      additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, o));
-    });
-    failureType.ifPresent(t -> {
-      additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, t));
-    });
-    if (attempt.getProcessingTaskQueue() != null) {
-      additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
-    }
-    externalMsg.ifPresent(e -> {
-      additionalAttributes.add(new MetricAttribute(MetricTags.EXTERNAL_MESSAGE, e));
-    });
-    internalMsg.ifPresent(i -> {
-      additionalAttributes.add(new MetricAttribute(MetricTags.INTERNAL_MESSAGE, i));
-    });
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, failureOrigin.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, failureType.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.EXTERNAL_MESSAGE, externalMsg.orElse(null)));
+    additionalAttributes.add(new MetricAttribute(MetricTags.INTERNAL_MESSAGE, internalMsg.orElse(null)));
 
     try {
       emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
@@ -323,10 +305,7 @@ public class JobCreationAndStatusUpdateHelper {
       final var config = job.getConfig().getResetConnection();
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     }
-
-    if (job.getScope() != null) {
-      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.getScope()));
-    }
+    attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.getScope()));
 
     return attrs;
   }
@@ -427,7 +406,7 @@ public class JobCreationAndStatusUpdateHelper {
         attributes.add(new MetricAttribute(MetricTags.RELEASE_STAGE, MetricTags.getReleaseStage(stage)));
         attributes.addAll(additionalAttributes);
 
-        metricClient.count(metric, attributes.toArray(new MetricAttribute[0]));
+        MetricClientFactory.getMetricClient().count(metric, 1, attributes.toArray(new MetricAttribute[0]));
       }
     }
   }
@@ -493,12 +472,12 @@ public class JobCreationAndStatusUpdateHelper {
   public void trackFailures(final AttemptFailureSummary failureSummary) {
     if (failureSummary != null) {
       for (final FailureReason reason : failureSummary.getFailures()) {
-        metricClient.count(OssMetricsRegistry.ATTEMPT_FAILED_BY_FAILURE_ORIGIN,
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ATTEMPT_FAILED_BY_FAILURE_ORIGIN, 1,
             new MetricAttribute(MetricTags.FAILURE_ORIGIN, MetricTags.getFailureOrigin(reason.getFailureOrigin())),
             new MetricAttribute(MetricTags.FAILURE_TYPE, MetricTags.getFailureType(reason.getFailureType())));
       }
     } else {
-      metricClient.count(OssMetricsRegistry.ATTEMPT_FAILED_BY_FAILURE_ORIGIN,
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ATTEMPT_FAILED_BY_FAILURE_ORIGIN, 1,
           new MetricAttribute(MetricTags.FAILURE_ORIGIN, FailureOrigin.UNKNOWN.value()),
           new MetricAttribute(MetricTags.FAILURE_TYPE, MetricTags.getFailureType(null)));
     }

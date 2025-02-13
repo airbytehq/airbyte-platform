@@ -16,7 +16,6 @@ dependencies {
   implementation(libs.temporal.sdk)
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
-  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-api:server-api"))

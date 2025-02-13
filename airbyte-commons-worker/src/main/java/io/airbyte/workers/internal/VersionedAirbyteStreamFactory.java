@@ -22,10 +22,10 @@ import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
@@ -97,7 +97,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   private final InvalidLineFailureConfiguration invalidLineFailureConfiguration;
   private final GsonPksExtractor gsonPksExtractor;
-  private final MetricClient metricClient;
 
   /**
    * In some cases, we know the stream will never emit messages that need to be migrated. This is
@@ -106,9 +105,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
-  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final MetricClient metricClient) {
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory() {
     return noMigrationVersionedAirbyteStreamFactory(DEFAULT_LOGGER, MdcScope.DEFAULT_BUILDER,
-        new InvalidLineFailureConfiguration(false), new GsonPksExtractor(), metricClient);
+        new InvalidLineFailureConfiguration(false), new GsonPksExtractor());
   }
 
   /**
@@ -120,8 +119,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final Logger logger,
                                                                                        final MdcScope.Builder mdcBuilder,
                                                                                        final InvalidLineFailureConfiguration conf,
-                                                                                       final GsonPksExtractor gsonPksExtractor,
-                                                                                       final MetricClient metricClient) {
+                                                                                       final GsonPksExtractor gsonPksExtractor) {
     final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
         List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
@@ -135,7 +133,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
 
     return new VersionedAirbyteStreamFactory<>(provider, fac, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, Optional.empty(),
-        Optional.empty(), logger, mdcBuilder, conf, gsonPksExtractor, metricClient);
+        Optional.empty(), logger, mdcBuilder, conf, gsonPksExtractor);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -145,10 +143,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final InvalidLineFailureConfiguration invalidLineFailureConfiguration,
-                                       final GsonPksExtractor gsonPksExtractor,
-                                       final MetricClient metricClient) {
+                                       final GsonPksExtractor gsonPksExtractor) {
     this(serDeProvider, migratorFactory, protocolVersion, connectionId, configuredAirbyteCatalog, DEFAULT_LOGGER, containerLogMdcBuilder,
-        invalidLineFailureConfiguration, gsonPksExtractor, metricClient);
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -157,10 +154,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Optional<UUID> connectionId,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final InvalidLineFailureConfiguration invalidLineFailureConfiguration,
-                                       final GsonPksExtractor gsonPksExtractor,
-                                       final MetricClient metricClient) {
+                                       final GsonPksExtractor gsonPksExtractor) {
     this(serDeProvider, migratorFactory, protocolVersion, connectionId, configuredAirbyteCatalog, DEFAULT_LOGGER, DEFAULT_MDC_SCOPE,
-        invalidLineFailureConfiguration, gsonPksExtractor, metricClient);
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -171,8 +167,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Logger logger,
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final InvalidLineFailureConfiguration invalidLineFailureConfiguration,
-                                       final GsonPksExtractor gsonPksExtractor,
-                                       final MetricClient metricClient) {
+                                       final GsonPksExtractor gsonPksExtractor) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
@@ -185,7 +180,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     this.initializeForProtocolVersion(protocolVersion);
     this.connectionId = connectionId;
     this.invalidLineFailureConfiguration = invalidLineFailureConfiguration;
-    this.metricClient = metricClient;
   }
 
   /**
@@ -226,6 +220,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   }
 
   private Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
+    final var metricClient = MetricClientFactory.getMetricClient();
     return bufferedReader
         .lines()
         .peek(str -> {
@@ -354,10 +349,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return;
     }
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
-      connectionId.ifPresentOrElse(c -> metricClient.count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG,
+      connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
           new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
-          () -> metricClient.count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG));
-      metricClient.distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+          () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
+      MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
       if (invalidLineFailureConfiguration.printLongRecordPks) {
         logger.warn("[LARGE RECORD] Risk of Destinations not being able to properly handle: " + line.length());
         configuredAirbyteCatalog.ifPresent(
@@ -390,11 +385,11 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         // Filter on record into debug to try and prevent such cases. Though this catches non-record
         // messages, this is ok as we rather be safe than sorry.
         logger.warn("Could not parse the string received from source, it seems to be a record message");
-        metricClient.count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD,
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
             malformedLogAttributes(line, connectionId));
         logger.debug(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line);
       } else {
-        metricClient.count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE,
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1,
             malformedLogAttributes(line, connectionId));
         logger.info(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line);
       }

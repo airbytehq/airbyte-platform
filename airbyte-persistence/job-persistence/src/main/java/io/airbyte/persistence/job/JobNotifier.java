@@ -32,9 +32,9 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
@@ -74,7 +74,6 @@ public class JobNotifier {
   private final WorkspaceService workspaceService;
   private final WorkspaceHelper workspaceHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
-  private final MetricClient metricClient;
 
   public JobNotifier(final WebUrlHelper webUrlHelper,
                      final ConnectionService connectionService,
@@ -83,8 +82,7 @@ public class JobNotifier {
                      final WorkspaceService workspaceService,
                      final WorkspaceHelper workspaceHelper,
                      final TrackingClient trackingClient,
-                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                     final MetricClient metricClient) {
+                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.webUrlHelper = webUrlHelper;
     this.connectionService = connectionService;
     this.sourceService = sourceService;
@@ -93,7 +91,6 @@ public class JobNotifier {
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-    this.metricClient = metricClient;
   }
 
   private void notifyJob(final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
@@ -204,7 +201,7 @@ public class JobNotifier {
     final MetricAttribute metricTriggerAttribute = new MetricAttribute(NOTIFICATION_TRIGGER, action);
     final MetricAttribute metricClientAttribute = new MetricAttribute(NOTIFICATION_CLIENT, notificationClient);
 
-    metricClient.count(OssMetricsRegistry.NOTIFICATIONS_SENT, metricClientAttribute,
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute,
         metricTriggerAttribute);
   }
 

@@ -46,10 +46,10 @@ import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
@@ -159,9 +159,8 @@ public class ReplicationInputHydrator {
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
 
     final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    final boolean useFileTransfer =
-        sourceActorConfig != null && (sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
-            && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType())));
+    final boolean useFileTransfer = sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
+        && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType()));
 
     if (useFileTransfer && !resolvedDestinationVersion.getSupportFileTransfer()) {
       final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
@@ -228,7 +227,7 @@ public class ReplicationInputHydrator {
         fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
       } catch (final SecretCoordinateException e) {
         metricClient.count(
-            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
             new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getSourceLauncherConfig().getDockerImage()),
             new MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
             new MetricAttribute(CONNECTION_ID, replicationActivityInput.getSourceLauncherConfig().getConnectionId().toString()));
@@ -239,7 +238,7 @@ public class ReplicationInputHydrator {
             secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
       } catch (final SecretCoordinateException e) {
         metricClient.count(
-            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
             new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getDestinationLauncherConfig().getDockerImage()),
             new MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
             new MetricAttribute(CONNECTION_ID, replicationActivityInput.getDestinationLauncherConfig().getConnectionId().toString()));
@@ -263,7 +262,7 @@ public class ReplicationInputHydrator {
     final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
         new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
     return new RuntimeSecretPersistence(
-        fromApiSecretPersistenceConfig(secretPersistenceConfig), metricClient);
+        fromApiSecretPersistenceConfig(secretPersistenceConfig));
   }
 
   @VisibleForTesting

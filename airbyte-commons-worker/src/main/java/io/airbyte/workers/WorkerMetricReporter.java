@@ -4,9 +4,9 @@
 
 package io.airbyte.workers;
 
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +62,7 @@ public class WorkerMetricReporter {
   }
 
   public void trackStateMetricTrackerError() {
-    metricClient.count(OssMetricsRegistry.STATE_METRIC_TRACKER_ERROR, new MetricAttribute("docker_repo", dockerRepo),
+    metricClient.count(OssMetricsRegistry.STATE_METRIC_TRACKER_ERROR, 1, new MetricAttribute("docker_repo", dockerRepo),
         new MetricAttribute("docker_version", dockerVersion));
   }
 

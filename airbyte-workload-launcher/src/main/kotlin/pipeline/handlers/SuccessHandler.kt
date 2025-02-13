@@ -4,12 +4,11 @@
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
@@ -24,28 +23,23 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class SuccessHandler(
   private val apiClient: WorkloadApiClient,
-  private val metricClient: MetricClient,
+  private val metricPublisher: CustomMetricPublisher,
   @Named("logMsgTemplate") private val logMsgTemplate: Optional<Function<String, String>>,
 ) {
   fun accept(io: LaunchStageIO) {
     withLoggingContext(io.logCtx) {
-      metricClient.count(
-        metric = OssMetricsRegistry.WORKLOAD_PROCESSED,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
-            MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
-          ),
+      metricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
+        MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
       )
       if (io.msg.startTimeMs != null) {
-        metricClient.gauge(
-          metric = OssMetricsRegistry.PRODUCER_TO_POD_STARTED_LATENCY_MS,
-          stateObject = System.currentTimeMillis() - io.msg.startTimeMs,
-          function = { it.toDouble() },
-          attributes =
-            arrayOf(
-              MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
-            ),
+        val timeElapsed = System.currentTimeMillis() - io.msg.startTimeMs
+        metricPublisher.gauge(
+          WorkloadLauncherMetricMetadata.PRODUCER_TO_POD_STARTED_LATENCY_MS,
+          timeElapsed,
+          { it.toDouble() },
+          MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         )
       }
 

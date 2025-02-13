@@ -144,9 +144,8 @@ public interface Configs {
    * activate additional features if valid.
    */
   enum AirbyteEdition {
-    AIRBYTE,
     COMMUNITY,
-    ENTERPRISE
+    PRO
   }
 
 }

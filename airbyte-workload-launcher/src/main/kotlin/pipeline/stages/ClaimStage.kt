@@ -5,14 +5,14 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -32,14 +32,14 @@ private val logger = KotlinLogging.logger {}
 @Named("claim")
 open class ClaimStage(
   private val apiClient: WorkloadApiClient,
-  metricClient: MetricClient,
+  metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "ClaimStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "claim")],
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "claim")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
@@ -47,12 +47,9 @@ open class ClaimStage(
     val claimed = apiClient.claim(input.msg.workloadId)
 
     if (!claimed) {
-      metricClient.count(
-        metric = OssMetricsRegistry.WORKLOAD_NOT_CLAIMED,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
-          ),
+      metricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_NOT_CLAIMED,
+        MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
       )
       logger.info { "Workload not claimed. Setting SKIP flag to true." }
       return input.apply {
@@ -60,12 +57,9 @@ open class ClaimStage(
       }
     }
 
-    metricClient.count(
-      metric = OssMetricsRegistry.WORKLOAD_CLAIMED,
-      attributes =
-        arrayOf(
-          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
-        ),
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_CLAIMED,
+      MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
     )
     return input
   }

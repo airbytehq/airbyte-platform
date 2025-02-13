@@ -6,7 +6,7 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
 import io.airbyte.config.WorkloadType
-import io.airbyte.metrics.MetricClient
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
@@ -22,13 +22,13 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
-    val metricClient: MetricClient = mockk(relaxed = true)
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
@@ -43,13 +43,13 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
-    val metricClient: MetricClient = mockk(relaxed = true)
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
     val originalInput =
       LaunchStageIO(
@@ -73,13 +73,13 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
-    val metricClient: MetricClient = mockk(relaxed = true)
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns false
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
@@ -94,13 +94,13 @@ class CheckStatusStageTest {
     val autoId = UUID.randomUUID()
 
     val kubernetesClient: KubePodClient = mockk()
-    val metricClient: MetricClient = mockk(relaxed = true)
+    val metricPublisher: CustomMetricPublisher = mockk(relaxed = true)
 
     every {
       kubernetesClient.podsExistForAutoId(autoId)
     } throws Exception("Bang!")
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))

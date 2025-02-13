@@ -26,7 +26,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -48,18 +47,15 @@ public class OAuthServiceJooqImpl implements OAuthService {
   private final FeatureFlagClient featureFlagClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final MetricClient metricClient;
 
   public OAuthServiceJooqImpl(@Named("configDatabase") final Database database,
                               final FeatureFlagClient featureFlagClient,
                               final SecretsRepositoryReader secretsRepositoryReader,
-                              final SecretPersistenceConfigService secretPersistenceConfigService,
-                              final MetricClient metricClient) {
+                              final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.database = new ExceptionWrappingDatabase(database);
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
-    this.metricClient = metricClient;
   }
 
   /**
@@ -238,8 +234,7 @@ public class OAuthServiceJooqImpl implements OAuthService {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
-      return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config,
-          new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
+      return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config, new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       return secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(config);
     }

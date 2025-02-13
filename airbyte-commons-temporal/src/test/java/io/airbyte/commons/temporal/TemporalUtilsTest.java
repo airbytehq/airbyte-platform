@@ -30,7 +30,6 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -47,7 +46,7 @@ class TemporalUtilsTest {
 
   @Test
   void testWaitForTemporalServerAndLogThrowsException() {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null, Optional.empty());
+    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs workflowServiceStubs = mock(WorkflowServiceStubs.class, Mockito.RETURNS_DEEP_STUBS);
     final DescribeNamespaceResponse describeNamespaceResponse = mock(DescribeNamespaceResponse.class);
     final NamespaceInfo namespaceInfo = mock(NamespaceInfo.class);
@@ -68,7 +67,7 @@ class TemporalUtilsTest {
 
   @Test
   void testWaitThatTimesOut() {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null, Optional.empty());
+    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs workflowServiceStubs = mock(WorkflowServiceStubs.class, Mockito.RETURNS_DEEP_STUBS);
     final DescribeNamespaceResponse describeNamespaceResponse = mock(DescribeNamespaceResponse.class);
     final NamespaceInfo namespaceInfo = mock(NamespaceInfo.class);

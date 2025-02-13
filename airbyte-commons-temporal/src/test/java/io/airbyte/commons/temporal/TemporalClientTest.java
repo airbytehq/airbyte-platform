@@ -49,7 +49,7 @@ import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;

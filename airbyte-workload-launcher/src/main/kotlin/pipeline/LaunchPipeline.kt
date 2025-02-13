@@ -5,13 +5,15 @@
 package io.airbyte.workload.launcher.pipeline
 
 import datadog.trace.api.Trace
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.LogContextFactory
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
 import io.airbyte.workload.launcher.pipeline.handlers.SuccessHandler
@@ -37,31 +39,25 @@ class LaunchPipeline(
   @Named("launch") private val launch: LaunchStage,
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
-  private val metricClient: MetricClient,
+  private val metricPublisher: CustomMetricPublisher,
   private val ctxFactory: LogContextFactory,
 ) {
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
     val startTime = TimeSource.Monotonic.markNow()
-    metricClient.count(
-      metric = OssMetricsRegistry.WORKLOAD_RECEIVED,
-      attributes =
-        arrayOf(
-          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
-        ),
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED,
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
     )
     val disposable =
       buildPipeline(msg)
         .subscribeOn(Schedulers.immediate())
         .subscribe()
-    metricClient
-      .timer(
-        metric = OssMetricsRegistry.WORKLOAD_LAUNCH_DURATION,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
-          ),
-      )?.record(startTime.elapsedNow().toJavaDuration())
+    metricPublisher.timer(
+      WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION,
+      startTime.elapsedNow().toJavaDuration(),
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
     disposable.dispose()
   }
 
@@ -84,8 +80,8 @@ class LaunchPipeline(
 
   private fun addTagsToTrace(msg: LauncherInput) {
     val commonTags = hashMapOf<String, Any>()
-    commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
-    commonTags[MetricTags.WORKLOAD_ID_TAG] = msg.workloadId
+    commonTags[DATA_PLANE_ID_TAG] = dataplaneId
+    commonTags[WORKLOAD_ID_TAG] = msg.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags)
   }
 }

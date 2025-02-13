@@ -5,10 +5,9 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
-import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
@@ -30,14 +29,14 @@ import reactor.core.publisher.Mono
 @Named("launch")
 open class LaunchPodStage(
   private val launcher: KubePodClient,
-  metricClient: MetricClient,
+  metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "launch")],
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "launch")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 

@@ -6,7 +6,7 @@ package io.airbyte.commons.temporal.factories
 
 import com.uber.m3.tally.RootScopeBuilder
 import com.uber.m3.tally.StatsReporter
-import io.micrometer.core.instrument.MeterRegistry
+import io.airbyte.metrics.lib.MetricClientFactory
 import io.temporal.common.reporter.MicrometerClientStatsReporter
 import io.temporal.serviceclient.SimpleSslContextBuilder
 import io.temporal.serviceclient.WorkflowServiceStubs
@@ -63,7 +63,6 @@ class WorkflowServiceStubsFactory(
   private val temporalCloudConfig: TemporalCloudConfig,
   private val temporalSelfHostedConfig: TemporalSelfHostedConfig,
   private val temporalCloudEnabled: Boolean,
-  private val meterRegistry: MeterRegistry?,
 ) {
   companion object {
     private val log = LoggerFactory.getLogger(WorkflowServiceStubsOptions::class.java)
@@ -109,7 +108,7 @@ class WorkflowServiceStubsFactory(
   }
 
   private fun configureTemporalMeterRegistry(optionBuilder: WorkflowServiceStubsOptions.Builder) {
-    meterRegistry?.let {
+    MetricClientFactory.getMeterRegistry()?.let {
       val reporter: StatsReporter = MicrometerClientStatsReporter(it)
       optionBuilder.setMetricsScope(
         RootScopeBuilder()

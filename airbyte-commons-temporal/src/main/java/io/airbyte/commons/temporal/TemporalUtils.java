@@ -13,7 +13,6 @@ import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.temporal.api.namespace.v1.NamespaceConfig;
@@ -27,7 +26,6 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,14 +58,13 @@ public class TemporalUtils {
                        @Value("${temporal.cloud.namespace}") final String temporalCloudNamespace,
                        @Value("${temporal.host}") final String temporalHost,
                        @Property(name = "temporal.retention",
-                                 defaultValue = "30") final Integer temporalRetentionInDays,
-                       final Optional<MeterRegistry> meterRegistry) {
+                                 defaultValue = "30") final Integer temporalRetentionInDays) {
     this.temporalCloudEnabled = Objects.requireNonNullElse(temporalCloudEnabled, false);
     this.temporalCloudConfig = new TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace);
     this.workflowServiceStubsFactory = new WorkflowServiceStubsFactory(
         temporalCloudConfig,
         new TemporalSelfHostedConfig(temporalHost, this.temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE),
-        this.temporalCloudEnabled, meterRegistry.orElse(null));
+        this.temporalCloudEnabled);
     this.temporalRetentionInDays = temporalRetentionInDays;
   }
 

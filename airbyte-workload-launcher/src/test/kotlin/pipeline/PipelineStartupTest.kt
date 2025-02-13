@@ -4,10 +4,10 @@
 
 package io.airbyte.workload.launcher.pipeline
 
-import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.StartupApplicationEventListener
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.temporal.TemporalWorkerController
 import io.mockk.Ordering
 import io.mockk.every
@@ -20,7 +20,7 @@ class PipelineStartupTest {
   fun `should process claimed workloads`() {
     val claimedProcessor: ClaimedProcessor = mockk()
     val claimProcessorTracker: ClaimProcessorTracker = mockk()
-    val metricClient: MetricClient = mockk()
+    val metricPublisher: CustomMetricPublisher = mockk()
     val temporalWorkerController: TemporalWorkerController = mockk()
 
     every { claimedProcessor.retrieveAndProcess() } returns Unit
@@ -31,7 +31,7 @@ class PipelineStartupTest {
       StartupApplicationEventListener(
         claimedProcessor,
         claimProcessorTracker,
-        metricClient,
+        metricPublisher,
         temporalWorkerController,
         mockk(),
       )

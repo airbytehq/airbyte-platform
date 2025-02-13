@@ -28,7 +28,6 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -56,7 +55,6 @@ class JobCreationAndStatusUpdateHelperTest {
 
   JobCreationAndStatusUpdateHelper helper;
   ConnectionTimelineEventHelper connectionTimelineEventHelper;
-  MetricClient metricClient;
 
   @BeforeEach
   void setup() {
@@ -66,7 +64,6 @@ class JobCreationAndStatusUpdateHelperTest {
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
-    metricClient = mock(MetricClient.class);
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
@@ -74,8 +71,7 @@ class JobCreationAndStatusUpdateHelperTest {
         mConnectionService,
         mJobNotifier,
         mJobTracker,
-        connectionTimelineEventHelper,
-        metricClient);
+        connectionTimelineEventHelper);
   }
 
   @Test

@@ -4,10 +4,10 @@
 
 package io.airbyte.metrics.reporter;
 
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.time.Duration;
@@ -26,7 +26,7 @@ final class NumPendingJobs extends Emitter {
       db.numberOfPendingJobsByGeography().forEach((geography, count) -> client.gauge(
           OssMetricsRegistry.NUM_PENDING_JOBS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geography != null ? geography : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, geography)));
 
       return null;
     });
@@ -43,7 +43,7 @@ final class NumRunningJobs extends Emitter {
       db.numberOfRunningJobsByTaskQueue().forEach((attemptQueue, count) -> client.gauge(
           OssMetricsRegistry.NUM_RUNNING_JOBS,
           count,
-          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue != null ? attemptQueue : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue)));
       return null;
     });
   }
@@ -73,7 +73,7 @@ final class OldestRunningJob extends Emitter {
       db.oldestRunningJobAgeSecsByTaskQueue().forEach((attemptQueue, count) -> client.gauge(
           OssMetricsRegistry.OLDEST_RUNNING_JOB_AGE_SECS,
           count,
-          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue != null ? attemptQueue : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue)));
       return null;
     });
   }
@@ -89,7 +89,7 @@ final class OldestPendingJob extends Emitter {
       db.oldestPendingJobAgeSecsByGeography().forEach((geographyType, count) -> client.gauge(
           OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geographyType != null ? geographyType : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, geographyType)));
       return null;
     });
   }
@@ -148,7 +148,7 @@ final class UnusuallyLongSyncs extends Emitter {
           attributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, job.workspaceId()));
         }
 
-        client.count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, attributes.toArray(new MetricAttribute[0]));
+        client.count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1, attributes.toArray(new MetricAttribute[0]));
       });
 
       return null;
@@ -211,7 +211,6 @@ final class TotalJobRuntimeByTerminalState extends Emitter {
 @SuppressWarnings("OneTopLevelClass")
 sealed class Emitter {
 
-  public static final String UNKNOWN = "unknown";
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   protected final MetricClient client;
   protected final Callable<Void> callable;
@@ -231,7 +230,7 @@ sealed class Emitter {
   public void emit() {
     try {
       callable.call();
-      client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
+      client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
     } catch (final Exception e) {
       log.error("Exception querying database for metric: ", e);
     }

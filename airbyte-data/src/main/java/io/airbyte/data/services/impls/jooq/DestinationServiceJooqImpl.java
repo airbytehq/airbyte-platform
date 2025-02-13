@@ -43,7 +43,6 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinit
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -87,7 +86,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
-  private final MetricClient metricClient;
 
   @VisibleForTesting
   public DestinationServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -96,8 +94,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
                                     final SecretsRepositoryWriter secretsRepositoryWriter,
                                     final SecretPersistenceConfigService secretPersistenceConfigService,
                                     final ConnectionService connectionService,
-                                    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
-                                    final MetricClient metricClient) {
+                                    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
@@ -105,7 +102,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
-    this.metricClient = metricClient;
   }
 
   /**
@@ -708,7 +704,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destination.getConfiguration(),
-          new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
+          new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration());
     }
@@ -739,7 +735,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
     secretsRepositoryWriter.deleteFromConfig(
         config,
@@ -778,7 +774,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
 
     final JsonNode partialConfig;

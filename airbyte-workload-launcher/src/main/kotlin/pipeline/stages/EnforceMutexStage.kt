@@ -5,13 +5,14 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.MUTEX_KEY_TAG
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
@@ -32,14 +33,14 @@ private val logger = KotlinLogging.logger {}
 @Named("mutex")
 open class EnforceMutexStage(
   private val launcher: KubePodClient,
-  metricClient: MetricClient,
+  metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "mutex")],
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "mutex")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
@@ -57,13 +58,10 @@ open class EnforceMutexStage(
     val deleted = launcher.deleteMutexPods(key)
     if (deleted) {
       logger.info { "Existing pods for mutex key: $key deleted." }
-      metricClient.count(
-        metric = OssMetricsRegistry.PODS_DELETED_FOR_MUTEX_KEY,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
-            MetricAttribute(MetricTags.MUTEX_KEY_TAG, key),
-          ),
+      metricPublisher.count(
+        WorkloadLauncherMetricMetadata.PODS_DELETED_FOR_MUTEX_KEY,
+        MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+        MetricAttribute(MUTEX_KEY_TAG, key),
       )
     } else {
       logger.info { "Mutex key: $key specified for workload: $workloadId found no existing pods. Continuing..." }

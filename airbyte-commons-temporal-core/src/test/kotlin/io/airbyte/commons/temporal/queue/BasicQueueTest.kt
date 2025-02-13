@@ -6,7 +6,7 @@ package io.airbyte.commons.temporal.queue
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.airbyte.commons.temporal.WorkflowClientWrapped
-import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.lib.MetricClient
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions

@@ -4,9 +4,15 @@
 
 package io.airbyte.bootloader.config;
 
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 
 /**
@@ -15,6 +21,18 @@ import jakarta.inject.Singleton;
 @Factory
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ApplicationBeanFactory {
+
+  @Singleton
+  public AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange(@Value("${airbyte.protocol.target.range.min-version}") final String min,
+                                                                       @Value("${airbyte.protocol.target.range.max-version}") final String max) {
+    return new AirbyteProtocolVersionRange(new Version(min), new Version(max));
+  }
+
+  @Singleton
+  public MetricClient metricClient() {
+    MetricClientFactory.initialize(MetricEmittingApps.BOOTLOADER);
+    return io.airbyte.metrics.lib.MetricClientFactory.getMetricClient();
+  }
 
   @Singleton
   public KubernetesClient kubernetesClient() {

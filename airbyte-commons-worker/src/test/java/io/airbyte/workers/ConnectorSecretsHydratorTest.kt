@@ -13,7 +13,6 @@ import io.airbyte.api.client.model.generated.SecretPersistenceType
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
-import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -27,7 +26,6 @@ class ConnectorSecretsHydratorTest {
   @Test
   fun `uses runtime hydration if ff enabled for organization id`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val useRuntimeSecretPersistence = true
@@ -39,7 +37,6 @@ class ConnectorSecretsHydratorTest {
         secretsRepositoryReader,
         airbyteApiClient,
         useRuntimeSecretPersistence,
-        metricClient,
       )
 
     val unhydratedConfig = POJONode("un-hydrated")
@@ -55,10 +52,10 @@ class ConnectorSecretsHydratorTest {
         scopeType = ScopeType.ORGANIZATION,
       )
 
-    val runtimeSecretPersistence = RuntimeSecretPersistence(mockk(), metricClient)
+    val runtimeSecretPersistence = RuntimeSecretPersistence(mockk())
 
     mockkStatic(SecretPersistenceConfigHelper::class)
-    every { SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretConfig, metricClient) } returns runtimeSecretPersistence
+    every { SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretConfig) } returns runtimeSecretPersistence
 
     every { secretsApiClient.getSecretsPersistenceConfig(any()) } returns secretConfig
     every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhydratedConfig, runtimeSecretPersistence) } returns hydratedConfig
@@ -73,7 +70,6 @@ class ConnectorSecretsHydratorTest {
   @Test
   fun `uses default hydration if ff not enabled for organization id`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val useRuntimeSecretPersistence = false
@@ -85,7 +81,6 @@ class ConnectorSecretsHydratorTest {
         secretsRepositoryReader,
         airbyteApiClient,
         useRuntimeSecretPersistence,
-        metricClient,
       )
 
     val unhydratedConfig = POJONode("un-hydrated")

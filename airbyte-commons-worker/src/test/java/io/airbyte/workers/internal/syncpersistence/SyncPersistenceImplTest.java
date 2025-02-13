@@ -28,7 +28,6 @@ import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
@@ -64,7 +63,6 @@ class SyncPersistenceImplTest {
   private Long jobId;
   private Integer attemptNumber;
   private AirbyteApiClient airbyteApiClient;
-  private MetricClient metricClient;
 
   @BeforeEach
   void beforeEach() {
@@ -72,7 +70,6 @@ class SyncPersistenceImplTest {
     jobId = (long) (Math.random() * Long.MAX_VALUE);
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     airbyteApiClient = mock(AirbyteApiClient.class);
-    metricClient = mock(MetricClient.class);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -93,7 +90,7 @@ class SyncPersistenceImplTest {
 
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, metricClient);
+        connectionId, jobId, attemptNumber);
   }
 
   @AfterEach
@@ -430,7 +427,7 @@ class SyncPersistenceImplTest {
     syncStatsTracker = mock();
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, metricClient);
+        connectionId, jobId, attemptNumber);
 
     syncPersistence.updateStats(new AirbyteRecordMessage());
     verify(syncStatsTracker).updateStats(new AirbyteRecordMessage());

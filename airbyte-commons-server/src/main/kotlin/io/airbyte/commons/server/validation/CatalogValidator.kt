@@ -12,9 +12,9 @@ import io.airbyte.commons.server.validation.CatalogValidator.Constants.PROPERTIE
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 

@@ -122,7 +122,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -184,7 +183,6 @@ class WebBackendConnectionsHandlerTest {
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
-  private MetricClient metricClient;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -211,7 +209,6 @@ class WebBackendConnectionsHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
-    metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
@@ -263,7 +260,6 @@ class WebBackendConnectionsHandlerTest {
         licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
-        metricClient,
         Configs.DeploymentMode.OSS);
 
     wbHandler = spy(new WebBackendConnectionsHandler(

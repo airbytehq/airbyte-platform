@@ -12,7 +12,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 
 import datadog.trace.api.DDTags;
 import datadog.trace.api.interceptor.MutableSpan;
-import io.airbyte.metrics.MetricAttribute;
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
@@ -50,7 +49,7 @@ public class ApmTraceUtils {
    */
   public static void addTagsToTrace(final List<MetricAttribute> attrs) {
     final Map<String, Object> tags = attrs.stream()
-        .collect(Collectors.toMap(MetricAttribute::getKey, MetricAttribute::getValue));
+        .collect(Collectors.toMap(MetricAttribute::key, MetricAttribute::value));
 
     addTagsToTrace(tags, TAG_PREFIX);
   }
@@ -145,7 +144,9 @@ public class ApmTraceUtils {
     final Span activeSpan = GlobalTracer.get().activeSpan();
     if (activeSpan instanceof MutableSpan) {
       final MutableSpan localRootSpan = ((MutableSpan) activeSpan).getLocalRootSpan();
-      tags.forEach((key, value) -> localRootSpan.setTag(formatTag(key, TAG_PREFIX), value.toString()));
+      tags.entrySet().forEach(entry -> {
+        localRootSpan.setTag(formatTag(entry.getKey(), TAG_PREFIX), entry.getValue().toString());
+      });
     }
   }
 

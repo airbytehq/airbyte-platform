@@ -10,10 +10,10 @@ import datadog.trace.api.Trace;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.metrics.MetricAttribute;
-import io.airbyte.metrics.MetricClient;
-import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
@@ -52,9 +52,9 @@ public class DefinitionsUpdater {
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "30s",
              initialDelay = "1m")
-  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     log.info("Updating definitions...");
-    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
+    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
     applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);
     log.info("Done applying remote connector definitions");
   }

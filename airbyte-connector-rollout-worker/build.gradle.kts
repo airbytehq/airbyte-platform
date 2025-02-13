@@ -10,7 +10,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.bundles.micronaut.metrics)
   implementation(libs.kotlin.logging)
   implementation(libs.temporal.sdk)
   implementation(libs.airbyte.protocol)
@@ -21,7 +20,6 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
-  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))

@@ -62,7 +62,6 @@ import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -105,7 +104,6 @@ public class SourceHandler {
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
-  private final MetricClient metricClient;
   private final Configs.DeploymentMode deploymentMode;
 
   @VisibleForTesting
@@ -128,7 +126,6 @@ public class SourceHandler {
                        final LicenseEntitlementChecker licenseEntitlementChecker,
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
-                       final MetricClient metricClient,
                        final Configs.DeploymentMode deploymentMode) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
@@ -149,7 +146,6 @@ public class SourceHandler {
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
-    this.metricClient = metricClient;
     this.deploymentMode = deploymentMode;
   }
 
@@ -623,8 +619,7 @@ public class SourceHandler {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
       secret =
-          secretsRepositoryReader.fetchSecretFromRuntimeSecretPersistence(secretCoordinate,
-              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
+          secretsRepositoryReader.fetchSecretFromRuntimeSecretPersistence(secretCoordinate, new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       secret = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(secretCoordinate);
     }

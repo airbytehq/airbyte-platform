@@ -5,13 +5,12 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
@@ -31,14 +30,14 @@ private val logger = KotlinLogging.logger {}
 @Named("check")
 open class CheckStatusStage(
   private val podClient: KubePodClient,
-  metricClient: MetricClient,
+  private val customMetricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(customMetricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "check_status")],
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
@@ -49,12 +48,9 @@ open class CheckStatusStage(
       logger.info {
         "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }
-      metricClient.count(
-        metric = OssMetricsRegistry.WORKLOAD_ALREADY_RUNNING,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
-          ),
+      customMetricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING,
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
       )
 
       return input.apply {

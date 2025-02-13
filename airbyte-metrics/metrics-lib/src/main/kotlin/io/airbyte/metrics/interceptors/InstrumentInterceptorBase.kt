@@ -4,9 +4,9 @@
 
 package io.airbyte.metrics.interceptors
 
-import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
+import io.airbyte.metrics.lib.MetricAttribute
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.core.annotation.AnnotationValue

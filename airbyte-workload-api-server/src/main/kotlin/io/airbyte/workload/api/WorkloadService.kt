@@ -12,11 +12,14 @@ import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.metrics.CustomMetricPublisher
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.QUEUE_NAME_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_TYPE_TAG
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -27,14 +30,13 @@ import java.util.UUID
 @Singleton
 open class WorkloadService(
   private val messageProducer: TemporalMessageProducer<LauncherInputMessage>,
-  private val metricClient: MetricClient,
+  private val metricPublisher: CustomMetricPublisher,
   private val airbyteApiClient: AirbyteApiClient,
 ) {
   companion object {
     const val CONNECTION_ID_LABEL_KEY = "connection_id"
     const val ACTOR_ID_LABEL_KEY = "actor_id"
     const val ACTOR_TYPE_LABEL_KEY = "actor_type"
-    const val WORKLOAD_PUBLISHER_OPERATION_NAME: String = "workload_publisher"
     const val WORKSPACE_ID_LABEL_KEY = "workspace_id"
   }
 
@@ -50,7 +52,7 @@ open class WorkloadService(
     priority: WorkloadPriority,
   ) {
     // TODO feature flag geography
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
     val queue = getQueueName(labels, priority)
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
@@ -60,14 +62,11 @@ open class WorkloadService(
       LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs, autoId),
       "wl-create_$workloadId",
     )
-    metricClient.count(
-      metric = OssMetricsRegistry.WORKLOAD_MESSAGE_PUBLISHED,
-      attributes =
-        arrayOf(
-          MetricAttribute(MetricTags.WORKLOAD_ID_TAG, workloadId),
-          MetricAttribute(MetricTags.QUEUE_NAME_TAG, queue),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType.toString()),
-        ),
+    metricPublisher.count(
+      WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
+      MetricAttribute(WORKLOAD_ID_TAG, workloadId),
+      MetricAttribute(QUEUE_NAME_TAG, queue),
+      MetricAttribute(WORKLOAD_TYPE_TAG, workloadType.toString()),
     )
   }
 

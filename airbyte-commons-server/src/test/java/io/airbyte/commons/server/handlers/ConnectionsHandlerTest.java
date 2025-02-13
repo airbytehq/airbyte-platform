@@ -186,7 +186,6 @@ import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGen
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperErrorType;
 import io.airbyte.mappers.transformations.HashingMapper;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -305,7 +304,6 @@ class ConnectionsHandlerTest {
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
-  private MetricClient metricClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -424,7 +422,6 @@ class ConnectionsHandlerTest {
     contextBuilder = mock(ContextBuilder.class);
 
     featureFlagClient = mock(TestClient.class);
-    metricClient = mock(MetricClient.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -462,7 +459,6 @@ class ConnectionsHandlerTest {
         licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
-        metricClient,
         Configs.DeploymentMode.OSS);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
@@ -523,7 +519,6 @@ class ConnectionsHandlerTest {
           apiPojoConverters,
           connectionSchedulerHelper,
           mapperSecretHelper,
-          metricClient,
           licenseEntitlementChecker,
           contextBuilder);
 
@@ -1987,9 +1982,13 @@ class ConnectionsHandlerTest {
           destinationService,
           connectionService,
           workspaceService,
-          destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
-          metricClient, licenseEntitlementChecker,
+          destinationCatalogGenerator,
+          catalogConverter,
+          applySchemaChangeHelper,
+          apiPojoConverters,
+          connectionSchedulerHelper,
+          mapperSecretHelper,
+          licenseEntitlementChecker,
           contextBuilder);
     }
 
@@ -2227,8 +2226,12 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
-          metricClient, licenseEntitlementChecker,
+          catalogConverter,
+          applySchemaChangeHelper,
+          apiPojoConverters,
+          connectionSchedulerHelper,
+          mapperSecretHelper,
+          licenseEntitlementChecker,
           contextBuilder);
     }
 
@@ -3046,8 +3049,12 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
+          catalogConverter,
+          applySchemaChangeHelper,
+          apiPojoConverters,
+          connectionSchedulerHelper,
+          mapperSecretHelper,
+          licenseEntitlementChecker,
           contextBuilder);
     }
 
@@ -3391,7 +3398,7 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper, metricClient,
+          mapperSecretHelper,
           licenseEntitlementChecker,
           contextBuilder);
     }

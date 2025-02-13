@@ -24,7 +24,6 @@ kotest = "5.9.1"
 kotlin-logging = "7.0.3"
 kubernetes-client = "7.0.1"
 logback = "1.5.15"
-micrometer = "1.14.3"
 micronaut = "4.7.5"
 micronaut-cache = "5.1.0"
 micronaut-core = "4.7.13"
@@ -152,8 +151,7 @@ kubernetes-mock-server = { module = "io.fabric8:kubernetes-server-mock", version
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "7.2.6" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
-micrometer-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
-micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version.ref = "micrometer" }
+micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-inline = { module = "org.mockito:mockito-inline", version = "5.2.0" }
@@ -173,7 +171,7 @@ otel-ext-annotations = { module = "io.opentelemetry:opentelemetry-extension-anno
 otel-incubator-metrics-alpha = { module = "io.opentelemetry:opentelemetry-api-incubator", version = "1.43.0-alpha" }
 otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.43.0" }
 otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version = "1.43.0" }
-otel-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv-incubating", version = "1.30.0-alpha-rc.1" }
+otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.30.1-alpha" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
@@ -240,7 +238,6 @@ micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runt
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut-core" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
-micronaut-micrometer-registry-otlp = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-otlp", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations", version.ref = "micronaut-openapi" }
@@ -275,7 +272,7 @@ micronaut-cache = ["micronaut-cache-caffeine", "micronaut-cache-management"]
 micronaut-data-jdbc = [ "micronaut-data-connection", "micronaut-data-jdbc", "micronaut-data-model", "micronaut-data-tx", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-kotlin = ["micronaut-kotlin-extension-functions", "micronaut-kotlin-runtime"]
-micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-otlp", "micronaut-micrometer-registry-statsd"]
+micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-statsd"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin"]
 mockito-inline = ["mockito-inline", "byte-buddy"]

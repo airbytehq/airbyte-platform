@@ -72,7 +72,6 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -111,7 +110,6 @@ class SourceHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
-  private MetricClient metricClient;
 
   private static final String API_KEY_FIELD = "apiKey";
   private static final String API_KEY_VALUE = "987-xyz";
@@ -157,7 +155,6 @@ class SourceHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
-    metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
@@ -204,7 +201,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.OSS);
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.OSS);
   }
 
   @Test
@@ -299,7 +296,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -446,7 +443,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();

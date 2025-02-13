@@ -4,7 +4,7 @@
 
 package io.airbyte.config.init
 
-import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.lib.MetricAttribute
 import jakarta.inject.Singleton
 
 /**

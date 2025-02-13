@@ -83,26 +83,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MICROMETER_METRICS_ENABLED
-        - name: MICROMETER_METRICS_STEP
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STEP
-        - name: MICROMETER_METRICS_OTLP_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_OTLP_ENABLED
-        - name: OTEL_COLLECTOR_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: OTEL_COLLECTOR_ENDPOINT
-        - name: MICROMETER_METRICS_STATSD_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: MICROMETER_METRICS_STATSD_ENABLED
         - name: MICROMETER_METRICS_STATSD_FLAVOR
           valueFrom:
             configMapKeyRef:
@@ -234,6 +214,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+        - name: METRIC_CLIENT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: METRIC_CLIENT
+        - name: OTEL_COLLECTOR_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: OTEL_COLLECTOR_ENDPOINT
         - name: ACTIVITY_MAX_ATTEMPT
           valueFrom:
             configMapKeyRef:

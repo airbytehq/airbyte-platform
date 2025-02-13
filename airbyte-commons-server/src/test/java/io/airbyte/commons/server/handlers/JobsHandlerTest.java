@@ -45,7 +45,6 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncMode;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
@@ -77,7 +76,6 @@ public class JobsHandlerTest {
   private JobCreationAndStatusUpdateHelper helper;
   private JobErrorReporter jobErrorReporter;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
-  private MetricClient metricClient;
 
   private static final long JOB_ID = 12;
   private static final int ATTEMPT_NUMBER = 1;
@@ -106,10 +104,9 @@ public class JobsHandlerTest {
     jobNotifier = mock(JobNotifier.class);
     jobErrorReporter = mock(JobErrorReporter.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
-    metricClient = mock(MetricClient.class);
 
     helper = mock(JobCreationAndStatusUpdateHelper.class);
-    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper, metricClient);
+    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper);
   }
 
   @Test
