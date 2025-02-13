@@ -8,8 +8,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow: auto;
   background: colors.$foreground;
+  max-height: variables.$height-long-listbox-options-list;
+  overflow: auto;
 
   &:focus-visible {
     outline: none;

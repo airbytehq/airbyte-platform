@@ -190,7 +190,7 @@ const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, s
               })}
           </FlexContainer>
         </ListboxButton>
-        <ListboxOptions className={styles.tagListboxOptions}>
+        <ListboxOptions>
           {tags.length === 0 && (
             <Box p="md">
               <Text color="grey" italicized>
