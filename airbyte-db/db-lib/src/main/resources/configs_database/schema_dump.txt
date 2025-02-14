@@ -486,6 +486,8 @@ create table "public"."workload" (
   "auto_id" uuid,
   "deadline" timestamp(6) with time zone,
   "signal_input" text,
+  "dataplane_group" varchar(256),
+  "priority" int,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (
