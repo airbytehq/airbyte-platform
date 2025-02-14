@@ -174,7 +174,14 @@ const TagFilterDropdown: React.FC<TagFilterDropdownProps> = ({ selectedTagIds, s
   const { targetRef } = useHeadlessUiOnClose(onCloseListbox);
 
   return (
-    <Listbox as="div" multiple onChange={setSelectedTagIds} value={selectedTagIds} ref={targetRef}>
+    <Listbox
+      as="div"
+      multiple
+      onChange={setSelectedTagIds}
+      value={selectedTagIds}
+      ref={targetRef}
+      data-testid="connection-list-tags-filter"
+    >
       <FloatLayout>
         <ListboxButton>
           <FlexContainer gap="sm" alignItems="center">

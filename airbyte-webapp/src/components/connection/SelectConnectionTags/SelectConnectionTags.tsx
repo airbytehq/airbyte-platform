@@ -201,7 +201,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   };
 
   return (
-    <Popover ref={targetRef}>
+    <Popover ref={targetRef} data-target="select-connection-tags-popover">
       {() => {
         return (
           <>
