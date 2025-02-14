@@ -1,6 +1,5 @@
 ### TEST FOR RELEASE WORKFLOW
 
-
 # Global params that are overwritten with umbrella chart
 global:
   # -- Service Account name override
@@ -43,12 +42,12 @@ global:
       # -- The first name of the initial user
       firstName: ""
       # -- The last name of the initial user
-      lastName:  ""
+      lastName: ""
       # -- The key within `emailSecretName` where the initial user's email is stored
       emailSecretKey: "instance-admin-email"
       # -- The key within `passwordSecretName` where the initial user's password is stored
       passwordSecretKey: "instance-admin-password"
-    
+
     # -- SSO Identify Provider configuration; (requires Enterprise)
     #identityProvider:
     #  # -- Secret name where the OIDC configuration is stored
@@ -94,8 +93,6 @@ global:
     password: ""
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
-
-
 
   storage:
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
@@ -232,7 +229,7 @@ webapp:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -452,7 +449,7 @@ pod-sweeper:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -558,7 +555,7 @@ server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -740,7 +737,7 @@ worker:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -875,7 +872,7 @@ workload-launcher:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1170,7 +1167,7 @@ metrics:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1292,7 +1289,7 @@ airbyte-bootloader:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1423,7 +1420,7 @@ temporal:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(temporal)
     runAsUser: 1000
@@ -1652,6 +1649,9 @@ postgresql:
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
+  storage:
+    volumeClaimValue: 500Mi
+
   # -- Airbyte Postgresql username
   postgresqlUsername: airbyte
   # -- Airbyte Postgresql password
@@ -1667,7 +1667,7 @@ postgresql:
     fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
@@ -1736,12 +1736,12 @@ minio:
   affinity: {}
 
   resources:
-     requests:
-       memory: 1Gi
-       cpu: 250m
-     limits:
-       cpu: 300m
-       memory: 2Gi
+    requests:
+      memory: 1Gi
+      cpu: 250m
+    limits:
+      cpu: 300m
+      memory: 2Gi
 ## @section cron parameters
 cron:
   enabled: true
@@ -1765,7 +1765,7 @@ cron:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1936,7 +1936,7 @@ connector-builder-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2035,7 +2035,7 @@ keycloak:
       image: "postgres:13-alpine"
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -2044,9 +2044,9 @@ keycloak:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-    
+
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -2080,7 +2080,7 @@ keycloak-setup:
     fsGroup: 1000
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -2091,7 +2091,7 @@ keycloak-setup:
       type: RuntimeDefault
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2133,7 +2133,7 @@ workload-api-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
