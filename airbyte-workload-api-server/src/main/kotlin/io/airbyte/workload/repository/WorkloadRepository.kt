@@ -73,6 +73,22 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     createdBefore: OffsetDateTime?,
   ): List<Workload>
 
+  @Query(
+    """
+      UPDATE workload
+      SET
+       dataplane_id = :dataplaneId,
+       status = 'claimed',
+       deadline = :deadline
+      WHERE id = :id AND status = 'pending'
+    """,
+  )
+  fun claim(
+    @Id id: String,
+    dataplaneId: String,
+    deadline: OffsetDateTime,
+  ): Long
+
   fun update(
     @Id id: String,
     status: WorkloadStatus,

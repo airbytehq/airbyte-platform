@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
+import io.airbyte.featureflag.UseAtomicWorkloadClaim;
+import io.airbyte.featureflag.Workspace;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -66,6 +68,23 @@ class WorkloadBasicAcceptanceTests {
     testResources.getTestHarness().createWorkspaceWithId(REPLICATION_WORKSPACE_ID);
 
     testResources.runSmallSyncForAWorkspaceId(REPLICATION_WORKSPACE_ID);
+  }
+
+  @Test
+  @EnabledIfEnvironmentVariable(named = KUBE,
+                                matches = TRUE)
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
+  void testSyncWithWorkloadUsingAtomicClaim() throws Exception {
+    // Create workspace with static ID for test which is used in the flags.yaml to perform an
+    // override in order to exercise the workload path.
+    testResources.getTestHarness().createWorkspaceWithId(REPLICATION_WORKSPACE_ID);
+
+    try (var ignored = testResources.getTestHarness()
+        .withFlag(UseAtomicWorkloadClaim.INSTANCE, new Workspace(REPLICATION_WORKSPACE_ID), true)) {
+      testResources.runSmallSyncForAWorkspaceId(REPLICATION_WORKSPACE_ID);
+    }
   }
 
   @Test

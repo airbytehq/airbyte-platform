@@ -8,6 +8,9 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
@@ -35,6 +38,7 @@ class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
   private val airbyteApi: AirbyteApiClient,
   private val metricClient: CustomMetricPublisher,
+  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
@@ -125,27 +129,36 @@ class WorkloadHandlerImpl(
     dataplaneId: String,
     deadline: OffsetDateTime,
   ): Boolean {
-    val workload = getDomainWorkload(workloadId)
+    if (featureFlagClient.boolVariation(UseAtomicWorkloadClaim, Empty)) {
+      workloadRepository.claim(workloadId, dataplaneId, deadline)
+      // We check the workload again because if the dataplane already claimed, we do not update
+      // the claim in order to avoid overriding the deadline.
+      val workload = getDomainWorkload(workloadId)
+      return workload.dataplaneId == dataplaneId
+    } else {
+      val workload = getDomainWorkload(workloadId)
 
-    if (workload.dataplaneId != null && !workload.dataplaneId.equals(dataplaneId)) {
-      return false
-    }
+      if (workload.dataplaneId != null && !workload.dataplaneId.equals(dataplaneId)) {
+        return false
+      }
 
-    when (workload.status) {
-      WorkloadStatus.PENDING ->
-        workloadRepository.update(
-          workloadId,
-          dataplaneId,
-          WorkloadStatus.CLAIMED,
-          deadline,
+      when (workload.status) {
+        WorkloadStatus.PENDING ->
+          workloadRepository.update(
+            workloadId,
+            dataplaneId,
+            WorkloadStatus.CLAIMED,
+            deadline,
+          )
+
+        WorkloadStatus.CLAIMED -> {}
+        else -> throw InvalidStatusTransitionException(
+          "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
         )
-      WorkloadStatus.CLAIMED -> {}
-      else -> throw InvalidStatusTransitionException(
-        "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
-      )
-    }
+      }
 
-    return true
+      return true
+    }
   }
 
   override fun cancelWorkload(

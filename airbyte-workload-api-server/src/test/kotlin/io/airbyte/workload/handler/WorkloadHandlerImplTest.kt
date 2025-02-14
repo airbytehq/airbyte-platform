@@ -9,6 +9,8 @@ import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
@@ -18,6 +20,7 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.featureFlagClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
@@ -304,9 +307,43 @@ class WorkloadHandlerImplTest {
     assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
+  @Test
+  fun `test claiming a workload successfully`() {
+    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(1)
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = WorkloadStatus.CLAIMED,
+          dataplaneId = DATAPLANE_ID,
+        ),
+      ),
+    )
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+  }
+
+  @Test
+  fun `test claiming a workload unsuccessfully`() {
+    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(0)
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = WorkloadStatus.CLAIMED,
+          dataplaneId = "other-dataplane",
+        ),
+      ),
+    )
+    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+  }
+
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
   fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
+    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
+    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -320,6 +357,8 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `test successful claim`() {
+    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
+    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -737,7 +776,13 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), mockk<AirbyteApiClient>(), mockk<CustomMetricPublisher>())
+    val workloadHandlerImpl =
+      WorkloadHandlerImpl(
+        mockk<WorkloadRepository>(),
+        mockk<AirbyteApiClient>(),
+        mockk<CustomMetricPublisher>(),
+        mockk<FeatureFlagClient>(),
+      )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
@@ -748,10 +793,11 @@ class WorkloadHandlerImplTest {
     val workloadRepository = mockk<WorkloadRepository>()
     val metricClient: CustomMetricPublisher = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
+    val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, airbyteApi, metricClient))
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, airbyteApi, metricClient, featureFlagClient))
 
     val configSignalInput =
       ConfigSignalInput(
