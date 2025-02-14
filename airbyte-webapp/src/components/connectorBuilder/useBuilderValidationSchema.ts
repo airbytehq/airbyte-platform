@@ -1,3 +1,4 @@
+import { parse } from "graphql";
 import { load } from "js-yaml";
 import isObject from "lodash/isObject";
 import { useCallback, useMemo } from "react";
@@ -407,6 +408,22 @@ const requestOptionsSchema = yup.object().shape({
       .when("type", {
         is: (val: string) => val === "string_freeform",
         then: yup.string(),
+      })
+      .when("type", {
+        is: (val: string) => val === "graphql",
+        then: yup
+          .string()
+          .test("is-valid-graphql", "connectorBuilder.requestOptions.graphqlQuery.invalidSyntax", (value) => {
+            if (!value) {
+              return true;
+            }
+            try {
+              parse(value);
+              return true;
+            } catch {
+              return false;
+            }
+          }),
       }),
   }),
 });

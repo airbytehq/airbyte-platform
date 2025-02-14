@@ -10,6 +10,8 @@ import omit from "lodash/omit";
 import pick from "lodash/pick";
 import { match } from "ts-pattern";
 
+import { formatGraphqlQuery } from "components/ui/CodeEditor/GraphqlFormatter";
+
 import {
   ConnectorManifest,
   DeclarativeStream,
@@ -389,6 +391,26 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (isString(requester.request_body_json)) {
     return { type: "string_freeform", value: requester.request_body_json };
   }
+
+  if (
+    isObject(requester.request_body_json) &&
+    Object.keys(requester.request_body_json).length === 1 &&
+    "query" in requester.request_body_json
+  ) {
+    try {
+      const formattedQuery = formatGraphqlQuery(requester.request_body_json.query);
+      return {
+        type: "graphql",
+        value: formattedQuery,
+      };
+    } catch {
+      return {
+        type: "graphql",
+        value: requester.request_body_json.query as string,
+      };
+    }
+  }
+
   if (
     isObject(requester.request_body_json) &&
     Object.values(requester.request_body_json).every((value) => isString(value))

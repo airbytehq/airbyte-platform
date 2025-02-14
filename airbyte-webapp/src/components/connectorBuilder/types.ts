@@ -272,6 +272,10 @@ export type BuilderRequestBody =
   | {
       type: "string_freeform";
       value: string;
+    }
+  | {
+      type: "graphql";
+      value: string;
     };
 
 export interface BuilderRecordSelector {
@@ -917,6 +921,8 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
             : Object.keys(parsedJson).length > 0
             ? parsedJson
             : undefined
+          : builderRequestBody.type === "graphql"
+          ? { query: builderRequestBody.value.replace(/\s+/g, " ").trim() }
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
