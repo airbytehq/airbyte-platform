@@ -120,7 +120,7 @@ class LocalContainerAirbyteDestination(
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null
     m?.let {
-      messageMetricsTracker.trackDestRead(m.type)
+      messageMetricsTracker.trackDestRead(it.type)
     }
     return Optional.ofNullable(m)
   }

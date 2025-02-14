@@ -75,7 +75,7 @@ open class OidcTokenValidator(
     val authentication: Authentication? = validateTokenWithUserInfoEndpoint(token = token, request = request)
     authentication?.let {
       updateMetric(success = true, request = request)
-      return just(authentication)
+      return just(it)
     }
 
     // pass to the next validator, if one exists

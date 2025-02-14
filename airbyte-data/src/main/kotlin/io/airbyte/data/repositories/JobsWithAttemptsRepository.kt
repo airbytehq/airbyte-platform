@@ -80,16 +80,16 @@ object Specifications {
       criteria.add(root.get<JobStatus>("status").`in`(statuses))
     }
     createdAtStart?.let {
-      criteria.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), createdAtStart))
+      criteria.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), it))
     }
     createdAtEnd?.let {
-      criteria.add(criteriaBuilder.lessThanOrEqualTo(root.get("createdAt"), createdAtEnd))
+      criteria.add(criteriaBuilder.lessThanOrEqualTo(root.get("createdAt"), it))
     }
     updatedAtStart?.let {
-      criteria.add(criteriaBuilder.greaterThanOrEqualTo(root.get("updatedAt"), updatedAtStart))
+      criteria.add(criteriaBuilder.greaterThanOrEqualTo(root.get("updatedAt"), it))
     }
     updatedAtEnd?.let {
-      criteria.add(criteriaBuilder.lessThanOrEqualTo(root.get("updatedAt"), updatedAtEnd))
+      criteria.add(criteriaBuilder.lessThanOrEqualTo(root.get("updatedAt"), it))
     }
     return if (criteria.isNotEmpty()) {
       criteriaBuilder.and(*criteria.toTypedArray())

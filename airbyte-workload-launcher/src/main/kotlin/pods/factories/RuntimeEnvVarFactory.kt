@@ -147,7 +147,7 @@ class RuntimeEnvVarFactory(
     if (resourceReqs?.ephemeralStorageLimit != null) {
       val bytes = ResourceConversionUtils.kubeQuantityStringToBytes(resourceReqs.ephemeralStorageLimit)
       bytes.let {
-        envList.add(EnvVar(EnvVarConstants.CONNECTOR_STORAGE_LIMIT_BYTES, bytes.toString(), null))
+        envList.add(EnvVar(EnvVarConstants.CONNECTOR_STORAGE_LIMIT_BYTES, it.toString(), null))
       }
     }
 

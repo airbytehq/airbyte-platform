@@ -5,7 +5,6 @@
 package io.airbyte.workers.pod
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Strings
 import io.airbyte.workers.pod.PodConstants.CPU_RESOURCE_KEY
 import io.airbyte.workers.pod.PodConstants.EPHEMERAL_STORAGE_RESOURCE_KEY
 import io.airbyte.workers.pod.PodConstants.MEMORY_RESOURCE_KEY
@@ -29,29 +28,29 @@ object ResourceConversionUtils {
       var memoryLimit: Quantity? = null
       var storageLimit: Quantity? = null
       val limitMap: MutableMap<String, Quantity?> = HashMap()
-      if (!Strings.isNullOrEmpty(resourceRequirements.cpuLimit)) {
+      if (!resourceRequirements.cpuLimit.isNullOrEmpty()) {
         cpuLimit = Quantity.parse(resourceRequirements.cpuLimit)
         limitMap[CPU_RESOURCE_KEY] = cpuLimit
       }
-      if (!Strings.isNullOrEmpty(resourceRequirements.memoryLimit)) {
+      if (!resourceRequirements.memoryLimit.isNullOrEmpty()) {
         memoryLimit = Quantity.parse(resourceRequirements.memoryLimit)
         limitMap[MEMORY_RESOURCE_KEY] = memoryLimit
       }
-      if (!Strings.isNullOrEmpty(resourceRequirements.ephemeralStorageLimit)) {
+      if (!resourceRequirements.ephemeralStorageLimit.isNullOrEmpty()) {
         storageLimit = Quantity.parse(resourceRequirements.ephemeralStorageLimit)
         limitMap[EPHEMERAL_STORAGE_RESOURCE_KEY] = storageLimit
       }
       val requestMap: MutableMap<String, Quantity?> = HashMap()
       // if null then use unbounded resource allocation
-      if (!Strings.isNullOrEmpty(resourceRequirements.cpuRequest)) {
+      if (!resourceRequirements.cpuRequest.isNullOrEmpty()) {
         val cpuRequest = Quantity.parse(resourceRequirements.cpuRequest)
         requestMap[CPU_RESOURCE_KEY] = min(cpuRequest, cpuLimit)
       }
-      if (!Strings.isNullOrEmpty(resourceRequirements.memoryRequest)) {
+      if (!resourceRequirements.memoryRequest.isNullOrEmpty()) {
         val memoryRequest = Quantity.parse(resourceRequirements.memoryRequest)
         requestMap[MEMORY_RESOURCE_KEY] = min(memoryRequest, memoryLimit)
       }
-      if (!Strings.isNullOrEmpty(resourceRequirements.ephemeralStorageRequest)) {
+      if (!resourceRequirements.ephemeralStorageRequest.isNullOrEmpty()) {
         val storageRequest = Quantity.parse(resourceRequirements.ephemeralStorageRequest)
         requestMap[EPHEMERAL_STORAGE_RESOURCE_KEY] = min(storageRequest, storageLimit)
       }
@@ -70,7 +69,7 @@ object ResourceConversionUtils {
   fun kubeQuantityStringToBytes(quantityStr: String?): Long? =
     try {
       Quantity.getAmountInBytes(Quantity(quantityStr)).toLong()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       null
     }
 

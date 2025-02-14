@@ -26,7 +26,7 @@ import java.time.Duration
 class RequestTimeoutInterceptor : MethodInterceptor<Any, Any> {
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any? {
     val annotationValue = context.getAnnotation(RequestTimeout::class.java)
-    return annotationValue?.let { doIntercept(annotationValue, context) } ?: context.proceed()
+    return annotationValue?.let { doIntercept(it, context) } ?: context.proceed()
   }
 
   private fun doIntercept(

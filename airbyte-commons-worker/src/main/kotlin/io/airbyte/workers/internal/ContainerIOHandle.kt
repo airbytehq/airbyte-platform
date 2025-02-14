@@ -124,11 +124,11 @@ data class ContainerIOHandle(
       var found = false
       try {
         // register to watch for exit file creation
-        exitValueFile.parentFile.toPath().register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
+        exitValueFile.parentFile.toPath().register(it, StandardWatchEventKinds.ENTRY_MODIFY)
         // now check if the file already exists to avoid a race
         found = exitCodeExists()
         while (!found) {
-          val watchKey = watchService.take()
+          val watchKey = it.take()
           found = watchKey.pollEvents().find {
             (it.context() as Path).endsWith(exitValueFile.name)
           } != null

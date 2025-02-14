@@ -35,7 +35,7 @@ class DefaultEntitlementProvider : EntitlementProvider {
     organizationId: UUID,
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
-  ): Map<UUID, Boolean> = actorDefinitionIds.associateWith { false }
+  ): Map<UUID, Boolean> = actorDefinitionIds.associateWith { _ -> false }
 }
 
 /**
@@ -58,7 +58,7 @@ class EnterpriseEntitlementProvider(
       }
     }
 
-    return actorDefinitionIds.associateWith { false }
+    return actorDefinitionIds.associateWith { _ -> false }
   }
 }
 

@@ -56,9 +56,6 @@ class ConnectorRolloutClient
 
     fun startRollout(input: ConnectorRolloutWorkflowInput) {
       logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
-      if (input.rolloutId == null) {
-        throw RuntimeException("Rollout ID is required to start a rollout workflow")
-      }
 
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.connectorRollout!!.actorDefinitionId)
       val workflowStub =

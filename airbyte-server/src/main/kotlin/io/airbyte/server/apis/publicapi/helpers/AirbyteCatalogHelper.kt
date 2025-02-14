@@ -60,12 +60,12 @@ object AirbyteCatalogHelper {
   fun updateConfigDefaultFullRefreshOverwrite(config: AirbyteStreamConfiguration?): AirbyteStreamConfiguration {
     val updatedStreamConfiguration = AirbyteStreamConfiguration()
     config?.let {
-      updatedStreamConfiguration.aliasName = config.aliasName
-      updatedStreamConfiguration.cursorField = config.cursorField
-      updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
-      updatedStreamConfiguration.selected = config.selected
-      updatedStreamConfiguration.selectedFields = config.selectedFields
-      updatedStreamConfiguration.suggested = config.suggested
+      updatedStreamConfiguration.aliasName = it.aliasName
+      updatedStreamConfiguration.cursorField = it.cursorField
+      updatedStreamConfiguration.fieldSelectionEnabled = it.fieldSelectionEnabled
+      updatedStreamConfiguration.selected = it.selected
+      updatedStreamConfiguration.selectedFields = it.selectedFields
+      updatedStreamConfiguration.suggested = it.suggested
     }
     updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
     updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
@@ -522,7 +522,7 @@ object AirbyteCatalogHelper {
     // Validate the actual key passed in
     val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
 
-    primaryKey?.let {
+    primaryKey?.let { primaryKey ->
       for (singlePrimaryKey in primaryKey) {
         if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
           throw BadRequestProblem(

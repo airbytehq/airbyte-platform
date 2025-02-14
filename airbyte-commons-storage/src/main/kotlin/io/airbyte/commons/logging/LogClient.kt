@@ -46,7 +46,11 @@ private fun <T : List<Any>> MeterRegistry?.createGauge(
   logClientType: StorageType,
   stateObject: T,
 ): T =
-  this?.gauge(metricName, listOf(Tag.of(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())), stateObject) { stateObject.size.toDouble() }
+  this?.gauge(
+    metricName,
+    listOf(Tag.of(MetricTags.LOG_CLIENT_TYPE, logClientType.name.lowercase())),
+    stateObject,
+  ) { _ -> stateObject.size.toDouble() }
     ?: stateObject
 
 private fun MeterRegistry?.createTimer(

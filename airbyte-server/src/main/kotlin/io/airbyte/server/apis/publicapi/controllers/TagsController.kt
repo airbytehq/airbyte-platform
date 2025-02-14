@@ -99,7 +99,7 @@ open class TagsController(
   override fun publicListTags(workspaceIds: List<UUID>?): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacesPermission(
-      workspaceIds?.let { workspaceIds.map { it.toString() } } ?: emptyList(),
+      workspaceIds?.let { it.map { it.toString() } } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
       PermissionType.WORKSPACE_READER,

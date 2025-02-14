@@ -11,5 +11,5 @@ import io.temporal.activity.ActivityMethod
 @ActivityInterface
 interface CleanupActivity {
   @ActivityMethod
-  fun cleanup(input: ConnectorRolloutActivityInputCleanup): Unit
+  fun cleanup(input: ConnectorRolloutActivityInputCleanup)
 }

@@ -34,6 +34,7 @@ class ManifestParser(
         throw ManifestParserException("Manifest provided is invalid. Missing streams field.")
       }
 
+      @Suppress("UNCHECKED_CAST")
       return manifestMap["streams"] as List<Map<String, Any>>
     }
 
@@ -44,6 +45,7 @@ class ManifestParser(
         throw ManifestParserException("Manifest provided is invalid. Missing spec field.")
       }
 
+      @Suppress("UNCHECKED_CAST")
       return manifestMap["spec"] as Map<String, Any>
     }
 
@@ -80,6 +82,7 @@ class ManifestParser(
       throw ManifestParserException("Manifest provided is not valid yaml. error: ${e.message}", e)
     }
 
+  @Suppress("UNCHECKED_CAST")
   private fun evaluateNode(
     node: Any?,
     manifest: Map<String, Any>,
@@ -100,7 +103,7 @@ class ManifestParser(
       return handleReference(mapNode[REF_TAG] as String, manifest, visited)
     }
 
-    return mapNode.mapValues { (key, value) ->
+    return mapNode.mapValues { (_, value) ->
       if (value is String && value.startsWith(REF_VALUE)) {
         handleReference(value, manifest, visited)
       } else {
@@ -212,6 +215,7 @@ class ManifestParser(
     return evaluatedNode
   }
 
+  @Suppress("UNCHECKED_CAST")
   private fun resolveReference(
     ref: String,
     manifest: Map<String, Any>,

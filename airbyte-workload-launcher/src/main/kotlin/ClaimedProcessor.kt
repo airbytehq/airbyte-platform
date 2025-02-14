@@ -104,7 +104,7 @@ class ClaimedProcessor(
         RetryPolicy
           .builder<Any>()
           .withBackoff(backoffDuration, backoffMaxDelay)
-          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+          .onRetry { _ -> logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
           .withMaxAttempts(-1)
           .abortOn { exception ->
             when (exception) {

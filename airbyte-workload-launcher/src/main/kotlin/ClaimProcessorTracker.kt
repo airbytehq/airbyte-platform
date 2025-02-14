@@ -32,7 +32,7 @@ class ClaimProcessorTracker(
 
   fun trackNumberOfClaimsToResume(n: Int) {
     if (n <= parallelism) {
-      repeat(parallelism - n) {
+      repeat(parallelism - n) { _ ->
         latch.countDown()
       }
     } else {

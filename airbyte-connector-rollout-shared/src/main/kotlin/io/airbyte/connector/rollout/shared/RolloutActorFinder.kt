@@ -417,7 +417,7 @@ class RolloutActorFinder(
       "Connector rollout getting sorted actor definition connections for actor Ids: " +
         "actorIds=$actorIds actorDefinitionId=$actorDefinitionId actorType=$actorType"
     }
-    var connections: List<StandardSync>
+    val connections: List<StandardSync>
 
     if (actorType == ActorType.SOURCE) {
       connections =

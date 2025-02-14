@@ -278,7 +278,7 @@ class GcsStorageClient(
     return gcsClient
       .get(blobId)
       ?.takeIf { it.exists() }
-      ?.let { gcsClient.readAllBytes(blobId).toString(StandardCharsets.UTF_8) }
+      ?.let { _ -> gcsClient.readAllBytes(blobId).toString(StandardCharsets.UTF_8) }
   }
 
   override fun delete(id: String): Boolean = gcsClient.delete(BlobId.of(bucketName, key(id)))

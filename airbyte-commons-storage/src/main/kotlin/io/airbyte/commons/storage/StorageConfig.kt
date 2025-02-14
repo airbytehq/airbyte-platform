@@ -114,10 +114,10 @@ data class S3StorageConfig(
       }
       put(EnvVar.STORAGE_TYPE, StorageType.S3.name)
       accessKey?.let {
-        put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
+        put(EnvVar.AWS_ACCESS_KEY_ID, it)
       }
       secretAccessKey?.let {
-        put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
+        put(EnvVar.AWS_SECRET_ACCESS_KEY, it)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
     }.mapKeys { it.key.name }
@@ -187,4 +187,4 @@ class LocalStorageConfig(
  *
  * Any non-null [String] that calls [mask] will return `"*******"`. Any null [String] will return `"null"`.
  */
-private fun String?.mask(): String = this?.let { "*******" } ?: "null"
+private fun String?.mask(): String = this?.let { _ -> "*******" } ?: "null"

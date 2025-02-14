@@ -150,7 +150,7 @@ open class PermissionsController(
     organizationId: String?,
   ): Response {
     val currentUserId: UUID = currentUserService.currentUser.userId
-    val permissionUserId = userId?.let { UUID.fromString(userId) } ?: currentUserId // if userId is not provided, then use current user ID by default
+    val permissionUserId = userId?.let { UUID.fromString(it) } ?: currentUserId // if userId is not provided, then use current user ID by default
     val permissionsResponse: PermissionsResponse
     // get someone else's permissions
     if (currentUserId != permissionUserId) {

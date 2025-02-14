@@ -81,11 +81,11 @@ object ClientConfigurationSupport {
 
   private fun getUrlTags(httpUrl: HttpUrl?): Array<String> {
     return httpUrl?.let {
-      val last = httpUrl.pathSegments.last()
+      val last = it.pathSegments.last()
       if (last.contains("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex())) {
-        return arrayOf("url", httpUrl.toString().removeSuffix(last), "workload-id", last)
+        return arrayOf("url", it.toString().removeSuffix(last), "workload-id", last)
       } else {
-        return arrayOf("url", httpUrl.toString())
+        return arrayOf("url", it.toString())
       }
     } ?: emptyArray()
   }

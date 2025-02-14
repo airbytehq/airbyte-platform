@@ -46,7 +46,7 @@ class JobOutputDocStore(
   fun readSyncOutput(workloadId: String): Optional<ReplicationOutput> {
     val output: String? =
       try {
-        storageClient.read(workloadId).also {
+        storageClient.read(workloadId).also { _ ->
           metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
         }
       } catch (e: Exception) {

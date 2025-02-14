@@ -49,6 +49,7 @@ class ContributionTemplates {
     return writer.toString()
   }
 
+  @Suppress("UNCHECKED_CAST")
   fun getPaginatorTypeForStreamObject(streamObject: Map<String, Any>): String? {
     val paginator = streamObject["retriever"] as? Map<String, Any>
     val pagination = paginator?.get("paginator") as? Map<String, Any>
@@ -69,6 +70,7 @@ class ContributionTemplates {
     val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
 
     val hosts =
+      @Suppress("UNCHECKED_CAST")
       streams.mapNotNull { stream ->
         val retriever = stream["retriever"] as? Map<String, Any>
         val requester = retriever?.get("requester") as? Map<String, Any>
@@ -100,6 +102,7 @@ class ContributionTemplates {
       else -> ""
     }
 
+  @Suppress("UNCHECKED_CAST")
   fun toTemplateSpecProperties(spec: Map<String, Any>): List<TemplateSpecProperty> {
     val connectionSpec = spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpec["properties"] as? Map<String, Map<String, Any>>

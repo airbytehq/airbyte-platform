@@ -124,7 +124,7 @@ class ReplicationWorkerHelper(
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
-  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<out MapperConfig>>
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<MapperConfig>>
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -150,7 +150,7 @@ class ReplicationWorkerHelper(
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
-        ctx?.let {
+        ctx?.let { _ ->
           try {
             logger.debug { "Sending workload heartbeat" }
             workloadApiClient.workloadApi.workloadHeartbeat(
@@ -449,7 +449,6 @@ class ReplicationWorkerHelper(
     }
 
     if (destinationRawMessage.type == Type.STATE) {
-      val airbyteStateMessage = destinationRawMessage.state
       syncPersistence.accept(context.connectionId, destinationRawMessage.state)
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
