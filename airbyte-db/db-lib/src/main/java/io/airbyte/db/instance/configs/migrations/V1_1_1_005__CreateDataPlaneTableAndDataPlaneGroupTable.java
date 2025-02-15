@@ -20,7 +20,7 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class V1_1_1_004__CreateDataPlaneTableAndDataPlaneGroupTable extends BaseJavaMigration {
+public class V1_1_1_005__CreateDataPlaneTableAndDataPlaneGroupTable extends BaseJavaMigration {
 
   private static final String DATAPLANE_TABLE = "dataplane";
   private static final String DATAPLANE_GROUP_TABLE = "dataplane_group";
