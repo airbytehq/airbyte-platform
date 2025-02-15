@@ -136,6 +136,8 @@ public class BaseConfigDatabaseTest {
               connection_tag,
               connector_builder_project,
               connector_rollout,
+              dataplane,
+              dataplane_group,
               declarative_manifest,
               notification_configuration,
               operation,
