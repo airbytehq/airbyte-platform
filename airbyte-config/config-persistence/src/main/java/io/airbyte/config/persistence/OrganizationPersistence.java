@@ -58,10 +58,18 @@ public class OrganizationPersistence {
    */
   public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
-        .select(asterisk())
-        .from(ORGANIZATION)
-        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
-        .where(ORGANIZATION.ID.eq(organizationId)).fetch());
+            .select(
+                    ORGANIZATION.ID,
+                    ORGANIZATION.NAME,
+                    ORGANIZATION.EMAIL,
+                    ORGANIZATION.USER_ID,
+                    ORGANIZATION.CREATED_AT,
+                    ORGANIZATION.UPDATED_AT,
+                    SSO_CONFIG.KEYCLOAK_REALM
+            )
+            .from(ORGANIZATION)
+            .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+            .where(ORGANIZATION.ID.eq(organizationId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();
