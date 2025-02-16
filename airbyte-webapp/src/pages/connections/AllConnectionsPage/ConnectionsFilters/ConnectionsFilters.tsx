@@ -20,7 +20,6 @@ import { useTagsList } from "core/api";
 import { Tag, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionsFilters.module.scss";
 import {
@@ -59,8 +58,6 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   tagFilters,
   setTagFilters,
 }) => {
-  const isConnectionTagsEnabled = useExperiment("connection.tags");
-
   const availableSourceOptions = useMemo(
     () => getAvailableSourceOptions(connections, filterValues.destination),
     [connections, filterValues.destination]
@@ -125,11 +122,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
               onSelect={(value) => setFilterValue("destination", value)}
             />
           </FlexItem>
-          {isConnectionTagsEnabled && (
-            <FlexItem>
-              <TagFilterDropdown selectedTagIds={tagFilters} setSelectedTagIds={(values) => setTagFilters(values)} />
-            </FlexItem>
-          )}
+          <TagFilterDropdown selectedTagIds={tagFilters} setSelectedTagIds={(values) => setTagFilters(values)} />
           {hasAnyFilterSelected && (
             <FlexItem>
               <ClearFiltersButton onClick={resetFilters} />

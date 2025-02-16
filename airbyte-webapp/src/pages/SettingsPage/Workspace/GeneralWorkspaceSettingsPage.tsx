@@ -8,13 +8,11 @@ import { UpdateWorkspaceNameForm } from "area/workspace/components/UpdateWorkspa
 import { useCurrentWorkspace } from "core/api";
 import { useFeature, FeatureItem } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { TagsTable } from "./components/TagsTable";
 import { DeleteWorkspace } from "../components/DeleteWorkspace";
 
 export const GeneralWorkspaceSettingsPage = () => {
-  const showConnectionTags = useExperiment("connection.tags");
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { workspaceId } = useCurrentWorkspace();
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
@@ -28,7 +26,7 @@ export const GeneralWorkspaceSettingsPage = () => {
         </Heading>
       </Box>
       {canViewWorkspaceSettings && multiWorkspaceUI && <UpdateWorkspaceNameForm />}
-      {showConnectionTags && <TagsTable />}
+      <TagsTable />
       {canViewWorkspaceSettings && multiWorkspaceUI && canDeleteWorkspace && (
         <FlexContainer direction="column">
           <Heading as="h3" size="sm">

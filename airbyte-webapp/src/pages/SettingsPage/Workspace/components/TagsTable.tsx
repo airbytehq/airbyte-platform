@@ -8,9 +8,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { TagBadge } from "components/ui/TagBadge";
+import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useDeleteTag, useTagsList } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -25,6 +27,7 @@ export const TagsTable: React.FC = () => {
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
+  const canEditTags = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -94,6 +97,7 @@ export const TagsTable: React.FC = () => {
               size="xs"
               aria-label="Edit"
               onClick={() => onEdit(props.row.original)}
+              disabled={!canEditTags}
             />
             <Button
               variant="clear"
@@ -101,6 +105,7 @@ export const TagsTable: React.FC = () => {
               size="xs"
               aria-label="Delete"
               onClick={() => onDelete(props.row.original)}
+              disabled={!canEditTags}
             />
           </FlexContainer>
         ),
@@ -111,17 +116,29 @@ export const TagsTable: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, onDelete, onEdit]
+    [columnHelper, onDelete, onEdit, canEditTags]
   );
 
   return (
     <Box>
       <FlexContainer direction="column">
         <FlexContainer justifyContent="space-between" alignItems="flex-start">
-          <Heading as="h3" size="sm">
-            <FormattedMessage id="settings.workspace.tags.title" />
-          </Heading>
-          <Button variant="primary" size="xs" icon="plus" aria-label="create tag" onClick={() => onEdit()}>
+          <FlexContainer direction="column" gap="sm">
+            <Heading as="h3" size="sm">
+              <FormattedMessage id="settings.workspace.tags.title" />
+            </Heading>
+            <Text>
+              <FormattedMessage id="settings.workspace.tags.description" />
+            </Text>
+          </FlexContainer>
+          <Button
+            variant="primary"
+            size="xs"
+            icon="plus"
+            aria-label="create tag"
+            onClick={() => onEdit()}
+            disabled={!canEditTags}
+          >
             <FormattedMessage id="settings.workspace.tags.tagForm.create" />
           </Button>
         </FlexContainer>

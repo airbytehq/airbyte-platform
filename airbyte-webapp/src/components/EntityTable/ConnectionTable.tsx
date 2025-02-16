@@ -7,7 +7,6 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionStatus } from "./components/ConnectionStatus";
@@ -29,7 +28,6 @@ interface ConnectionTableProps {
 
 const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant }) => {
   const createLink = useCurrentWorkspaceLink();
-  const isConnectionTagsEnabled = useExperiment("connection.tags");
   const streamCentricUIEnabled = false;
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
@@ -108,19 +106,15 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         },
         cell: FrequencyCell,
       }),
-      ...(isConnectionTagsEnabled
-        ? [
-            columnHelper.accessor("tags", {
-              header: () => <FormattedMessage id="connection.tags.title" />,
-              enableSorting: false,
-              meta: {
-                noPadding: true,
-                thClassName: styles.tags,
-              },
-              cell: TagsCell,
-            }),
-          ]
-        : []),
+      columnHelper.accessor("tags", {
+        header: () => <FormattedMessage id="connection.tags.title" />,
+        enableSorting: false,
+        meta: {
+          noPadding: true,
+          thClassName: styles.tags,
+        },
+        cell: TagsCell,
+      }),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
         cell: LastSyncCell,
@@ -147,7 +141,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         enableSorting: false,
       }),
     ],
-    [columnHelper, EntityNameCell, isConnectionTagsEnabled, entity]
+    [columnHelper, EntityNameCell, entity]
   );
 
   const customScrollParent = useContext(ScrollParentContext);

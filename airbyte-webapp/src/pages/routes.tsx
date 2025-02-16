@@ -16,7 +16,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
 import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -74,7 +73,6 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 };
 
 const MainViewRoutes: React.FC = () => {
-  const showConnectionTags = useExperiment("connection.tags");
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { applicationSupport } = useAuthService();
@@ -113,9 +111,7 @@ const MainViewRoutes: React.FC = () => {
             {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
-            {(canViewWorkspaceSettings && multiWorkspaceUI) || showConnectionTags ? (
-              <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
-            ) : null}
+            <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
             {canViewWorkspaceSettings && multiWorkspaceUI ? (
               <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
             ) : null}

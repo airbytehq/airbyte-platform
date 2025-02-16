@@ -11,12 +11,10 @@ import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/Ai
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const SettingsPage: React.FC = () => {
-  const showConnectionTags = useExperiment("connection.tags");
   const { formatMessage } = useIntl();
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { trackingStrategy } = useGetInstanceConfiguration();
@@ -48,15 +46,13 @@ export const SettingsPage: React.FC = () => {
           )}
         </SettingsNavigationBlock>
         <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
-          {(multiWorkspaceUI && canViewWorkspaceSettings) || showConnectionTags ? (
-            <SettingsLink
-              iconType="gear"
-              name={formatMessage({
-                id: "settings.general",
-              })}
-              to={SettingsRoutePaths.Workspace}
-            />
-          ) : null}
+          <SettingsLink
+            iconType="gear"
+            name={formatMessage({
+              id: "settings.general",
+            })}
+            to={SettingsRoutePaths.Workspace}
+          />
           {multiWorkspaceUI && canViewWorkspaceSettings && (
             <SettingsLink
               iconType="community"
