@@ -4,23 +4,25 @@
 
 package io.airbyte.commons.workers.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 class EnvUtils {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(EnvUtils.class);
 
   private static final Pattern KEY_JSON_VALUE_PATTERN = Pattern.compile("(?<key>[^=]+)\\s*?=\\s*?(?<value>\\{[^=]+})\\s*,?\\s*");
   private static final Pattern KEY_VALUE_PATTERN = Pattern.compile("(?<key>[^=]+)=(?<value>[^=,]+),?");
   private static final String KEY_GROUP_ALIAS = "key";
   private static final String VALUE_GROUP_ALIAS = "value";
+
+  private EnvUtils() {}
 
   /**
    * Splits key value pairs from the input string into a map. Each kv-pair is separated by a ','.
@@ -58,7 +60,7 @@ class EnvUtils {
   private static Map<String, String> getKVPairsMatchedWithSimplePattern(final String input) {
     final Map<String, String> stringMatchResult = match(input, KEY_VALUE_PATTERN);
     if (stringMatchResult.isEmpty()) {
-      log.warn("No valid key value pairs found in the input string: {}", input);
+      LOGGER.warn("No valid key value pairs found in the input string: {}", input);
       return Collections.emptyMap();
     }
     return stringMatchResult;
