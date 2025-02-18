@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the workloads secret name
-*/}}
-{{- define "airbyte.workloads.secretName" }}
-{{- if .Values.global.workloads.secretName }}
-    {{- .Values.global.workloads.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.workloads.containerOrchestrator.secretName value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretName" }}
@@ -229,17 +218,6 @@ PUB_SUB_TOPIC_NAME: {{ include "airbyte.workloads.pubSub.topicName" . | quote }}
 {{- end }}
 
 {{/*
-Renders the workloads.queues secret name
-*/}}
-{{- define "airbyte.workloads.queues.secretName" }}
-{{- if .Values.global.workloads.queues.secretName }}
-    {{- .Values.global.workloads.queues.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.workloads.queues.check value
 */}}
 {{- define "airbyte.workloads.queues.check" }}
@@ -309,17 +287,6 @@ Renders the set of all workloads.queues config map variables
 DATA_CHECK_TASK_QUEUES: {{ include "airbyte.workloads.queues.check" . | quote }}
 DATA_DISCOVER_TASK_QUEUES: {{ include "airbyte.workloads.queues.discover" . | quote }}
 DATA_SYNC_TASK_QUEUES: {{ include "airbyte.workloads.queues.sync" . | quote }}
-{{- end }}
-
-{{/*
-Renders the workloads.resources secret name
-*/}}
-{{- define "airbyte.workloads.resources.secretName" }}
-{{- if .Values.global.workloads.resources.secretName }}
-    {{- .Values.global.workloads.resources.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
 {{- end }}
 
 {{/*

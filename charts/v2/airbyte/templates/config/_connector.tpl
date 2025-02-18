@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the connector secret name
-*/}}
-{{- define "airbyte.connector.secretName" }}
-{{- if .Values.global.connectorRegistry.secretName }}
-    {{- .Values.global.connectorRegistry.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.connectorRegistry.seedProvider value
 */}}
 {{- define "airbyte.connector.seedProvider" }}

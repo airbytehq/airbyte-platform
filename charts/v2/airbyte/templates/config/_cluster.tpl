@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the cluster secret name
-*/}}
-{{- define "airbyte.cluster.secretName" }}
-{{- if .Values.global.cluster.secretName }}
-    {{- .Values.global.cluster.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.cluster.type value
 */}}
 {{- define "airbyte.cluster.type" }}

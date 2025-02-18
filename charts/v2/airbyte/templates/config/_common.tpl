@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the common secret name
-*/}}
-{{- define "airbyte.common.secretName" }}
-{{- if .Values.global.secretName }}
-    {{- .Values.global.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.edition value
 */}}
 {{- define "airbyte.common.edition" }}

@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the micronaut secret name
-*/}}
-{{- define "airbyte.micronaut.secretName" }}
-{{- if .Values.global.micronaut.secretName }}
-    {{- .Values.global.micronaut.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.micronaut.environments value
 */}}
 {{- define "airbyte.micronaut.environments" }}

@@ -118,17 +118,6 @@ WORKLOAD_LAUNCHER_PARALLELISM: {{ include "airbyte.workloadLauncher.parallelism"
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.images secret name
-*/}}
-{{- define "airbyte.workloadLauncher.images.secretName" }}
-{{- if .Values.workloadLauncher.secretName }}
-    {{- .Values.workloadLauncher.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the workloadLauncher.connectorSidecar.image value
 */}}
 {{- define "airbyte.workloadLauncher.images.connectorSidecar.image" }}
