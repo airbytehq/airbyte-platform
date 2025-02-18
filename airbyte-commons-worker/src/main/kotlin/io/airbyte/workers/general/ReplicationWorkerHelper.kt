@@ -32,11 +32,11 @@ import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
@@ -103,8 +103,8 @@ class ReplicationWorkerHelper(
   private val recordMapper: RecordMapper,
   private val featureFlagClient: FeatureFlagClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
+  private val metricClient: MetricClient,
 ) {
-  private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
   private val replicationFailures: MutableList<FailureReason> = Collections.synchronizedList(mutableListOf())
   private val _cancelled = AtomicBoolean()
@@ -165,12 +165,12 @@ class ReplicationWorkerHelper(
              */
             if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
               logger.warn(e) { "Cancelling sync, workload is in a terminal state" }
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
+              metricClient.count(metric = OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, attributes = metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, 1, *metricAttrs.toTypedArray())
+              metricClient.count(metric = OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, attributes = metricAttrs.toTypedArray())
               markFailed()
               abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
@@ -229,7 +229,7 @@ class ReplicationWorkerHelper(
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
 
     if (configuredAirbyteCatalog.streams.isEmpty()) {
-      metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, attributes = metricAttrs.toTypedArray())
     }
 
     val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
@@ -367,7 +367,7 @@ class ReplicationWorkerHelper(
           f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
       }
     ) {
-      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, attributes = metricAttrs.toTypedArray())
     }
 
     LineGobbler.endSection("REPLICATION")
@@ -409,7 +409,7 @@ class ReplicationWorkerHelper(
     }
 
     if (sourceRawMessage.type == Type.STATE) {
-      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, attributes = metricAttrs.toTypedArray())
     }
 
     if (sourceRawMessage.type == Type.RECORD) {
@@ -450,7 +450,7 @@ class ReplicationWorkerHelper(
 
     if (destinationRawMessage.type == Type.STATE) {
       syncPersistence.accept(context.connectionId, destinationRawMessage.state)
-      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, attributes = metricAttrs.toTypedArray())
     }
 
     handleControlMessage(destinationRawMessage, context, AirbyteMessageOrigin.DESTINATION)

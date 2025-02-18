@@ -29,10 +29,10 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -137,12 +137,12 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
         .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
         .build()) {
       logClientManager.setJobMdc(jobRoot);
-      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION);
 
       ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
 
       if (replicationActivityInput.isReset()) {
-        metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+        metricClient.count(OssMetricsRegistry.RESET_REQUEST);
       }
 
       LOGGER.info("Starting async replication");

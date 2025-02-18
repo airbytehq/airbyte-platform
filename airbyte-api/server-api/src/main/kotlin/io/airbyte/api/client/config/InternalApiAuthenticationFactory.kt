@@ -9,8 +9,8 @@ import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.commons.micronaut.EnvConstants
+import io.airbyte.metrics.MetricClient
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Prototype
@@ -62,7 +62,7 @@ class InternalApiAuthenticationFactory {
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
-    meterRegistry: MeterRegistry?,
+    metricClient: MetricClient,
   ): String {
     return try {
       val now = Date()
@@ -88,10 +88,10 @@ class InternalApiAuthenticationFactory {
         com.auth0.jwt.algorithms.Algorithm
           .RSA256(null, key)
       val signedToken = token.sign(algorithm)
-      meterRegistry?.counter("api-client.auth-token.success")?.increment()
+      metricClient.count(metricName = "api-client.auth-token.success")
       return "Bearer $signedToken"
     } catch (e: Exception) {
-      meterRegistry?.counter("api-client.auth-token.failure")?.increment()
+      metricClient.count(metricName = "api-client.auth-token.failure")
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }

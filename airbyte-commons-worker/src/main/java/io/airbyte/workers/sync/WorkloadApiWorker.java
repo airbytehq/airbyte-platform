@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
+import static io.airbyte.metrics.MetricEmittingApps.WORKLOAD_LAUNCHER;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;

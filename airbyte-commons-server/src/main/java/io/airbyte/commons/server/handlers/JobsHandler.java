@@ -24,8 +24,8 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
@@ -52,17 +52,20 @@ public class JobsHandler {
   private final JobNotifier jobNotifier;
   private final JobErrorReporter jobErrorReporter;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private final MetricClient metricClient;
 
   public JobsHandler(final JobPersistence jobPersistence,
                      final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
                      final JobNotifier jobNotifier,
                      final JobErrorReporter jobErrorReporter,
-                     final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
+                     final ConnectionTimelineEventHelper connectionTimelineEventHelper,
+                     final MetricClient metricClient) {
     this.jobPersistence = jobPersistence;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
     this.jobNotifier = jobNotifier;
     this.jobErrorReporter = jobErrorReporter;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -91,7 +94,7 @@ public class JobsHandler {
       final UUID connectionId = UUID.fromString(job.getScope());
       if (!connectionId.equals(input.getConnectionId())) {
         log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.getConnectionId(), connectionId);
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT, 1);
+        metricClient.count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT);
       }
 
       final JobSyncConfig jobSyncConfig = job.getConfig().getSync();

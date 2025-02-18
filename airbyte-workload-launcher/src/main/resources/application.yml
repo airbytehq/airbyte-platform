@@ -12,8 +12,12 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -27,6 +31,7 @@ micronaut:
       type: cached
       n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
       core-pool-size: 0
+
 airbyte:
   pod-sweeper:
     # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
@@ -50,6 +55,7 @@ airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -222,10 +228,6 @@ airbyte:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
-  metric:
-    client: ${METRIC_CLIENT:}
-    should-publish: ${PUBLISH_METRICS:false}
-    otel-collector-endpoint: ${OTEL_COLLECTOR_ENDPOINT:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

@@ -141,11 +141,11 @@ import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
@@ -226,6 +226,7 @@ public class ConnectionsHandler {
   private final ApiPojoConverters apiPojoConverters;
 
   private final ConnectionScheduleHelper connectionScheduleHelper;
+  private final MetricClient metricClient;
 
   // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
@@ -258,6 +259,7 @@ public class ConnectionsHandler {
                             final ApiPojoConverters apiPojoConverters,
                             final ConnectionScheduleHelper connectionScheduleHelper,
                             final MapperSecretHelper mapperSecretHelper,
+                            final MetricClient metricClient,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
                             final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
@@ -289,6 +291,7 @@ public class ConnectionsHandler {
     this.apiPojoConverters = apiPojoConverters;
     this.connectionScheduleHelper = connectionScheduleHelper;
     this.mapperSecretHelper = mapperSecretHelper;
+    this.metricClient = metricClient;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.contextBuilder = contextBuilder;
   }
@@ -1431,7 +1434,7 @@ public class ConnectionsHandler {
                                                 final UUID sourceCatalogId,
                                                 final NonBreakingChangesPreference nonBreakingChangesPreference,
                                                 final List<DestinationSyncMode> supportedDestinationSyncModes) {
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+    metricClient.count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     final ApplySchemaChangeHelper.UpdateSchemaResult propagateResult = applySchemaChangeHelper.getUpdatedSchema(
         currentSyncCatalog,
@@ -1449,9 +1452,8 @@ public class ConnectionsHandler {
     final var validationContext = new Workspace(workspaceId);
     final var validationError = catalogValidator.fieldCount(catalog, validationContext);
     if (validationError != null) {
-      MetricClientFactory.getMetricClient().count(
+      metricClient.count(
           OssMetricsRegistry.CATALOG_SIZE_VALIDATION_ERROR,
-          1,
           new MetricAttribute(MetricTags.CRUD_OPERATION, operationName),
           new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()));
 
@@ -1546,10 +1548,10 @@ public class ConnectionsHandler {
     final UUID connectionId = connectionRead.getConnectionId();
     // Monitor the schema change detection
     if (containsBreakingChange) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+      metricClient.count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED,
           new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     } else {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+      metricClient.count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED,
           new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     }
     // Update connection

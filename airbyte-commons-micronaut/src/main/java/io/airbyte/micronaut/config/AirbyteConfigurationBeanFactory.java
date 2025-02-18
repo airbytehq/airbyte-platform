@@ -4,10 +4,13 @@
 
 package io.airbyte.micronaut.config;
 
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.exceptions.DisabledBeanException;
 import io.micronaut.core.util.StringUtils;
@@ -56,6 +59,14 @@ public class AirbyteConfigurationBeanFactory {
                            @Value("${airbyte-yml.webapp-url}") final Optional<String> webappUrl) {
     return airbyteUrl.filter(StringUtils::isNotEmpty)
         .orElseGet(() -> webappUrl.orElseThrow(() -> new DisabledBeanException("Airbyte URL not provided.")));
+  }
+
+  @Singleton
+  @Requires(property = "airbyte.protocol.min-version")
+  public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
+                                                                 @Value("${airbyte.protocol.min-version}") final String minVersion,
+                                                                 @Value("${airbyte.protocol.max-version}") final String maxVersion) {
+    return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
   }
 
 }

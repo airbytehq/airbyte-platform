@@ -46,9 +46,15 @@ micronaut:
           # which is used to add auth tokens when using keycloak for internal service auth.
           # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
           enabled: false
-    export:
-      statsd:
+      web:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
+      statsd:
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -157,7 +163,6 @@ airbyte:
       wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
       wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}
       rollout_expiration_seconds: ${CONNECTOR_ROLLOUT_EXPIRATION_SECONDS:360}
-
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   support-email-domains:
     oss: ""

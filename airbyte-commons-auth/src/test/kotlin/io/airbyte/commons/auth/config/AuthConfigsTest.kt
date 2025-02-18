@@ -54,7 +54,7 @@ class AuthConfigsTest {
   }
 
   @Test
-  @Property(name = "airbyte.edition", value = "PRO")
+  @Property(name = "airbyte.edition", value = "ENTERPRISE")
   fun `test Enterprise AuthConfigs sets mode to OIDC`() {
     Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
   }

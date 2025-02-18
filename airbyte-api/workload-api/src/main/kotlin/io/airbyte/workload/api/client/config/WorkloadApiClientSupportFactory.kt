@@ -8,8 +8,8 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.UserAgentInterceptor
 import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.api.client.auth.WorkloadApiAuthenticationInterceptor
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -43,13 +43,13 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.workload-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: MeterRegistry?,
+    metricClient: MetricClient,
   ): RetryPolicy<Response> =
     generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
-      meterRegistry = meterRegistry,
+      metricClient = metricClient,
       metricPrefix = "workload-api-client",
       clientRetryExceptions = clientRetryExceptions,
     )

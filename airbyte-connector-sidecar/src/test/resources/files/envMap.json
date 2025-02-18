@@ -10,7 +10,6 @@
   "AWS_ACCESS_KEY_ID": "access-key-id",
   "JOB_MAIN_CONTAINER_MEMORY_REQUEST": "1Gi",
   "WORKSPACE_ROOT": "/workspace",
-  "METRIC_CLIENT": "imperial",
   "LOG_LEVEL": "INFO",
   "DEPLOYMENT_MODE": "CLOUD",
   "JOB_KUBE_NODE_SELECTORS": "node-selectors",

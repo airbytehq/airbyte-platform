@@ -7,9 +7,9 @@ package io.airbyte.workload.launcher
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
 import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
@@ -179,7 +179,7 @@ class PodSweeper(
               .delete()
           }
         }
-        metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, 1, MetricAttribute("phase", phase))
+        metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, attributes = arrayOf(MetricAttribute("phase", phase)))
       }
     }
   }
@@ -187,9 +187,7 @@ class PodSweeper(
   private fun <T> runKubeCommand(kubeCommand: () -> T) {
     try {
       Failsafe.with(kubernetesClientRetryPolicy).get(
-        object : CheckedSupplier<T> {
-          override fun get(): T = kubeCommand()
-        },
+        CheckedSupplier { kubeCommand() },
       )
     } catch (e: Exception) {
       logger.error(e) { "Could not delete the pod" }

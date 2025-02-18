@@ -29,6 +29,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-storage"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)

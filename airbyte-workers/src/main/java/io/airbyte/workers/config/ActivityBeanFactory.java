@@ -7,7 +7,7 @@ package io.airbyte.workers.config;
 import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;

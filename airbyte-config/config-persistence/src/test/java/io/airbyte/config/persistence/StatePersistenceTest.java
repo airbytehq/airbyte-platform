@@ -39,6 +39,7 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
@@ -88,6 +89,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final var metricClient = mock(MetricClient.class);
     connectionService = mock(ConnectionService.class);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -103,7 +105,8 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
@@ -111,13 +114,15 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
 
     connectionId = setupTestData();
 

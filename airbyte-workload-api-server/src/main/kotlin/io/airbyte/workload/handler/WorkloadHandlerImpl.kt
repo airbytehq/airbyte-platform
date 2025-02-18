@@ -11,15 +11,15 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseAtomicWorkloadClaim
-import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
-import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -37,7 +37,7 @@ private val logger = KotlinLogging.logger {}
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
   private val airbyteApi: AirbyteApiClient,
-  private val metricClient: CustomMetricPublisher,
+  private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
@@ -348,9 +348,13 @@ class WorkloadHandlerImpl(
         } catch (e: Exception) {
           logger.error(e) { "Failed to deserialize signal payload: $signalPayload" }
           metricClient.count(
-            OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+            metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+            attributes =
+              arrayOf(
+                MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+                MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+                MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType.toString()),
+              ),
           )
           return
         }
@@ -364,19 +368,27 @@ class WorkloadHandlerImpl(
           ),
         )
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
-          MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
+              MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+            ),
         )
       } catch (e: Exception) {
         logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
-          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-          MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
+          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
+              MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+              e.message?.let { m ->
+                MetricAttribute(MetricTags.FAILURE_TYPE, m)
+              },
+            ),
         )
       }
     }

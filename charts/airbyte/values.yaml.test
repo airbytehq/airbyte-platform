@@ -70,13 +70,20 @@ global:
       credentials: ""
       # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
       credentialsJson: ""
-  metrics:
-    ## These parameters are used in the airbyte-env ConfigMap, which is then mounted in deployments in the airbyte-worker and airbyte-metrics Charts.
-    ##  global.metrics.metricClient The metric client to configure globally. Supports "otel"
-    metricClient: ""
 
-    ##  global.metrics.otelCollectorEndpoint The open-telemetry-collector endpoint that metrics will be sent to.
-    otelCollectorEndpoint: ""
+  metrics:
+    enabled: "false"
+    step: ""
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
+
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

@@ -9,8 +9,12 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -27,6 +31,7 @@ airbyte:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -51,12 +56,9 @@ airbyte:
         instance-admin-client-id: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
         instance-admin-client-secret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}
         jwt-signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
-
   protocol:
-    target:
-      range:
-        min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
-        max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
+    min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
+    max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   secret:
     persistence: ${SECRET_PERSISTENCE:NO_OP}
     store:

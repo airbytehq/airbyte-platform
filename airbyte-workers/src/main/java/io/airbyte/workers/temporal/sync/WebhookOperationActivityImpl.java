@@ -24,9 +24,9 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
@@ -62,21 +62,24 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   public WebhookOperationActivityImpl(@Named("webhookHttpClient") final HttpClient httpClient,
                                       final SecretsRepositoryReader secretsRepositoryReader,
                                       final AirbyteApiClient airbyteApiClient,
-                                      final FeatureFlagClient featureFlagClient) {
+                                      final FeatureFlagClient featureFlagClient,
+                                      final MetricClient metricClient) {
     this.httpClient = httpClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public boolean invokeWebhook(final OperatorWebhookInput input) {
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION, 1);
+    metricClient.count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION);
 
     LOGGER.debug("Webhook operation input: {}", input);
     LOGGER.debug("Found webhook config: {}", input.getWorkspaceWebhookConfigs());
@@ -88,7 +91,7 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
             new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
+            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig, metricClient);
         fullWebhookConfigJson =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence);
       } catch (final IOException e) {

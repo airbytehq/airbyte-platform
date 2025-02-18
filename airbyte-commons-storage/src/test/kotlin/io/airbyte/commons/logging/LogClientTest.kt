@@ -13,6 +13,11 @@ import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.commons.storage.StorageType
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.MetricsRegistry
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.Timer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -26,6 +31,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.Callable
 import kotlin.io.path.createTempFile
 import kotlin.io.path.pathString
 
@@ -33,8 +39,10 @@ internal class LogClientTest {
   private lateinit var logUtils: LogUtils
   private lateinit var logEventLayout: LogEventLayout
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var metricClient: MetricClient
 
   @BeforeEach
+  @Suppress("UNCHECKED_CAST")
   fun setup() {
     logUtils = LogUtils()
     logUtils.init()
@@ -44,6 +52,29 @@ internal class LogClientTest {
     module.addDeserializer(StackTraceElement::class.java, StackTraceElementDeserializer())
     module.addSerializer(StackTraceElement::class.java, StackTraceElementSerializer())
     objectMapper.registerModules(module)
+    val micrometerCounter: Counter =
+      mockk {
+        every { increment() } returns Unit
+        every { increment(any()) } returns Unit
+      }
+    val micrometerTimer: Timer =
+      mockk {
+        every { recordCallable(any<Callable<*>>()) } answers { (it.invocation.args[0] as Callable<*>).run { call() } }
+      }
+    metricClient =
+      mockk<MetricClient> {
+        every { counter(metric = any<MetricsRegistry>(), attributes = anyVararg<MetricAttribute>()) } returns micrometerCounter
+        every {
+          gauge(
+            metric = any<MetricsRegistry>(),
+            stateObject = any<List<Int>>(),
+            function = any(),
+            attributes = anyVararg<MetricAttribute>(),
+          )
+        } answers
+          { it.invocation.args[1] as List<Int> }
+        every { timer(metric = any<MetricsRegistry>(), attributes = anyVararg<MetricAttribute>()) } returns micrometerTimer
+      }
   }
 
   @AfterEach
@@ -67,7 +98,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     logClient.deleteLogs(logPath = logPath)
@@ -102,7 +133,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     val result = logClient.getLogs(logPath = logPath, numLines = numLines)
@@ -145,7 +176,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)
@@ -182,7 +213,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)
@@ -249,7 +280,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)
     assertEquals(16, logs.size)
@@ -297,7 +328,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)
     assertEquals(16, logs.size)
@@ -405,7 +436,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)
@@ -617,7 +648,7 @@ internal class LogClientTest {
         storageClientFactory = storageClientFactory,
         mapper = objectMapper,
         logEventLayout = logEventLayout,
-        meterRegistry = null,
+        metricClient = metricClient,
       )
 
     val logs = logClient.tailCloudLogs(logPath = logPath, numLines = numLines)

@@ -17,6 +17,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -57,6 +58,7 @@ class ConnectorWatcher(
   private val jobOutputDocStore: JobOutputDocStore,
   private val logContextFactory: SidecarLogContextFactory,
   private val heartbeatMonitor: HeartbeatMonitor,
+  private val metricClient: MetricClient,
 ) {
   @PostConstruct
   fun run() {
@@ -209,6 +211,7 @@ class ConnectorWatcher(
       Optional.empty(),
       InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
+      metricClient,
     )
   }
 

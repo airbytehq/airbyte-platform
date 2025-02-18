@@ -19,6 +19,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.mappers.transformations.MapperSpec
+import io.airbyte.metrics.MetricClient
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -27,6 +28,7 @@ class MapperSecretHydrationHelper(
   private val mappers: List<Mapper<MapperConfig>>,
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val airbyteApiClient: AirbyteApiClient,
+  private val metricClient: MetricClient,
 ) {
   private fun getMapper(name: String): Mapper<MapperConfig> = mappers.first { it.name == name }
 
@@ -58,6 +60,7 @@ class MapperSecretHydrationHelper(
             io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType::class.java,
           ),
         ),
+      metricClient,
     )
   }
 

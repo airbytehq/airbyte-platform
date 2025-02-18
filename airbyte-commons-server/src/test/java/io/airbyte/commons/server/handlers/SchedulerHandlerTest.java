@@ -123,6 +123,7 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -282,6 +283,7 @@ class SchedulerHandlerTest {
   private OperationService operationService;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
+  private MetricClient metricClient;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -332,6 +334,7 @@ class SchedulerHandlerTest {
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    metricClient = mock(MetricClient.class);
 
     when(connectorDefinitionSpecificationHandler.getDestinationSpecification(any())).thenReturn(new DestinationDefinitionSpecificationRead()
         .supportedDestinationSyncModes(
@@ -370,7 +373,7 @@ class SchedulerHandlerTest {
         sourceService,
         destinationService,
         catalogConverter,
-        applySchemaChangeHelper);
+        applySchemaChangeHelper, metricClient);
   }
 
   @ParameterizedTest

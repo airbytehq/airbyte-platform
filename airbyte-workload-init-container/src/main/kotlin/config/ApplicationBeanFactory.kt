@@ -9,9 +9,7 @@ import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import io.airbyte.commons.protocol.ProtocolSerializer
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.MetricClientFactory
-import io.airbyte.metrics.lib.MetricEmittingApps
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
@@ -51,14 +49,9 @@ class ApplicationBeanFactory {
     )
 
   @Singleton
-  fun metricClient(): MetricClient {
-    MetricClientFactory.initialize(MetricEmittingApps.WORKLOAD_INIT)
-    return MetricClientFactory.getMetricClient()
-  }
-
-  @Singleton
   fun baseConnectorInputHydrator(
     airbyteApiClient: AirbyteApiClient,
+    metricClient: MetricClient,
     secretsRepositoryReader: SecretsRepositoryReader,
     @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
   ): ConnectorSecretsHydrator =
@@ -66,6 +59,7 @@ class ApplicationBeanFactory {
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
       useRuntimeSecretPersistence = useRuntimeSecretPersistence,
+      metricClient = metricClient,
     )
 
   @Singleton

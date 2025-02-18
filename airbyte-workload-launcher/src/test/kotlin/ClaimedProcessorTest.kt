@@ -51,7 +51,7 @@ class ClaimedProcessorTest {
       ClaimedProcessor(
         apiClient = apiClient,
         pipe = launchPipeline,
-        metricPublisher = mockk(relaxed = true),
+        metricClient = mockk(relaxed = true),
         dataplaneId = "dataplane1",
         parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,

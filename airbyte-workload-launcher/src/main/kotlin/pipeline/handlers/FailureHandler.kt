@@ -4,13 +4,14 @@
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
-import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -26,7 +27,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class FailureHandler(
   private val apiClient: WorkloadApiClient,
-  private val metricPublisher: CustomMetricPublisher,
+  private val metricClient: MetricClient,
   @Named("logMsgTemplate") private val logMsgTemplate: Optional<Function<String, String>>,
 ) {
   fun apply(
@@ -50,18 +51,18 @@ class FailureHandler(
         buildList {
           if (e.cause is KubeClientException) {
             val clientEx = (e.cause as KubeClientException)
-            add(MetricAttribute(MeterFilterFactory.KUBE_COMMAND_TYPE_TAG, clientEx.commandType.toString()))
+            add(MetricAttribute(MetricTags.KUBE_COMMAND_TYPE_TAG, clientEx.commandType.toString()))
             if (clientEx.podType != null) {
-              add(MetricAttribute(MeterFilterFactory.KUBE_POD_TYPE_TAG, clientEx.podType.toString()))
+              add(MetricAttribute(MetricTags.KUBE_POD_TYPE_TAG, clientEx.podType.toString()))
             }
           }
-          add(MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()))
-          add(MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS))
+          add(MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()))
+          add(MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS))
         }
 
-      metricPublisher.count(
-        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
-        *attrs.toTypedArray(),
+      metricClient.count(
+        metric = OssMetricsRegistry.WORKLOAD_PROCESSED,
+        attributes = attrs.toTypedArray(),
       )
       logger.info { logMsgTemplate.orElse { id -> "Pipeline aborted after error for workload: $id." }.apply(io.msg.workloadId) }
     }

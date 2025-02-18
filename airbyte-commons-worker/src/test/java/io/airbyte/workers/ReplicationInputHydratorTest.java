@@ -60,7 +60,7 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
