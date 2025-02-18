@@ -62,6 +62,7 @@ airbyte:
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
     use-runtime-persistence: ${USE_RUNTIME_SECRET_PERSISTENCE:false}
+  version: ${AIRBYTE_VERSION}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}

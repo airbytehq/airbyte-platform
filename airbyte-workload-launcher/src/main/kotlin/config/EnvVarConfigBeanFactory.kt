@@ -51,6 +51,7 @@ class EnvVarConfigBeanFactory {
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
+    @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -78,6 +79,9 @@ class EnvVarConfigBeanFactory {
     envMap.putAll(metricsEnvMap)
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-workload-init-container"
 
+    // Airbyte metadata
+    envMap.putAll(airbyteMetadataEnvMap)
+
     val envVars = envMap.toEnvVarList()
 
     val secretEnvVars =
@@ -99,6 +103,7 @@ class EnvVarConfigBeanFactory {
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -115,6 +120,9 @@ class EnvVarConfigBeanFactory {
 
     // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
+
+    // Airbyte metadata
+    envMap.putAll(airbyteMetadataEnvMap)
 
     val envVars = envMap.toEnvVarList()
 
