@@ -136,7 +136,7 @@ class TemporalClient(
       listOpenWorkflowExecutionsRequest
         .executionsList
         .filterNotNull()
-        .filter { it.type == connectionManagerWorkflowType || it.status == executionStatus }
+        .filter { it.type == connectionManagerWorkflowType && it.status == executionStatus }
         .mapNotNull { extractConnectionIdFromWorkflowId(it.execution.workflowId) }
         .toSet()
         .also {
