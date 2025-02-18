@@ -251,10 +251,18 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });
+
   return (
     <ConnectionEditContext.Provider value={data}>
       <ConnectionFormServiceProvider
-        mode={data.connection.status === ConnectionStatus.deprecated || !canEditConnection ? "readonly" : "edit"}
+        mode={
+          data.connection.status === ConnectionStatus.deprecated ||
+          !canEditConnection ||
+          data.connection.source.isEntitled === false ||
+          data.connection.destination.isEntitled === false
+            ? "readonly"
+            : "edit"
+        }
         connection={data.connection}
         schemaError={schemaError}
         refreshSchema={refreshSchema}

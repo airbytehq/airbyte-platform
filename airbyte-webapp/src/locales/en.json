@@ -1503,7 +1503,7 @@
   "connector.sort.name": "Name",
   "connector.sort.success": "Sync success rate",
   "connector.sort.usage": "Usage",
-
+  "connector.unlicensedConnector": "{connectorName} is not included in your organization's license. You cannot use or update this connector. Please contact your administrator to resolve this.",
   "credits.talkToSales": "Talk to Sales",
 
   "docs.notFoundError": "We were not able to receive docs. Please click the link above to open docs on our website",
