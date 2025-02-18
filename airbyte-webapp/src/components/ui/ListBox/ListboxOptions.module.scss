@@ -2,7 +2,7 @@
 @use "scss/variables";
 
 .listboxOptions {
-  min-width: 140px;
+  min-width: variables.$min-width-listbox-options-list;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-menu;
   display: flex;

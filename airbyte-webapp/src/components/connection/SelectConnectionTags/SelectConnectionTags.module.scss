@@ -27,14 +27,6 @@
     border: variables.$border-thin solid colors.$grey-200;
     box-shadow: none;
     border-radius: variables.$border-radius-sm;
-
-    tr & {
-      opacity: 0;
-    }
-
-    tr:hover & {
-      opacity: 1;
-    }
   }
 
   ul,

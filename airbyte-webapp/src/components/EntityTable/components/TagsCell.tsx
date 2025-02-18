@@ -10,6 +10,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateTag, useTagsList, useUpdateConnectionOptimistically } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
 
+import styles from "./TagsCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
 
 export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Tag[]>> = (props) => {
@@ -48,14 +49,16 @@ export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Ta
     <Box py="md" px="lg">
       <FlexContainer gap="sm" alignItems="center" wrap="wrap">
         {selectedTags?.map((tag) => <TagBadge color={tag.color} key={tag.tagId} text={tag.name} />)}
-        <SelectConnectionTags
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          createTag={onCreateTag}
-          selectTag={onTagSelect}
-          deselectTag={onTagDeselect}
-          onClose={updateTags}
-        />
+        <span className={styles.tagsCell__selectButton}>
+          <SelectConnectionTags
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            createTag={onCreateTag}
+            selectTag={onTagSelect}
+            deselectTag={onTagDeselect}
+            onClose={updateTags}
+          />
+        </span>
       </FlexContainer>
     </Box>
   );

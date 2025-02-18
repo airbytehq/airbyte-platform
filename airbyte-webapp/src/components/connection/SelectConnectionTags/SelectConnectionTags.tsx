@@ -12,7 +12,9 @@ import { TagBadge } from "components/ui/TagBadge";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { HttpProblem } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -42,6 +44,8 @@ export const THEMED_HEX_OPTIONS = [
 ];
 
 const CONNECTION_TAGS_LIMIT = 10;
+
+const CONNECTION_NAME_LENGTH_LIMIT = 30;
 
 const CreateTagControl: React.FC<{
   createTagLoading: boolean;
@@ -129,6 +133,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   const [query, setQuery] = useState("");
   const [createTagLoading, setCreateTagLoading] = useState(false);
   const notificationService = useNotificationService();
+  const formatError = useFormatError();
 
   const onClosePopover = useCallback(() => {
     setQuery("");
@@ -156,7 +161,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   const filteredTags = useMemo(
     () =>
       availableTags
-        .filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.toLocaleLowerCase()))
+        .filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.trim().toLocaleLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [availableTags, deferredQueryValue]
   );
@@ -174,7 +179,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   }, [tagsSelectedOnOpen, filteredTags]);
 
   const tagDoesNotExist = useMemo(
-    () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue),
+    () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue.trim()),
     [availableTags, deferredQueryValue]
   );
 
@@ -188,15 +193,30 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     setCreateTagLoading(true);
     try {
       await createTag(deferredQueryValue, color);
-    } catch (e) {
+    } catch (error) {
       notificationService.registerNotification({
         id: "create-tag-error",
-        text: formatMessage({ id: "connection.tags.creationError" }),
+        text: HttpProblem.isInstanceOf(error)
+          ? formatError(error)
+          : formatMessage({ id: "connection.tags.creationError" }),
         type: "error",
       });
     } finally {
       setCreateTagLoading(false);
       setQuery("");
+    }
+  };
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value.length <= CONNECTION_NAME_LENGTH_LIMIT) {
+      setQuery(e.target.value);
+    }
+  };
+
+  const handleSearchFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (tagDoesNotExist && (!disabled || createTagLoading)) {
+      handleCreateTag(deferredQueryValue, color);
     }
   };
 
@@ -219,18 +239,25 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               }}
               className={styles.selectConnectionTags}
             >
-              <Input
-                inline
-                value={deferredQueryValue}
-                onChange={(e) => setQuery(e.target.value)}
-                containerClassName={styles.selectConnectionTags__input}
-                placeholder={formatMessage(
-                  {
-                    id: "connection.tags.selectOrCreateTag",
-                  },
-                  { hasTags: availableTags.length > 0 }
-                )}
-              />
+              <form onSubmit={handleSearchFormSubmit}>
+                <Input
+                  inline
+                  // Auto-focusing improves the UX here, because this input only shows up when the popover is explicitly
+                  // opened by the user
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                  disabled={disabled || createTagLoading}
+                  value={deferredQueryValue}
+                  onChange={handleQueryChange}
+                  containerClassName={styles.selectConnectionTags__input}
+                  placeholder={formatMessage(
+                    {
+                      id: "connection.tags.selectOrCreateTag",
+                    },
+                    { hasTags: availableTags.length > 0 }
+                  )}
+                />
+              </form>
               {tagDoesNotExist &&
                 (!tagLimitReached ? (
                   <CreateTagControl

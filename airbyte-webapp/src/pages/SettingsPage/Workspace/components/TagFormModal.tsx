@@ -36,7 +36,11 @@ interface TagFormValues {
 }
 
 const ValidationSchema: SchemaOf<TagFormValues> = yup.object().shape({
-  name: yup.string().required("form.empty.error").max(30, "settings.workspace.tags.tagForm.validation.maxLength"),
+  name: yup
+    .string()
+    .trim()
+    .required("form.empty.error")
+    .max(30, "settings.workspace.tags.tagForm.validation.maxLength"),
   color: yup
     .string()
     .required("form.empty.error")
@@ -123,7 +127,7 @@ export const TagFormModal: React.FC<TagFormModalProps> = ({ tag, onCancel, onCom
   const { registerNotification } = useNotificationService();
 
   const onSubmit = async (values: TagFormValues) => {
-    const formattedColor = values.color.slice(1).toUpperCase(); // Remove the # and convert to uppercase
+    const formattedColor = values.color.slice(1).toUpperCase().trim(); // Remove the #, convert to uppercase and trim
     if (tag) {
       await updateTag({ workspaceId, tagId: tag.tagId, ...values, color: formattedColor });
     } else {
