@@ -73,8 +73,8 @@ class LaunchPipeline(
     return input
       .toMono()
       .flatMap(build)
-      .flatMap(loadShed)
       .flatMap(claim)
+      .flatMap(loadShed)
       .flatMap(check)
       .flatMap(mutex)
       .flatMap(launch)
