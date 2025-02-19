@@ -66,7 +66,7 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test active statuses are complete`() {
+  fun `verify active statuses doesn't contain terminal statuses`() {
     assertEquals(
       setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
       WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
@@ -77,7 +77,7 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test get workload`() {
+  fun `getWorkload returns the expected workload`() {
     val domainWorkload =
       Workload(
         id = WORKLOAD_ID,
@@ -98,13 +98,13 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found`() {
+  fun `getWorkload throws NotFoundException if the workload isn't found`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
     assertThrows<NotFoundException> { workloadHandler.getWorkload(WORKLOAD_ID) }
   }
 
   @Test
-  fun `test create workload`() {
+  fun `createWorkload saves the expected workload`() {
     val workloadLabel1 = WorkloadLabel("key1", "value1")
     val workloadLabel2 = WorkloadLabel("key2", "value2")
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)

@@ -125,7 +125,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test claim of pending workload`() {
+  fun `claiming a pending workload marks the workload as claimed by the dataplane`() {
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -144,7 +144,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test claim of claimed workload by another dataplane`() {
+  fun `claiming a workload that has been claimed by another dataplane fails`() {
     val otherDataplaneId = "my-other-dataplane"
     val originalDeadline = OffsetDateTime.now().withNano(0).plusMinutes(5)
     val workload =
@@ -168,7 +168,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test claim of claimed workload by the same dataplane`() {
+  fun `claiming a workload that has been claimed by the same dataplane succeeds and doesn't update the deadline`() {
     val dataplaneId = "my-data-plane"
     val originalDeadline = OffsetDateTime.now().withNano(0).plusMinutes(5)
     val workload =
@@ -191,7 +191,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test claim of running workload by the same dataplane`() {
+  fun `claiming workload that is running on the same dataplane fails`() {
     val dataplaneId = "my-data-plane"
     val originalDeadline = OffsetDateTime.now().withNano(0).plusMinutes(5)
     val workload =
@@ -217,7 +217,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test db insertion`() {
+  fun `saving a workload writes all the expected fields`() {
     val label1 =
       WorkloadLabel(
         id = null,
@@ -269,7 +269,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test status update`() {
+  fun `updating a workload status and deadline should update the workload`() {
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -294,7 +294,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test heartbeat update`() {
+  fun `heartbeat should update deadline and lastHeartbeatAt`() {
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -320,8 +320,9 @@ internal class WorkloadRepositoryTest {
     assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().deadline?.toEpochSecond())
   }
 
+  // TODO: we should delete this once we are using atomic claims by default because it should be the only way to set a dataplane.
   @Test
-  fun `test dataplane update`() {
+  fun `updating a workload with a dataplane should update the workload`() {
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -342,7 +343,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun `test mutex search`() {
+  fun `searchByMutexKeyAndStatusInList returns the workloads matching the search`() {
     val mutexKey = "mutex-search-test"
     val workload1 =
       Fixtures.workload(
