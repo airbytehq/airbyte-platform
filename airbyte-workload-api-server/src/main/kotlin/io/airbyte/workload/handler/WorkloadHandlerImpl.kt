@@ -7,6 +7,7 @@ package io.airbyte.workload.handler
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
@@ -79,6 +80,8 @@ class WorkloadHandlerImpl(
     autoId: UUID,
     deadline: OffsetDateTime,
     signalInput: String?,
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -100,6 +103,8 @@ class WorkloadHandlerImpl(
         autoId = autoId,
         deadline = deadline,
         signalInput = signalInput,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority?.toInt() ?: 0,
       )
     workloadRepository.save(domainWorkload).toApi()
 

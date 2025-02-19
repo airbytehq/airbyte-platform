@@ -236,6 +236,8 @@ internal class WorkloadRepositoryTest {
     labels.add(label1)
     labels.add(label2)
     val signalInput = "signalInput"
+    val dataplaneGroup = "dataplane-group-1"
+    val priority = 0
     val workload =
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -244,6 +246,8 @@ internal class WorkloadRepositoryTest {
         workloadLabels = labels,
         deadline = defaultDeadline,
         signalInput = signalInput,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority,
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
@@ -257,6 +261,8 @@ internal class WorkloadRepositoryTest {
     assertEquals(defaultDeadline.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
     assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
     assertEquals(signalInput, persistedWorkload.get().signalInput)
+    assertEquals(dataplaneGroup, persistedWorkload.get().dataplaneGroup)
+    assertEquals(priority, persistedWorkload.get().priority)
 
     val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
     workloadLabels.sortWith(Comparator.comparing(WorkloadLabel::key))
@@ -575,6 +581,8 @@ internal class WorkloadRepositoryTest {
       type: WorkloadType = WorkloadType.SYNC,
       deadline: OffsetDateTime = OffsetDateTime.now(),
       signalInput: String = "",
+      dataplaneGroup: String = "",
+      priority: Int = 0,
     ): Workload =
       Workload(
         id = id,
@@ -587,6 +595,8 @@ internal class WorkloadRepositoryTest {
         type = type,
         deadline = deadline,
         signalInput = signalInput,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority,
       )
   }
 }

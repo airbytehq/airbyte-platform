@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -43,6 +44,8 @@ interface WorkloadHandler {
     autoId: UUID,
     deadline: OffsetDateTime,
     signalInput: String?,
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
   )
 
   fun claimWorkload(

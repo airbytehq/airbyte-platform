@@ -420,6 +420,13 @@ components:
         signalInput:
           type: string
           nullable: true
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
     WorkloadCancelRequest:
       required:
       - reason
@@ -479,6 +486,9 @@ components:
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
         signalInput:
+          type: string
+          nullable: true
+        dataplaneGroup:
           type: string
           nullable: true
     WorkloadFailureRequest:

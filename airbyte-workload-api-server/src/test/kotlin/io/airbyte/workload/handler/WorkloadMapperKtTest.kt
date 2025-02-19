@@ -4,18 +4,27 @@
 
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.stream.Stream
 
 class WorkloadMapperKtTest {
-  @Test
-  fun `test from domain workload to api workload`() {
+  @ParameterizedTest
+  @MethodSource("priorityMatrix")
+  fun `test from domain workload to api workload`(
+    domainPriority: Int?,
+    expectedApiPriority: WorkloadPriority?,
+  ) {
     val createdAt = Instant.now().atOffset(ZoneOffset.UTC)
     val lastHeartbeatAt = createdAt.plusHours(1)
     val updatedAt = lastHeartbeatAt.plusHours(1)
@@ -38,6 +47,8 @@ class WorkloadMapperKtTest {
         deadline = Instant.now().atOffset(ZoneOffset.UTC),
         autoId = UUID.randomUUID(),
         signalInput = "signalPayload",
+        dataplaneGroup = "dataplane-group",
+        priority = domainPriority,
       )
 
     val apiWorkload = domainWorkload.toApi()
@@ -55,6 +66,8 @@ class WorkloadMapperKtTest {
     assertEquals(domainWorkload.terminationSource, apiWorkload.terminationSource)
     assertEquals(domainWorkload.autoId, apiWorkload.autoId)
     assertEquals(domainWorkload.signalInput, apiWorkload.signalInput)
+    assertEquals(domainWorkload.dataplaneGroup, apiWorkload.dataplaneGroup)
+    assertEquals(expectedApiPriority, apiWorkload.priority)
   }
 
   @Test
@@ -63,5 +76,15 @@ class WorkloadMapperKtTest {
     val apiWorkloadLabel = domainWorkloadLabel.toApi()
     assertEquals(domainWorkloadLabel.key, apiWorkloadLabel.key)
     assertEquals(domainWorkloadLabel.value, apiWorkloadLabel.value)
+  }
+
+  companion object {
+    @JvmStatic
+    fun priorityMatrix(): Stream<Arguments> =
+      Stream.of(
+        Arguments.of(null, null),
+        Arguments.of(0, WorkloadPriority.DEFAULT),
+        Arguments.of(1, WorkloadPriority.HIGH),
+      )
   }
 }

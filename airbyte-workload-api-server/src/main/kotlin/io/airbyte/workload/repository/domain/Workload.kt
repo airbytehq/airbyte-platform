@@ -59,6 +59,10 @@ data class Workload(
   var autoId: UUID? = null,
   @Nullable
   var signalInput: String? = null,
+  @Nullable
+  var dataplaneGroup: String? = null,
+  @Nullable
+  var priority: Int? = null,
 ) {
   @VisibleForTesting
   constructor(

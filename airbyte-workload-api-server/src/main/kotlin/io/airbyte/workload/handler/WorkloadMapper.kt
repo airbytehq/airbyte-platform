@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
@@ -69,6 +70,8 @@ fun DomainWorkload.toApi(): ApiWorkload =
     terminationSource = this.terminationSource,
     autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
     signalInput = this.signalInput,
+    dataplaneGroup = this.dataplaneGroup,
+    priority = this.priority?.let { WorkloadPriority.fromInt(it) },
   )
 
 fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel =

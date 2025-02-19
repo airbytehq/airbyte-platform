@@ -126,7 +126,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
         null,
-        replicationInput.getSignalInput());
+        replicationInput.getSignalInput(),
+        null);
 
     // Create the workload
     try {

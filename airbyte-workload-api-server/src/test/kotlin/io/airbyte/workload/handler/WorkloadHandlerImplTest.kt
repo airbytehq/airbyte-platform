@@ -9,6 +9,7 @@ import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.MetricAttribute
@@ -57,7 +58,7 @@ import java.util.UUID
 import io.airbyte.config.SignalInput as ConfigSignalInput
 
 class WorkloadHandlerImplTest {
-  val now = OffsetDateTime.now()
+  private val now: OffsetDateTime = OffsetDateTime.now()
 
   @BeforeEach
   fun reset() {
@@ -124,6 +125,8 @@ class WorkloadHandlerImplTest {
       UUID.randomUUID(),
       now.plusHours(2),
       signalInput = "signal payload",
+      "queue-name-1",
+      WorkloadPriority.DEFAULT,
     )
     verify {
       workloadRepository.save(
@@ -141,7 +144,9 @@ class WorkloadHandlerImplTest {
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
             it.deadline!! == now.plusHours(2) &&
-            it.signalInput == "signal payload"
+            it.signalInput == "signal payload" &&
+            it.dataplaneGroup == "queue-name-1" &&
+            it.priority == 0
         },
       )
     }
@@ -151,7 +156,19 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+      workloadHandler.createWorkload(
+        WORKLOAD_ID,
+        null,
+        "",
+        "",
+        "mutex-this",
+        io.airbyte.config.WorkloadType.SYNC,
+        UUID.randomUUID(),
+        now,
+        "",
+        "queue-name-1",
+        WorkloadPriority.DEFAULT,
+      )
     }
   }
 
@@ -180,7 +197,19 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+    workloadHandler.createWorkload(
+      WORKLOAD_ID,
+      null,
+      "",
+      "",
+      "mutex-this",
+      io.airbyte.config.WorkloadType.SYNC,
+      UUID.randomUUID(),
+      now,
+      "",
+      "queue-name-1",
+      WorkloadPriority.DEFAULT,
+    )
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -204,6 +233,8 @@ class WorkloadHandlerImplTest {
         logPath = "/log/path",
         mutexKey = "mutex-this",
         type = WorkloadType.DISCOVER,
+        dataplaneGroup = "queue-name-1",
+        priority = 0,
       )
     every { workloadRepository.search(any(), any(), any()) }.returns(listOf(domainWorkload))
     val workloads = workloadHandler.getWorkloads(listOf("dataplane1"), listOf(ApiWorkloadStatus.CLAIMED, ApiWorkloadStatus.FAILURE), null)
@@ -213,6 +244,8 @@ class WorkloadHandlerImplTest {
     assertEquals("/log/path", workloads[0].logPath)
     assertEquals("mutex-this", workloads[0].mutexKey)
     assertEquals(io.airbyte.config.WorkloadType.DISCOVER, workloads[0].type)
+    assertEquals("queue-name-1", workloads[0].dataplaneGroup)
+    assertEquals(WorkloadPriority.DEFAULT, workloads[0].priority)
   }
 
   @ParameterizedTest
@@ -846,6 +879,8 @@ class WorkloadHandlerImplTest {
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
       signalPayload: String? = "",
+      dataplaneGroup: String? = "",
+      priority: Int? = 0,
     ): Workload =
       Workload(
         id = id,
@@ -858,6 +893,8 @@ class WorkloadHandlerImplTest {
         type = type,
         createdAt = createdAt,
         signalInput = signalPayload,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority,
       )
   }
 }
