@@ -37,9 +37,13 @@
   }
 
   &__input {
-    border-radius: 0;
     border: none;
+    border-radius: 0;
     border-bottom: variables.$border-thin solid colors.$grey-100;
+
+    &:focus-within {
+      border-bottom: variables.$border-thin solid colors.$grey-100;
+    }
   }
 
   &__tags {

@@ -1,7 +1,7 @@
 import { autoUpdate, flip, offset, useFloating } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import classNames from "classnames";
-import { useDeferredValue, useState, useMemo, useCallback } from "react";
+import { useDeferredValue, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { CheckBox } from "components/ui/CheckBox";
@@ -239,25 +239,13 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               }}
               className={styles.selectConnectionTags}
             >
-              <form onSubmit={handleSearchFormSubmit}>
-                <Input
-                  inline
-                  // Auto-focusing improves the UX here, because this input only shows up when the popover is explicitly
-                  // opened by the user
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  disabled={disabled || createTagLoading}
-                  value={deferredQueryValue}
-                  onChange={handleQueryChange}
-                  containerClassName={styles.selectConnectionTags__input}
-                  placeholder={formatMessage(
-                    {
-                      id: "connection.tags.selectOrCreateTag",
-                    },
-                    { hasTags: availableTags.length > 0 }
-                  )}
-                />
-              </form>
+              <SearchOrCreateInputForm
+                disabled={disabled || createTagLoading}
+                onChange={handleQueryChange}
+                onSubmit={handleSearchFormSubmit}
+                value={deferredQueryValue}
+                hasTags={availableTags.length > 0}
+              />
               {tagDoesNotExist &&
                 (!tagLimitReached ? (
                   <CreateTagControl
@@ -315,5 +303,50 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
         );
       }}
     </Popover>
+  );
+};
+
+interface SearchOrCreateInputFormProps {
+  disabled?: boolean;
+  hasTags: boolean;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}
+
+const SearchOrCreateInputForm: React.FC<SearchOrCreateInputFormProps> = ({
+  disabled,
+  onChange,
+  onSubmit,
+  value,
+  hasTags,
+}) => {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const { formatMessage } = useIntl();
+
+  // This is a workaround for the fact that autoFocus does not work as expected with headless ui's floating popover.
+  // The initial rendered position popover causes the page to scroll and potentially close immediately if it gets
+  // virtualized away.
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+
+  return (
+    <form onSubmit={onSubmit}>
+      <Input
+        inline
+        ref={ref}
+        disabled={disabled}
+        value={value}
+        onChange={onChange}
+        containerClassName={styles.selectConnectionTags__input}
+        placeholder={formatMessage(
+          {
+            id: "connection.tags.selectOrCreateTag",
+          },
+          { hasTags }
+        )}
+      />
+    </form>
   );
 };
