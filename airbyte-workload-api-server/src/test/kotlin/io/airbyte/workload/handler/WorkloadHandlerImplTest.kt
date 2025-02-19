@@ -311,14 +311,11 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test claiming a workload successfully`() {
     every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
-    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(1)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.CLAIMED,
-          dataplaneId = DATAPLANE_ID,
-        ),
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        status = WorkloadStatus.CLAIMED,
+        dataplaneId = DATAPLANE_ID,
       ),
     )
     assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
@@ -327,16 +324,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test claiming a workload unsuccessfully`() {
     every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
-    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(0)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.CLAIMED,
-          dataplaneId = "other-dataplane",
-        ),
-      ),
-    )
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
     assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 

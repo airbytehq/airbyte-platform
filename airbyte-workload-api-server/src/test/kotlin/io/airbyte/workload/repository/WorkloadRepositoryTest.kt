@@ -136,11 +136,11 @@ internal class WorkloadRepositoryTest {
     workloadRepo.save(workload)
     val newDeadline = OffsetDateTime.now().plusMinutes(10)
     val dataplaneId = "my-data-plane"
-    workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+    val actualWorkload = workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
 
-    val actualWorkload = workloadRepo.findById(WORKLOAD_ID).get()
-    assertEquals(dataplaneId, actualWorkload.dataplaneId)
-    assertEquals(WorkloadStatus.CLAIMED, actualWorkload.status)
+    assertEquals(WORKLOAD_ID, actualWorkload?.id)
+    assertEquals(dataplaneId, actualWorkload?.dataplaneId)
+    assertEquals(WorkloadStatus.CLAIMED, actualWorkload?.status)
   }
 
   @Test
@@ -158,7 +158,8 @@ internal class WorkloadRepositoryTest {
     workloadRepo.save(workload)
     val newDeadline = OffsetDateTime.now().plusMinutes(10)
     val dataplaneId = "my-data-plane"
-    workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+    val claimResult = workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+    assertNull(claimResult)
 
     val actualWorkload = workloadRepo.findById(WORKLOAD_ID).get()
     assertEquals(otherDataplaneId, actualWorkload.dataplaneId)
@@ -180,11 +181,37 @@ internal class WorkloadRepositoryTest {
       )
     workloadRepo.save(workload)
     val newDeadline = OffsetDateTime.now().plusMinutes(10)
-    workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+    val actualWorkload = workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+
+    assertEquals(WORKLOAD_ID, actualWorkload?.id)
+    assertEquals(dataplaneId, actualWorkload?.dataplaneId)
+    assertEquals(WorkloadStatus.CLAIMED, actualWorkload?.status)
+    // note that we do not refresh the deadline in this case
+    assertEquals(originalDeadline, actualWorkload?.deadline)
+  }
+
+  @Test
+  fun `test claim of running workload by the same dataplane`() {
+    val dataplaneId = "my-data-plane"
+    val originalDeadline = OffsetDateTime.now().withNano(0).plusMinutes(5)
+    val workload =
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        dataplaneId = dataplaneId,
+        status = WorkloadStatus.RUNNING,
+        deadline = originalDeadline,
+        geography = "US",
+      )
+    workloadRepo.save(workload)
+    val newDeadline = OffsetDateTime.now().plusMinutes(10)
+    val claimResult = workloadRepo.claim(WORKLOAD_ID, dataplaneId, newDeadline)
+    assertNull(claimResult)
 
     val actualWorkload = workloadRepo.findById(WORKLOAD_ID).get()
+    // Verifying we didn't update the workload in this case, deadline should remain the original one.
+    assertEquals(WORKLOAD_ID, actualWorkload.id)
     assertEquals(dataplaneId, actualWorkload.dataplaneId)
-    assertEquals(WorkloadStatus.CLAIMED, actualWorkload.status)
+    assertEquals(WorkloadStatus.RUNNING, actualWorkload.status)
     // note that we do not refresh the deadline in this case
     assertEquals(originalDeadline, actualWorkload.deadline)
   }

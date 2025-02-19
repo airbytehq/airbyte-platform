@@ -130,11 +130,8 @@ class WorkloadHandlerImpl(
     deadline: OffsetDateTime,
   ): Boolean {
     if (featureFlagClient.boolVariation(UseAtomicWorkloadClaim, Empty)) {
-      workloadRepository.claim(workloadId, dataplaneId, deadline)
-      // We check the workload again because if the dataplane already claimed, we do not update
-      // the claim in order to avoid overriding the deadline.
-      val workload = getDomainWorkload(workloadId)
-      return workload.dataplaneId == dataplaneId
+      val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
+      return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
     } else {
       val workload = getDomainWorkload(workloadId)
 

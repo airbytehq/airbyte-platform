@@ -73,21 +73,29 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     createdBefore: OffsetDateTime?,
   ): List<Workload>
 
+  /**
+   * Claim transitions a workload into a claimed state and updates the deadline if the workload was pending.
+   * Claim returns the workload if it is in a valid claimed status by the dataplane (either from this call or if it was already claimed).
+   */
   @Query(
     """
       UPDATE workload
       SET
        dataplane_id = :dataplaneId,
        status = 'claimed',
-       deadline = :deadline
-      WHERE id = :id AND status = 'pending'
+       deadline = case
+                    when status = 'pending' then :deadline
+                    else deadline
+                  end
+      WHERE id = :id AND (status = 'pending' OR (status = 'claimed' AND dataplane_id = :dataplaneId))
+      RETURNING *
     """,
   )
   fun claim(
     @Id id: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
-  ): Long
+  ): Workload?
 
   fun update(
     @Id id: String,
