@@ -266,12 +266,19 @@ global:
     opts: []
 
   metrics:
-    # -- The metric client to configure globally. Supports "otel"
-    metricClient: ""
+    enabled: "false"
+    step: ""
 
-    micrometer:
-      enabled: false
-      statsdFlavor: "datadog" # datadog
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
 
     otel:
       resourceAttributes: {}
@@ -285,10 +292,6 @@ global:
         timeout: "30000"
         metricExportInterval: "10000"
     
-    statsd:
-      host: ""
-      port: ""
-
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
