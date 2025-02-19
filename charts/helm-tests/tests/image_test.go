@@ -30,6 +30,7 @@ func TestImages_Default(t *testing.T) {
 		"airbyte/db:dev",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
 		"airbyte/workload-init-container:dev",
+		"airbyte/async-profiler:dev",
 		"airbyte/connector-sidecar:dev",
 		"airbyte/container-orchestrator:dev",
 	})
@@ -61,6 +62,7 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 		"airbyte/keycloak-setup:dev",
 		"airbyte/container-orchestrator:dev",
 		"airbyte/workload-init-container:dev",
+		"airbyte/async-profiler:dev",
 		"airbyte/connector-sidecar:dev",
 	})
 }
@@ -90,6 +92,7 @@ func TestImages_GlobalTag(t *testing.T) {
 		"postgres:13-alpine",
 		"airbyte/connector-sidecar:test-tag",
 		"airbyte/workload-init-container:test-tag",
+		"airbyte/async-profiler:test-tag",
 		"airbyte/container-orchestrator:test-tag",
 		"airbyte/keycloak-setup:test-tag",
 		"airbyte/keycloak:test-tag",
@@ -126,6 +129,7 @@ func TestImages_GlobalRegistry(t *testing.T) {
 	assert.Equal(t, "http://my-registry/airbyte/container-orchestrator:dev", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/connector-sidecar:dev", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/workload-init-container:dev", env.Data["WORKLOAD_INIT_IMAGE"])
+	assert.Equal(t, "http://my-registry/airbyte/async-profiler:dev", env.Data["CONNECTOR_PROFILER_IMAGE"])
 }
 
 func TestImages_GlobalRegistry_NoTrailingSlash(t *testing.T) {
@@ -175,6 +179,7 @@ func TestImages_AppTag(t *testing.T) {
 		"airbyte/keycloak-setup:app-tag",
 		// these don't support app tags due to backwards compat.
 		"airbyte/workload-init-container:global-tag",
+		"airbyte/async-profiler:global-tag",
 		"airbyte/container-orchestrator:global-tag",
 		"airbyte/connector-sidecar:global-tag",
 	})
@@ -214,12 +219,14 @@ func TestImages_StringImages(t *testing.T) {
 	opts.SetValues["workload-launcher.containerOrchestrator.image"] = "my-oc"
 	opts.SetValues["workload-launcher.connectorSidecar.image"] = "my-cs"
 	opts.SetValues["workload-launcher.workloadInit.image"] = "my-wi"
+	opts.SetValues["workload-launcher.connectorProfiler.image"] = "my-cp"
 
 	chart := renderChart(t, opts)
 	env := getConfigMap(chart, "airbyte-airbyte-env")
 	assert.Equal(t, "my-oc", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "my-cs", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "my-wi", env.Data["WORKLOAD_INIT_IMAGE"])
+	assert.Equal(t, "my-cp", env.Data["CONNECTOR_PROFILER_IMAGE"])
 }
 
 func enableAllImages(opts *helm.Options) {

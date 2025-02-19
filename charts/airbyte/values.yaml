@@ -1003,6 +1003,11 @@ workload-launcher:
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
+  connectorProfiler:
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/async-profiler:{{ default .Chart.AppVersion .Values.global.image.tag }}"
+
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""

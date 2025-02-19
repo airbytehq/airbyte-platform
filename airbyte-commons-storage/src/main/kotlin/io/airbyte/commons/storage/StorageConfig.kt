@@ -32,6 +32,7 @@ data class StorageBucketConfig(
   @Value("\${$STORAGE_BUCKET_WORKLOAD_OUTPUT}") val workloadOutput: String,
   @Value("\${$STORAGE_BUCKET_ACTIVITY_PAYLOAD}") val activityPayload: String,
   @Value("\${$STORAGE_BUCKET_AUDIT_LOGGING:}") val auditLogging: String?,
+  @Value("\${$STORAGE_BUCKET_PROFILER_OUTPUT:}") val profilerOutput: String?,
 )
 
 /**

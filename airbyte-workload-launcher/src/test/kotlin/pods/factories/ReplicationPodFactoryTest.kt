@@ -14,6 +14,7 @@ import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
 import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
+import io.airbyte.workload.launcher.pods.factories.ProfilerContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
@@ -29,7 +30,6 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
-import pods.factories.ReplicationPodFactoryTest.Fixtures.resourceRequirements
 import java.util.UUID
 
 class ReplicationPodFactoryTest {
@@ -221,6 +221,7 @@ class ReplicationPodFactoryTest {
             destinationEnvVars = emptyList(),
             imagePullPolicy = "Always",
           ),
+        ProfilerContainerFactory(emptyList(), KubeContainerInfo("", "Always"), io.airbyte.config.ResourceRequirements()),
         volumeFactory = defaultVolumeFactory,
         workloadSecurityContextProvider = workloadSecurityContextProvider,
         serviceAccount = "test-sa",
@@ -261,6 +262,7 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars,
       isFileTransfer,
       workspaceId,
+      false,
     )
 
     fun createResetWithDefaults(

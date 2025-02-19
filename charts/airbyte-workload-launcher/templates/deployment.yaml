@@ -221,6 +221,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_INIT_IMAGE
+        - name: CONNECTOR_PROFILER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_PROFILER_IMAGE
         - name: CONTAINER_ORCHESTRATOR_IMAGE
           valueFrom:
             configMapKeyRef:

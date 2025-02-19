@@ -98,6 +98,7 @@ enum class DocumentType(
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
   ACTIVITY_PAYLOADS(prefix = Path.of("/activity-payloads")),
   AUDIT_LOGS(prefix = Path.of("audit-logging")),
+  PROFILER_OUTPUT(prefix = Path.of("/profiler/output")),
 }
 
 /**
@@ -566,4 +567,5 @@ fun StorageConfig.bucketName(type: DocumentType): String =
     DocumentType.LOGS -> this.buckets.log
     DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
     DocumentType.AUDIT_LOGS -> this.buckets.auditLogging?.takeIf { it.isNotBlank() } ?: ""
+    DocumentType.PROFILER_OUTPUT -> this.buckets.profilerOutput?.takeIf { it.isNotBlank() } ?: ""
   }

@@ -92,6 +92,7 @@ data:
   {{ $workloadLauncher := (index .Values "workload-launcher") }}
   CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.containerOrchestrator.image $) }}
   WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list $workloadLauncher.workloadInit.image $) }}
+  CONNECTOR_PROFILER_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorProfiler.image $) }}
   CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list $workloadLauncher.connectorSidecar.image $) }}
 
   JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ $.Values.global.image.registry | quote }}

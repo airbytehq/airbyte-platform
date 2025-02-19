@@ -69,6 +69,8 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
+object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")

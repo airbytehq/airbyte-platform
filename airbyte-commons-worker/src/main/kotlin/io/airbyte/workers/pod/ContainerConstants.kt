@@ -7,6 +7,7 @@ package io.airbyte.workers.pod
 object ContainerConstants {
   // shared containers
   const val INIT_CONTAINER_NAME = "init"
+  const val PROFILER_CONTAINER_NAME = "profiler"
 
   // replication containers
   const val ORCHESTRATOR_CONTAINER_NAME = "orchestrator"

@@ -36,6 +36,7 @@ private val bucket =
     workloadOutput = "workload",
     activityPayload = "payload",
     auditLogging = null,
+    profilerOutput = null,
   )
 
 @MicronautTest
@@ -60,6 +61,7 @@ class LocalStorageClientFactoryTest {
           workloadOutput = "wo",
           activityPayload = "ap",
           auditLogging = null,
+          profilerOutput = null,
         )
     }
 

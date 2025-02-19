@@ -24,6 +24,7 @@ data class ReplicationPodFactory(
   private val featureFlagClient: FeatureFlagClient,
   private val initContainerFactory: InitContainerFactory,
   private val replContainerFactory: ReplicationContainerFactory,
+  private val profilerContainerFactory: ProfilerContainerFactory,
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
@@ -47,11 +48,12 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
+    enableAsyncProfiler: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
@@ -80,6 +82,11 @@ data class ReplicationPodFactory(
 
     val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
 
+    val containers = mutableListOf(orchContainer, sourceContainer, destContainer)
+    if (enableAsyncProfiler) {
+      containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
+    }
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -93,15 +100,21 @@ data class ReplicationPodFactory(
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
-      .withContainers(orchContainer, sourceContainer, destContainer)
+      .withShareProcessNamespace(enableAsyncProfiler)
+      .withContainers(containers)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
       .withTolerations(nodeSelection.tolerations)
       .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
-      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
-      .endSpec()
+      .withSecurityContext(
+        if (enableAsyncProfiler) {
+          workloadSecurityContextProvider.rootSecurityContext()
+        } else {
+          workloadSecurityContextProvider.defaultPodSecurityContext()
+        },
+      ).endSpec()
       .build()
   }
 
@@ -123,7 +136,7 @@ data class ReplicationPodFactory(
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, false)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =

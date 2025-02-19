@@ -91,6 +91,23 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("profilerContainerImage")
+  fun profilerContainerImage(
+    @Value("\${airbyte.version}") airbyteVersion: String,
+    @Value("\${airbyte.worker.job.kube.profiler.container.image}") injectedImage: String?,
+  ): String {
+    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
+      return injectedImage
+    }
+
+    return if (airbyteVersion.endsWith("-cloud")) {
+      "airbyte/async-profiler:${airbyteVersion.dropLast(6)}"
+    } else {
+      "airbyte/async-profiler:$airbyteVersion"
+    }
+  }
+
+  @Singleton
   @Named("orchestratorKubeContainerInfo")
   fun orchestratorKubeContainerInfo(
     @Named("containerOrchestratorImage") containerOrchestratorImage: String,
@@ -107,6 +124,13 @@ class ContainerConfigBeanFactory {
     @Named("connectorSidecarImage") connectorSidecarImage: String,
     @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") connectorSidecarImagePullPolicy: String,
   ): KubeContainerInfo = KubeContainerInfo(connectorSidecarImage, connectorSidecarImagePullPolicy)
+
+  @Singleton
+  @Named("profilerKubeContainerInfo")
+  fun profilerKubeContainerInfo(
+    @Named("profilerContainerImage") profilerContainerImage: String,
+    @Value("\${airbyte.worker.job.kube.profiler.container.image-pull-policy}") profilerImagePullPolicy: String,
+  ): KubeContainerInfo = KubeContainerInfo(profilerContainerImage, profilerImagePullPolicy)
 
   @Singleton
   @Named("initContainerInfo")
@@ -142,6 +166,20 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.kube-job-configs.check.cpu-request}") cpuRequest: String,
     @Value("\${airbyte.worker.kube-job-configs.check.memory-limit}") memoryLimit: String,
     @Value("\${airbyte.worker.kube-job-configs.check.memory-request}") memoryRequest: String,
+  ): ResourceRequirements =
+    ResourceRequirements()
+      .withCpuLimit(cpuLimit)
+      .withCpuRequest(cpuRequest)
+      .withMemoryLimit(memoryLimit)
+      .withMemoryRequest(memoryRequest)
+
+  @Singleton
+  @Named("profilerReqs")
+  fun profilerReqs(
+    @Value("\${airbyte.worker.job.kube.profiler.container.cpu-limit}") cpuLimit: String,
+    @Value("\${airbyte.worker.job.kube.profiler.container.cpu-request}") cpuRequest: String,
+    @Value("\${airbyte.worker.job.kube.profiler.container.memory-limit}") memoryLimit: String,
+    @Value("\${airbyte.worker.job.kube.profiler.container.memory-request}") memoryRequest: String,
   ): ResourceRequirements =
     ResourceRequirements()
       .withCpuLimit(cpuLimit)
