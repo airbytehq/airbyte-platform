@@ -5,6 +5,7 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_MEMBER;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
@@ -118,7 +119,7 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get_or_create_by_auth_id")
-  @Secured({ADMIN, SELF})
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {

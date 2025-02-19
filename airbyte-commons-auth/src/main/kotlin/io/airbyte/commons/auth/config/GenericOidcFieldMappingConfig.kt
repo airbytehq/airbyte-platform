@@ -7,10 +7,11 @@ package io.airbyte.commons.auth.config
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Requires
 
-@ConfigurationProperties("airbyte.auth.identity-provider.oidc.endpoints.fields")
+@ConfigurationProperties("airbyte.auth.identity-provider.oidc.fields")
 @Requires(property = "airbyte.auth.identity-provider.type", value = "generic-oidc")
-class OidcFieldMappingConfig {
+class GenericOidcFieldMappingConfig {
   var sub: String = "sub"
   var email: String = "email"
   var name: String = "name"
+  var issuer: String = "iss"
 }

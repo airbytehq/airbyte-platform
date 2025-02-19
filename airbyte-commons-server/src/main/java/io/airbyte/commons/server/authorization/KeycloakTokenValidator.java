@@ -22,6 +22,7 @@ import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.context.annotation.Primary;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
@@ -48,6 +49,8 @@ import reactor.core.publisher.Mono;
 @Singleton
 @Primary
 @RequiresAuthMode(AuthMode.OIDC)
+@Requires(property = "airbyte.auth.identity-provider.type",
+          notEquals = "generic-oidc")
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
   "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {

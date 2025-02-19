@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.LicenseStatus;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AuthConfigs;
 import io.airbyte.commons.auth.config.AuthMode;
-import io.airbyte.commons.auth.config.OidcEndpointConfig;
+import io.airbyte.commons.auth.config.GenericOidcConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
@@ -75,7 +75,7 @@ public class InstanceConfigurationHandler {
   private final AuthConfigs authConfigs;
   private final PermissionService permissionService;
   private final Clock clock;
-  private final Optional<OidcEndpointConfig> oidcEndpointConfig;
+  private final Optional<GenericOidcConfig> oidcEndpointConfig;
   private final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
@@ -90,7 +90,7 @@ public class InstanceConfigurationHandler {
                                       final AuthConfigs authConfigs,
                                       final PermissionService permissionService,
                                       final Optional<Clock> clock,
-                                      final Optional<OidcEndpointConfig> oidcEndpointConfig,
+                                      final Optional<GenericOidcConfig> oidcEndpointConfig,
                                       final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;

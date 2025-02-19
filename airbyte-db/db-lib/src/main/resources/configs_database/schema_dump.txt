@@ -140,7 +140,7 @@ create table "public"."airbyte_configs_migrations" (
 );
 create table "public"."application" (
   "id" uuid not null,
-  "user_id" uuid not null,
+  "auth_user_id" text not null,
   "name" varchar(2147483647) not null,
   "client_id" varchar(2147483647) not null,
   "client_secret" varchar(2147483647) not null,

@@ -62,6 +62,17 @@ micronaut:
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
+    token:
+      jwt:
+        signatures:
+          jwks:
+            oidc:
+              url: ${AB_AIRBYTE_AUTH_JWKS_ENDPOINT:}
+          secret:
+            generator:
+              secret: ${AB_AIRBYTE_AUTH_SECRET_SIGNING_KEY:}
+        enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
+      enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
   server:
     port: 8001
     cors:
@@ -106,6 +117,8 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  applications:
+    type: ${AB_AIRBYTE_APPLICATIONS:}
   auth:
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
@@ -115,14 +128,14 @@ airbyte:
     identity-provider:
       type: ${IDENTITY_PROVIDER_TYPE:}
       oidc:
+        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_CLIENT_ID:}
         endpoints:
           authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
-          user-info-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
-          client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
-          fields:
-            sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:sub}
-            email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:email}
-            name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:name}
+        fields:
+          sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB:sub}
+          email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL:email}
+          name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME:name}
+          issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER:iss}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
