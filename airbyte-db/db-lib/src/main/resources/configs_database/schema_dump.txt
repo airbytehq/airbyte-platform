@@ -285,6 +285,7 @@ create table "public"."declarative_manifest" (
   "spec" jsonb not null,
   "version" bigint not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "components_file_content" text,
   constraint "declarative_manifest_pkey" primary key ("actor_definition_id", "version")
 );
 create table "public"."declarative_manifest_image_version" (

@@ -472,7 +472,8 @@ public class DbConverter {
     return new DeclarativeManifest()
         .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
         .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
-        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
+        .withComponentsFileContent(record.get(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT));
   }
 
   /**

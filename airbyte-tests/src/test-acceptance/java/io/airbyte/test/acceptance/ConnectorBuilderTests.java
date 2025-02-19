@@ -233,7 +233,8 @@ public class ConnectorBuilderTests {
                 "A description",
                 manifest,
                 A_SPEC,
-                1L)))
+                1L),
+            null))
         .getSourceDefinitionId();
   }
 

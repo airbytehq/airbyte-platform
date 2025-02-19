@@ -131,7 +131,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
             CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT,
             field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"))
-        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST)
+        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST,
+            DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT)
         .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
         .from(CONNECTOR_BUILDER_PROJECT)
         .join(ACTIVE_DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
@@ -227,6 +228,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(projectId))
           .execute();
@@ -248,6 +250,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
               .and(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)))
@@ -509,7 +512,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     return database
         .query(ctx -> ctx
             .select(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.SPEC,
-                DECLARATIVE_MANIFEST.VERSION)
+                DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT)
             .from(DECLARATIVE_MANIFEST)
             .where(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
             .fetch())
@@ -635,13 +638,15 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     }
   }
 
-  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
+  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest,
+                                               final DSLContext ctx) {
     insertDeclarativeManifest(declarativeManifest, ctx);
     upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
         .withVersion(declarativeManifest.getVersion()), ctx);
   }
 
-  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
+  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest,
+                                                final DSLContext ctx) {
     // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
     // object that is not null. Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
@@ -659,6 +664,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .set(DECLARATIVE_MANIFEST.SPEC, JSONB.valueOf(Jsons.serialize(declarativeManifest.getSpec())))
         .set(DECLARATIVE_MANIFEST.VERSION, declarativeManifest.getVersion())
         .set(DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+        .set(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT, declarativeManifest.getComponentsFileContent())
         .execute();
   }
 
@@ -737,7 +743,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
         .withManifestVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
         .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
-        .withComponentsFileContent(record.get(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT));
+        .withComponentsFileContent(record.get(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT));
   }
 
 }

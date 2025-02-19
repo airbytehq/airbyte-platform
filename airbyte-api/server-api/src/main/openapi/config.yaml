@@ -9104,6 +9104,8 @@ components:
           type: string
         initialDeclarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+        componentsFileContent:
+          type: string
     ConnectorBuilderProjectTestingValuesUpdate:
       type: object
       required:
@@ -9611,6 +9613,8 @@ components:
           type: boolean
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+        componentsFileContent:
+          type: string
     UpdateActiveManifestRequestBody:
       type: object
       required:

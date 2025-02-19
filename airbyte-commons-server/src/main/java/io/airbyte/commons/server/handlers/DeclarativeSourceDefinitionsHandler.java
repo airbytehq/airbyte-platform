@@ -79,7 +79,8 @@ public class DeclarativeSourceDefinitionsHandler {
         .withVersion(version)
         .withDescription(requestBody.getDeclarativeManifest().getDescription())
         .withManifest(requestBody.getDeclarativeManifest().getManifest())
-        .withSpec(spec);
+        .withSpec(spec)
+        .withComponentsFileContent(requestBody.getComponentsFileContent());
     if (requestBody.getSetAsActiveManifest()) {
       connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
           manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),

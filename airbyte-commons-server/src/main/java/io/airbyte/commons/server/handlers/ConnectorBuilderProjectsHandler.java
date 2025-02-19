@@ -347,6 +347,7 @@ public class ConnectorBuilderProjectsHandler {
           .manifest(declarativeManifest.getManifest())
           .version(declarativeManifest.getVersion())
           .description(declarativeManifest.getDescription()));
+      response.getBuilderProject().setComponentsFileContent(declarativeManifest.getComponentsFileContent());
       response.setTestingValues(maskSecrets(project.getTestingValues(), declarativeManifest.getManifest()));
     }
     return response;
@@ -405,7 +406,8 @@ public class ConnectorBuilderProjectsHandler {
         .withVersion(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getVersion())
         .withDescription(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription())
         .withManifest(manifest)
-        .withSpec(spec);
+        .withSpec(spec)
+        .withComponentsFileContent(connectorBuilderPublishRequestBody.getComponentsFileContent());
     connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
     connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(),
         actorDefinitionId);

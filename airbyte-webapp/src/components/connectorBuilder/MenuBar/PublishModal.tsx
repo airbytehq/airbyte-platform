@@ -138,6 +138,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
   const connectorName = useBuilderWatch("name");
   const { setValue } = useFormContext();
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   const minVersion = versions && versions.length > 0 ? Math.max(...versions.map((version) => version.version)) + 1 : 1;
 
@@ -163,6 +164,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
           projectId: currentProject.id,
           useAsActiveVersion: values.useVersion,
           version: values.version,
+          componentsFileContent: customComponentsCode,
         });
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.RELEASE_NEW_PROJECT_VERSION, {
           actionDescription: "User released a new version of a Connector Builder project",
@@ -175,6 +177,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
           name: values.name,
           description: values.description ?? "",
           projectId,
+          componentsFileContent: customComponentsCode,
         });
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.PUBLISH_PROJECT, {
           actionDescription: "User published a Connector Builder project",
@@ -411,8 +414,9 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const connectorName = useBuilderWatch("name");
   const connectorImageName = useMemo(() => convertConnectorNameToImageName(connectorName), [connectorName]);
   const { jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
-  const { setValue, getValues } = useFormContext();
+  const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   // update the version so that the manifest reflects which CDK version was used to build it
   const jsonManifestWithCorrectedVersion = useMemo(
@@ -500,7 +504,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       name: values.name,
       manifest: jsonManifestWithDescription,
       yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
-      componentsFileContent: getValues("customComponentsCode"),
+      componentsFileContent: customComponentsCode,
       contributionPullRequestUrl: contribution.pull_request_url,
       contributionActorDefinitionId: contribution.actor_definition_id,
     };
