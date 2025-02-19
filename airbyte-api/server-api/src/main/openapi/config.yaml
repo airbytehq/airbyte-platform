@@ -16533,6 +16533,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
         - full_refresh_overwrite
+        - full_refresh_overwrite_deduped
         - full_refresh_append
         - incremental_append
         - incremental_deduped_history

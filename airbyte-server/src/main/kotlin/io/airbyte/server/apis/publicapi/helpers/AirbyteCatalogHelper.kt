@@ -188,7 +188,9 @@ object AirbyteCatalogHelper {
       )
     }
     // 3. Selected fields must contain primary key(s) in dedup mode.
-    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY) {
+    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY ||
+      streamConfiguration.syncMode == ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED
+    ) {
       val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
       val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
       require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
@@ -354,6 +356,13 @@ object AirbyteCatalogHelper {
           updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
           updatedStreamConfiguration.cursorField = config.cursorField
           updatedStreamConfiguration.primaryKey = config.primaryKey
+        }
+
+        ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> {
+          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE_DEDUP
+          updatedStreamConfiguration.cursorField = config.cursorField
+          updatedStreamConfiguration.primaryKey = selectPrimaryKey(airbyteStream, streamConfiguration)
         }
 
         ConnectionSyncModeEnum.INCREMENTAL_APPEND -> {

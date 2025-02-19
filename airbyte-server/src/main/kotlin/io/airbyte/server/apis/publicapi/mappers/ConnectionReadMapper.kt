@@ -180,6 +180,10 @@ object ConnectionReadMapper {
               DestinationSyncMode.APPEND,
               ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
             ),
+            Pair(
+              DestinationSyncMode.OVERWRITE_DEDUP,
+              ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
+            ),
           ),
         SyncMode.INCREMENTAL to
           mapOf(
