@@ -51,6 +51,7 @@ class EnvVarConfigBeanFactory {
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
+    @Named("trackingClientEnvMap") trackingClientEnvMap: Map<String, String>,
     @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
@@ -79,6 +80,9 @@ class EnvVarConfigBeanFactory {
     envMap.putAll(metricsEnvMap)
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-workload-init-container"
 
+    // Tracking configuration
+    envMap.putAll(trackingClientEnvMap)
+
     // Airbyte metadata
     envMap.putAll(airbyteMetadataEnvMap)
 
@@ -103,6 +107,7 @@ class EnvVarConfigBeanFactory {
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("trackingClientEnvMap") trackingClientEnvMap: Map<String, String>,
     @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
@@ -120,6 +125,9 @@ class EnvVarConfigBeanFactory {
 
     // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
+
+    // Tracking configuration
+    envMap.putAll(trackingClientEnvMap)
 
     // Airbyte metadata
     envMap.putAll(airbyteMetadataEnvMap)
@@ -534,4 +542,14 @@ class EnvVarConfigBeanFactory {
       EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to role,
       EnvVarConstants.DEPLOYMENT_MODE_ENV_VAR to deploymentMode,
     )
+
+  @Singleton
+  @Named("trackingClientEnvMap")
+  fun trackingClientEnvMap(
+    @Value("\${airbyte.tracking.strategy}") trackingStrategy: String,
+    @Value("\${airbyte.tracking.write-key}") trackingWriteKey: String,
+  ) = mapOf(
+    EnvVarConstants.TRACKING_STRATEGY to trackingStrategy,
+    EnvVarConstants.SEGMENT_WRITE_KEY to trackingWriteKey,
+  )
 }

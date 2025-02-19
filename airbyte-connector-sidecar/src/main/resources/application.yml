@@ -67,6 +67,9 @@ airbyte:
     # Should we pass it in from the launcher?
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
     file-timeout-minutes-within-sync: ${SIDECAR_FILE_TIMEOUT_WITHIN_SYNC_MINUTES:30}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
