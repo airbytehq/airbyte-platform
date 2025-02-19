@@ -13,9 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // TODO: update migration description in the class name
-public class V1_1_1_006__Make_user_id_a_string extends BaseJavaMigration {
+public class V1_1_1_007__Make_user_id_a_string extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V1_1_1_006__Make_user_id_a_string.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V1_1_1_007__Make_user_id_a_string.class);
 
   @Override
   public void migrate(final Context context) throws Exception {
