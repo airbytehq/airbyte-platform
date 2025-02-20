@@ -220,46 +220,4 @@ class WorkspacePublicApiTests {
     assertEquals(400, prob.status)
     assertEquals("The 'failure' notification is enabled but is missing a URL.", prob.data.message)
   }
-
-  @Test
-  fun requiredEmailNotifications() {
-    // connectionUpdateActionRequired and syncDisabled email notifications can't be disabled
-
-    val workspaceId = testResources.workspaceId.toString()
-    var config =
-      NotificationsConfig(
-        connectionUpdateActionRequired =
-          NotificationConfig(
-            email = EmailNotificationConfig(enabled = false),
-          ),
-      )
-    var exception =
-      assertThrows<org.openapitools.client.infrastructure.ClientException> {
-        apiClient.publicUpdateWorkspace(workspaceId, WorkspaceUpdateRequest(notifications = config))
-      }
-
-    var err = exception.response as ClientError<*>
-    var prob = Jsons.deserialize(err.body as String, NotificationRequiredProblemResponse::class.java)
-    assertEquals(400, exception.statusCode)
-    assertEquals(400, prob.status)
-    assertEquals("The 'connectionUpdateActionRequired' email notification can't be disabled", prob.data.message)
-
-    config =
-      NotificationsConfig(
-        syncDisabled =
-          NotificationConfig(
-            email = EmailNotificationConfig(enabled = false),
-          ),
-      )
-    exception =
-      assertThrows<org.openapitools.client.infrastructure.ClientException> {
-        apiClient.publicUpdateWorkspace(workspaceId, WorkspaceUpdateRequest(notifications = config))
-      }
-
-    err = exception.response as ClientError<*>
-    prob = Jsons.deserialize(err.body as String, NotificationRequiredProblemResponse::class.java)
-    assertEquals(400, exception.statusCode)
-    assertEquals(400, prob.status)
-    assertEquals("The 'syncDisabled' email notification can't be disabled", prob.data.message)
-  }
 }

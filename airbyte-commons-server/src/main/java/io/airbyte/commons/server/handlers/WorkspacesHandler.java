@@ -53,6 +53,7 @@ import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.slug.Slug;
+import io.airbyte.config.Configs;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
@@ -107,6 +108,7 @@ public class WorkspacesHandler {
   private final ProductLimitsProvider limitsProvider;
   private final ConsumptionService consumptionService;
   private final FeatureFlagClient ffClient;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
@@ -122,7 +124,8 @@ public class WorkspacesHandler {
                            final ApiPojoConverters apiPojoConverters,
                            final ProductLimitsProvider limitsProvider,
                            final ConsumptionService consumptionService,
-                           final FeatureFlagClient ffClient) {
+                           final FeatureFlagClient ffClient,
+                           final Configs.AirbyteEdition airbyteEdition) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -137,6 +140,7 @@ public class WorkspacesHandler {
     this.limitsProvider = limitsProvider;
     this.consumptionService = consumptionService;
     this.ffClient = ffClient;
+    this.airbyteEdition = airbyteEdition;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -565,10 +569,13 @@ public class WorkspacesHandler {
     }
 
     // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
-    if ("connectionUpdateActionRequired".equals(notificationName) || "syncDisabled".equals(notificationName)) {
-      if (!item.getNotificationType().contains(Notification.NotificationType.CUSTOMERIO)) {
-        throw new NotificationRequiredProblem(
-            new ProblemMessageData().message(String.format("The '%s' email notification can't be disabled", notificationName)));
+    // this rule only applies to Airbyte Cloud, because OSS doesn't support email notifications.
+    if (airbyteEdition == Configs.AirbyteEdition.AIRBYTE) {
+      if ("connectionUpdateActionRequired".equals(notificationName) || "syncDisabled".equals(notificationName)) {
+        if (!item.getNotificationType().contains(Notification.NotificationType.CUSTOMERIO)) {
+          throw new NotificationRequiredProblem(
+              new ProblemMessageData().message(String.format("The '%s' email notification can't be disabled", notificationName)));
+        }
       }
     }
   }
