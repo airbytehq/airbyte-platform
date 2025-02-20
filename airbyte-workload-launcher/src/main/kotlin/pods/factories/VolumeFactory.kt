@@ -281,6 +281,9 @@ data class VolumeFactory(
     if (secrets != null) {
       volumes.add(secrets.volume)
       orchVolumeMounts.add(secrets.mount)
+      if (enableAsyncProfiler) {
+        profilerVolumeMounts.add(secrets.mount)
+      }
     }
 
     val dataPlaneCreds = dataplaneCreds()
