@@ -51,8 +51,10 @@ import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
+import io.airbyte.db.instance.configs.migrations.V1_1_1_008__AddPendingStatusIndexToWorkload;
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator;
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
+import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
@@ -99,8 +101,12 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "1.1.1.008";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "1.1.0.001";
+  private static final Class<?> CURRENT_CONFIGS_MIGRATION = V1_1_1_008__AddPendingStatusIndexToWorkload.class;
+  private static final Class<?> CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable.class;
+
+  private String getMigrationVersion(Class<?> cls) {
+    return cls.getSimpleName().split("__")[0].substring(1).replace('_', '.');
+  }
 
   @BeforeEach
   void setup() {
@@ -225,10 +231,10 @@ class BootloaderTest {
     bootloader.load();
 
     var jobsMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-    assertEquals(CURRENT_JOBS_MIGRATION_VERSION, jobsMigrator.getLatestMigration().getVersion().getVersion());
+    assertEquals(getMigrationVersion(CURRENT_JOBS_MIGRATION), jobsMigrator.getLatestMigration().getVersion().getVersion());
 
     var configsMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
-    assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
+    assertEquals(getMigrationVersion(CURRENT_CONFIGS_MIGRATION), configsMigrator.getLatestMigration().getVersion().getVersion());
 
     assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get());
     assertEquals(new Version(PROTOCOL_VERSION_001), jobsPersistence.getAirbyteProtocolVersionMin().get());
