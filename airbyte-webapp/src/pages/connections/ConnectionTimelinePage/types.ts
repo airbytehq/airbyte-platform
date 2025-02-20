@@ -262,6 +262,7 @@ export const refreshEventSummarySchema = yup.object({
   attemptsCount: yup.number().optional(),
   bytesLoaded: yup.number().required(),
   streams: yup.array().of(streamDescriptorSchema).required(),
+  failureReason: jobFailureReasonSchema.nullable(),
   jobId: yup.number().required(),
 });
 
