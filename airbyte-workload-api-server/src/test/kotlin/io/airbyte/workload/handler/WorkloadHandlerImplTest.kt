@@ -11,7 +11,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -279,71 +278,25 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found when claiming workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
+  fun `claiming a workload unsuccesfully returns false`() {
+    every { workloadRepository.claim(WORKLOAD_ID, any(), any()) }.returns(null)
+    assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
-  fun `test claiming workload has already been claimed by another plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = "otherDataplaneId",
-          status = WorkloadStatus.CLAIMED,
-        ),
-      ),
-    )
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
-  }
-
-  @Test
-  fun `test claiming pending workload has already been claimed by the same plane`() {
-    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }.returns(Unit)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.PENDING,
-        ),
-      ),
-    )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
-  }
-
-  @Test
-  fun `test claiming claimed workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.CLAIMED,
-        ),
+  fun `claiming a workload successfully returns true`() {
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        dataplaneId = DATAPLANE_ID,
+        status = WorkloadStatus.CLAIMED,
       ),
     )
     assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
-  fun `test claiming running workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.RUNNING,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @Test
   fun `test claiming a workload successfully`() {
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -356,45 +309,8 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `test claiming a workload unsuccessfully`() {
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
     assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
-  fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
-    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @Test
-  fun `test successful claim`() {
-    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = null,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
-
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
-
-    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
   }
 
   @Test

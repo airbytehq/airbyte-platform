@@ -9,9 +9,7 @@ import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -134,33 +132,8 @@ class WorkloadHandlerImpl(
     dataplaneId: String,
     deadline: OffsetDateTime,
   ): Boolean {
-    if (featureFlagClient.boolVariation(UseAtomicWorkloadClaim, Empty)) {
-      val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
-      return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
-    } else {
-      val workload = getDomainWorkload(workloadId)
-
-      if (workload.dataplaneId != null && !workload.dataplaneId.equals(dataplaneId)) {
-        return false
-      }
-
-      when (workload.status) {
-        WorkloadStatus.PENDING ->
-          workloadRepository.update(
-            workloadId,
-            dataplaneId,
-            WorkloadStatus.CLAIMED,
-            deadline,
-          )
-
-        WorkloadStatus.CLAIMED -> {}
-        else -> throw InvalidStatusTransitionException(
-          "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
-        )
-      }
-
-      return true
-    }
+    val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
+    return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
   }
 
   override fun cancelWorkload(
