@@ -11964,6 +11964,8 @@ components:
             - internal
         gracePeriodEndAt:
           $ref: "#/components/schemas/ISO8601DateTime"
+        newGracePeriodReason:
+          type: string
     # ORGANIZATIONS
     OrganizationId:
       type: string
