@@ -15598,6 +15598,7 @@ components:
         prefix:
           type: string
           description: Prefix that will be prepended to the name of each stream when it is written to the destination (ex. “airbyte_” causes “projects” => “airbyte_projects”).
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
@@ -16585,6 +16586,7 @@ components:
       properties:
         streams:
           type: array
+          x-speakeasy-plan-modifiers: StreamConfigurationModifier
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-sdk-component: true
