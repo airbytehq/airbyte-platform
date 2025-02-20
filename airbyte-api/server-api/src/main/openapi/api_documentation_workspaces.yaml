@@ -237,6 +237,29 @@ components:
       type: "string"
       format: "uuid"
       x-speakeasy-component: true
+    TagId:
+      type: "string"
+      format: "uuid"
+      x-speakeasy-component: true
+    Tag:
+      description: "A tag that can be associated with a connection. Useful for grouping\
+        \ and organizing connections in a workspace."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "tagId"
+      - "workspaceId"
+      - "name"
+      - "color"
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: "string"
+        color:
+          type: "string"
     OrganizationId:
       type: "string"
       format: "uuid"
@@ -715,6 +738,10 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -748,6 +775,10 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -848,6 +879,33 @@ components:
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
+    TagCreateRequest:
+      required:
+      - "name"
+      - "color"
+      - "workspaceId"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        color:
+          type: "string"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
+    TagPatchRequest:
+      required:
+      - "name"
+      - "color"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        color:
+          type: "string"
+      x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
     ConnectionResponse:
       title: "Root Type for ConnectionResponse"
       description: "Provides details of a single connection."
@@ -863,6 +921,7 @@ components:
       - "dataResidency"
       - "configurations"
       - "createdAt"
+      - "tags"
       properties:
         connectionId:
           format: "UUID"
@@ -897,6 +956,10 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1105,6 +1168,31 @@ components:
       enum:
       - "source"
       - "destination"
+      x-speakeasy-component: true
+    TagResponse:
+      title: "Root Type for TagResponse"
+      description: "Provides details of a single tag."
+      type: "object"
+      required:
+      - "tagId"
+      - "name"
+      - "color"
+      - "workspaceId"
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        name:
+          type: "string"
+        color:
+          description: "A hexadecimal color value"
+          type: "string"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      example:
+        tagId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+        name: "Analytics Team"
+        color: "FF5733"
+        workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
@@ -1526,6 +1614,18 @@ components:
           workspaceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
           name: "Acme Company"
           dataResidency: "auto"
+      x-speakeasy-component: true
+    TagsResponse:
+      title: "Root Type for TagsResponse"
+      description: ""
+      required:
+      - "data"
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TagResponse"
       x-speakeasy-component: true
     StreamConfiguration:
       description: "Configurations for a single stream."
@@ -2280,10 +2380,10 @@ components:
               airbyte_secret: true
             client_secret:
               type: "string"
-              title: "Client secret"
-              description: "The client secret the Airtable developer application."
+              title: "Client Secret"
+              description: "The client secret of the Airtable developer application."
               airbyte_secret: true
-      title: "Airtable Source Spec"
+      title: null
     OAuthCredentialsConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }

@@ -1068,6 +1068,16 @@ paths:
             type: string
         in: query
         required: false
+      - name: tagIds
+        description: The UUIDs of the tags you wish to list connections for. Empty
+          list will retrieve all connections.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        in: query
+        required: false
       - name: includeDeleted
         description: Include deleted connections in the returned results.
         schema:
@@ -1673,6 +1683,140 @@ paths:
       operationId: listUsersWithinAnOrganization
       x-speakeasy-alias: listUsersWithinAnOrganization
       x-speakeasy-group: Users
+  /tags:
+    get:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: List all tags
+      description: Lists all tags
+      parameters:
+      - name: workspaceIds
+        in: query
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        required: false
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+          description: List Tags.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listTags
+      x-speakeasy-alias: listTags
+      x-speakeasy-group: Tags
+    post:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Create a tag
+      description: Create a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreateRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '409':
+          description: Tag with same name already exists
+      operationId: createTag
+      x-speakeasy-alias: createTag
+      x-speakeasy-group: Tags
+  /tags/{tagId}:
+    parameters:
+    - name: tagId
+      schema:
+        $ref: '#/components/schemas/TagId'
+      in: path
+      required: true
+    get:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Get a tag
+      description: Get a tag
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getTag
+      x-speakeasy-alias: getTag
+      x-speakeasy-group: Tags
+    delete:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Delete a tag
+      description: Delete a tag
+      responses:
+        '204':
+          description: The resource was deleted successfully
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteTag
+      x-speakeasy-alias: deleteTag
+      x-speakeasy-group: Tags
+    patch:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Update a tag
+      description: Update a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagPatchRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateTag
+      x-speakeasy-alias: updateTag
+      x-speakeasy-group: Tags
 components:
   responses:
     InitiateOauthResponse:
@@ -1701,6 +1845,29 @@ components:
       example:
         user: charles
       x-speakeasy-component: true
+    TagId:
+      type: string
+      format: uuid
+      x-speakeasy-component: true
+    Tag:
+      description: A tag that can be associated with a connection. Useful for grouping
+        and organizing connections in a workspace.
+      type: object
+      x-speakeasy-component: true
+      required:
+      - tagId
+      - workspaceId
+      - name
+      - color
+      properties:
+        tagId:
+          $ref: '#/components/schemas/TagId'
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+        name:
+          type: string
+        color:
+          type: string
     OrganizationId:
       type: string
       format: uuid
@@ -2179,6 +2346,10 @@ components:
           $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum'
         status:
           $ref: '#/components/schemas/ConnectionStatusEnum'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2212,6 +2383,10 @@ components:
           $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault'
         status:
           $ref: '#/components/schemas/ConnectionStatusEnum'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2312,6 +2487,33 @@ components:
       x-speakeasy-entity: Source
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
+    TagCreateRequest:
+      required:
+      - name
+      - color
+      - workspaceId
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+      x-speakeasy-entity: Tag
+      x-speakeasy-component: true
+    TagPatchRequest:
+      required:
+      - name
+      - color
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+      x-speakeasy-entity: Tag
+      x-speakeasy-component: true
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       required:
@@ -2384,6 +2586,7 @@ components:
       - dataResidency
       - configurations
       - createdAt
+      - tags
       properties:
         connectionId:
           format: UUID
@@ -2418,6 +2621,10 @@ components:
         createdAt:
           format: int64
           type: integer
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2626,6 +2833,31 @@ components:
       enum:
       - source
       - destination
+      x-speakeasy-component: true
+    TagResponse:
+      title: Root Type for TagResponse
+      description: Provides details of a single tag.
+      type: object
+      required:
+      - tagId
+      - name
+      - color
+      - workspaceId
+      properties:
+        tagId:
+          $ref: '#/components/schemas/TagId'
+        name:
+          type: string
+        color:
+          description: A hexadecimal color value
+          type: string
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+      example:
+        tagId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Analytics Team
+        color: FF5733
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
       x-speakeasy-component: true
     DestinationCreateRequest:
       required:
@@ -3047,6 +3279,18 @@ components:
           workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
           name: Acme Company
           dataResidency: auto
+      x-speakeasy-component: true
+    TagsResponse:
+      title: Root Type for TagsResponse
+      description: ''
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
       x-speakeasy-component: true
     StreamConfiguration:
       description: Configurations for a single stream.

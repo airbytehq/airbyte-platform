@@ -11455,6 +11455,7 @@ components:
     Tag:
       description: A tag that can be associated with a connection. Useful for grouping and organizing connections in a workspace.
       type: object
+      x-sdk-component: true
       required:
         - tagId
         - workspaceId
