@@ -74,6 +74,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
         - name: DATA_PLANE_ID
           value: "local"
         - name: PUB_SUB_ENABLED
@@ -130,6 +135,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
         - name: STATSD_HOST
           valueFrom:
             configMapKeyRef:

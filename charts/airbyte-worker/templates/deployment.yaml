@@ -66,6 +66,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
         - name: CONFIG_ROOT
           valueFrom:
             configMapKeyRef:

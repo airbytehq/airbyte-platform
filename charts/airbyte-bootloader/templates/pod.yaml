@@ -50,6 +50,11 @@ spec:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
         - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
@@ -85,6 +90,11 @@ spec:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: RUN_DATABASE_MIGRATION_ON_STARTUP
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+           configMapKeyRef:
+             name: {{ .Release.Name }}-airbyte-env
+             key: SEGMENT_WRITE_KEY
         - name: STATSD_HOST
           valueFrom:
             configMapKeyRef:
@@ -95,6 +105,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
 
         # Airbyte auth secret keys and values
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}

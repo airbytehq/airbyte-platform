@@ -56,6 +56,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
         - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
           valueFrom:
             configMapKeyRef:
@@ -91,6 +96,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
         - name: STATSD_HOST
           valueFrom:
             configMapKeyRef:
@@ -101,6 +111,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
 
         {{- include "airbyte.database.envs" . | nindent 8 }}
 
