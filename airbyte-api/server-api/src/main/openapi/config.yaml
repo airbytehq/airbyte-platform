@@ -5821,6 +5821,94 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplane_group/create:
+    post:
+      summary: Create a dataplane group
+      tags:
+        - dataplane_group
+      operationId: createDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/update:
+    post:
+      summary: Update a dataplane group
+      tags:
+        - dataplane_group
+      operationId: updateDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/delete:
+    post:
+      summary: Delete a dataplane group
+      tags:
+        - dataplane_group
+      operationId: deleteDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/list:
+    post:
+      summary: List dataplane groups for the organization
+      tags:
+        - dataplane_group
+      operationId: listDataplaneGroups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplane groups for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/get_dataplane_id:
     post:
       summary: Get a dataplane ID given the provided request body params
@@ -16577,6 +16665,84 @@ components:
           type: string
         workflowId:
           type: string
+    DataplaneGroupCreateRequestBody:
+      type: object
+      required:
+        - organization_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneGroupListRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+    DataplaneGroupRead:
+      type: object
+      required:
+        # TODO: add dataplanes when those endpoints have been added
+        - name
+        - dataplane_group_id
+        - organization_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        # TODO: add dataplanes when those endpoints have been added
+        name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneGroupListResponse:
+      type: object
+      properties:
+        dataplaneGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneGroupRead"
+
     DataplaneGetIdRequestBody:
       type: object
       required:

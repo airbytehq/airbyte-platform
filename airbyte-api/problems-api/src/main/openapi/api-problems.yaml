@@ -898,6 +898,27 @@ components:
               default: Not enough actors are eligible for the progressive rollout.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    DataplaneGroupNameAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:dataplane-group-name-already-exists
+            title:
+              type: string
+              default: Data plane group name already exists
+            detail:
+              type: string
+              default: A data plane group with this name already exists for this organization.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     TagAlreadyExistsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
