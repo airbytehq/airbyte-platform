@@ -339,7 +339,9 @@ data class RequestId(
 // This is aimed to be used with the EnvFeatureFlag
 data object Empty : Context {
   override val kind: String = "empty"
-  override val key: String = ""
+
+  // key needs to be not null or empty for LD to accept the context
+  override val key: String = "empty"
 }
 
 data class CloudProvider(
