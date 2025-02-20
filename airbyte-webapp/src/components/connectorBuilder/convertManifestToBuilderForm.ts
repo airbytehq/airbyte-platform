@@ -48,6 +48,7 @@ import {
   SimpleRetrieverDecoder,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
   CheckDynamicStreamType,
+  JwtAuthenticator,
   RequestOptionInjectInto,
 } from "core/api/types/ConnectorManifest";
 
@@ -86,6 +87,7 @@ import {
   SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
   YamlString,
   YamlSupportedComponentName,
+  JWT_AUTHENTICATOR,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -1109,6 +1111,7 @@ type SupportedAuthenticator =
   | BearerAuthenticator
   | OAuthAuthenticator
   | NoAuth
+  | JwtAuthenticator
   | SessionTokenAuthenticator;
 
 function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticator {
@@ -1117,6 +1120,7 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
     API_KEY_AUTHENTICATOR,
     BEARER_AUTHENTICATOR,
     BASIC_AUTHENTICATOR,
+    JWT_AUTHENTICATOR,
     OAUTH_AUTHENTICATOR,
     SESSION_TOKEN_AUTHENTICATOR,
   ];
@@ -1202,6 +1206,40 @@ export function manifestAuthenticatorToBuilder(
         ...basicAuth,
         username: interpolateConfigKey(extractAndValidateAuthKey(["username"], basicAuth, spec)),
         password: interpolateConfigKey(extractAndValidateAuthKey(["password"], basicAuth, spec)),
+      };
+    }
+
+    case JWT_AUTHENTICATOR: {
+      const jwtAuth = filterKnownFields(
+        authenticator,
+        [
+          "type",
+          "secret_key",
+          "algorithm",
+          "token_duration",
+          "additional_jwt_headers",
+          "additional_jwt_payload",
+          "jwt_headers",
+          "jwt_payload",
+          "header_prefix",
+          "base64_encode_secret_key",
+        ],
+        authenticator.type
+      );
+
+      const jwtHeaders = pick(jwtAuth.jwt_headers, ["kid", "typ", "cty"]);
+      const jwtPayload = pick(jwtAuth.jwt_payload, ["iss", "sub", "aud"]);
+      const headerPrefix = jwtAuth.header_prefix === "" ? undefined : jwtAuth.header_prefix;
+
+      return {
+        ...jwtAuth,
+        secret_key: interpolateConfigKey(extractAndValidateAuthKey(["secret_key"], jwtAuth, spec)),
+        additional_jwt_headers: Object.entries(jwtAuth.additional_jwt_headers ?? {}),
+        additional_jwt_payload: Object.entries(jwtAuth.additional_jwt_payload ?? {}),
+        jwt_headers: jwtHeaders,
+        jwt_payload: jwtPayload,
+        header_prefix: headerPrefix,
+        token_duration: jwtAuth.token_duration ?? undefined,
       };
     }
 

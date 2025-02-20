@@ -43,6 +43,7 @@ import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  JWT_AUTHENTICATOR,
   OAUTH_AUTHENTICATOR,
   DeclarativeOAuthAuthenticatorType,
   SESSION_TOKEN_AUTHENTICATOR,
@@ -136,6 +137,18 @@ export const AuthenticationSection: React.FC = () => {
         </>
       ),
     },
+    {
+      label: formatMessage({ id: "connectorBuilder.authentication.method.jwt" }),
+      default: {
+        type: JWT_AUTHENTICATOR,
+        secret_key: interpolateConfigKey(
+          getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[JWT_AUTHENTICATOR].secret_key.key)
+        ),
+        algorithm: "HS256",
+        base64_encode_secret_key: false,
+      },
+      children: <JwtAuthForm />,
+    },
     ...useOauthOptions(),
     {
       label: formatMessage({ id: "connectorBuilder.authentication.method.sessionToken" }),
@@ -201,6 +214,7 @@ export const AuthenticationSection: React.FC = () => {
           "BearerAuthenticator",
           "BasicHttpAuthenticator",
           "OAuthAuthenticator",
+          "JwtAuthenticator",
         ]}
         onSelect={(newType) => {
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.AUTHENTICATION_METHOD_SELECT, {
@@ -211,6 +225,109 @@ export const AuthenticationSection: React.FC = () => {
         options={options}
       />
     </BuilderCard>
+  );
+};
+
+const JwtAuthForm = () => {
+  return (
+    <>
+      <BuilderInputPlaceholder label="Secret Key" manifestPath="JwtAuthenticator.properties.secret_key" />
+      <BuilderField
+        label="Encode Secret Key (Base64 encoding)"
+        type="boolean"
+        path={authPath("base64_encode_secret_key")}
+        manifestPath="JwtAuthenticator.properties.base64_encode_secret_key"
+      />
+      <BuilderField
+        label="Aglorithm"
+        type="enum"
+        path={authPath("algorithm")}
+        options={getOptionsByManifest("JwtAuthenticator.properties.algorithm")}
+        manifestPath="JwtAuthenticator.properties.algorithm"
+      />
+      <BuilderField
+        type="string"
+        optional
+        path={authPath("header_prefix")}
+        manifestPath="JwtAuthenticator.properties.header_prefix"
+      />
+      <BuilderField
+        type="number"
+        optional
+        path={authPath("token_duration")}
+        manifestPath="JwtAuthenticator.properties.token_duration"
+      />
+      <GroupControls
+        label={<ControlLabels label="JWT Header" infoTooltipContent="JWT headers used when signing JSON web token." />}
+      >
+        <BuilderField
+          label="kid"
+          tooltip="The 'kid' (Key Identifier) Header Parameter is a key ID for the user's account."
+          type="jinja"
+          optional
+          path={authPath("jwt_headers.kid")}
+          manifestPath="JwtAuthenticator.properties.jwt_headers.kid"
+        />
+        <BuilderField
+          label="typ"
+          tooltip="The 'typ' (type) Header Parameter is used by JWT applications to declare the media type of this complete JWT."
+          type="string"
+          optional
+          path={authPath("jwt_headers.typ")}
+          manifestPath="JwtAuthenticator.properties.jwt_headers.typ"
+        />
+        <BuilderField
+          label="cty"
+          tooltip="The 'cty' (content type) Header Parameter is used to convey structural information about the JWT."
+          type="string"
+          optional
+          path={authPath("jwt_headers.cty")}
+          manifestPath="JwtAuthenticator.properties.jwt_headers.cty"
+        />
+        <KeyValueListField
+          label="Additional JWT Header Key-Value Pairs"
+          tooltip="Add additional JWT header parameters as required."
+          path={authPath("additional_jwt_headers")}
+          manifestPath="JwtAuthenticator.properties.additional_jwt_headers"
+          optional
+        />
+      </GroupControls>
+      <GroupControls
+        label={<ControlLabels label="JWT Payload" infoTooltipContent="JWT Payload used when signing JSON web token." />}
+      >
+        <BuilderField
+          label="iss"
+          tooltip="The 'iss' (Issuer) payload field is the user/principal that issued the JWT. Commonly a value unique to the user."
+          type="jinja"
+          optional
+          path={authPath("jwt_payload.iss")}
+          manifestPath="JwtAuthenticator.properties.jwt_payload.iss"
+        />
+        <BuilderField
+          label="sub"
+          tooltip="The 'sub' (Subject) payload field of the JWT. Commonly defined by the API."
+          type="string"
+          optional
+          path={authPath("jwt_payload.sub")}
+          manifestPath="JwtAuthenticator.properties.jwt_payload.sub"
+        />
+        <BuilderField
+          label="aud"
+          tooltip="The 'aud' (Audience) payload field recipient that the JWT is intended for. Commonly defined by the API."
+          type="string"
+          optional
+          path={authPath("jwt_payload.aud")}
+          manifestPath="JwtAuthenticator.properties.jwt_payload.aud"
+        />
+        <KeyValueListField
+          label="Additional JWT Payload Key-Value Pairs"
+          tooltip="Add additional JWT payload fields as required."
+          path={authPath("additional_jwt_payload")}
+          manifestPath="JwtAuthenticator.properties.additional_jwt_payload"
+          optional
+        />
+      </GroupControls>
+    </>
   );
 };
 

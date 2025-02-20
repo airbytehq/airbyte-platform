@@ -29,6 +29,7 @@ import {
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
   SUBSTREAM_PARTITION_ROUTER,
   isYamlString,
+  JWT_AUTHENTICATOR,
 } from "./types";
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
@@ -594,6 +595,63 @@ const useAuthenticatorSchema = () => {
               otherwise: strip,
             }),
           }),
+          otherwise: strip,
+        }),
+        secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        algorithm: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        token_duration: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup
+            .number()
+            .integer()
+            .min(0, "connectorBuilder.authentication.jwt.tokenDuration")
+            .max(172_800, "connectorBuilder.authentication.jwt.tokenDuration"),
+          otherwise: strip,
+        }),
+        base64_encode_secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.boolean(),
+          otherwise: strip,
+        }),
+        additional_jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        additional_jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            kid: yup.string().optional(),
+            typ: yup.string().optional(),
+            cty: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            iss: yup.string().optional(),
+            sub: yup.string().optional(),
+            aud: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        header_prefix: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().optional(),
           otherwise: strip,
         }),
       }),

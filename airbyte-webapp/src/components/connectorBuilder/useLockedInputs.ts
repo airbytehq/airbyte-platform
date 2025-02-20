@@ -15,6 +15,7 @@ import {
   SESSION_TOKEN_AUTHENTICATOR,
   extractInterpolatedConfigKey,
   isYamlString,
+  JWT_AUTHENTICATOR,
 } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 
@@ -155,6 +156,15 @@ export function getAuthKeyToDesiredLockedInput(
         }),
       };
 
+    case JWT_AUTHENTICATOR:
+      const secretKey = extractInterpolatedConfigKey(authenticator.secret_key);
+
+      return {
+        ...(secretKey && {
+          [secretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].secret_key,
+        }),
+      };
+
     case OAUTH_AUTHENTICATOR: {
       const clientIdKey = extractInterpolatedConfigKey(authenticator.client_id);
       const clientSecretKey = extractInterpolatedConfigKey(authenticator.client_secret);
@@ -263,6 +273,27 @@ export const LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE = {
         title: "Password",
         always_show: true,
         airbyte_secret: true,
+      },
+    },
+  },
+  [JWT_AUTHENTICATOR]: {
+    secret_key: {
+      key: "secret_key",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Secret Key",
+        airbyte_secret: true,
+      },
+    },
+    algorithm: {
+      key: "algorithm",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Algorithm",
+        always_show: true,
+        airbyte_secret: false,
       },
     },
   },

@@ -58,6 +58,8 @@ import {
   WaitTimeFromHeader,
   SimpleRetrieverDecoder,
   XmlDecoderType,
+  JwtAuthenticator,
+  JwtAuthenticatorType,
   RequestOptionType,
 } from "core/api/types/ConnectorManifest";
 
@@ -119,7 +121,13 @@ export type BuilderFormAuthenticator =
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
+  | BuilderJwtAuthenticator
   | BuilderSessionTokenAuthenticator;
+
+export type BuilderJwtAuthenticator = Omit<JwtAuthenticator, "additional_jwt_headers" | "additional_jwt_headers"> & {
+  additional_jwt_headers?: Array<[string, string]>;
+  additional_jwt_payload?: Array<[string, string]>;
+};
 
 export const DeclarativeOAuthAuthenticatorType = "DeclarativeOAuthAuthenticator" as const;
 
@@ -429,6 +437,7 @@ export const NO_AUTH: NoAuthType = "NoAuth";
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
 export const BEARER_AUTHENTICATOR: BearerAuthenticatorType = "BearerAuthenticator";
 export const BASIC_AUTHENTICATOR: BasicHttpAuthenticatorType = "BasicHttpAuthenticator";
+export const JWT_AUTHENTICATOR: JwtAuthenticatorType = "JwtAuthenticator";
 export const OAUTH_AUTHENTICATOR: OAuthAuthenticatorType = "OAuthAuthenticator";
 export const SESSION_TOKEN_AUTHENTICATOR: SessionTokenAuthenticatorType = "SessionTokenAuthenticator";
 export const SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR: SessionTokenRequestApiKeyAuthenticatorType = "ApiKey";
@@ -571,6 +580,14 @@ export function builderAuthenticatorToManifest(
       ...authenticator,
       username: authenticator.username,
       password: authenticator.password,
+    };
+  }
+  if (authenticator.type === "JwtAuthenticator") {
+    return {
+      ...authenticator,
+      secret_key: authenticator.secret_key,
+      additional_jwt_headers: fromEntriesOrUndefined(authenticator.additional_jwt_headers ?? []),
+      additional_jwt_payload: fromEntriesOrUndefined(authenticator.additional_jwt_payload ?? []),
     };
   }
   if (authenticator.type === "SessionTokenAuthenticator") {
