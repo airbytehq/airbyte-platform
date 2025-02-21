@@ -7,6 +7,7 @@ package io.airbyte.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import okhttp3.HttpUrl
 import okhttp3.Response
@@ -36,7 +37,7 @@ object ClientConfigurationSupport {
     jitterFactor: Double,
     maxRetries: Int,
     metricClient: MetricClient,
-    metricPrefix: String,
+    clientApiType: ClientApiType,
     clientRetryExceptions: List<Class<out Exception>> = listOf(),
   ): RetryPolicy<Response> =
     RetryPolicy
@@ -46,7 +47,14 @@ object ClientConfigurationSupport {
       .onAbort { l ->
         logger.warn { "Attempt aborted.  Attempt count ${l.attemptCount}" }
         metricClient.count(
-          metricName = "$metricPrefix.abort",
+          metric =
+            if (clientApiType ==
+              ClientApiType.SERVER
+            ) {
+              OssMetricsRegistry.API_CLIENT_REQUEST_ABORT
+            } else {
+              OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_ABORT
+            },
           attributes =
             arrayOf(
               MetricAttribute("max-retries", maxRetries.toString()),
@@ -57,7 +65,14 @@ object ClientConfigurationSupport {
       }.onFailure { l ->
         logger.error(l.exception) { "Failed to call ${l.result?.request?.url ?: UNKNOWN}.  Last response: ${l.result}" }
         metricClient.count(
-          metricName = "$metricPrefix.failure",
+          metric =
+            if (clientApiType ==
+              ClientApiType.SERVER
+            ) {
+              OssMetricsRegistry.API_CLIENT_REQUEST_FAILURE
+            } else {
+              OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_FAILURE
+            },
           attributes =
             arrayOf(
               MetricAttribute("max-retries", maxRetries.toString()),
@@ -68,7 +83,12 @@ object ClientConfigurationSupport {
       }.onRetry { l ->
         logger.warn { "Retry attempt ${l.attemptCount} of $maxRetries. Last response: ${l.lastResult}" }
         metricClient.count(
-          metricName = "$metricPrefix.retry",
+          metric =
+            if (clientApiType == ClientApiType.SERVER) {
+              OssMetricsRegistry.API_CLIENT_REQUEST_RETRY
+            } else {
+              OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_RETRY
+            },
           attributes =
             arrayOf(
               MetricAttribute("max-retries", maxRetries.toString()),
@@ -79,7 +99,14 @@ object ClientConfigurationSupport {
       }.onRetriesExceeded { l ->
         logger.error(l.exception) { "Retry attempts exceeded." }
         metricClient.count(
-          metricName = "$metricPrefix.retries_exceeded",
+          metric =
+            if (clientApiType ==
+              ClientApiType.SERVER
+            ) {
+              OssMetricsRegistry.API_CLIENT_REQUEST_RETRIES_EXCEEDED
+            } else {
+              OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_RETRIES_EXCEEDED
+            },
           attributes =
             arrayOf(
               MetricAttribute("max-retries", maxRetries.toString()),
@@ -90,7 +117,14 @@ object ClientConfigurationSupport {
       }.onSuccess { l ->
         logger.debug { "Successfully called ${l.result.request.url}.  Response: ${l.result}, isRetry: ${l.isRetry}" }
         metricClient.count(
-          metricName = "$metricPrefix.success",
+          metric =
+            if (clientApiType ==
+              ClientApiType.SERVER
+            ) {
+              OssMetricsRegistry.API_CLIENT_REQUEST_SUCCESS
+            } else {
+              OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_SUCCESS
+            },
           attributes =
             arrayOf(
               MetricAttribute("max-retries", maxRetries.toString()),
@@ -102,4 +136,9 @@ object ClientConfigurationSupport {
       .withJitter(jitterFactor)
       .withMaxRetries(maxRetries)
       .build()
+}
+
+enum class ClientApiType {
+  SERVER,
+  WORKLOAD,
 }

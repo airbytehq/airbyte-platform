@@ -7,6 +7,7 @@ package io.airbyte.workload.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.UserAgentInterceptor
 import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
+import io.airbyte.api.client.config.ClientApiType
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.api.client.auth.WorkloadApiAuthenticationInterceptor
@@ -50,7 +51,7 @@ class WorkloadApiClientSupportFactory {
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
       metricClient = metricClient,
-      metricPrefix = "workload-api-client",
+      clientApiType = ClientApiType.WORKLOAD,
       clientRetryExceptions = clientRetryExceptions,
     )
 

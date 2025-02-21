@@ -411,7 +411,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL.getMetricName(), any(), any()) } returns mockk<Counter>()
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, any(), any()) } returns mockk<Counter>()
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
     verify {

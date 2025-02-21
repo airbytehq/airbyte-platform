@@ -48,7 +48,7 @@ class ApiClientSupportFactory {
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
       metricClient = metricClient,
-      metricPrefix = "api-client",
+      clientApiType = ClientApiType.SERVER,
       clientRetryExceptions = clientRetryExceptions,
     )
 

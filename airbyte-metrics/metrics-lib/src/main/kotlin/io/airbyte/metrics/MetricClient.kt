@@ -69,24 +69,8 @@ class MetricClient(
     metric: MetricsRegistry,
     value: Long = 1L,
     vararg attributes: MetricAttribute?,
-  ): Counter? = count(metricName = metric.getMetricName(), value = value, metricDescription = metric.getMetricDescription(), attributes = attributes)
-
-  /**
-   * Increment or decrement a counter.
-   *
-   * @param metricName The name of the metric to record.
-   * @param metricDescription The description of the metric.
-   * @param value The value to record.
-   * @param attributes additional attributes
-   */
-  @JvmOverloads
-  fun count(
-    metricName: String,
-    metricDescription: String? = null,
-    value: Long = 1L,
-    vararg attributes: MetricAttribute?,
   ): Counter? {
-    val provider = counterProvider(metricName = metricName, metricDescription = metricDescription)
+    val provider = counterProvider(metric = metric)
     val counter = provider?.withTags(toTags(attributes))
     counter?.increment(value.toDouble())
     return counter
@@ -101,21 +85,8 @@ class MetricClient(
   fun counter(
     metric: MetricsRegistry,
     vararg attributes: MetricAttribute?,
-  ): Counter? = counter(metricName = metric.getMetricName(), metricDescription = metric.getMetricDescription(), attributes = attributes)
-
-  /**
-   * Creates a counter.
-   *
-   * @param metricName The name of the metric to record.
-   * @param metricDescription The description of the metric.
-   * @param attributes additional attributes
-   */
-  fun counter(
-    metricName: String,
-    metricDescription: String? = null,
-    vararg attributes: MetricAttribute?,
   ): Counter? {
-    val provider = counterProvider(metricName = metricName, metricDescription = metricDescription)
+    val provider = counterProvider(metric = metric)
     val counter = provider?.withTags(toTags(attributes))
     return counter
   }
@@ -135,26 +106,9 @@ class MetricClient(
     stateObject: T,
     function: ToDoubleFunction<T>,
     vararg attributes: MetricAttribute?,
-  ): T = gauge(metricName = metric.getMetricName(), stateObject = stateObject, function = function, attributes = attributes)
-
-  /**
-   * Record the latest value of a state object for a gauge.
-   *
-   * @param metricName The name of the metric to record.
-   * @param stateObject The object to monitor as part of the gauge.
-   * @param function The function used to extract the double value when reporting the gauge's current value.
-   * @param attributes additional attributes.
-   *
-   * @return The gauge-wrapped state object.
-   */
-  fun <T> gauge(
-    metricName: String,
-    stateObject: T,
-    function: ToDoubleFunction<T>,
-    vararg attributes: MetricAttribute?,
   ): T =
     meterRegistry?.gauge(
-      metricName,
+      metric.getMetricName(),
       toTags(attributes),
       stateObject,
       function,
@@ -171,20 +125,7 @@ class MetricClient(
     metric: MetricsRegistry,
     value: Double,
     vararg attributes: MetricAttribute?,
-  ) = gauge(metricName = metric.getMetricName(), attributes = attributes, value = value)
-
-  /**
-   * Record the latest value for a gauge.
-   *
-   * @param metricName The name of the metric to record.
-   * @param value The value to record.
-   * @param attributes additional attributes
-   */
-  fun gauge(
-    metricName: String,
-    value: Double,
-    vararg attributes: MetricAttribute?,
-  ) = meterRegistry?.gauge(metricName, toTags(attributes), value)
+  ) = meterRegistry?.gauge(metric.getMetricName(), toTags(attributes), value)
 
   /**
    * Accepts value on the metrics, and report the distribution of these values. Useful to analysis how
@@ -198,24 +139,8 @@ class MetricClient(
     metric: MetricsRegistry,
     value: Double,
     vararg attributes: MetricAttribute?,
-  ) = distribution(metricName = metric.getMetricName(), metricDescription = metric.getMetricDescription(), attributes = attributes, value = value)
-
-  /**
-   * Accepts value on the metrics, and report the distribution of these values. Useful to analysis how
-   * much time have elapsed, and percentile of a series of records.
-   *
-   * @param metricName The name of the metric to record.
-   * @param metricDescription The description of the metric.
-   * @param value The value to record.
-   * @param attributes additional attributes
-   */
-  fun distribution(
-    metricName: String,
-    metricDescription: String? = null,
-    value: Double,
-    vararg attributes: MetricAttribute?,
   ): DistributionSummary? {
-    val provider = distributionSummaryProvider(metricName = metricName, metricDescription = metricDescription)
+    val provider = distributionSummaryProvider(metric = metric)
     val summary = provider?.withTags(toTags(attributes))
     summary?.record(value)
     return summary
@@ -231,22 +156,8 @@ class MetricClient(
   fun timer(
     metric: MetricsRegistry,
     vararg attributes: MetricAttribute?,
-  ): Timer? = timer(metricName = metric.getMetricName(), metricDescription = metric.getMetricDescription(), attributes = attributes)
-
-  /**
-   * Creates a [Timer].
-   *
-   * @param metricName The name of the timer.
-   * @param metricDescription The description of the metric.
-   * @param attributes additional attributes.
-   * @return A [Timer] or null if metrics are not configured.
-   */
-  fun timer(
-    metricName: String,
-    metricDescription: String? = null,
-    vararg attributes: MetricAttribute?,
   ): Timer? {
-    val provider = timerProvider(metricName = metricName, metricDescription = metricDescription)
+    val provider = timerProvider(metric = metric)
     return provider?.withTags(toTags(attributes))
   }
 
@@ -260,51 +171,39 @@ class MetricClient(
   /**
    * Builds a [Counter] [Meter.MeterProvider] to reduce meter allocations for repeated calls.
    *
-   * @param metricName The name of the metric
-   * @param metricDescription The optional metric description
+   * @param metric The metric definition
    * @return A [Meter.MeterProvider] wrapping the [Counter].
    */
-  private fun counterProvider(
-    metricName: String,
-    metricDescription: String? = null,
-  ): Meter.MeterProvider<Counter>? =
-    counterCache.get(metricName) { k ->
+  private fun counterProvider(metric: MetricsRegistry): Meter.MeterProvider<Counter>? =
+    counterCache.get(metric.getMetricName()) { k ->
       meterRegistry?.let { registry ->
-        Counter.builder(k).description(metricDescription).withRegistry(registry)
+        Counter.builder(k).description(metric.getMetricDescription()).withRegistry(registry)
       }
     }
 
   /**
    * Builds a [DistributionSummary] [Meter.MeterProvider] to reduce meter allocations for repeated calls.
    *
-   * @param metricName The name of the metric
-   * @param metricDescription The optional metric description
+   * @param metric The metric definition
    * @return A [Meter.MeterProvider] wrapping the [DistributionSummary].
    */
-  private fun distributionSummaryProvider(
-    metricName: String,
-    metricDescription: String? = null,
-  ): Meter.MeterProvider<DistributionSummary>? =
-    distributionSummaryCache.get(metricName) { k ->
+  private fun distributionSummaryProvider(metric: MetricsRegistry): Meter.MeterProvider<DistributionSummary>? =
+    distributionSummaryCache.get(metric.getMetricName()) { k ->
       meterRegistry?.let { registry ->
-        DistributionSummary.builder(k).description(metricDescription).withRegistry(registry)
+        DistributionSummary.builder(k).description(metric.getMetricDescription()).withRegistry(registry)
       }
     }
 
   /**
    * Builds a [Timer] [Meter.MeterProvider] to reduce meter allocations for repeated calls.
    *
-   * @param metricName The name of the metric
-   * @param metricDescription The optional metric description
+   * @param metric The metric definition
    * @return A [Meter.MeterProvider] wrapping the [Timer].
    */
-  private fun timerProvider(
-    metricName: String,
-    metricDescription: String? = null,
-  ): Meter.MeterProvider<Timer>? =
-    timerCache.get(metricName) { k ->
+  private fun timerProvider(metric: MetricsRegistry): Meter.MeterProvider<Timer>? =
+    timerCache.get(metric.getMetricName()) { k ->
       meterRegistry?.let { registry ->
-        Timer.builder(k).description(metricDescription).withRegistry(registry)
+        Timer.builder(k).description(metric.getMetricDescription()).withRegistry(registry)
       }
     }
 }

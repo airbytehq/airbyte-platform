@@ -10,6 +10,7 @@ import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micronaut.context.annotation.Factory
@@ -52,7 +53,7 @@ class ApplicationBeanFactory {
       .handleIf(predicate)
       .onRetry { l ->
         metricClient.count(
-          metricName = "kube_api_client.retry",
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_RETRY,
           attributes =
             arrayOf(
               MetricAttribute("max_retries", maxRetries.toString()),
@@ -65,7 +66,7 @@ class ApplicationBeanFactory {
         )
       }.onAbort { l ->
         metricClient.count(
-          metricName = "kube_api_client.abort",
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_ABORT,
           attributes =
             arrayOf(
               MetricAttribute("max_retries", maxRetries.toString()),
@@ -74,7 +75,7 @@ class ApplicationBeanFactory {
         )
       }.onFailedAttempt { l ->
         metricClient.count(
-          metricName = "kube_api_client.failed",
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_FAILED,
           attributes =
             arrayOf(
               MetricAttribute("max_retries", maxRetries.toString()),
@@ -83,7 +84,7 @@ class ApplicationBeanFactory {
         )
       }.onSuccess { l ->
         metricClient.count(
-          metricName = "kube_api_client.success",
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_SUCCESS,
           attributes =
             arrayOf(
               MetricAttribute("max_retries", maxRetries.toString()),
