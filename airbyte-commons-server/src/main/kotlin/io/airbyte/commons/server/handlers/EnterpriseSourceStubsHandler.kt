@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.EnterpriseSourceStub
 import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -107,18 +108,24 @@ open class EnterpriseSourceStubsHandler(
   fun listEnterpriseSourceStubsForWorkspace(workspaceId: UUID): EnterpriseSourceStubsReadList {
     try {
       val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
-
       val sourceStubs = listEnterpriseSourceStubs().enterpriseSourceStubs
-      val definitionIds = sourceStubs.filter { it.definitionId != null }.map { UUID.fromString(it.definitionId!!) }
-
-      val entitlements = licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.SOURCE_CONNECTOR, definitionIds)
-      val entitledDefinitionIds = entitlements.filter { it.value }.keys
 
       // only return stubs for connectors that the org is NOT entitled to
       return EnterpriseSourceStubsReadList().apply {
         enterpriseSourceStubs =
           sourceStubs.filter {
-            it.definitionId == null || !entitledDefinitionIds.contains(UUID.fromString(it.definitionId!!))
+            if (it.definitionId == null) {
+              return@filter true
+            }
+
+            val isEntitled =
+              try {
+                licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, UUID.fromString(it.definitionId!!))
+              } catch (e: ConfigNotFoundException) {
+                false
+              }
+
+            !isEntitled
           }
       }
     } catch (error: Exception) {
