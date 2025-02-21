@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import debounce from "lodash/debounce";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
@@ -14,12 +14,13 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { LabelInfo } from "components/Label";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils/useCurrentWorkspaceId";
 import {
   BuilderProjectWithManifest,
   GENERATE_CONTRIBUTION_NOTIFICATION_ID,
@@ -35,6 +36,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useNotificationService } from "hooks/services/Notification";
+import { RoutePaths, SourcePaths } from "pages/routePaths";
 import {
   useConnectorBuilderFormState,
   convertJsonToYaml,
@@ -137,6 +139,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   } = useConnectorBuilderFormState();
   const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
   const connectorName = useBuilderWatch("name");
+  const workspaceId = useCurrentWorkspaceId();
   const { setValue } = useFormContext();
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -156,7 +159,9 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   const handleSubmit = async (values: PublishToWorkspaceFormValues) => {
     unregisterNotificationById(PUBLISH_TO_WORKSPACE_NOTIFICATION_ID);
     try {
+      let sourceDefinitionId: string;
       if (currentProject.sourceDefinitionId) {
+        sourceDefinitionId = currentProject.sourceDefinitionId;
         await releaseNewVersion({
           manifest,
           description: values.description ?? "",
@@ -172,13 +177,16 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
           projectId: currentProject.id,
         });
       } else {
-        await publishProject({
+        const response = await publishProject({
           manifest,
           name: values.name,
           description: values.description ?? "",
           projectId,
           componentsFileContent: customComponentsCode,
         });
+
+        sourceDefinitionId = response.sourceDefinitionId;
+
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.PUBLISH_PROJECT, {
           actionDescription: "User published a Connector Builder project",
           projectId: currentProject.id,
@@ -188,12 +196,22 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
       // push name change upstream so it's updated
       setValue("name", values.name);
 
+      const publishedConnectorPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SelectSourceNew}/${sourceDefinitionId}`;
+
       registerNotification({
         id: PUBLISH_TO_WORKSPACE_NOTIFICATION_ID,
         text: (
           <FormattedMessage
             id="connectorBuilder.publishedMessage"
-            values={{ name: values.name, version: values.version }}
+            values={{
+              name: values.name,
+              version: values.version,
+              lnk: (linkText: ReactNode) => (
+                <Link to={publishedConnectorPath} opensInNewTab>
+                  {linkText}
+                </Link>
+              ),
+            }}
           />
         ),
         type: "success",

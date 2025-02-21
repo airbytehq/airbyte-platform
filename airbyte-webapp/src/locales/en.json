@@ -1602,7 +1602,7 @@
   "connectorBuilder.publish": "Publish",
   "connectorBuilder.publishConnector": "Publish connector",
   "connectorBuilder.releaseNewVersion": "Publish new version to workspace",
-  "connectorBuilder.publishedMessage": "Published {name} version {version}. It's now possible to use this version of the connector in connections.",
+  "connectorBuilder.publishedMessage": "Published <lnk>{name}</lnk> version {version}. It's now possible to use this version of the connector in connections.",
   "connectorBuilder.publishModal.toWorkspace.label": "Publish to workspace",
   "connectorBuilder.publishModal.toWorkspace.description": "Only workspace members can use this connector",
   "connectorBuilder.publishModal.toAirbyte.label": "Contribute to Airbyte",
