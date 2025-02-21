@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.36.0
+airbyte-cdk==6.36.1
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
@@ -23,7 +23,7 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.5.post1
     # via wcmatch
-cachetools==5.5.1
+cachetools==5.5.2
     # via airbyte-cdk
 cattrs==24.1.2
     # via requests-cache
