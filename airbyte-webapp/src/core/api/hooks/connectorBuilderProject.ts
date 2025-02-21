@@ -65,6 +65,7 @@ export interface BuilderProject {
   version: "draft" | number;
   sourceDefinitionId?: string;
   id: string;
+  updatedAt: number;
   hasDraft?: boolean;
   baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
   contributionInfo?: ContributionInfo;
@@ -103,6 +104,7 @@ export const convertProjectDetailsReadToBuilderProject = (
     typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
       ? projectDetails.activeDeclarativeManifestVersion
       : "draft",
+  updatedAt: projectDetails.updatedAt,
   sourceDefinitionId: projectDetails.sourceDefinitionId,
   id: projectDetails.builderProjectId,
   hasDraft: projectDetails.hasDraft,
@@ -166,6 +168,7 @@ export const useCreateBuilderProject = () => {
               id: builderProjectId,
               name,
               version: "draft" as const,
+              updatedAt: Date.now(),
             },
           ]
         );

@@ -175,6 +175,7 @@ public class ConnectorBuilderProjectsHandler {
   private ConnectorBuilderProjectDetailsRead getProjectDetailsWithoutBaseAdvInfo(final ConnectorBuilderProject project) {
     final ConnectorBuilderProjectDetailsRead detailsRead = new ConnectorBuilderProjectDetailsRead()
         .name(project.getName())
+        .updatedAt(project.getUpdatedAt())
         .builderProjectId(project.getBuilderProjectId())
         .sourceDefinitionId(project.getActorDefinitionId())
         .activeDeclarativeManifestVersion(

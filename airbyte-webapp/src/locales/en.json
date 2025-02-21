@@ -1809,6 +1809,7 @@
   "connectorBuilder.builderPrompt.secondary": "Use our low-code connector builder",
   "connectorBuilder.listPage.name": "Name",
   "connectorBuilder.listPage.version": "Active version",
+  "connectorBuilder.listPage.updatedAt": "Last updated at",
   "connectorBuilder.listPage.title": "Custom connectors",
   "connectorBuilder.listPage.newConnector": "New custom connector",
   "connectorBuilder.listPage.draftTooltip": "A project in draft state can't be used in connections. Publish a first version to run syncs.",

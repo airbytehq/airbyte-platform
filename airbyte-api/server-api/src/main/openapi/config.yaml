@@ -9064,6 +9064,7 @@ components:
         - name
         - builderProjectId
         - hasDraft
+        - updatedAt
       properties:
         name:
           type: string
@@ -9075,6 +9076,9 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        updatedAt:
+          type: integer
+          format: int64
         baseActorDefinitionVersionInfo:
           $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
         contributionInfo:
