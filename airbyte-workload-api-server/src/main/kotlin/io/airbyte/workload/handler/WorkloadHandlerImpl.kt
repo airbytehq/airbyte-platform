@@ -16,6 +16,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.domain.WorkloadQueueStats
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
@@ -293,6 +294,26 @@ class WorkloadHandlerImpl(
       )
 
     return domainWorkloads.map { it.toApi() }
+  }
+
+  override fun pollWorkloadQueue(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+  ): List<Workload> {
+    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt())
+
+    return domainWorkloads.map { it.toApi() }
+  }
+
+  override fun countWorkloadQueueDepth(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+  ): Long = workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
+
+  override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
+    val domainStats = workloadRepository.getPendingWorkloadsByQueue()
+
+    return domainStats.map { it.toApi() }
   }
 
   override fun getWorkloadsWithExpiredDeadline(

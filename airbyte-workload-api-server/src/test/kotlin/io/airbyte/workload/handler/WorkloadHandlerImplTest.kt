@@ -32,6 +32,7 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHand
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micrometer.core.instrument.Counter
@@ -50,7 +51,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -732,6 +735,45 @@ class WorkloadHandlerImplTest {
     assertTrue(offsetDateTimeAfter10Ms.isAfter(offsetDateTime))
   }
 
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `poll workloads returns pending workloads`(
+    group: String,
+    priority: Int,
+    domainWorkloads: List<Workload>,
+  ) {
+    every { workloadRepository.getPendingWorkloads(group, priority) }.returns(domainWorkloads)
+    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority))
+    val expected = domainWorkloads.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("countPendingWorkloadMatrix")
+  fun `count workload queue depth returns count of pending workloads`(
+    group: String,
+    priority: Int,
+    count: Long,
+  ) {
+    every { workloadRepository.countPendingWorkloads(group, priority) }.returns(count)
+    val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
+
+    assertEquals(count, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("workloadStatsMatrix")
+  fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority)`(
+    stats: List<WorkloadQueueStats>,
+  ) {
+    every { workloadRepository.getPendingWorkloadsByQueue() }.returns(stats)
+    val result = workloadHandler.getWorkloadQueueStats()
+    val expected = stats.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
     val metricClient: MetricClient = mockk(relaxed = true)
@@ -811,6 +853,34 @@ class WorkloadHandlerImplTest {
         signalInput = signalPayload,
         dataplaneGroup = dataplaneGroup,
         priority = priority,
+      )
+  }
+
+  companion object {
+    @JvmStatic
+    fun getPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, listOf(Fixtures.workload("1"), Fixtures.workload("2"), Fixtures.workload("3"))),
+        Arguments.of("group-2", 1, listOf(Fixtures.workload("1"), Fixtures.workload("3"))),
+        Arguments.of("group-3", 0, listOf(Fixtures.workload("4"))),
+        Arguments.of("group-1", 1, listOf(Fixtures.workload("1"), Fixtures.workload("2"))),
+      )
+
+    @JvmStatic
+    fun countPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, 10),
+        Arguments.of("group-2", 1, 9),
+        Arguments.of("group-3", 0, 0),
+        Arguments.of("group-1", 1, 124124124),
+      )
+
+    @JvmStatic
+    fun workloadStatsMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of(listOf(WorkloadQueueStats("group-1", 0, 10), WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-3", 0, 0))),
+        Arguments.of(listOf(WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-1", 1, 124124124))),
+        Arguments.of(listOf(WorkloadQueueStats("group-3", 0, 0))),
       )
   }
 }

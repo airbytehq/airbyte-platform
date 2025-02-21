@@ -17,6 +17,8 @@ typealias ApiWorkload = io.airbyte.workload.api.domain.Workload
 typealias DomainWorkloadLabel = WorkloadLabel
 typealias ApiWorkloadLabel = io.airbyte.workload.api.domain.WorkloadLabel
 typealias ApiWorkloadType = io.airbyte.config.WorkloadType
+typealias ApiWorkloadQueueStats = io.airbyte.workload.api.domain.WorkloadQueueStats
+typealias DomainWorkloadQueueStats = io.airbyte.workload.repository.domain.WorkloadQueueStats
 
 fun ApiWorkloadStatus.toDomain(): WorkloadStatus =
   when (this) {
@@ -84,4 +86,11 @@ fun ApiWorkloadLabel.toDomain(): DomainWorkloadLabel =
   DomainWorkloadLabel(
     key = this.key,
     value = this.value,
+  )
+
+fun DomainWorkloadQueueStats.toApi(): ApiWorkloadQueueStats =
+  ApiWorkloadQueueStats(
+    dataplaneGroup = dataplaneGroup,
+    priority = priority?.let { WorkloadPriority.fromInt(it) },
+    enqueuedCount = enqueuedCount,
   )

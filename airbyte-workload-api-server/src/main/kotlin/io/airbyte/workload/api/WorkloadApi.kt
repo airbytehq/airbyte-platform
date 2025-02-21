@@ -15,11 +15,15 @@ import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadDepthResponse
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
+import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
+import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
+import io.airbyte.workload.api.domain.WorkloadQueueStatsResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.handler.DefaultDeadlineValues
@@ -508,4 +512,79 @@ open class WorkloadApi(
         longRunningWorkloadRequest.createdBefore,
       ),
     )
+
+  @POST
+  @Path("/queue/poll")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Poll for workloads to process", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun pollWorkloadQueue(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadQueuePollRequest::class))],
+    ) @Body req: WorkloadQueuePollRequest,
+  ): WorkloadListResponse {
+    ApmTraceUtils.addTagsToTrace(
+      mutableMapOf<String, Any?>(
+        MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
+      ),
+    )
+    val workloads = workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority)
+    return WorkloadListResponse(workloads)
+  }
+
+  @POST
+  @Path("/queue/depth")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Count enqueued workloads matching a search criteria", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadDepthResponse::class))],
+      ),
+    ],
+  )
+  open fun countWorkloadQueueDepth(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadQueueQueryRequest::class))],
+    ) @Body req: WorkloadQueuePollRequest,
+  ): WorkloadDepthResponse {
+    ApmTraceUtils.addTagsToTrace(
+      mutableMapOf<String, Any?>(
+        MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
+      ),
+    )
+    val count = workloadHandler.countWorkloadQueueDepth(req.dataplaneGroup, req.priority)
+    return WorkloadDepthResponse(count)
+  }
+
+  @GET
+  @Path("/queue/stats")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Count enqueued workloads grouped by logical queue", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadQueueStatsResponse::class))],
+      ),
+    ],
+  )
+  open fun getWorkloadQueueStats(): WorkloadQueueStatsResponse {
+    val stats = workloadHandler.getWorkloadQueueStats()
+    return WorkloadQueueStatsResponse(stats)
+  }
 }

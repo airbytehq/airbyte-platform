@@ -244,6 +244,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
+  /api/v1/workload/queue/depth:
+    post:
+      tags:
+      - workload
+      summary: Count enqueued workloads matching a search criteria
+      operationId: countWorkloadQueueDepth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadQueueQueryRequest"
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadDepthResponse"
+  /api/v1/workload/queue/poll:
+    post:
+      tags:
+      - workload
+      summary: Poll for workloads to process
+      operationId: pollWorkloadQueue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadQueuePollRequest"
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadListResponse"
+  /api/v1/workload/queue/stats:
+    get:
+      tags:
+      - workload
+      summary: Count enqueued workloads grouped by logical queue
+      operationId: getWorkloadQueueStats
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadQueueStatsResponse"
   /api/v1/workload/running:
     put:
       tags:
@@ -491,6 +542,14 @@ components:
         dataplaneGroup:
           type: string
           nullable: true
+    WorkloadDepthResponse:
+      required:
+      - count
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -568,6 +627,50 @@ components:
       - high
       - default
       x-type: String
+    WorkloadQueuePollRequest:
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+    WorkloadQueueQueryRequest:
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+    WorkloadQueueStats:
+      required:
+      - enqueuedCount
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+        enqueuedCount:
+          type: integer
+          format: int64
+    WorkloadQueueStatsResponse:
+      required:
+      - stats
+      type: object
+      properties:
+        stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkloadQueueStats"
     WorkloadRunningRequest:
       required:
       - workloadId
