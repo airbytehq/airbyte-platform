@@ -3,9 +3,13 @@ import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { ConnectionsGraph, LookbackControl } from "area/connection/components/ConnectionsGraph";
+import { LookbackWindow } from "area/connection/components/ConnectionsGraph/lookbackConfiguration";
 import { useConnectionList, useFilters } from "core/api";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionsFilters, FilterValues } from "./ConnectionsFilters";
 import styles from "./ConnectionsListCard.module.scss";
@@ -18,6 +22,8 @@ import {
 import ConnectionsTable from "./ConnectionsTable";
 
 export const ConnectionsListCard = () => {
+  const [graphLookback, setGraphLookback] = useState<LookbackWindow>("7d");
+  const showConnectionsGraph = useExperiment("connection.connectionsGraph");
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
@@ -124,6 +130,16 @@ export const ConnectionsListCard = () => {
           setTagFilters={setTagFilters}
         />
       </div>
+      {showConnectionsGraph && (
+        <Box px="lg">
+          <FlexContainer justifyContent="flex-end">
+            <Box pb="md">
+              <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
+            </Box>
+          </FlexContainer>
+          <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
+        </Box>
+      )}
       <div className={styles.table}>
         <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />
       </div>

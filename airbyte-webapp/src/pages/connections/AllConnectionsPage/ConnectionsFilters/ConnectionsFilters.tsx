@@ -76,7 +76,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
     searchFilter;
 
   return (
-    <Box p="lg">
+    <Box px="lg" pt="lg">
       <FlexContainer justifyContent="flex-start" direction="column">
         <FlexItem grow>
           <SearchInput value={searchFilter} onChange={({ target: { value } }) => setSearchFilter(value)} />
