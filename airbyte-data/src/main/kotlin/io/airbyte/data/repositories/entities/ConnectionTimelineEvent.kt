@@ -4,9 +4,11 @@
 
 package io.airbyte.data.repositories.entities
 
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.AutoPopulated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.MappedProperty
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import java.time.OffsetDateTime
@@ -23,4 +25,15 @@ data class ConnectionTimelineEvent(
   @field:TypeDef(type = DataType.JSON)
   var summary: String? = null,
   var createdAt: OffsetDateTime? = null,
+)
+
+@Introspected
+data class ConnectionTimelineEventMinimal(
+  val id: UUID,
+  @MappedProperty("connection_id")
+  val connectionId: UUID,
+  @MappedProperty("created_at")
+  val createdAt: OffsetDateTime?,
+  @MappedProperty("event_type")
+  val eventType: String,
 )

@@ -2400,6 +2400,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/list_minimal:
+    post:
+      tags:
+        - connection
+      summary: List all events in a given time span in a minimal representation
+      operationId: listConnectionEventsMinimal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsListMinimalRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionEventListMinimal"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/events/backfill:
     post:
       tags:
@@ -11255,6 +11278,22 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
+    ConnectionEventMinimal:
+      type: object
+      required:
+        - id
+        - connectionId
+        - createdAt
+        - eventType
+      properties:
+        eventId:
+          $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        createdAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        eventType:
+          $ref: "#/components/schemas/ConnectionEventType"
     ConnectionEventWithDetails:
       type: object
       required:
@@ -11282,7 +11321,6 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
-
     ConnectionEventList:
       type: object
       required:
@@ -11292,6 +11330,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionEvent"
+    ConnectionEventListMinimal:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventMinimal"
     ConnectionEventsRequestBody:
       type: object
       required:
@@ -11306,6 +11353,31 @@ components:
             $ref: "#/components/schemas/ConnectionEventType"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        createdAtStart:
+          description: The start datetime of a time range to filter by
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to filter by
+          type: string
+          format: date-time
+    ConnectionEventsListMinimalRequestBody:
+      type: object
+      required:
+        - connectionIds
+        - eventTypes
+        - createdAtStart
+        - createdAtEnd
+      properties:
+        connectionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionId"
+        eventTypes:
+          description: filter events by event types
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventType"
         createdAtStart:
           description: The start datetime of a time range to filter by
           type: string

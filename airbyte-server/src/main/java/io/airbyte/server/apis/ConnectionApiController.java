@@ -20,8 +20,10 @@ import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventList;
+import io.airbyte.api.model.generated.ConnectionEventListMinimal;
 import io.airbyte.api.model.generated.ConnectionEventWithDetails;
 import io.airbyte.api.model.generated.ConnectionEventsBackfillRequestBody;
+import io.airbyte.api.model.generated.ConnectionEventsListMinimalRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
@@ -240,6 +242,11 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionEventList listConnectionEvents(@Body @Valid @NotNull final ConnectionEventsRequestBody connectionEventsRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionEvents(connectionEventsRequestBody));
+  }
+
+  @Override
+  public ConnectionEventListMinimal listConnectionEventsMinimal(ConnectionEventsListMinimalRequestBody connectionEventsListMinimalRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.listConnectionEventsMinimal(connectionEventsListMinimalRequestBody));
   }
 
   @Override
