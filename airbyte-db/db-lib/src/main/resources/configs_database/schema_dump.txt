@@ -266,6 +266,16 @@ create table "public"."dataplane" (
   constraint "dataplane_pkey" primary key ("id"),
   constraint "dataplane_dataplane_group_id_name_key" unique ("dataplane_group_id", "name")
 );
+create table "public"."dataplane_client_credentials" (
+  "id" uuid not null,
+  "dataplane_id" uuid not null,
+  "client_id" varchar(2147483647) not null,
+  "client_secret" varchar(2147483647) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "created_by" uuid not null,
+  constraint "dataplane_client_credentials_pkey" primary key ("id"),
+  constraint "dataplane_client_credentials_dataplane_id_client_id_client__key" unique ("dataplane_id", "client_id", "client_secret")
+);
 create table "public"."dataplane_group" (
   "id" uuid not null,
   "organization_id" uuid not null,
@@ -634,6 +644,8 @@ alter table "public"."connector_rollout" add constraint "fk_release_candidate_ve
 alter table "public"."connector_rollout" add constraint "fk_updated_by" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."dataplane" add constraint "dataplane_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
 alter table "public"."dataplane" add constraint "dataplane_updated_by_fkey" foreign key ("updated_by") references "public"."user" ("id");
+alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_created_by_fkey" foreign key ("created_by") references "public"."user" ("id");
+alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_updated_by_fkey" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");

@@ -51,7 +51,7 @@ import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
-import io.airbyte.db.instance.configs.migrations.V1_1_1_008__AddPendingStatusIndexToWorkload;
+import io.airbyte.db.instance.configs.migrations.V1_1_1_009__AddDataplaneClientCredentialsTable;
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator;
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable;
@@ -101,7 +101,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final Class<?> CURRENT_CONFIGS_MIGRATION = V1_1_1_008__AddPendingStatusIndexToWorkload.class;
+  private static final Class<?> CURRENT_CONFIGS_MIGRATION = V1_1_1_009__AddDataplaneClientCredentialsTable.class;
   private static final Class<?> CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable.class;
 
   private String getMigrationVersion(Class<?> cls) {
