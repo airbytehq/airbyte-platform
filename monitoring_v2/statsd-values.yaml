@@ -1,0 +1,10 @@
+serviceMonitor:
+  enabled: true
+  honorLabels: true
+
+statsd:
+  udpPort: 9125
+  tcpPort: 9125
+
+extraArgs:
+  - "--log.level=debug"

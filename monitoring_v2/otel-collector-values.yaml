@@ -1,0 +1,65 @@
+mode: "deployment"
+
+image:
+  repository: "otel/opentelemetry-collector-contrib"
+
+serviceMonitor:
+  enabled: true
+  metricsEndpoints:
+    - port: metrics
+      interval: 30s
+  extraLabels:
+    release: prometheus
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+  metrics:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+
+config:
+  exporters:
+    prometheus:
+      endpoint: 0.0.0.0:8889
+      namespace: "otel"
+    debug:
+      verbosity: detailed
+      sampling_initial: 5
+      sampling_thereafter: 200
+
+  processors:
+    batch:
+      send_batch_size: 10000
+      timeout: 10s
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+  service:
+    pipelines:
+      metrics:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [prometheus, debug]
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

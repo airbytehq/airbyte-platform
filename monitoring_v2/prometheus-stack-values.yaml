@@ -1,0 +1,6 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    serviceMonitorSelectorNilUsesHelmValues: false # serviceMonitorSelectorNilUsesHelmValues is true (which is the default), an empty selector ( {} ) will be replaced with labels matching the Helm release. To explicitly tell Prometheus to select ALL ServiceMonitors, this basically omits the need to add to each service monitor additionalLabels: release: prometheus
+    enableAdminAPI: true
