@@ -204,7 +204,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.OSS);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.COMMUNITY);
   }
 
   @Test
@@ -299,7 +299,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -446,7 +446,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();

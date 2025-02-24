@@ -8,7 +8,6 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.AirbyteEdition;
-import io.airbyte.config.Configs.DeploymentMode;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
@@ -33,11 +32,6 @@ public class AirbyteConfigurationBeanFactory {
   @Singleton
   public AirbyteVersion airbyteVersion(@Value("${airbyte.version}") final String airbyteVersion) {
     return new AirbyteVersion(airbyteVersion);
-  }
-
-  @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode:OSS}") final String deploymentMode) {
-    return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
   }
 
   /**

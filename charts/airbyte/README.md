@@ -127,8 +127,7 @@ Helm chart to deploy airbyte
 | global.database.port | string | `""` | The database port                                                                                                                                                       |
 | global.database.secretName | string | `""` | Secret name where database credentials are stored                                                                                                                       |
 | global.database.user | string | `""` | The database user                                                                                                                                                       |
-| global.deploymentMode | string | `"oss"` | Deployment mode, whether or not render the default env vars and volumes in deployment spec                                                                              |
-| global.edition | string | `"community"` | Edition; "community" or "pro"                                                                                                                                           |
+| global.edition | string | `"community"` | Edition; "community" "enterprise"                                                                                                                                       |
 | global.enterprise.licenseKeySecretKey | string | `"license-key"` | The key within `licenseKeySecretName` where the Airbyte license key is stored                                                                                           |
 | global.enterprise.secretName | string | `"airbyte-config-secrets"` | Secret name where an Airbyte license key is stored                                                                                                                      |
 | global.env_vars | object | `{}` | Environment variables                                                                                                                                                   |
@@ -517,4 +516,4 @@ Helm chart to deploy airbyte
 | workload-launcher.resources.limits | object | `{}` | The resources limits for the workload launcher container                                                                                                                |
 | workload-launcher.resources.requests | object | `{}` | The requested resources for the workload launcher container                                                                                                             |
 | workload-launcher.tolerations | list | `[]` | Tolerations for workload launcher pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                           |
-| workload-launcher.workloadInit.image | string | `""` | Workload Init image                                                                                                                                                 |
+| workload-launcher.workloadInit.image | string | `""` | Workload Init image                                                                                                                                                     |

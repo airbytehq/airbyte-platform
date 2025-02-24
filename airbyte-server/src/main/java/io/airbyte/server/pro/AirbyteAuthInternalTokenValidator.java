@@ -26,8 +26,8 @@ import reactor.core.publisher.Flux;
 @Singleton
 @Requires(property = "micronaut.security.enabled",
           value = "true")
-@Requires(property = "airbyte.deployment-mode",
-          value = "OSS")
+@Requires(property = "airbyte.edition",
+          pattern = "(?i)^community|enterprise$")
 public class AirbyteAuthInternalTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   @Override

@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.pods.factories
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.config.Configs
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ANONYMOUS
@@ -37,6 +38,14 @@ import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
+ * Legacy deployment mode environment variable that is still used by some
+ * connectors.
+ */
+internal const val CLOUD_DEPLOYMENT_MODE = "CLOUD"
+internal const val DEPLOYMENT_MODE = "DEPLOYMENT_MODE"
+internal const val OSS_DEPLOYMENT_MODE = "OSS"
+
+/**
  * Performs dynamic mapping of config to env vars based on runtime inputs.
  * For static stat time configuration see EnvVarConfigBeanFactory.
  */
@@ -47,6 +56,7 @@ class RuntimeEnvVarFactory(
   @Value("\${airbyte.container.orchestrator.java-opts}") private val containerOrchestratorJavaOpts: String,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
+  private val airbyteEdition: Configs.AirbyteEdition,
 ) {
   fun orchestratorEnvVars(
     replicationInput: ReplicationInput,
@@ -139,6 +149,8 @@ class RuntimeEnvVarFactory(
   @VisibleForTesting
   internal fun getMetadataEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> =
     listOf(
+      // Connectors still rely on the DEPLOYMENT_MODE env var, so map the Airbyte edition to it.
+      EnvVar(DEPLOYMENT_MODE, if (airbyteEdition == Configs.AirbyteEdition.CLOUD) CLOUD_DEPLOYMENT_MODE else OSS_DEPLOYMENT_MODE, null),
       EnvVar(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, launcherConfig.dockerImage, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ID, launcherConfig.jobId, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ATTEMPT, launcherConfig.attemptId.toString(), null),

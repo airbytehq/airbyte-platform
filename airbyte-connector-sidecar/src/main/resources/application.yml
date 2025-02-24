@@ -19,7 +19,6 @@ micronaut:
   security:
     enabled: false
 airbyte:
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}

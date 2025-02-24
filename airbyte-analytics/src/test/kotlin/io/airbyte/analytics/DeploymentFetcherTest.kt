@@ -23,7 +23,7 @@ class DeploymentFetcherTest {
     deploymentMetadata =
       DeploymentMetadataRead(
         id = deploymentId,
-        mode = Configs.DeploymentMode.OSS.name,
+        mode = Configs.AirbyteEdition.COMMUNITY.name,
         version = airbyteVersion.serialize(),
       )
     deploymentFetcher = DeploymentFetcher { deploymentMetadata }

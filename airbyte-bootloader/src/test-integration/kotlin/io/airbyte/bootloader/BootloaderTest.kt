@@ -8,7 +8,7 @@ import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.ApplyDefinitionsHelper
@@ -219,7 +219,7 @@ internal class BootloaderTest {
         actorDefinitionService,
         sourceService,
         destinationService,
-        DeploymentMode.OSS,
+        Configs.AirbyteEdition.COMMUNITY,
         breakingChangeHelper,
         breakingChangeNotificationHelper,
         featureFlagClient!!,
@@ -403,7 +403,7 @@ internal class BootloaderTest {
         actorDefinitionService,
         sourceService,
         destinationService,
-        DeploymentMode.OSS,
+        Configs.AirbyteEdition.COMMUNITY,
         breakingChangesHelper,
         breakingChangeNotificationHelper,
         featureFlagClient!!,

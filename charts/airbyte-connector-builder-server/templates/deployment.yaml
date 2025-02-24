@@ -59,7 +59,7 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
-        {{- if eq .Values.global.deploymentMode "oss"  }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")  }}
         - name: AIRBYTE_VERSION
           valueFrom:
             configMapKeyRef:

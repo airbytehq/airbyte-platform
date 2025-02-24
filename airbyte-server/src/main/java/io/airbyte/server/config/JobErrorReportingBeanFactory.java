@@ -4,7 +4,7 @@
 
 package io.airbyte.server.config;
 
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -53,7 +53,7 @@ public class JobErrorReportingBeanFactory {
                                            final SourceService sourceService,
                                            final DestinationService destinationService,
                                            final WorkspaceService workspaceService,
-                                           final DeploymentMode deploymentMode,
+                                           final Configs.AirbyteEdition airbyteEdition,
                                            @Named("jobErrorReportingClient") final Optional<JobErrorReportingClient> jobErrorReportingClient,
                                            final WebUrlHelper webUrlHelper) {
     return new JobErrorReporter(
@@ -61,7 +61,7 @@ public class JobErrorReportingBeanFactory {
         sourceService,
         destinationService,
         workspaceService,
-        deploymentMode,
+        airbyteEdition,
         airbyteVersion,
         webUrlHelper,
         jobErrorReportingClient.orElseGet(() -> new LoggingJobErrorReportingClient()));

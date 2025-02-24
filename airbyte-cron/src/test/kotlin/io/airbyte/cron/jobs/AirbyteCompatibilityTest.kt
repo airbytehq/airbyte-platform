@@ -24,7 +24,7 @@ import java.util.UUID
 @MicronautTest(environments = [Environment.TEST])
 @Property(name = "airbyte.version", value = "1.2.0")
 @Property(name = "airbyte.workspace.root", value = "./build/tmp/workspace")
-@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "COMMUNITY")
 @Requires(env = ["internal"])
 class AirbyteCompatibilityTest(
   private val airbyteCompatibilityValidator: AirbyteCompatibleConnectorsValidator,

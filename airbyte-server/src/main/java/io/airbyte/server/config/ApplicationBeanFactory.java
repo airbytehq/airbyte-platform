@@ -14,7 +14,7 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
@@ -169,10 +169,11 @@ public class ApplicationBeanFactory {
   @Singleton
   @Named("airbyteSupportEmailDomains")
   public Set<String> airbyteSupportEmailDomains(
-                                                @Value("${airbyte.deployment-mode}") final String deployMode,
+                                                final Configs.AirbyteEdition airbyteEdition,
                                                 @Value("${airbyte.support-email-domains.oss}") final String ossSupportEmailDomains,
                                                 @Value("${airbyte.support-email-domains.cloud}") final String cloudSupportEmailDomains) {
-    final String supportEmailDomains = Objects.equals(deployMode, DeploymentMode.OSS.name()) ? ossSupportEmailDomains : cloudSupportEmailDomains;
+    final String supportEmailDomains =
+        Objects.equals(airbyteEdition, Configs.AirbyteEdition.CLOUD) ? cloudSupportEmailDomains : ossSupportEmailDomains;
     if (supportEmailDomains.isEmpty()) {
       return Set.of();
     }

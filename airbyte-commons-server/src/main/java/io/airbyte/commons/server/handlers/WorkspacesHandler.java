@@ -570,7 +570,7 @@ public class WorkspacesHandler {
 
     // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
     // this rule only applies to Airbyte Cloud, because OSS doesn't support email notifications.
-    if (airbyteEdition == Configs.AirbyteEdition.AIRBYTE) {
+    if (airbyteEdition == Configs.AirbyteEdition.CLOUD) {
       if ("connectionUpdateActionRequired".equals(notificationName) || "syncDisabled".equals(notificationName)) {
         if (!item.getNotificationType().contains(Notification.NotificationType.CUSTOMERIO)) {
           throw new NotificationRequiredProblem(

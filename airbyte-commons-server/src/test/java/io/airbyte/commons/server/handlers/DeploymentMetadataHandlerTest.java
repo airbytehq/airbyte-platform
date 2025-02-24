@@ -29,7 +29,7 @@ class DeploymentMetadataHandlerTest {
     final UUID deploymentId = UUID.randomUUID();
     final String version = "0.1.2";
     final AirbyteVersion airbyteVersion = new AirbyteVersion(version);
-    final Configs.DeploymentMode deploymentMode = Configs.DeploymentMode.OSS;
+    final Configs.AirbyteEdition airbyteEdition = Configs.AirbyteEdition.COMMUNITY;
     final DSLContext dslContext = mock(DSLContext.class);
     final Environment environment = mock(Environment.class);
     final Result<org.jooq.Record> result = mock(Result.class);
@@ -38,12 +38,12 @@ class DeploymentMetadataHandlerTest {
     when(dslContext.fetch(anyString())).thenReturn(result);
     when(environment.getActiveNames()).thenReturn(Set.of(activeEnvironment));
 
-    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, deploymentMode, dslContext);
+    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, airbyteEdition, dslContext);
 
     final DeploymentMetadataRead deploymentMetadataRead = handler.getDeploymentMetadata();
 
     assertEquals(deploymentId, deploymentMetadataRead.getId());
-    assertEquals(deploymentMode.name(), deploymentMetadataRead.getMode());
+    assertEquals(airbyteEdition.name(), deploymentMetadataRead.getMode());
     assertEquals(version, deploymentMetadataRead.getVersion());
   }
 

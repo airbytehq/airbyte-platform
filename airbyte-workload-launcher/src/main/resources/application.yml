@@ -148,7 +148,6 @@ airbyte:
   container.orchestrator:
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
   role: ${AIRBYTE_ROLE:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:
     job:
       error-reporting:

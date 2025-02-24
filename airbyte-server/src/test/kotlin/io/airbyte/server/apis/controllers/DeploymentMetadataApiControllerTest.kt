@@ -41,7 +41,7 @@ internal class DeploymentMetadataApiControllerTest {
     val deploymentMetadataRead =
       DeploymentMetadataRead()
         .id(UUID.randomUUID())
-        .mode(Configs.DeploymentMode.OSS.name)
+        .mode(Configs.AirbyteEdition.COMMUNITY.name)
         .version("0.2.3")
 
     every { deploymentMetadataHandler.deploymentMetadata } returns deploymentMetadataRead

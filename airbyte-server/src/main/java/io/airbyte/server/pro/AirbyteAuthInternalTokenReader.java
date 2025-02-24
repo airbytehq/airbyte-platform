@@ -19,8 +19,8 @@ import jakarta.inject.Singleton;
 @Singleton
 @Requires(property = "micronaut.security.enabled",
           value = "true")
-@Requires(property = "airbyte.deployment-mode",
-          value = "OSS")
+@Requires(property = "airbyte.edition",
+          pattern = "(?i)^community|enterprise$")
 public class AirbyteAuthInternalTokenReader extends HttpHeaderTokenReader {
 
   // This is set higher than other token readers so that it is checked last.

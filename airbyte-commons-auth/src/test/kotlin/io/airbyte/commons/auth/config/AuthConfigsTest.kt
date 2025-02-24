@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 @MicronautTest(rebuildContext = true)
-@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "community")
 class AuthConfigsTest {
   @get:Primary
   @get:Bean
@@ -84,14 +84,13 @@ class AuthConfigsForCloudTest {
   lateinit var authConfigs: AuthConfigs
 
   @Test
-  @Property(name = "airbyte.deployment-mode", value = "CLOUD")
+  @Property(name = "airbyte.edition", value = "cloud")
   fun `test cloud environment sets mode to OIDC`() {
     Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
   }
 }
 
 @MicronautTest
-@Property(name = "airbyte.deployment-mode", value = "OSS")
 @Property(name = "airbyte.edition", value = "community")
 @Property(name = "micronaut.security.enabled", value = "true")
 class AuthConfigsForCommunityAuthTest {

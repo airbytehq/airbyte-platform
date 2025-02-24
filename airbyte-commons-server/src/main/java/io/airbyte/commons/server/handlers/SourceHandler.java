@@ -106,7 +106,7 @@ public class SourceHandler {
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
   private final MetricClient metricClient;
-  private final Configs.DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -129,7 +129,7 @@ public class SourceHandler {
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
                        final MetricClient metricClient,
-                       final Configs.DeploymentMode deploymentMode) {
+                       final Configs.AirbyteEdition airbyteEdition) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -150,7 +150,7 @@ public class SourceHandler {
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
     this.metricClient = metricClient;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -201,8 +201,8 @@ public class SourceHandler {
   @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (sourceCreate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (sourceCreate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     // validate configuration
@@ -228,8 +228,8 @@ public class SourceHandler {
 
   public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    if (partialSourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (partialSourceUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     final UUID sourceId = partialSourceUpdate.getSourceId();
@@ -259,8 +259,8 @@ public class SourceHandler {
   @Trace
   public SourceRead updateSource(final SourceUpdate sourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (sourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (sourceUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     final UUID sourceId = sourceUpdate.getSourceId();

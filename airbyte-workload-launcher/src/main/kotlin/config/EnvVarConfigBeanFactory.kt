@@ -9,8 +9,9 @@ import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.storage.StorageConfig
+import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.constants.EnvVarConstants
@@ -342,7 +343,7 @@ class EnvVarConfigBeanFactory {
   fun micronautEnvMap(
     @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
     @Value("\${micronaut.env.additional-envs}") additionalMicronautEnv: String,
-    deploymentMode: DeploymentMode,
+    edition: AirbyteEdition,
   ): Map<String, String> {
     val envs = mutableListOf(EnvConstants.WORKER_V2)
 
@@ -356,7 +357,7 @@ class EnvVarConfigBeanFactory {
       envs.add(EnvConstants.LOCAL_SECRETS)
     }
 
-    if (deploymentMode == DeploymentMode.CLOUD) {
+    if (edition == AirbyteEdition.CLOUD) {
       envs.add(Environment.CLOUD)
     }
 
@@ -531,16 +532,14 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("airbyteMetadataEnvMap")
   fun airbyteMetadataEnvMap(
-    @Value("\${airbyte.edition}") edition: String,
-    @Value("\${airbyte.version}") version: String,
+    edition: AirbyteEdition,
+    version: AirbyteVersion,
     @Value("\${airbyte.role}") role: String,
-    @Value("\${airbyte.deployment-mode}") deploymentMode: String,
   ): Map<String, String> =
     mapOf(
-      EnvVarConstants.AIRBYTE_EDITION_ENV_VAR to edition,
-      EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version,
+      EnvVarConstants.AIRBYTE_EDITION_ENV_VAR to edition.name,
+      EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version.serialize(),
       EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to role,
-      EnvVarConstants.DEPLOYMENT_MODE_ENV_VAR to deploymentMode,
     )
 
   @Singleton

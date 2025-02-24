@@ -160,7 +160,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.OSS);
+            Configs.AirbyteEdition.COMMUNITY);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -271,7 +271,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.CLOUD);
+            Configs.AirbyteEdition.CLOUD);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -411,7 +411,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.CLOUD);
+            Configs.AirbyteEdition.CLOUD);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();

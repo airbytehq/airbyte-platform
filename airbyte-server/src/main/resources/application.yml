@@ -176,7 +176,6 @@ airbyte:
       wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
       wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}
       rollout_expiration_seconds: ${CONNECTOR_ROLLOUT_EXPIRATION_SECONDS:360}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   support-email-domains:
     oss: ""
     cloud: "airbyte.io"

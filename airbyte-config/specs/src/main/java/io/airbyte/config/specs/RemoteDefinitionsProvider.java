@@ -13,7 +13,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistry;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -59,7 +59,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   private final OkHttpClient okHttpClient;
 
   private final URI remoteRegistryBaseUrl;
-  private final DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
   private static final int NOT_FOUND = 404;
   private static final String CUSTOM_COMPONENTS_FILE_NAME = "components.py";
 
@@ -77,16 +77,16 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   public RemoteDefinitionsProvider(@Value("${airbyte.connector-registry.remote.base-url}") final String remoteRegistryBaseUrl,
-                                   final DeploymentMode deploymentMode,
+                                   final Configs.AirbyteEdition airbyteEdition,
                                    @Value("${airbyte.connector-registry.remote.timeout-ms}") final long remoteCatalogTimeoutMs) {
     final URI remoteRegistryBaseUrlUri = parsedRemoteRegistryBaseUrlOrDefault(remoteRegistryBaseUrl);
-    LOGGER.info("Creating remote definitions provider for URL '{}' and registry '{}'...", remoteRegistryBaseUrlUri, deploymentMode);
 
     this.remoteRegistryBaseUrl = remoteRegistryBaseUrlUri;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
     this.okHttpClient = new OkHttpClient.Builder()
         .callTimeout(Duration.ofMillis(remoteCatalogTimeoutMs))
         .build();
+    LOGGER.info("Created remote definitions provider for URL '{}' and registry '{}'...", remoteRegistryBaseUrlUri, getRegistryName(airbyteEdition));
   }
 
   private Map<UUID, ConnectorRegistrySourceDefinition> getSourceDefinitionsMap() {
@@ -151,9 +151,9 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     return new ArrayList<>(getDestinationDefinitionsMap().values());
   }
 
-  private String getRegistryName() {
-    return switch (deploymentMode) {
-      case OSS -> "oss";
+  static String getRegistryName(final Configs.AirbyteEdition airbyteEdition) {
+    return switch (airbyteEdition) {
+      case COMMUNITY, ENTERPRISE -> "oss";
       case CLOUD -> "cloud";
     };
   }
@@ -169,12 +169,12 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   @VisibleForTesting
   String getRegistryPath() {
-    return String.format("registries/v0/%s_registry.json", getRegistryName());
+    return String.format("registries/v0/%s_registry.json", getRegistryName(airbyteEdition));
   }
 
   @VisibleForTesting
   String getRegistryEntryPath(final String connectorRepository, final String version) {
-    return String.format("metadata/%s/%s/%s.json", connectorRepository, version, getRegistryName());
+    return String.format("metadata/%s/%s/%s.json", connectorRepository, version, getRegistryName(airbyteEdition));
   }
 
   @VisibleForTesting

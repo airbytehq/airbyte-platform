@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.anyList
@@ -58,16 +60,26 @@ class RuntimeEnvVarFactoryTest {
 
   private val stagingMountPath = "/staging-dir"
 
+  private lateinit var airbyteEdition: AirbyteEdition
+
   @BeforeEach
   fun setup() {
     connectorApmSupportHelper = mockk()
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
+    airbyteEdition = AirbyteEdition.COMMUNITY
 
     factory =
       spyk(
-        RuntimeEnvVarFactory(connectorAwsAssumedRoleSecretEnvList, stagingMountPath, CONTAINER_ORCH_JAVA_OPTS, connectorApmSupportHelper, ffClient),
+        RuntimeEnvVarFactory(
+          connectorAwsAssumedRoleSecretEnvList,
+          stagingMountPath,
+          CONTAINER_ORCH_JAVA_OPTS,
+          connectorApmSupportHelper,
+          ffClient,
+          airbyteEdition,
+        ),
       )
   }
 
@@ -160,6 +172,52 @@ class RuntimeEnvVarFactoryTest {
 
     val expected =
       listOf(
+        EnvVar(DEPLOYMENT_MODE, OSS_DEPLOYMENT_MODE, null),
+        EnvVar(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, image, null),
+        EnvVar(WorkerEnvConstants.WORKER_JOB_ID, jobId, null),
+        EnvVar(WorkerEnvConstants.WORKER_JOB_ATTEMPT, attemptId.toString(), null),
+      )
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "CLOUD,CLOUD",
+      "COMMUNITY,OSS",
+      "ENTERPRISE,OSS",
+    ],
+  )
+  fun `builds metadata env vars for each edition`(
+    airbyteEdition: AirbyteEdition,
+    expectedDeploymentMode: String,
+  ) {
+    val image = "docker-image-name"
+    val jobId = "3145"
+    val attemptId = 7L
+    val config =
+      IntegrationLauncherConfig()
+        .withDockerImage(image)
+        .withJobId(jobId)
+        .withAttemptId(attemptId)
+
+    factory =
+      spyk(
+        RuntimeEnvVarFactory(
+          connectorAwsAssumedRoleSecretEnvList,
+          stagingMountPath,
+          CONTAINER_ORCH_JAVA_OPTS,
+          connectorApmSupportHelper,
+          ffClient,
+          airbyteEdition,
+        ),
+      )
+    val result = factory.getMetadataEnvVars(config)
+
+    val expected =
+      listOf(
+        EnvVar(DEPLOYMENT_MODE, expectedDeploymentMode, null),
         EnvVar(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, image, null),
         EnvVar(WorkerEnvConstants.WORKER_JOB_ID, jobId, null),
         EnvVar(WorkerEnvConstants.WORKER_JOB_ATTEMPT, attemptId.toString(), null),
