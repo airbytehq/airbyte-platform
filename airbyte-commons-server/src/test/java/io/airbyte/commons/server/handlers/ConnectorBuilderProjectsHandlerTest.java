@@ -826,7 +826,8 @@ class ConnectorBuilderProjectsHandlerTest {
     final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null);
     final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
     final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
-        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),
+        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null,
+            List.of())),
         false, null, null, null, null);
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);

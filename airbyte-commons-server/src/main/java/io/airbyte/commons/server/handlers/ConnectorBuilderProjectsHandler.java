@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest;
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
+import io.airbyte.api.model.generated.ConnectorBuilderAuxiliaryRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
@@ -25,7 +26,6 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
@@ -64,10 +64,12 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.AuxiliaryRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -518,31 +520,134 @@ public class ConnectorBuilderProjectsHandler {
     return new BuilderProjectForDefinitionResponse().builderProjectId(builderProjectId.orElse(null));
   }
 
+  /**
+   * Converts the provided {@code StreamRead} object into a {@code ConnectorBuilderProjectStreamRead}
+   * object.
+   * <p>
+   * This method maps various properties from the {@code streamRead} instance including logs, slices,
+   * auxiliary requests, inferred schema, and inferred datetime formats. It also transfers the test
+   * read limit flag.
+   *
+   * @param streamRead the {@code StreamRead} instance containing the original data to be converted.
+   * @return a new {@code ConnectorBuilderProjectStreamRead} instance populated with the mapped values
+   *         from {@code streamRead}.
+   */
   private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
-        .logs(streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
-            .message(log.getMessage())
-            .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
-            .internalMessage(log.getInternalMessage())
-            .stacktrace(log.getStacktrace())).toList())
-        .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
-            .sliceDescriptor(slice.getSliceDescriptor())
-            .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
-            .pages(slice.getPages().stream().map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
+        .logs(mapStreamReadLogs(streamRead))
+        .slices(mapStreamReadSlices(streamRead))
+        .testReadLimitReached(streamRead.getTestReadLimitReached())
+        .auxiliaryRequests(mapGlobalAuxiliaryRequests(streamRead))
+        .inferredSchema(streamRead.getInferredSchema())
+        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+  }
+
+  /**
+   * Converts the logs contained within a {@code StreamRead} object into a list of
+   * {@code ConnectorBuilderProjectStreamReadLogsInner} instances.
+   *
+   * <p>
+   * Each log entry in the provided {@code streamRead} is transformed by mapping its message, level
+   * (converted via {@code LevelEnum.fromString}), internal message, and stacktrace.
+   * </p>
+   *
+   * @param streamRead the {@code StreamRead} instance containing the logs to be mapped
+   * @return a list of {@code ConnectorBuilderProjectStreamReadLogsInner} objects representing the
+   *         mapped log entries
+   */
+  private List<ConnectorBuilderProjectStreamReadLogsInner> mapStreamReadLogs(final StreamRead streamRead) {
+    return streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
+        .message(log.getMessage())
+        .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
+        .internalMessage(log.getInternalMessage())
+        .stacktrace(log.getStacktrace()))
+        .toList();
+  }
+
+  /**
+   * Maps the slices from the given StreamRead instance into a list of
+   * ConnectorBuilderProjectStreamReadSlicesInner objects.
+   *
+   * <p>
+   * This method iterates through each slice in the provided StreamRead, creating a corresponding
+   * ConnectorBuilderProjectStreamReadSlicesInner for each slice. For each slice, it:
+   * <ul>
+   * <li>Sets the slice descriptor.</li>
+   * <li>Ensures the state list is not empty; otherwise, it uses an empty list.</li>
+   * <li>Converts each page by mapping records and transforming both the HTTP request and
+   * response.</li>
+   * <li>Processes auxiliary requests specific to the slice.</li>
+   * </ul>
+   *
+   * @param streamRead the StreamRead instance containing slices to be mapped.
+   * @return a list of ConnectorBuilderProjectStreamReadSlicesInner objects constructed from the
+   *         StreamRead slices.
+   */
+  private List<ConnectorBuilderProjectStreamReadSlicesInner> mapStreamReadSlices(final StreamRead streamRead) {
+    return streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
+        .sliceDescriptor(slice.getSliceDescriptor())
+        .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
+        .pages(slice.getPages().stream()
+            .map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
                 .records(page.getRecords())
                 .request(convertHttpRequest(page.getRequest()))
-                .response(convertHttpResponse(page.getResponse()))).toList()))
+                .response(convertHttpResponse(page.getResponse())))
             .toList())
-        .testReadLimitReached(streamRead.getTestReadLimitReached())
-        .auxiliaryRequests(CollectionUtils.isNotEmpty(streamRead.getAuxiliaryRequests())
-            ? streamRead.getAuxiliaryRequests().stream().map(auxRequest -> new ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner()
+        .auxiliaryRequests(mapSliceAuxiliaryRequests(slice)))
+        .toList();
+  }
+
+  /**
+   * Converts a list of AuxiliaryRequest objects into a list of ConnectorBuilderAuxiliaryRequest
+   * objects.
+   *
+   * <p>
+   * This method first checks if the provided list is not empty. If it is not empty, it streams over
+   * the list, mapping each AuxiliaryRequest into a ConnectorBuilderAuxiliaryRequest by copying the
+   * description, title, and converting the HTTP request and response fields as well as mapping the
+   * type using the TypeEnum. If the input list is empty, it returns an empty list.
+   *
+   * @param auxiliaryRequests the list of AuxiliaryRequest objects to be converted
+   * @return a list of converted ConnectorBuilderAuxiliaryRequest objects, or an empty list if the
+   *         input is empty
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapAuxiliaryRequests(List<AuxiliaryRequest> auxiliaryRequests) {
+    return CollectionUtils.isNotEmpty(auxiliaryRequests)
+        ? auxiliaryRequests.stream()
+            .map(auxRequest -> new ConnectorBuilderAuxiliaryRequest()
                 .description(auxRequest.getDescription())
                 .request(convertHttpRequest(auxRequest.getRequest()))
                 .response(convertHttpResponse(auxRequest.getResponse()))
-                .title(auxRequest.getTitle())).toList()
-            : List.of())
-        .inferredSchema(streamRead.getInferredSchema())
-        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+                .title(auxRequest.getTitle())
+                .type(ConnectorBuilderAuxiliaryRequest.TypeEnum.fromString(auxRequest.getType().getValue())))
+            .toList()
+        : List.of();
+  }
+
+  /**
+   * Maps the global auxiliary requests from the provided StreamRead instance.
+   *
+   * <p>
+   * This method retrieves the auxiliary requests from the StreamRead object and delegates the mapping
+   * to the mapAuxiliaryRequests method.
+   *
+   * @param streamRead the StreamRead instance that contains the auxiliary requests
+   * @return a list of ConnectorBuilderAuxiliaryRequest objects generated from the auxiliary requests
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapGlobalAuxiliaryRequests(final StreamRead streamRead) {
+    return mapAuxiliaryRequests(streamRead.getAuxiliaryRequests());
+  }
+
+  /**
+   * Maps the auxiliary requests from the given slice into a list of ConnectorBuilderAuxiliaryRequest
+   * instances.
+   *
+   * @param slice the input slice containing auxiliary request data
+   * @return a list of ConnectorBuilderAuxiliaryRequest objects mapped from the slice's auxiliary
+   *         requests
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapSliceAuxiliaryRequests(final StreamReadSlicesInner slice) {
+    return mapAuxiliaryRequests(slice.getAuxiliaryRequests());
   }
 
   private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable final HttpRequest request) {
