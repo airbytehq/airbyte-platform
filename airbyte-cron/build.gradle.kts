@@ -24,7 +24,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
   implementation(libs.sentry.java)
-  implementation(libs.commons.io)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))

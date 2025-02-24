@@ -70,7 +70,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.apache.commons.collections4.CollectionUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.JSONB;
@@ -788,7 +787,7 @@ public class DefaultJobPersistence implements JobPersistence {
       }
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
-      if (CollectionUtils.isNotEmpty(streamSyncStats)) {
+      if (streamSyncStats != null && !streamSyncStats.isEmpty()) {
         saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
       return null;

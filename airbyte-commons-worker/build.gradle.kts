@@ -27,10 +27,7 @@ dependencies {
     exclude(module = "guava")
   }
   implementation(libs.apache.ant)
-  implementation(libs.apache.commons.text)
   implementation(libs.bundles.datadog)
-  implementation(libs.commons.io)
-  implementation(libs.bundles.apache)
   implementation(libs.failsafe.okhttp)
   implementation(libs.google.cloud.storage)
   implementation(libs.okhttp)

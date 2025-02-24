@@ -10,7 +10,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
 
-  implementation(libs.apache.commons.text)
+  implementation("org.apache.commons:commons-text:1.10.0")
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:problems-api"))

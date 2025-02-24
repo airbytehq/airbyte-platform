@@ -14,11 +14,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.apache.commons.io.FileUtils;
 import org.flywaydb.core.api.ClassProvider;
 import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationVersion;
@@ -81,7 +81,7 @@ public class MigrationDevHelper {
     LOGGER.info("\n==== New Migration File ====\n" + filePath);
 
     final File file = new File(Path.of(filePath).toUri());
-    FileUtils.forceMkdirParent(file);
+    Files.createDirectories(file.toPath());
 
     try (final PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
       writer.println(newMigration);

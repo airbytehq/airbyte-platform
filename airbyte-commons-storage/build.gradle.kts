@@ -11,7 +11,6 @@ dependencies {
   api(libs.bundles.micronaut.kotlin)
   api(libs.bundles.micronaut.metrics)
   api(libs.kotlin.logging)
-  api(libs.commons.io)
   api(libs.azure.storage)
   api(libs.aws.java.sdk.s3)
   api(libs.aws.java.sdk.sts)

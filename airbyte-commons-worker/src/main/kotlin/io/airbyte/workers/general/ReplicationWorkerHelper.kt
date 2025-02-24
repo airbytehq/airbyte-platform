@@ -72,7 +72,6 @@ import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
-import org.apache.commons.io.FileUtils
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
@@ -293,7 +292,7 @@ class ReplicationWorkerHelper(
     val context = requireNotNull(ctx)
 
     logger.info {
-      val bytes = FileUtils.byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+      val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
       "Total records read: $recordsRead ($bytes)"
     }
 
@@ -403,7 +402,7 @@ class ReplicationWorkerHelper(
     recordsRead += 1
     if (recordsRead % 5000 == 0L) {
       logger.info {
-        val bytes = FileUtils.byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
         "Records read: $recordsRead ($bytes)"
       }
     }
@@ -561,3 +560,19 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
 }
+
+private const val KB = 1_024L
+private const val MB = KB * KB
+private const val GB = MB * KB
+private const val TB = GB * KB
+private const val PB = TB * KB
+
+private fun byteCountToDisplaySize(size: Long): String =
+  when {
+    size > PB -> "${size.div(PB)} PB"
+    size > TB -> "${size.div(TB)} TB"
+    size > GB -> "${size.div(GB)} GB"
+    size > MB -> "${size.div(MB)} MB"
+    size > KB -> "${size.div(KB)} KB"
+    else -> "$size bytes"
+  }
