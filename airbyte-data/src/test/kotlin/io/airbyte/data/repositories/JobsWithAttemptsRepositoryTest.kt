@@ -74,7 +74,7 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
           updatedAtEnd = null,
           createdAtEnd = null,
           configTypes = setOf(),
-          scope = scope,
+          scopes = setOf(scope),
         ),
       )
 
@@ -133,7 +133,7 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
           updatedAtEnd = null,
           createdAtEnd = null,
           configTypes = setOf(),
-          scope = "",
+          scopes = setOf(),
         ),
       )
 
@@ -184,7 +184,7 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
           updatedAtEnd = null,
           createdAtEnd = null,
           configTypes = setOf(),
-          scope = "",
+          scopes = setOf(),
         ),
         pageable,
       )
@@ -204,7 +204,7 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
           updatedAtEnd = null,
           createdAtEnd = null,
           configTypes = setOf(),
-          scope = "",
+          scopes = setOf(),
         ),
         pageable2,
       )
