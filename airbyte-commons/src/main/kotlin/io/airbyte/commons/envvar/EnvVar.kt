@@ -12,6 +12,7 @@ package io.airbyte.commons.envvar
  * These are defined in alphabetical order for findability/readability reasons.
  */
 enum class EnvVar {
+  AIRBYTE_ALLOW_CUSTOM_CODE,
   AIRBYTE_ROLE,
   AIRBYTE_VERSION,
   ATTEMPT_ID,

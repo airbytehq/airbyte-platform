@@ -16,6 +16,7 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -77,9 +78,10 @@ class RuntimeEnvVarFactory(
     val configurationEnvVars = getConfigurationEnvVars(launcherConfig.dockerImage, launcherConfig.connectionId ?: ANONYMOUS, useFileTransfers)
     val metadataEnvVars = getMetadataEnvVars(launcherConfig)
     val resourceEnvVars = getResourceEnvVars(resourceReqs)
+    val customCodeEnvVars = getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId))
     val configPassThroughEnv = launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty()
 
-    return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv
+    return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv + customCodeEnvVars
   }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
@@ -90,6 +92,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
+      getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
@@ -101,15 +104,18 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
+      getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
-  fun specConnectorEnvVars(workloadId: String): List<EnvVar> =
-    listOf(
-      EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
-      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-    )
+  fun specConnectorEnvVars(
+    launcherConfig: IntegrationLauncherConfig,
+    workloadId: String,
+  ): List<EnvVar> =
+    getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
+      EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null) +
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
   /**
    * Env vars to enable APM metrics for the connector if enabled.
@@ -188,6 +194,18 @@ class RuntimeEnvVarFactory(
 
     return listOf(
       EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
+    )
+  }
+
+  /**
+   * Env vars for controlling runtime custom code execution behaviour.
+   */
+  @VisibleForTesting
+  internal fun getDeclarativeCustomCodeSupportEnvVars(context: Context): List<EnvVar> {
+    val useAllowCustomCode = featureFlagClient.boolVariation(UseAllowCustomCode, context)
+
+    return listOf(
+      EnvVar(EnvVarConstants.AIRBYTE_ALLOW_CUSTOM_CODE_ENV_VAR, useAllowCustomCode.toString(), null),
     )
   }
 

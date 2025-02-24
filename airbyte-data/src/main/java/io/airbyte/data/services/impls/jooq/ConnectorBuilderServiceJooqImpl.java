@@ -49,6 +49,8 @@ import org.jooq.exception.DataAccessException;
 @Singleton
 public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService {
 
+  private static final String INJECTED_DECLARATIVE_MANIFEST_KEY = "__injected_declarative_manifest";
+
   private static final List<Field<?>> BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS =
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
           CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE, CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
@@ -323,6 +325,28 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   }
 
   /**
+   * Deletes all config injections associated with a given actor definition ID.
+   *
+   * @param actorDefinitionId The ID of the actor definition whose config injections should be deleted
+   * @param ctx The JOOQ DSL context to use for the deletion
+   */
+  private void deleteActorDefinitionConfigInjections(final UUID actorDefinitionId, final DSLContext ctx) {
+    ctx.deleteFrom(ACTOR_DEFINITION_CONFIG_INJECTION)
+        .where(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .execute();
+  }
+
+  /**
+   * Checks if a given config injection is a manifest injection by comparing its injection path.
+   *
+   * @param injection The config injection to check
+   * @return true if the injection is a manifest injection, false otherwise
+   */
+  private static Boolean isManifestInjection(ActorDefinitionConfigInjection injection) {
+    return INJECTED_DECLARATIVE_MANIFEST_KEY.equals(injection.getInjectionPath());
+  }
+
+  /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
    * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
@@ -350,7 +374,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *
    * @param declarativeManifest declarative manifest version to create and make active
-   * @param configInjection configInjection for the manifest
+   * @param configInjections configInjection for the manifest
    * @param connectorSpecification connectorSpecification associated with the declarativeManifest
    *        being created
    * @throws IOException exception while interacting with db
@@ -358,14 +382,24 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
-                                                       final ActorDefinitionConfigInjection configInjection,
+                                                       final List<ActorDefinitionConfigInjection> configInjections,
                                                        final ConnectorSpecification connectorSpecification,
                                                        final String cdkVersion)
       throws IOException {
-    if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
+
+    // find one manifest config injection
+    Optional<ActorDefinitionConfigInjection> manifestConfigInjection = configInjections.stream()
+        .filter(ConnectorBuilderServiceJooqImpl::isManifestInjection)
+        .findFirst();
+
+    if (manifestConfigInjection.isEmpty()) {
+      throw new IllegalArgumentException("No manifest config injection found");
+    }
+
+    if (!declarativeManifest.getActorDefinitionId().equals(manifestConfigInjection.get().getActorDefinitionId())) {
       throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
     }
-    if (!declarativeManifest.getManifest().equals(configInjection.getJsonToInject())) {
+    if (!declarativeManifest.getManifest().equals(manifestConfigInjection.get().getJsonToInject())) {
       throw new IllegalArgumentException("The DeclarativeManifest does not match the config injection");
     }
     if (!declarativeManifest.getSpec().get("connectionSpecification").equals(connectorSpecification.getConnectionSpecification())) {
@@ -373,7 +407,13 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     }
 
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
+      // Set new version of the actor definition
+      updateDeclarativeActorDefinitionVersion(manifestConfigInjection.get().getActorDefinitionId(), connectorSpecification, cdkVersion, ctx);
+
+      // Replace all existing config injections
+      upsertActorDefinitionConfigInjections(configInjections, ctx);
+
+      // Insert the new declarative manifest
       insertActiveDeclarativeManifest(declarativeManifest, ctx);
       return null;
     });
@@ -408,7 +448,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @param sourceDefinitionId actor definition to update
    * @param version the version of the manifest to make active. declarative_manifest.version must
    *        already exist
-   * @param configInjection configInjection for the manifest
+   * @param configInjections configInjections for the manifest
    * @param connectorSpecification connectorSpecification associated with the declarativeManifest
    *        being made active
    * @throws IOException exception while interacting with db
@@ -416,12 +456,13 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   @Override
   public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
                                                 final Long version,
-                                                final ActorDefinitionConfigInjection configInjection,
+                                                final List<ActorDefinitionConfigInjection> configInjections,
                                                 final ConnectorSpecification connectorSpecification,
                                                 final String cdkVersion)
       throws IOException {
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
+      updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, ctx);
+      upsertActorDefinitionConfigInjections(configInjections, ctx);
       upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version), ctx);
       return null;
     });
@@ -462,6 +503,77 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
       writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection, ctx);
       return null;
     });
+  }
+
+  /**
+   * Update or create one or more config injection object. If there is an existing config injection
+   * for the given actor definition and path, it is updated. If there isn't yet, a new config
+   * injection is created.
+   *
+   * @param actorDefinitionConfigInjections the config injections to write to the database
+   * @throws IOException exception while interacting with db
+   */
+  @Override
+  public void writeActorDefinitionConfigInjectionsForPath(
+                                                          final List<ActorDefinitionConfigInjection> actorDefinitionConfigInjections)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeActorDefinitionConfigInjectionsForPath(actorDefinitionConfigInjections, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write multiple config injections to the database using the provided DSL context. This method
+   * iterates through the list of config injections and writes each one individually.
+   *
+   * @param actorDefinitionConfigInjections List of config injections to write
+   * @param ctx The JOOQ DSL context to use for database operations
+   */
+  private void writeActorDefinitionConfigInjectionsForPath(
+                                                           final List<ActorDefinitionConfigInjection> actorDefinitionConfigInjections,
+                                                           final DSLContext ctx) {
+    for (final ActorDefinitionConfigInjection configInjection : actorDefinitionConfigInjections) {
+      writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
+    }
+  }
+
+  /**
+   * Update or insert a list of config injections for an actor definition. This method: 1. Validates
+   * that a manifest config injection exists in the list 2. Ensures all config injections are for the
+   * same actor definition 3. Deletes any existing config injections for the actor definition 4.
+   * Writes the new config injections
+   *
+   * @param configInjections List of config injections to upsert
+   * @param ctx The JOOQ DSL context to use for database operations
+   * @throws IllegalArgumentException if no manifest injection is found or if config injections have
+   *         different actor definition IDs
+   */
+  private void upsertActorDefinitionConfigInjections(
+                                                     final List<ActorDefinitionConfigInjection> configInjections,
+                                                     final DSLContext ctx) {
+
+    // find one manifest config injection
+    Optional<ActorDefinitionConfigInjection> manifestConfigInjection = configInjections.stream()
+        .filter(ConnectorBuilderServiceJooqImpl::isManifestInjection)
+        .findFirst();
+
+    // Ensure all config injections have the same actor definition id
+    final long uniqueActorDefinitionIds = configInjections.stream().map(ActorDefinitionConfigInjection::getActorDefinitionId).distinct().count();
+    final boolean hasMoreThanOneActorDefinitionId = uniqueActorDefinitionIds > 1;
+    if (hasMoreThanOneActorDefinitionId) {
+      throw new IllegalArgumentException("All config injections must have the same actor definition id");
+    }
+
+    if (manifestConfigInjection.isEmpty()) {
+      throw new IllegalArgumentException("No manifest config injection found");
+    }
+
+    // Delete all existing config injections for the actor definition
+    deleteActorDefinitionConfigInjections(manifestConfigInjection.get().getActorDefinitionId(), ctx);
+
+    // Write all new config injections
+    writeActorDefinitionConfigInjectionsForPath(configInjections, ctx);
   }
 
   /**
@@ -668,7 +780,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .execute();
   }
 
-  private void updateDeclarativeActorDefinitionVersion(final ActorDefinitionConfigInjection configInjection,
+  private void updateDeclarativeActorDefinitionVersion(final UUID actorDefinitionId,
                                                        final ConnectorSpecification spec,
                                                        final String cdkVersion,
                                                        final DSLContext ctx) {
@@ -678,10 +790,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, cdkVersion)
-        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
+        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .execute();
-
-    writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
   private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, final DSLContext ctx) {

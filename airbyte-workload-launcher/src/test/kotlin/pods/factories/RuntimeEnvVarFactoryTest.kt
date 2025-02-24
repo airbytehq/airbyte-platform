@@ -13,7 +13,9 @@ import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
+import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -61,6 +63,7 @@ class RuntimeEnvVarFactoryTest {
     connectorApmSupportHelper = mockk()
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
+    every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
 
     factory =
       spyk(
@@ -249,12 +252,14 @@ class RuntimeEnvVarFactoryTest {
     val configurationEnvVars = listOf(EnvVar("config-var", "3", null))
     val metadataEnvVars = listOf(EnvVar("metadata-var", "4", null))
     val resourceEnvVars = listOf(EnvVar("resource-var", "5", null))
+    val customCodeEnvVars = listOf(EnvVar("custom-code-var", "6", null))
     val passThroughVars = passThroughEnvMap?.toEnvVarList().orEmpty()
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns awsEnvVars
     every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
     every { factory.getConfigurationEnvVars(any(), any(), any()) } returns configurationEnvVars
     every { factory.getMetadataEnvVars(any()) } returns metadataEnvVars
     every { factory.getResourceEnvVars(any()) } returns resourceEnvVars
+    every { factory.getDeclarativeCustomCodeSupportEnvVars(any()) } returns customCodeEnvVars
 
     val config =
       IntegrationLauncherConfig()
@@ -266,7 +271,7 @@ class RuntimeEnvVarFactoryTest {
 
     val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
-    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars
+    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
 
     assertEquals(expected, result)
   }
@@ -284,6 +289,7 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
+        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -303,6 +309,7 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
+        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -311,13 +318,30 @@ class RuntimeEnvVarFactoryTest {
 
   @Test
   fun `builds expected env vars for spec connector container`() {
-    val result = factory.specConnectorEnvVars(WORKLOAD_ID)
+    val config =
+      IntegrationLauncherConfig()
+        .withWorkspaceId(workspaceId)
+
+    val result = factory.specConnectorEnvVars(config, WORKLOAD_ID)
 
     assertEquals(
       listOf(
+        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       ),
+      result,
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `builds expected env vars for getDeclarativeCustomCodeSupportEnvVars`(useAllowCustomCode: Boolean) {
+    every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns useAllowCustomCode
+    val result = factory.getDeclarativeCustomCodeSupportEnvVars(Workspace(workspaceId))
+
+    assertEquals(
+      listOf(EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), useAllowCustomCode.toString(), null)),
       result,
     )
   }

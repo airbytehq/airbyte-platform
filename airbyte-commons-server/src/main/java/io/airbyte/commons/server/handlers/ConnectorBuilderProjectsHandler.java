@@ -47,6 +47,7 @@ import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
@@ -398,11 +399,14 @@ public class ConnectorBuilderProjectsHandler {
     validateProjectUnderRightWorkspace(connectorBuilderPublishRequestBody.getBuilderProjectId(), connectorBuilderPublishRequestBody.getWorkspaceId());
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
+    final String componentsFileContent = connectorBuilderPublishRequestBody.getComponentsFileContent();
+
     manifestInjector.addInjectedDeclarativeManifest(spec);
     final UUID actorDefinitionId = createActorDefinition(connectorBuilderPublishRequestBody.getName(),
         connectorBuilderPublishRequestBody.getWorkspaceId(),
         manifest,
-        spec);
+        spec,
+        componentsFileContent);
 
     final DeclarativeManifest declarativeManifest = new DeclarativeManifest()
         .withActorDefinitionId(actorDefinitionId)
@@ -410,7 +414,8 @@ public class ConnectorBuilderProjectsHandler {
         .withDescription(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription())
         .withManifest(manifest)
         .withSpec(spec)
-        .withComponentsFileContent(connectorBuilderPublishRequestBody.getComponentsFileContent());
+        .withComponentsFileContent(componentsFileContent);
+
     connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
     connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(),
         actorDefinitionId);
@@ -419,7 +424,12 @@ public class ConnectorBuilderProjectsHandler {
     return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
   }
 
-  private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
+  private UUID createActorDefinition(final String name,
+                                     final UUID workspaceId,
+                                     final JsonNode manifest,
+                                     final JsonNode spec,
+                                     final String componentFileContent)
+      throws IOException {
     final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
     final UUID actorDefinitionId = uuidSupplier.get();
     final StandardSourceDefinition source = new StandardSourceDefinition()
@@ -442,8 +452,10 @@ public class ConnectorBuilderProjectsHandler {
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
     sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
-    connectorBuilderService
-        .writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
+
+    final List<ActorDefinitionConfigInjection> configInjectionsToCreate =
+        manifestInjector.getManifestConnectorInjections(source.getSourceDefinitionId(), manifest, componentFileContent);
+    connectorBuilderService.writeActorDefinitionConfigInjectionsForPath(configInjectionsToCreate);
 
     return source.getSourceDefinitionId();
   }
