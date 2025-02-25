@@ -24,13 +24,11 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import jakarta.validation.Valid
 import org.jooq.exception.DataAccessException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
-import java.util.stream.Collectors
 
 @Controller("/api/v1/dataplane_group")
 @Context
@@ -99,13 +97,9 @@ class DataplaneGroupApiController(
     val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(dataplaneGroupListRequestBody.organizationId, false)
     return DataplaneGroupListResponse()
       .dataplaneGroups(
-        dataplaneGroups
-          .stream()
-          .map { dataplaneGroup: DataplaneGroup ->
-            this.toDataplaneGroupRead(
-              dataplaneGroup,
-            )
-          }.collect(Collectors.toList<@Valid DataplaneGroupRead?>()),
+        dataplaneGroups.map { dataplaneGroup ->
+          this.toDataplaneGroupRead(dataplaneGroup)
+        },
       )
   }
 

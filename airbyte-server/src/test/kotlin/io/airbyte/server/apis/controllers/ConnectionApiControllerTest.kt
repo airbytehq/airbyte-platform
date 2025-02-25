@@ -20,7 +20,6 @@ import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.services.ConnectionService
 import io.airbyte.data.exceptions.ConfigNotFoundException
-import io.airbyte.server.apis.ConnectionApiController
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

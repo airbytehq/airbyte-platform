@@ -9,12 +9,11 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
-import java.util.Optional
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 abstract class RetryStatesRepository : PageableRepository<RetryState, UUID> {
-  abstract fun findByJobId(jobId: Long?): Optional<RetryState>?
+  abstract fun findByJobId(jobId: Long?): RetryState?
 
   @Query(
     "UPDATE retry_states SET " +

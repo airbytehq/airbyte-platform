@@ -99,6 +99,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.kotest)
@@ -129,7 +130,7 @@ tasks.named("assemble") {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.server.Application"
+    mainClass = "io.airbyte.server.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

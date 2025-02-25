@@ -6,7 +6,6 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.micronaut.core.util.CollectionUtils
 import io.micronaut.http.uri.UriBuilder
-import java.util.Optional
 import java.util.UUID
 import kotlin.math.max
 
@@ -41,12 +40,12 @@ object PaginationMapper {
     collection: Collection<*>,
     limit: Int,
     offset: Int,
-  ): Optional<Int> {
+  ): Int? {
     // If we have no more entries, or we had no entries this page, just return empty - no next URL
     return if (CollectionUtils.isEmpty(collection)) {
-      Optional.empty()
+      null
     } else {
-      Optional.of(offset + limit)
+      offset + limit
     }
   }
 
@@ -81,10 +80,10 @@ object PaginationMapper {
     uriBuilder: UriBuilder,
   ): String {
     val nextOffset = getNextOffset(collection, limit, offset)
-    return if (nextOffset.isPresent) {
+    return if (nextOffset != null) {
       uriBuilder
         .queryParam(LIMIT, limit)
-        .replaceQueryParam(OFFSET, nextOffset.get())
+        .replaceQueryParam(OFFSET, nextOffset)
         .toString()
     } else {
       ""

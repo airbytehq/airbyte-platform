@@ -7,7 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SyncMode
@@ -100,9 +99,7 @@ class StreamsController(
     val streamList =
       httpResponse.catalog!!
         .streams
-        .stream()
-        .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
-        .toList()
+        .map { it.stream }
     val listOfStreamProperties =
       streamList.map { airbyteStream ->
         StreamProperties(

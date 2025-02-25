@@ -28,7 +28,6 @@ class UserInvitationAuthorizationHelper(
    *
    * @throws OperationNotAllowedException if authorization fails.
    */
-  @Throws(OperationNotAllowedException::class)
   fun authorizeInvitationAdmin(
     inviteCode: String,
     userId: UUID,

@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.model.generated.ApplicationTokenRequest
 import io.airbyte.api.problems.throwable.generated.RequestTimeoutExceededProblem
 import io.airbyte.data.services.ApplicationService
-import io.airbyte.server.apis.ApplicationsController
 import io.micronaut.context.ApplicationContext
 import io.micronaut.http.HttpStatus
 import io.mockk.Awaits

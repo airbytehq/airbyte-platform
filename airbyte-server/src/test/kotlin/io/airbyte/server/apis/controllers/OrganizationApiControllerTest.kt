@@ -46,7 +46,6 @@ internal class OrganizationApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testUpdateOrganization() {
     every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
 
@@ -55,7 +54,6 @@ internal class OrganizationApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCreateOrganization() {
     every { organizationsHandler.createOrganization(any()) } returns OrganizationRead()
 
