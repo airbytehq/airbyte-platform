@@ -9,4 +9,5 @@ import io.airbyte.config.WorkloadPriority
 data class WorkloadQueuePollRequest(
   var dataplaneGroup: String? = null,
   var priority: WorkloadPriority? = null,
+  var quantity: Int,
 )

@@ -505,7 +505,7 @@ internal class WorkloadRepositoryTest {
     seeds.forEach { workloadRepo.save(it) }
     workloads.forEach { workloadRepo.save(it) }
 
-    val result = workloadRepo.getPendingWorkloads(group, priority)
+    val result = workloadRepo.getPendingWorkloads(group, priority, 10)
 
     assertWorkloadsEqual(workloads, result)
   }
@@ -534,9 +534,9 @@ internal class WorkloadRepositoryTest {
     seeds.forEach { workloadRepo.save(it) }
     workloads.forEach { workloadRepo.save(it) }
 
-    val nullGroupResult = workloadRepo.getPendingWorkloads(null, priority)
-    val nullPriorityResult = workloadRepo.getPendingWorkloads(group, null)
-    val allNullResult = workloadRepo.getPendingWorkloads(null, null)
+    val nullGroupResult = workloadRepo.getPendingWorkloads(null, priority, 10)
+    val nullPriorityResult = workloadRepo.getPendingWorkloads(group, null, 10)
+    val allNullResult = workloadRepo.getPendingWorkloads(null, null, 10)
 
     val nullGroupExpected = workloads + differentGroup
     val nullPriorityExpected = workloads + differentPriority
@@ -634,7 +634,7 @@ internal class WorkloadRepositoryTest {
     seeds.forEach { workloadRepo.save(it) }
     workloads.forEach { workloadRepo.save(it) }
 
-    val result = workloadRepo.getPendingWorkloadsByQueue()
+    val result = workloadRepo.getPendingWorkloadQueueStats()
     val expected =
       listOf(
         WorkloadQueueStats(group, priority, workloads.size.toLong()),

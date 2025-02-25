@@ -131,11 +131,14 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     SELECT * FROM workload WHERE status = 'pending'
         AND (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
         AND (:priority IS NULL OR priority = :priority)
+        ORDER BY created_at
+        LIMIT :quantity
     """,
   )
   fun getPendingWorkloads(
     dataplaneGroup: String?,
     priority: Int?,
+    quantity: Int,
   ): List<Workload>
 
   @Query(
@@ -156,5 +159,5 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
         GROUP BY dataplane_group, priority
     """,
   )
-  fun getPendingWorkloadsByQueue(): List<WorkloadQueueStats>
+  fun getPendingWorkloadQueueStats(): List<WorkloadQueueStats>
 }

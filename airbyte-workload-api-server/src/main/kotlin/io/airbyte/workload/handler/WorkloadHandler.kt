@@ -93,6 +93,7 @@ interface WorkloadHandler {
   fun pollWorkloadQueue(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
+    quantity: Int,
   ): List<Workload>
 
   fun countWorkloadQueueDepth(

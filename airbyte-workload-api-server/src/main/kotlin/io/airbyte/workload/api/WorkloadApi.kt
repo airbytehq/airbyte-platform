@@ -537,7 +537,7 @@ open class WorkloadApi(
         MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
       ),
     )
-    val workloads = workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority)
+    val workloads = workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, req.quantity)
     return WorkloadListResponse(workloads)
   }
 
@@ -558,7 +558,7 @@ open class WorkloadApi(
   open fun countWorkloadQueueDepth(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadQueueQueryRequest::class))],
-    ) @Body req: WorkloadQueuePollRequest,
+    ) @Body req: WorkloadQueueQueryRequest,
   ): WorkloadDepthResponse {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf<String, Any?>(

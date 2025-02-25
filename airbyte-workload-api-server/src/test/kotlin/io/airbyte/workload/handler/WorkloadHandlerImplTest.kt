@@ -21,7 +21,6 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.featureFlagClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
@@ -742,8 +741,8 @@ class WorkloadHandlerImplTest {
     priority: Int,
     domainWorkloads: List<Workload>,
   ) {
-    every { workloadRepository.getPendingWorkloads(group, priority) }.returns(domainWorkloads)
-    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority))
+    every { workloadRepository.getPendingWorkloads(group, priority, 10) }.returns(domainWorkloads)
+    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
     val expected = domainWorkloads.map { it.toApi() }
 
     assertEquals(expected, result)
@@ -767,7 +766,7 @@ class WorkloadHandlerImplTest {
   fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority)`(
     stats: List<WorkloadQueueStats>,
   ) {
-    every { workloadRepository.getPendingWorkloadsByQueue() }.returns(stats)
+    every { workloadRepository.getPendingWorkloadQueueStats() }.returns(stats)
     val result = workloadHandler.getWorkloadQueueStats()
     val expected = stats.map { it.toApi() }
 

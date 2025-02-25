@@ -298,9 +298,10 @@ class WorkloadApiTest(
       WorkloadQueuePollRequest(
         dataplaneGroup = "dataplane-group-1",
         priority = WorkloadPriority.DEFAULT,
+        10,
       )
 
-    every { workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority) }.returns(emptyList())
+    every { workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, 10) }.returns(emptyList())
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/poll", req), HttpStatus.OK)
   }
 

@@ -299,8 +299,9 @@ class WorkloadHandlerImpl(
   override fun pollWorkloadQueue(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
+    quantity: Int,
   ): List<Workload> {
-    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt())
+    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -311,7 +312,7 @@ class WorkloadHandlerImpl(
   ): Long = workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
-    val domainStats = workloadRepository.getPendingWorkloadsByQueue()
+    val domainStats = workloadRepository.getPendingWorkloadQueueStats()
 
     return domainStats.map { it.toApi() }
   }

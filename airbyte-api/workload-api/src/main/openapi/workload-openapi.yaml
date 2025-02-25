@@ -628,6 +628,8 @@ components:
       - default
       x-type: String
     WorkloadQueuePollRequest:
+      required:
+      - quantity
       type: object
       properties:
         dataplaneGroup:
@@ -637,6 +639,9 @@ components:
           nullable: true
           allOf:
           - $ref: "#/components/schemas/WorkloadPriority"
+        quantity:
+          type: integer
+          format: int32
     WorkloadQueueQueryRequest:
       type: object
       properties:
