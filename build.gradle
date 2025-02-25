@@ -4,7 +4,7 @@
 buildscript {
     repositories {
         maven {
-            url "https://plugins.gradle.org/m2/"
+            url = "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
@@ -48,14 +48,14 @@ plugins {
 repositories {
     mavenCentral()
     maven {
-        url 'https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/'
+        url = 'https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/'
     }
     maven {
         name = 'cloudrepo'
         url = 'https://airbyte.mycloudrepo.io/repositories/airbyte-public-jars'
         credentials {
-            username System.getenv('CLOUDREPO_USER')
-            password System.getenv('CLOUDREPO_PASSWORD')
+            username = System.getenv('CLOUDREPO_USER')
+            password = System.getenv('CLOUDREPO_PASSWORD')
         }
     }
 }
