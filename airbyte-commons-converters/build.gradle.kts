@@ -25,7 +25,6 @@ dependencies {
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-  testAnnotationProcessor(libs.jmh.annotations)
 
   testImplementation(libs.bundles.micronaut.test)
   testRuntimeOnly(libs.junit.jupiter.engine)

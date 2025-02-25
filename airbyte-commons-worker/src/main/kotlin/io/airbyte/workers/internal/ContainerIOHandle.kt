@@ -6,7 +6,6 @@ package io.airbyte.workers.internal
 
 import io.airbyte.workers.pod.FileConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.tools.ant.util.NullOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -61,6 +60,10 @@ data class ContainerIOHandle(
       )
     }
 
+    private object NullOutputStream : OutputStream() {
+      override fun write(b: Int) {}
+    }
+
     @JvmStatic
     fun source(): ContainerIOHandle {
       // The order we instantiate these matters as opening a fifo will block.
@@ -72,7 +75,7 @@ data class ContainerIOHandle(
         Channels.newInputStream(
           FileChannel.open(Path.of(FileConstants.SOURCE_DIR, FileConstants.STDOUT_PIPE_FILE), StandardOpenOption.READ),
         )
-      val nullPipe = NullOutputStream.INSTANCE
+      val nullPipe = NullOutputStream
       val exitValueFile = Path.of(FileConstants.SOURCE_DIR, FileConstants.EXIT_CODE_FILE).toFile()
       val terminationFile = Path.of(FileConstants.SOURCE_DIR, FileConstants.TERMINATION_MARKER_FILE).toFile()
 

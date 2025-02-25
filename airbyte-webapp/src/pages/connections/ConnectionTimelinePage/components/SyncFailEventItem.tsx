@@ -1,5 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { Text } from "components/ui/Text";
 
@@ -16,7 +16,7 @@ import { syncFailEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface SyncFailEventItemProps {
-  event: InferType<typeof syncFailEventSchema>;
+  event: z.infer<typeof syncFailEventSchema>;
 }
 
 export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) => {
@@ -35,7 +35,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
-        <JobStats {...event.summary} />
+        <JobStats summary={event.summary} />
         {failureUiDetails && <JobFailureDetails failureUiDetails={failureUiDetails} />}
         {!failureUiDetails && showExtendedStats && (
           <Text as="span" color="grey400" size="sm">

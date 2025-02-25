@@ -14,6 +14,7 @@ const baseEvent = {
     id: "00000000-0000-0000-0000-000000000000",
     email: "volodymyr.s.petrov@globallogic.com",
     name: "Volodymyr Petrov",
+    isDeleted: false,
   },
   createdAt: 1732114841,
 };
