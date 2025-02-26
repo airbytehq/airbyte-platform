@@ -44,7 +44,38 @@ class JobServiceDataImpl(
       .findAll(
         Specifications.jobWithAssociatedAttempts(
           configTypes = configTypes.map { it.toEntity() }.toSet(),
-          scope = scope,
+          scopes = scope?.takeIf { it.isNotBlank() }?.let { setOf(it) } ?: emptySet(),
+          statuses = statuses.map { it.toEntity() }.toSet(),
+          createdAtStart = createdAtStart,
+          createdAtEnd = createdAtEnd,
+          updatedAtStart = updatedAtStart,
+          updatedAtEnd = updatedAtEnd,
+        ),
+        pageable,
+      ).toList()
+      .map { it.toConfigModel() }
+      .toList()
+  }
+
+  override fun listJobsForScopes(
+    configTypes: Set<JobConfig.ConfigType>,
+    scopes: Set<String>,
+    limit: Int,
+    offset: Int,
+    statuses: List<io.airbyte.config.JobStatus>,
+    createdAtStart: OffsetDateTime?,
+    createdAtEnd: OffsetDateTime?,
+    updatedAtStart: OffsetDateTime?,
+    updatedAtEnd: OffsetDateTime?,
+    orderByField: String?,
+    orderByMethod: String?,
+  ): List<Job> {
+    val pageable = buildPageable(limit, offset, orderByField, orderByMethod)
+    return jobsWithAttemptsRepository
+      .findAll(
+        Specifications.jobWithAssociatedAttempts(
+          configTypes = configTypes.map { it.toEntity() }.toSet(),
+          scopes = scopes,
           statuses = statuses.map { it.toEntity() }.toSet(),
           createdAtStart = createdAtStart,
           createdAtEnd = createdAtEnd,

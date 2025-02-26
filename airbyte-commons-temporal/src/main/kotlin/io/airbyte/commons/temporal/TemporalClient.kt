@@ -44,6 +44,8 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
+import io.temporal.api.filter.v1.StatusFilter
+import io.temporal.api.filter.v1.WorkflowTypeFilter
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest
 import io.temporal.client.WorkflowOptions
@@ -126,6 +128,8 @@ class TemporalClient(
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
         .setNamespace(workflowClientWrapped.getNamespace())
+        .setStatusFilter(StatusFilter.newBuilder().setStatus(executionStatus).build())
+        .setTypeFilter(WorkflowTypeFilter.newBuilder().setName(ConnectionManagerWorkflow::class.java.getSimpleName()).build())
         .build()
 
     val workflowExecutionInfos = mutableSetOf<UUID>()

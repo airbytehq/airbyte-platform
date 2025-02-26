@@ -55,3 +55,6 @@ flags:
         serve: true
   - name: platform.fail-sync-on-invalid-checksum
     serve: false
+  # If set to 'true', the platform will allow custom code to be executed in the platform.
+  - name: platform.use-allow-custom-code
+    serve: false

@@ -165,17 +165,42 @@ public class DeclarativeOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
-   * Determines the content type for the token request based on the provided OAuth configuration.
+   * Determines the token request content type based on the provided OAuth configuration.
    *
-   * @param inputOAuthConfiguration the JSON node containing the OAuth configuration.
-   * @return the content type for the token request. If the configuration contains the access token
-   *         parameters key, the content type is JSON. Otherwise, it delegates to the superclass
-   *         implementation.
+   * @param inputOAuthConfiguration the JSON node representing the OAuth configuration.
+   * @return the determined {@code TokenRequestContentType} for the access token request.
    */
   @Override
   protected TokenRequestContentType getRequestContentType(final JsonNode inputOAuthConfiguration) {
-    final JsonNode value = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_PARAMS_KEY);
-    return (!value.isMissingNode()) ? TokenRequestContentType.JSON : super.getRequestContentType(inputOAuthConfiguration);
+    final JsonNode headers = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY);
+    final JsonNode params = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_PARAMS_KEY);
+
+    // When no 'access_token_params' are provided, fall back to the default
+    // `application/x-www-form-urlencoded`.
+    if (params.isMissingNode()) {
+      return super.getRequestContentType(inputOAuthConfiguration);
+    }
+
+    // If headers exist, try to extract the 'Content-Type'.
+    if (!headers.isMissingNode()) {
+      final JsonNode contentTypeNode = headers.get("Content-Type");
+
+      if (contentTypeNode != null) {
+        final String contentType = contentTypeNode.asText();
+
+        /* application/x-www-form-urlencoded */
+        if (TokenRequestContentType.URL_ENCODED.getContentType().equals(contentType)) {
+          return TokenRequestContentType.URL_ENCODED;
+        }
+        /* application/json */
+        if (TokenRequestContentType.JSON.getContentType().equals(contentType)) {
+          return TokenRequestContentType.JSON;
+        }
+      }
+    }
+
+    // Default to `application/json` when params exist but no recognizable 'Content-Type' is specified.
+    return TokenRequestContentType.JSON;
   }
 
   /**

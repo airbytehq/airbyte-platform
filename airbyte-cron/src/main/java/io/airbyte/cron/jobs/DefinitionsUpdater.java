@@ -7,7 +7,7 @@ package io.airbyte.cron.jobs;
 import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.metrics.MetricAttribute;
@@ -23,8 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * DefinitionsUpdater
- *
  * Automatically updates connector definitions from a remote catalog at an interval (30s). This can
  * be enabled by setting UPDATE_DEFINITIONS_CRON_ENABLED=true.
  */
@@ -36,16 +34,16 @@ public class DefinitionsUpdater {
   private static final Logger log = LoggerFactory.getLogger(DefinitionsUpdater.class);
 
   private final ApplyDefinitionsHelper applyDefinitionsHelper;
-  private final DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
   private final MetricClient metricClient;
 
   public DefinitionsUpdater(final ApplyDefinitionsHelper applyDefinitionsHelper,
-                            final DeploymentMode deploymentMode,
+                            final Configs.AirbyteEdition airbyteEdition,
                             final MetricClient metricClient) {
     log.info("Creating connector definitions updater");
 
     this.applyDefinitionsHelper = applyDefinitionsHelper;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
     this.metricClient = metricClient;
   }
 
@@ -55,7 +53,7 @@ public class DefinitionsUpdater {
   void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException {
     log.info("Updating definitions...");
     metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
-    applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);
+    applyDefinitionsHelper.apply(airbyteEdition == Configs.AirbyteEdition.CLOUD);
     log.info("Done applying remote connector definitions");
   }
 

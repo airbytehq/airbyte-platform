@@ -441,7 +441,7 @@ class ConnectionsHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.OSS);
+            Configs.AirbyteEdition.COMMUNITY);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -463,7 +463,7 @@ class ConnectionsHandlerTest {
         catalogConverter,
         apiPojoConverters,
         metricClient,
-        Configs.DeploymentMode.OSS);
+        Configs.AirbyteEdition.COMMUNITY);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

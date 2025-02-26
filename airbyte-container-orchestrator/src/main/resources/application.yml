@@ -40,7 +40,6 @@ airbyte:
   connection-id: ${CONNECTION_ID:}
   job-id: ${JOB_ID:}
   attempt-id: ${ATTEMPT_ID:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}

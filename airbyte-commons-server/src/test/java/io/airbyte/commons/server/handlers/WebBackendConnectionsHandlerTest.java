@@ -241,7 +241,7 @@ class WebBackendConnectionsHandlerTest {
         apiPojoConverters,
         workspaceHelper,
         licenseEntitlementChecker,
-        Configs.DeploymentMode.OSS);
+        Configs.AirbyteEdition.COMMUNITY);
 
     final SourceHandler sourceHandler = new SourceHandler(
         catalogService,
@@ -264,7 +264,7 @@ class WebBackendConnectionsHandlerTest {
         catalogConverter,
         apiPojoConverters,
         metricClient,
-        Configs.DeploymentMode.OSS);
+        Configs.AirbyteEdition.COMMUNITY);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,

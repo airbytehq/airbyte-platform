@@ -23,6 +23,9 @@ import org.junit.jupiter.api.Test
 import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
+private const val APPLICATION_NAME = "airbyte-workload-launcher"
+private const val DATA_PLANE_ID = "data-plane-id"
+
 internal class WorkloadApiClientTest {
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var workloadApi: WorkloadApi
@@ -32,7 +35,7 @@ internal class WorkloadApiClientTest {
   internal fun setup() {
     workloadApi = mockk()
     internalWorkloadApiClient = mockk()
-    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, DATA_PLANE_ID)
+    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, DATA_PLANE_ID, APPLICATION_NAME)
 
     every { internalWorkloadApiClient.workloadApi } returns workloadApi
   }
@@ -126,9 +129,5 @@ internal class WorkloadApiClientTest {
 
     verify(exactly = 1) { workloadApi.workloadClaim(any()) }
     assertEquals(false, claimResult)
-  }
-
-  companion object {
-    const val DATA_PLANE_ID = "data-plane-id"
   }
 }

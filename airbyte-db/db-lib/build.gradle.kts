@@ -35,7 +35,6 @@ dependencies {
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(libs.commons.io)
 
   migrations(libs.platform.testcontainers.postgresql)
   migrations(sourceSets["main"].output)

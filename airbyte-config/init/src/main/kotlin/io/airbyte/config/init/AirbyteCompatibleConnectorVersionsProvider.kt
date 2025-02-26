@@ -30,7 +30,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 @CacheConfig("platform-compatibility-provider")
-@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^community|enterprise$")
 open class AirbyteCompatibleConnectorVersionsProvider(
   @Named("platformCompatibilityClient") val okHttpClient: OkHttpClient,
 ) {

@@ -67,7 +67,7 @@ class EnterpriseEntitlementProvider(
  */
 @Singleton
 @Replaces(DefaultEntitlementProvider::class)
-@Requires(property = "airbyte.deployment-mode", value = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^cloud$")
 class CloudEntitlementProvider(
   private val featureFlagClient: FeatureFlagClient,
 ) : EntitlementProvider {

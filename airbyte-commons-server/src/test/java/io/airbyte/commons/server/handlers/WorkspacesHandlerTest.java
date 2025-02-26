@@ -50,6 +50,7 @@ import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
+import io.airbyte.config.Configs;
 import io.airbyte.config.CustomerioNotificationConfiguration;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
@@ -164,7 +165,8 @@ class WorkspacesHandlerTest {
             apiPojoConverters,
             limitsProvider,
             consumptionService,
-            ffClient);
+            ffClient,
+            Configs.AirbyteEdition.COMMUNITY);
   }
 
   private StandardWorkspace generateWorkspace() {
@@ -956,7 +958,7 @@ class WorkspacesHandlerTest {
         new WorkspacesHandler(workspacePersistence, organizationPersistence,
             secretsRepositoryWriter, permissionPersistence, connectionsHandler,
             destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters,
-            limitsProvider, consumptionService, ffClient);
+            limitsProvider, consumptionService, ffClient, Configs.AirbyteEdition.COMMUNITY);
 
     final UUID uuid = UUID.randomUUID();
     when(uuidSupplier.get()).thenReturn(uuid);

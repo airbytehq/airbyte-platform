@@ -108,7 +108,6 @@ internal class UserApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetOrCreateUser() {
     every { userHandler.getOrCreateUserByAuthId(any()) } returns UserGetOrCreateByAuthIdResponse().userRead(UserRead())
 

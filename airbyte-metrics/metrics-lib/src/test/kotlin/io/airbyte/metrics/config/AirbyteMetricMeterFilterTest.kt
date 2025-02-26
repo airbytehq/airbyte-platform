@@ -25,7 +25,7 @@ internal class AirbyteMetricMeterFilterTest {
     val meterId = Meter.Id(metricName, Tags.of(emptyList()), null, null, Meter.Type.COUNTER)
     val filter =
       AirbyteMetricMeterFilter(
-        airbyteEdition = AirbyteEdition.AIRBYTE,
+        airbyteEdition = AirbyteEdition.CLOUD,
         metricsResolvers = metricsResolvers,
       )
     assertEquals("$METRIC_PREFIX${meterId.name}", filter.map(meterId).name)
@@ -38,7 +38,7 @@ internal class AirbyteMetricMeterFilterTest {
     val meterId = Meter.Id(metricName, Tags.of(emptyList()), null, null, Meter.Type.COUNTER)
     val filter =
       AirbyteMetricMeterFilter(
-        airbyteEdition = AirbyteEdition.AIRBYTE,
+        airbyteEdition = AirbyteEdition.CLOUD,
         metricsResolvers = metricsResolvers,
       )
     assertEquals(meterId.name, filter.map(meterId).name)
@@ -51,7 +51,7 @@ internal class AirbyteMetricMeterFilterTest {
     val meterId = Meter.Id(metricName, Tags.of(emptyList()), null, null, Meter.Type.COUNTER)
     val filter =
       AirbyteMetricMeterFilter(
-        airbyteEdition = AirbyteEdition.AIRBYTE,
+        airbyteEdition = AirbyteEdition.CLOUD,
         metricsResolvers = metricsResolvers,
       )
     assertEquals("$METRIC_PREFIX${OssMetricsRegistry.API_REQUESTS.getMetricName()}", filter.map(meterId).name)
@@ -64,7 +64,7 @@ internal class AirbyteMetricMeterFilterTest {
     val meterId = Meter.Id(metricName, Tags.of(emptyList()), null, null, Meter.Type.COUNTER)
     val filter =
       AirbyteMetricMeterFilter(
-        airbyteEdition = AirbyteEdition.AIRBYTE,
+        airbyteEdition = AirbyteEdition.CLOUD,
         metricsResolvers = metricsResolvers,
       )
     assertEquals("$METRIC_PREFIX${meterId.name}", filter.map(filter.map(meterId)).name)
@@ -72,8 +72,8 @@ internal class AirbyteMetricMeterFilterTest {
 
   @ParameterizedTest
   @CsvSource(
-    "AIRBYTE,TEST_INTERNAL_METRIC,ACCEPT",
-    "AIRBYTE,TEST_PUBLIC_METRIC,ACCEPT",
+    "CLOUD,TEST_INTERNAL_METRIC,ACCEPT",
+    "CLOUD,TEST_PUBLIC_METRIC,ACCEPT",
     "COMMUNITY,TEST_INTERNAL_METRIC,DENY",
     "COMMUNITY,TEST_PUBLIC_METRIC,DENY",
     "ENTERPRISE,TEST_INTERNAL_METRIC,DENY",
@@ -98,7 +98,7 @@ internal class AirbyteMetricMeterFilterTest {
 
   @ParameterizedTest
   @CsvSource(
-    "AIRBYTE,ACCEPT",
+    "CLOUD,ACCEPT",
     "COMMUNITY,DENY",
     "ENTERPRISE,DENY",
   )

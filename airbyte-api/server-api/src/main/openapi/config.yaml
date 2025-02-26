@@ -2400,6 +2400,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/list_minimal:
+    post:
+      tags:
+        - connection
+      summary: List all events in a given time span in a minimal representation
+      operationId: listConnectionEventsMinimal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsListMinimalRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionEventListMinimal"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/events/backfill:
     post:
       tags:
@@ -5821,6 +5844,182 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplane_group/create:
+    post:
+      summary: Create a dataplane group
+      tags:
+        - dataplane_group
+      operationId: createDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/update:
+    post:
+      summary: Update a dataplane group
+      tags:
+        - dataplane_group
+      operationId: updateDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/delete:
+    post:
+      summary: Delete a dataplane group
+      tags:
+        - dataplane_group
+      operationId: deleteDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/list:
+    post:
+      summary: List dataplane groups for the organization
+      tags:
+        - dataplane_group
+      operationId: listDataplaneGroups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplane groups for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/create:
+    post:
+      summary: Create a dataplane
+      tags:
+        - dataplane
+      operationId: createDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/update:
+    post:
+      summary: Update a dataplane
+      tags:
+        - dataplane
+      operationId: updateDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/delete:
+    post:
+      summary: Delete a dataplane
+      tags:
+        - dataplane
+      operationId: deleteDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/list:
+    post:
+      summary: List dataplanes for the dataplane group
+      tags:
+        - dataplane
+      operationId: listDataplanes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplanes for the dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/get_dataplane_id:
     post:
       summary: Get a dataplane ID given the provided request body params
@@ -5839,7 +6038,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataplaneRead"
+                $ref: "#/components/schemas/DataplaneReadId"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -8953,6 +9152,7 @@ components:
         - name
         - builderProjectId
         - hasDraft
+        - updatedAt
       properties:
         name:
           type: string
@@ -8964,6 +9164,9 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        updatedAt:
+          type: integer
+          format: int64
         baseActorDefinitionVersionInfo:
           $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
         contributionInfo:
@@ -9224,27 +9427,18 @@ components:
                 items:
                   type: object
                   description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
+              auxiliary_requests:
+                type: array
+                description: Non-data requests made at the slice level, e.g. creation / polling requests for async stream slices
+                items:
+                  $ref: "#/components/schemas/ConnectorBuilderAuxiliaryRequest"
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
         auxiliary_requests:
           type: array
           items:
-            type: object
-            required:
-              - description
-              - request
-              - response
-              - title
-            properties:
-              description:
-                type: string
-              request:
-                $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
-              response:
-                $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
-              title:
-                type: string
+            $ref: "#/components/schemas/ConnectorBuilderAuxiliaryRequest"
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
@@ -9254,6 +9448,35 @@ components:
         latest_config_update:
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
           $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderAuxiliaryRequest:
+      type: object
+      required:
+        - description
+        - request
+        - response
+        - title
+        - type
+      properties:
+        description:
+          type: string
+        request:
+          $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
+        response:
+          $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            [
+              "HTTP",
+              "AUTH",
+              "PARENT_STREAM",
+              "ASYNC_CREATE",
+              "ASYNC_POLL",
+              "ASYNC_ABORT",
+              "ASYNC_DELETE",
+            ]
     ConnectorBuilderHttpRequest:
       type: object
       required:
@@ -11167,6 +11390,22 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
+    ConnectionEventMinimal:
+      type: object
+      required:
+        - id
+        - connectionId
+        - createdAt
+        - eventType
+      properties:
+        eventId:
+          $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        createdAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        eventType:
+          $ref: "#/components/schemas/ConnectionEventType"
     ConnectionEventWithDetails:
       type: object
       required:
@@ -11194,7 +11433,6 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
-
     ConnectionEventList:
       type: object
       required:
@@ -11204,6 +11442,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionEvent"
+    ConnectionEventListMinimal:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventMinimal"
     ConnectionEventsRequestBody:
       type: object
       required:
@@ -11218,6 +11465,31 @@ components:
             $ref: "#/components/schemas/ConnectionEventType"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        createdAtStart:
+          description: The start datetime of a time range to filter by
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to filter by
+          type: string
+          format: date-time
+    ConnectionEventsListMinimalRequestBody:
+      type: object
+      required:
+        - connectionIds
+        - eventTypes
+        - createdAtStart
+        - createdAtEnd
+      properties:
+        connectionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionId"
+        eventTypes:
+          description: filter events by event types
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventType"
         createdAtStart:
           description: The start datetime of a time range to filter by
           type: string
@@ -11876,6 +12148,8 @@ components:
             - internal
         gracePeriodEndAt:
           $ref: "#/components/schemas/ISO8601DateTime"
+        newGracePeriodReason:
+          type: string
     # ORGANIZATIONS
     OrganizationId:
       type: string
@@ -15510,6 +15784,7 @@ components:
         prefix:
           type: string
           description: Prefix that will be prepended to the name of each stream when it is written to the destination (ex. “airbyte_” causes “projects” => “airbyte_projects”).
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
@@ -16497,6 +16772,7 @@ components:
       properties:
         streams:
           type: array
+          format: set
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-sdk-component: true
@@ -16577,6 +16853,177 @@ components:
           type: string
         workflowId:
           type: string
+    DataplaneGroupCreateRequestBody:
+      type: object
+      required:
+        - organization_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneGroupListRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+    DataplaneGroupRead:
+      type: object
+      required:
+        # TODO: add dataplanes when those endpoints have been added
+        - name
+        - dataplane_group_id
+        - organization_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        # TODO: add dataplanes when those endpoints have been added
+        name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneGroupListResponse:
+      type: object
+      properties:
+        dataplaneGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneGroupRead"
+
+    DataplaneCreateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        dataplane_group_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneCreateResponse:
+      type: object
+      required:
+        - dataplane_id
+        - client_id
+        - client_secret
+      properties:
+        dataplane_id:
+          type: string
+          format: UUID
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    DataplaneUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+    DataplaneListRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneRead:
+      type: object
+      required:
+        - name
+        - dataplane_id
+        - dataplane_group_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_group_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneListResponse:
+      type: object
+      properties:
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneRead"
     DataplaneGetIdRequestBody:
       type: object
       required:
@@ -16592,7 +17039,7 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         workloadPriority:
           $ref: "#/components/schemas/WorkloadPriority"
-    DataplaneRead:
+    DataplaneReadId:
       type: object
       required:
         - id

@@ -33,6 +33,7 @@ import {
   refreshConnectionStream,
   syncConnection,
   listConnectionEvents,
+  listConnectionEventsMinimal,
   webBackendCreateConnection,
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
@@ -41,6 +42,7 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
+  ConnectionEventsListMinimalRequestBody,
   ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
@@ -87,6 +89,15 @@ export const connectionsKeys = {
     connectionId: string | undefined,
     filters: string | Record<string, string | number | string[] | undefined> = {}
   ) => [...connectionsKeys.all, "eventsList", connectionId, { filters }] as const,
+  eventsListMinimal: (requestBody: ConnectionEventsListMinimalRequestBody) =>
+    [
+      ...connectionsKeys.all,
+      "eventsListMinimal",
+      ...requestBody.connectionIds,
+      ...requestBody.eventTypes,
+      requestBody.createdAtStart,
+      requestBody.createdAtEnd,
+    ] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
 };
 
@@ -687,4 +698,17 @@ export const useSetConnectionStatusActiveJob = () => {
       });
     });
   };
+};
+
+export const useGetConnectionsGraphData = (requestBody: ConnectionEventsListMinimalRequestBody) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    connectionsKeys.eventsListMinimal(requestBody),
+    () => listConnectionEventsMinimal(requestBody, requestOptions),
+    {
+      staleTime: 30_000,
+      refetchInterval: 60_000,
+    }
+  );
 };

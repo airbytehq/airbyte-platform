@@ -123,10 +123,9 @@ open class ApplicationsController(
         {
           applicationService
             .listApplicationsByUser(user)
-            .stream()
-            .filter { app -> app.id.equals(applicationId) }
-            .map { app -> toApplicationRead(app) }
-            .findFirst()
+            .firstOrNull { app -> app.id == applicationId }
+            ?.let { app -> toApplicationRead(app) }
+            .let { Optional.ofNullable(it) }
         },
         APPLICATIONS_PATH_WITH_ID,
         GET,
@@ -156,9 +155,7 @@ open class ApplicationsController(
         {
           applicationService
             .listApplicationsByUser(user)
-            .stream()
             .map { app -> toApplicationRead(app) }
-            .toList()
         },
         APPLICATIONS_PATH,
         GET,

@@ -11,7 +11,7 @@ import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.config.AirbyteSecret
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScopeType
@@ -75,7 +75,7 @@ internal class MapperSecretHelperTest {
       secretsRepositoryReader = secretsRepositoryReader,
       featureFlagClient = featureFlagClient,
       secretsProcessor = secretsProcessor,
-      deploymentMode = DeploymentMode.CLOUD,
+      airbyteEdition = Configs.AirbyteEdition.CLOUD,
       metricClient = metricClient,
     )
 
@@ -383,7 +383,7 @@ internal class MapperSecretHelperTest {
         secretsRepositoryReader = secretsRepositoryReader,
         featureFlagClient = featureFlagClient,
         secretsProcessor = secretsProcessor,
-        deploymentMode = DeploymentMode.OSS,
+        airbyteEdition = Configs.AirbyteEdition.COMMUNITY,
         metricClient = metricClient,
       )
 

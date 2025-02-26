@@ -11,7 +11,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseAtomicWorkloadClaim
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -22,7 +21,6 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.featureFlagClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
@@ -33,6 +31,7 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHand
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micrometer.core.instrument.Counter
@@ -51,7 +50,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -279,71 +280,25 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found when claiming workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
+  fun `claiming a workload unsuccesfully returns false`() {
+    every { workloadRepository.claim(WORKLOAD_ID, any(), any()) }.returns(null)
+    assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
-  fun `test claiming workload has already been claimed by another plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = "otherDataplaneId",
-          status = WorkloadStatus.CLAIMED,
-        ),
-      ),
-    )
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
-  }
-
-  @Test
-  fun `test claiming pending workload has already been claimed by the same plane`() {
-    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }.returns(Unit)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.PENDING,
-        ),
-      ),
-    )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
-  }
-
-  @Test
-  fun `test claiming claimed workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.CLAIMED,
-        ),
+  fun `claiming a workload successfully returns true`() {
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        dataplaneId = DATAPLANE_ID,
+        status = WorkloadStatus.CLAIMED,
       ),
     )
     assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
-  fun `test claiming running workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.RUNNING,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @Test
   fun `test claiming a workload successfully`() {
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -356,45 +311,8 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `test claiming a workload unsuccessfully`() {
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(true)
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
     assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
-  fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
-    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @Test
-  fun `test successful claim`() {
-    // Test will be obsolete once UseAtomicWorkloadClaim defaults to true
-    every { featureFlagClient.boolVariation(UseAtomicWorkloadClaim, any()) }.returns(false)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = null,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
-
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
-
-    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
   }
 
   @Test
@@ -495,7 +413,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL.getMetricName(), any(), any()) } returns mockk<Counter>()
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, any(), any()) } returns mockk<Counter>()
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
     verify {
@@ -816,6 +734,45 @@ class WorkloadHandlerImplTest {
     assertTrue(offsetDateTimeAfter10Ms.isAfter(offsetDateTime))
   }
 
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `poll workloads returns pending workloads`(
+    group: String,
+    priority: Int,
+    domainWorkloads: List<Workload>,
+  ) {
+    every { workloadRepository.getPendingWorkloads(group, priority, 10) }.returns(domainWorkloads)
+    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
+    val expected = domainWorkloads.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("countPendingWorkloadMatrix")
+  fun `count workload queue depth returns count of pending workloads`(
+    group: String,
+    priority: Int,
+    count: Long,
+  ) {
+    every { workloadRepository.countPendingWorkloads(group, priority) }.returns(count)
+    val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
+
+    assertEquals(count, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("workloadStatsMatrix")
+  fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority)`(
+    stats: List<WorkloadQueueStats>,
+  ) {
+    every { workloadRepository.getPendingWorkloadQueueStats() }.returns(stats)
+    val result = workloadHandler.getWorkloadQueueStats()
+    val expected = stats.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
     val metricClient: MetricClient = mockk(relaxed = true)
@@ -895,6 +852,34 @@ class WorkloadHandlerImplTest {
         signalInput = signalPayload,
         dataplaneGroup = dataplaneGroup,
         priority = priority,
+      )
+  }
+
+  companion object {
+    @JvmStatic
+    fun getPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, listOf(Fixtures.workload("1"), Fixtures.workload("2"), Fixtures.workload("3"))),
+        Arguments.of("group-2", 1, listOf(Fixtures.workload("1"), Fixtures.workload("3"))),
+        Arguments.of("group-3", 0, listOf(Fixtures.workload("4"))),
+        Arguments.of("group-1", 1, listOf(Fixtures.workload("1"), Fixtures.workload("2"))),
+      )
+
+    @JvmStatic
+    fun countPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, 10),
+        Arguments.of("group-2", 1, 9),
+        Arguments.of("group-3", 0, 0),
+        Arguments.of("group-1", 1, 124124124),
+      )
+
+    @JvmStatic
+    fun workloadStatsMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of(listOf(WorkloadQueueStats("group-1", 0, 10), WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-3", 0, 0))),
+        Arguments.of(listOf(WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-1", 1, 124124124))),
+        Arguments.of(listOf(WorkloadQueueStats("group-3", 0, 0))),
       )
   }
 }

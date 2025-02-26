@@ -47,7 +47,7 @@ class AirbyteMetricMeterFilter(
     val metric = cache.get(id)
     logger.debug { "Resolved metric ID $id to $metric" }
     return when (airbyteEdition) {
-      AirbyteEdition.AIRBYTE -> MeterFilterReply.ACCEPT
+      AirbyteEdition.CLOUD -> MeterFilterReply.ACCEPT
       AirbyteEdition.COMMUNITY -> MeterFilterReply.DENY
       AirbyteEdition.ENTERPRISE ->
         if (metric?.getMetricVisibility() == MetricVisibility.PUBLIC) {

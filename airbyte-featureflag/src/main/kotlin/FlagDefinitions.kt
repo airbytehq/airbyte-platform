@@ -130,6 +130,8 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
+object UseAllowCustomCode : Temporary<Boolean>(key = "platform.use-allow-custom-code", default = false)
+
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
@@ -191,5 +193,3 @@ object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
-
-object UseAtomicWorkloadClaim : Temporary<Boolean>(key = "platform.use-atomic-workload-claim", default = false)

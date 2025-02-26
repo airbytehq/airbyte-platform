@@ -5,7 +5,6 @@
 package io.airbyte.workload.launcher.client
 
 import com.amazonaws.internal.ExceptionUtils
-import io.airbyte.metrics.MetricEmittingApps
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -22,6 +21,7 @@ private val logger = KotlinLogging.logger {}
 class WorkloadApiClient(
   private val workloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
+  @Value("\${micronaut.application.name}") private val applicationName: String,
 ) {
   fun reportFailure(failure: StageError) {
     // This should never happen, but if it does, we should avoid blowing up.
@@ -49,7 +49,7 @@ class WorkloadApiClient(
     val request =
       WorkloadFailureRequest(
         workloadId,
-        MetricEmittingApps.WORKLOAD_LAUNCHER.applicationName,
+        applicationName.removePrefix("airbyte-"),
         reason,
       )
     logger.info { "Attempting to update workload: $workloadId to FAILED." }

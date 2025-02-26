@@ -8,15 +8,15 @@ import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.defaultDeadline
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
+import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
 import io.micronaut.context.env.PropertySource
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
@@ -27,97 +27,15 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.testcontainers.containers.PostgreSQLContainer
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import javax.sql.DataSource
 
-@MicronautTest(environments = [Environment.TEST])
 internal class WorkloadRepositoryTest {
-  val defaultDeadline = OffsetDateTime.now()
-
-  companion object {
-    private lateinit var context: ApplicationContext
-    lateinit var workloadRepo: WorkloadRepository
-    lateinit var workloadLabelRepo: WorkloadLabelRepository
-    private lateinit var jooqDslContext: DSLContext
-
-    // we run against an actual database to ensure micronaut data and jooq properly integrate
-    private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
-        .withDatabaseName("airbyte")
-        .withUsername("docker")
-        .withPassword("docker")
-
-    @BeforeAll
-    @JvmStatic
-    fun setup() {
-      container.start()
-      // set the micronaut datasource properties to match our container we started up
-      context =
-        ApplicationContext.run(
-          PropertySource.of(
-            "test",
-            mapOf(
-              "datasources.default.driverClassName" to "org.postgresql.Driver",
-              "datasources.default.db-type" to "postgres",
-              "datasources.default.dialect" to "POSTGRES",
-              "datasources.default.url" to container.jdbcUrl,
-              "datasources.default.username" to container.username,
-              "datasources.default.password" to container.password,
-            ),
-          ),
-        )
-
-      // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
-      val dataSource = (context.getBean(DataSource::class.java) as DelegatingDataSource).targetDataSource
-      jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
-      val databaseProviders = TestDatabaseProviders(dataSource, jooqDslContext)
-
-      // this line is what runs the migrations
-      databaseProviders.createNewConfigsDatabase()
-      workloadRepo = context.getBean(WorkloadRepository::class.java)
-      workloadLabelRepo = context.getBean(WorkloadLabelRepository::class.java)
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun dbDown() {
-      container.close()
-    }
-
-    private fun sortedSearch(
-      dataplaneIds: List<String>?,
-      statuses: List<WorkloadStatus>?,
-      updatedBefore: OffsetDateTime?,
-    ): MutableList<Workload> {
-      val workloads = workloadRepo.search(dataplaneIds, statuses, updatedBefore).toMutableList()
-      workloads.sortWith(Comparator.comparing(Workload::id))
-      return workloads
-    }
-
-    private fun sortedSearchByTypeStatusCreatedDate(
-      dataplaneIds: List<String>?,
-      statuses: List<WorkloadStatus>?,
-      types: List<WorkloadType>?,
-      createdBefore: OffsetDateTime?,
-    ): MutableList<Workload> {
-      val workloads = workloadRepo.searchByTypeStatusAndCreationDate(dataplaneIds, statuses, types, createdBefore).toMutableList()
-      workloads.sortWith(Comparator.comparing(Workload::id))
-      return workloads
-    }
-  }
-
-  private fun sortedSearchByExpiredDeadline(
-    dataplaneIds: List<String>?,
-    statuses: List<WorkloadStatus>?,
-    deadline: OffsetDateTime,
-  ): MutableList<Workload> {
-    val workloads = workloadRepo.searchForExpiredWorkloads(dataplaneIds, statuses, deadline).toMutableList()
-    workloads.sortWith(Comparator.comparing(Workload::id))
-    return workloads
-  }
-
   @AfterEach
   fun cleanDb() {
     workloadLabelRepo.deleteAll()
@@ -566,14 +484,176 @@ internal class WorkloadRepositoryTest {
     assertEquals("workload2", resultSearch[1].id)
   }
 
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `get pending workloads returns only pending workloads that match the search criteria`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = priority),
+        Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = group, priority = 8),
+      )
+    seeds.forEach { workloadRepo.save(it) }
+    workloads.forEach { workloadRepo.save(it) }
+
+    val result = workloadRepo.getPendingWorkloads(group, priority, 10)
+
+    assertWorkloadsEqual(workloads, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `get pending workloads handles nullable criteria`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val differentGroup = Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = priority)
+    val differentPriority = Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = group, priority = 8)
+
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED, dataplaneGroup = group, priority = priority),
+        differentGroup,
+        differentPriority,
+      )
+    seeds.forEach { workloadRepo.save(it) }
+    workloads.forEach { workloadRepo.save(it) }
+
+    val nullGroupResult = workloadRepo.getPendingWorkloads(null, priority, 10)
+    val nullPriorityResult = workloadRepo.getPendingWorkloads(group, null, 10)
+    val allNullResult = workloadRepo.getPendingWorkloads(null, null, 10)
+
+    val nullGroupExpected = workloads + differentGroup
+    val nullPriorityExpected = workloads + differentPriority
+    val allNullExpected = workloads + differentGroup + differentPriority
+
+    assertWorkloadsEqual(nullGroupExpected, nullGroupResult)
+    assertWorkloadsEqual(nullPriorityExpected, nullPriorityResult)
+    assertWorkloadsEqual(allNullExpected, allNullResult)
+  }
+
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `count pending workloads counts only pending workloads that match the search criteria`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = priority),
+        Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = group, priority = 8),
+      )
+    seeds.forEach { workloadRepo.save(it) }
+    workloads.forEach { workloadRepo.save(it) }
+
+    val result = workloadRepo.countPendingWorkloads(group, priority)
+
+    assertEquals(workloads.size.toLong(), result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `count pending workloads handles nullable criteria`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val differentGroup = Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = priority)
+    val differentPriority = Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = group, priority = 8)
+
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED, dataplaneGroup = group, priority = priority),
+        differentGroup,
+        differentPriority,
+      )
+    seeds.forEach { workloadRepo.save(it) }
+    workloads.forEach { workloadRepo.save(it) }
+
+    val nullGroupResult = workloadRepo.countPendingWorkloads(null, priority)
+    val nullPriorityResult = workloadRepo.countPendingWorkloads(group, null)
+    val allNullResult = workloadRepo.countPendingWorkloads(null, null)
+
+    val nullGroupExpected = (workloads.size + 1).toLong()
+    val nullPriorityExpected = (workloads.size + 1).toLong()
+    val allNullExpected = (workloads.size + 2).toLong()
+
+    assertEquals(nullGroupExpected, nullGroupResult)
+    assertEquals(nullPriorityExpected, nullPriorityResult)
+    assertEquals(allNullExpected, allNullResult)
+  }
+
+  @ParameterizedTest
+  @MethodSource("getPendingWorkloadMatrix")
+  fun `count pending workloads by queue returns a queue stats object per dataplane x priority`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val staticPending1 = Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = 1)
+    val staticPending2 = Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = "random-2", priority = 0)
+
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED),
+        staticPending1,
+        staticPending2,
+      )
+    seeds.forEach { workloadRepo.save(it) }
+    workloads.forEach { workloadRepo.save(it) }
+
+    val result = workloadRepo.getPendingWorkloadQueueStats()
+    val expected =
+      listOf(
+        WorkloadQueueStats(group, priority, workloads.size.toLong()),
+        WorkloadQueueStats(staticPending1.dataplaneGroup, staticPending1.priority, 1),
+        WorkloadQueueStats(staticPending2.dataplaneGroup, staticPending2.priority, 1),
+      )
+
+    assertEquals(expected, result)
+  }
+
   object Fixtures {
     const val WORKLOAD_ID = "test"
+    val defaultDeadline: OffsetDateTime = OffsetDateTime.now()
 
     fun workload(
       id: String = WORKLOAD_ID,
       dataplaneId: String? = null,
       status: WorkloadStatus = WorkloadStatus.PENDING,
-      workloadLabels: List<WorkloadLabel>? = listOf(),
+      workloadLabels: List<WorkloadLabel>? = null,
       inputPayload: String = "",
       logPath: String = "/",
       geography: String = "US",
@@ -597,6 +677,146 @@ internal class WorkloadRepositoryTest {
         signalInput = signalInput,
         dataplaneGroup = dataplaneGroup,
         priority = priority,
+      )
+  }
+
+  companion object {
+    private lateinit var context: ApplicationContext
+    lateinit var workloadRepo: WorkloadRepository
+    lateinit var workloadLabelRepo: WorkloadLabelRepository
+    private lateinit var jooqDslContext: DSLContext
+
+    // we run against an actual database to ensure micronaut data and jooq properly integrate
+    private val container: PostgreSQLContainer<*> =
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
+        .withDatabaseName("airbyte")
+        .withUsername("docker")
+        .withPassword("docker")
+
+    @BeforeAll
+    @JvmStatic
+    fun setup() {
+      container.start()
+      // set the micronaut datasource properties to match our container we started up
+      context =
+        ApplicationContext.run(
+          PropertySource.of(
+            "test",
+            mapOf(
+              "datasources.default.driverClassName" to "org.postgresql.Driver",
+              "datasources.default.db-type" to "postgres",
+              "datasources.default.dialect" to "POSTGRES",
+              "datasources.default.url" to container.jdbcUrl,
+              "datasources.default.username" to container.username,
+              "datasources.default.password" to container.password,
+            ),
+          ),
+        )
+
+      // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
+      val dataSource = (context.getBean(DataSource::class.java) as DelegatingDataSource).targetDataSource
+      jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
+      val databaseProviders = TestDatabaseProviders(dataSource, jooqDslContext)
+
+      // this line is what runs the migrations
+      databaseProviders.createNewConfigsDatabase()
+      workloadRepo = context.getBean(WorkloadRepository::class.java)
+      workloadLabelRepo = context.getBean(WorkloadLabelRepository::class.java)
+    }
+
+    @AfterAll
+    @JvmStatic
+    fun dbDown() {
+      container.close()
+    }
+
+    private fun sortedSearch(
+      dataplaneIds: List<String>?,
+      statuses: List<WorkloadStatus>?,
+      updatedBefore: OffsetDateTime?,
+    ): MutableList<Workload> {
+      val workloads = workloadRepo.search(dataplaneIds, statuses, updatedBefore).toMutableList()
+      workloads.sortWith(Comparator.comparing(Workload::id))
+      return workloads
+    }
+
+    private fun sortedSearchByTypeStatusCreatedDate(
+      dataplaneIds: List<String>?,
+      statuses: List<WorkloadStatus>?,
+      types: List<WorkloadType>?,
+      createdBefore: OffsetDateTime?,
+    ): MutableList<Workload> {
+      val workloads = workloadRepo.searchByTypeStatusAndCreationDate(dataplaneIds, statuses, types, createdBefore).toMutableList()
+      workloads.sortWith(Comparator.comparing(Workload::id))
+      return workloads
+    }
+
+    private fun sortedSearchByExpiredDeadline(
+      dataplaneIds: List<String>?,
+      statuses: List<WorkloadStatus>?,
+      deadline: OffsetDateTime,
+    ): MutableList<Workload> {
+      val workloads = workloadRepo.searchForExpiredWorkloads(dataplaneIds, statuses, deadline).toMutableList()
+      workloads.sortWith(Comparator.comparing(Workload::id))
+      return workloads
+    }
+
+    /**
+     * Compares 2 lists of workloads ignoring order and normalizing timestamp precision.
+     */
+    fun assertWorkloadsEqual(
+      a: List<Workload>,
+      b: List<Workload>,
+    ) {
+      val aGroomed =
+        a
+          .map {
+            it.createdAt = it.createdAt?.truncatedTo(ChronoUnit.MILLIS)
+            it.updatedAt = it.updatedAt?.truncatedTo(ChronoUnit.MILLIS)
+            it.deadline = it.deadline?.truncatedTo(ChronoUnit.MILLIS)
+            it
+          }.sortedBy { it.id }
+      val bGroomed =
+        b
+          .map {
+            it.createdAt = it.createdAt?.truncatedTo(ChronoUnit.MILLIS)
+            it.updatedAt = it.updatedAt?.truncatedTo(ChronoUnit.MILLIS)
+            it.deadline = it.deadline?.truncatedTo(ChronoUnit.MILLIS)
+            it
+          }.sortedBy { it.id }
+
+      assertEquals(aGroomed, bGroomed)
+    }
+
+    @JvmStatic
+    fun getPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of(
+          "group-1",
+          0,
+          listOf(
+            Fixtures.workload(id = "1", dataplaneGroup = "group-1", priority = 0),
+            Fixtures.workload(id = "2", dataplaneGroup = "group-1", priority = 0),
+            Fixtures.workload(id = "3", dataplaneGroup = "group-1", priority = 0),
+          ),
+        ),
+        Arguments.of(
+          "group-2",
+          1,
+          listOf(
+            Fixtures.workload(id = "1", dataplaneGroup = "group-2", priority = 1),
+            Fixtures.workload(id = "3", dataplaneGroup = "group-2", priority = 1),
+          ),
+        ),
+        Arguments.of("group-3", 0, listOf(Fixtures.workload(id = "4", dataplaneGroup = "group-3", priority = 0))),
+        Arguments.of(
+          "group-1",
+          1,
+          listOf(
+            Fixtures.workload(id = "1", dataplaneGroup = "group-1", priority = 1),
+            Fixtures.workload(id = "2", dataplaneGroup = "group-1", priority = 1),
+          ),
+        ),
       )
   }
 }

@@ -3,7 +3,7 @@ global:
   # imagePullSecrets:
   #   - name: ""
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
+  edition: community
   extraContainers: []
   database:
     secretName: ""

@@ -10,7 +10,7 @@ import io.airbyte.api.problems.throwable.generated.MapperSecretNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.RuntimeSecretsManagerRequiredProblem
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
@@ -48,7 +48,7 @@ class MapperSecretHelper(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   @Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
   private val featureFlagClient: FeatureFlagClient,
-  private val deploymentMode: DeploymentMode,
+  private val airbyteEdition: AirbyteEdition,
   private val metricClient: MetricClient,
 ) {
   @Inject
@@ -60,7 +60,7 @@ class MapperSecretHelper(
     secretsRepositoryReader: SecretsRepositoryReader,
     @Named("jsonSecretsProcessorWithCopy") secretsProcessor: JsonSecretsProcessor,
     featureFlagClient: FeatureFlagClient,
-    deploymentMode: DeploymentMode,
+    airbyteEdition: AirbyteEdition,
     metricClient: MetricClient,
   ) : this(
     mappers.associateBy { it.name },
@@ -70,7 +70,7 @@ class MapperSecretHelper(
     secretsRepositoryReader,
     secretsProcessor,
     featureFlagClient,
-    deploymentMode,
+    airbyteEdition,
     metricClient,
   )
 
@@ -82,7 +82,7 @@ class MapperSecretHelper(
     mapperConfig: MapperConfig,
     organizationId: UUID,
   ): Boolean {
-    if (deploymentMode != DeploymentMode.CLOUD) {
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
       return false
     }
 

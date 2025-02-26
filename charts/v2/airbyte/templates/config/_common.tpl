@@ -186,24 +186,6 @@ Renders the common.connectorBuilderServer.apiHost environment variable
 {{- end }}
 
 {{/*
-Renders the global.deploymentMode value
-*/}}
-{{- define "airbyte.common.deploymentMode" }}
-    {{- upper .Values.global.deploymentMode }}
-{{- end }}
-
-{{/*
-Renders the common.deploymentMode environment variable
-*/}}
-{{- define "airbyte.common.deploymentMode.env" }}
-- name: DEPLOYMENT_MODE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DEPLOYMENT_MODE
-{{- end }}
-
-{{/*
 Renders the global.api.internalHost value
 */}}
 {{- define "airbyte.common.api.internalHost" }}
@@ -271,7 +253,6 @@ Renders the set of all common environment variables
 {{- include "airbyte.common.server.host.env" . }}
 {{- include "airbyte.common.api.authEnabled.env" . }}
 {{- include "airbyte.common.connectorBuilderServer.apiHost.env" . }}
-{{- include "airbyte.common.deploymentMode.env" . }}
 {{- include "airbyte.common.api.internalHost.env" . }}
 {{- include "airbyte.common.local.env" . }}
 {{- include "airbyte.common.webapp.url.env" . }}
@@ -291,7 +272,6 @@ AIRBYTE_API_AUTH_HEADER_NAME: {{ include "airbyte.common.api.authHeaderName" . |
 AIRBYTE_SERVER_HOST: {{ include "airbyte.common.server.host" . | quote }}
 API_AUTHORIZATION_ENABLED: {{ include "airbyte.common.api.authEnabled" . | quote }}
 CONNECTOR_BUILDER_SERVER_API_HOST: {{ include "airbyte.common.connectorBuilderServer.apiHost" . | quote }}
-DEPLOYMENT_MODE: {{ include "airbyte.common.deploymentMode" . | quote }}
 INTERNAL_API_HOST: {{ include "airbyte.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte.common.local" . | quote }}
 WEBAPP_URL: {{ include "airbyte.common.webapp.url" . | quote }}

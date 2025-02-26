@@ -466,7 +466,7 @@ class PayloadKubeInputMapperTest {
         every { workspaceId } returns workspaceId1
       }
     val expectedEnv = listOf(EnvVar("key-1", "value-1", null))
-    every { envVarFactory.specConnectorEnvVars(workloadId) } returns expectedEnv
+    every { envVarFactory.specConnectorEnvVars(launcherConfig, workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
 
     val input: SpecInput = mockk()
@@ -529,7 +529,7 @@ class PayloadKubeInputMapperTest {
         attemptId = 1
       }
 
-    every { envVarFactory.specConnectorEnvVars(any()) } returns emptyList()
+    every { envVarFactory.specConnectorEnvVars(any(), any()) } returns emptyList()
     every { envVarFactory.checkConnectorEnvVars(any(), any(), any()) } returns emptyList()
     every { envVarFactory.discoverConnectorEnvVars(any(), any(), any()) } returns emptyList()
     every { envVarFactory.orchestratorEnvVars(any(), any()) } returns emptyList()

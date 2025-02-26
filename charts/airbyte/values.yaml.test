@@ -6,8 +6,8 @@ global:
   
   ##  serviceAccountName -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
+  ##  edition -- Airbyte edition, whether or not render the default env vars and volumes in deployment spec
+  edition: "community"
   image:
     tag: dev
 

@@ -40,7 +40,6 @@ micronaut:
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   internal-api:
     auth-header:

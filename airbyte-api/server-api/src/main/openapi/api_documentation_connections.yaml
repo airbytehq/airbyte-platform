@@ -718,6 +718,7 @@ components:
           description: "Prefix that will be prepended to the name of each stream when\
             \ it is written to the destination (ex. “airbyte_” causes “projects” =>\
             \ “airbyte_projects”)."
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
@@ -1654,6 +1655,7 @@ components:
       properties:
         streams:
           type: "array"
+          format: "set"
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-speakeasy-component: true
@@ -1695,6 +1697,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
       - "full_refresh_overwrite"
+      - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
       - "incremental_append"
       - "incremental_deduped_history"

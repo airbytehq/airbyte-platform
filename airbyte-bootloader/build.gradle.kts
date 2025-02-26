@@ -59,7 +59,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.bootloader.Application"
+    mainClass = "io.airbyte.bootloader.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

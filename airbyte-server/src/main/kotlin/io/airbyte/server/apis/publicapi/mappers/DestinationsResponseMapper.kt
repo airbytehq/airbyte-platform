@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationReadList
 import io.airbyte.publicApi.server.generated.models.DestinationsResponse
 import io.airbyte.server.apis.publicapi.constants.DESTINATIONS_PATH
@@ -49,11 +48,7 @@ object DestinationsResponseMapper {
     return DestinationsResponse(
       next = PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
-      data =
-        destinationReadList.destinations
-          .stream()
-          .map { obj: DestinationRead? -> DestinationReadMapper.from(obj!!) }
-          .toList(),
+      data = destinationReadList.destinations.map { obj -> DestinationReadMapper.from(obj!!) },
     )
   }
 }

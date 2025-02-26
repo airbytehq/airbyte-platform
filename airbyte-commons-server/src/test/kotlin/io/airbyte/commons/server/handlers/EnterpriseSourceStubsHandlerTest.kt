@@ -6,6 +6,8 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.config.ConfigSchema
+import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -136,12 +138,11 @@ class EnterpriseSourceStubsHandlerTest {
 
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
     every {
-      licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.SOURCE_CONNECTOR, listOf(unlicensedDefinitionId, licensedDefinitionId))
-    } returns
-      mapOf(
-        licensedDefinitionId to true,
-        unlicensedDefinitionId to false,
-      )
+      licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, unlicensedDefinitionId)
+    } returns false
+    every {
+      licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, licensedDefinitionId)
+    } returns true
 
     val result = enterpriseSourceHandler.listEnterpriseSourceStubsForWorkspace(workspaceId)
 
@@ -153,5 +154,45 @@ class EnterpriseSourceStubsHandlerTest {
     assertEquals("Test Fake Source", result.enterpriseSourceStubs[1].name)
     assertEquals("test-fake-id", result.enterpriseSourceStubs[1].id)
     assertNull(result.enterpriseSourceStubs[1].definitionId)
+  }
+
+  @Test
+  fun testListEnterpriseSourceStubsForWorkspace_DefinitionNotFound() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+
+    val definitionId = UUID.randomUUID()
+
+    val mockJsonResponse =
+      """
+      [
+        {
+          "name": "Test Source",
+          "type": "enterprise_source",
+          "id": "test-id",
+          "definitionId": "$definitionId"
+        }
+      ]
+      """.trimIndent()
+
+    mockWebServer.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setBody(mockJsonResponse)
+        .addHeader("Content-Type", "application/json"),
+    )
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
+    every {
+      licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, definitionId)
+    } throws ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, definitionId.toString())
+
+    val result = enterpriseSourceHandler.listEnterpriseSourceStubsForWorkspace(workspaceId)
+
+    assertNotNull(result)
+    assertEquals(1, result.enterpriseSourceStubs.size)
+    assertEquals("Test Source", result.enterpriseSourceStubs[0].name)
+    assertEquals("test-id", result.enterpriseSourceStubs[0].id)
+    assertEquals(definitionId.toString(), result.enterpriseSourceStubs[0].definitionId)
   }
 }

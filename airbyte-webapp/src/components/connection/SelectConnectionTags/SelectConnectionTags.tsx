@@ -89,11 +89,6 @@ const TagRow: React.FC<TagRowProps> = ({ disabled, handleTagChange, isSelected, 
         [styles["selectConnectionTags__tagRow--disabled"]]: disabled,
       })}
       onClick={() => handleTagChange(!isSelected, tag)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          handleTagChange(isSelected, tag);
-        }
-      }}
       disabled={disabled}
     >
       <FlexContainer gap="md" alignItems="center">

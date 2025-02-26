@@ -9,7 +9,7 @@ import static org.mockito.Mockito.mock;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -42,7 +42,7 @@ class JobErrorReporterTest {
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final String CONNECTION_URL = "http://localhost:8000/connection/my_connection";
   private static final String WORKSPACE_URL = "http://localhost:8000/workspace/my_workspace";
-  private static final DeploymentMode DEPLOYMENT_MODE = DeploymentMode.OSS;
+  private static final Configs.AirbyteEdition AIRBYTE_EDITION = Configs.AirbyteEdition.CLOUD;
   private static final String AIRBYTE_VERSION = "0.1.40";
   private static final String DOCKER_IMAGE_TAG = "1.2.3";
 
@@ -66,7 +66,7 @@ class JobErrorReporterTest {
   private static final String WORKSPACE_URL_KEY = "workspace_url";
   private static final String CONNECTION_ID_KEY = "connection_id";
   private static final String CONNECTION_URL_KEY = "connection_url";
-  private static final String DEPLOYMENT_MODE_KEY = "deployment_mode";
+  private static final String AIRBYTE_EDITION_KEY = "airbyte_edition";
   private static final String AIRBYTE_VERSION_KEY = "airbyte_version";
   private static final String FAILURE_ORIGIN_KEY = "failure_origin";
   private static final String SOURCE = "source";
@@ -105,7 +105,7 @@ class JobErrorReporterTest {
         sourceService,
         destinationService,
         workspaceService,
-        DEPLOYMENT_MODE,
+        AIRBYTE_EDITION,
         AIRBYTE_VERSION,
         webUrlHelper,
         jobErrorReportingClient);
@@ -184,7 +184,7 @@ class JobErrorReporterTest {
         Map.entry(WORKSPACE_URL_KEY, WORKSPACE_URL),
         Map.entry(CONNECTION_ID_KEY, CONNECTION_ID.toString()),
         Map.entry(CONNECTION_URL_KEY, CONNECTION_URL),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, SOURCE),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -201,7 +201,7 @@ class JobErrorReporterTest {
         Map.entry(WORKSPACE_URL_KEY, WORKSPACE_URL),
         Map.entry(CONNECTION_ID_KEY, CONNECTION_ID.toString()),
         Map.entry(CONNECTION_URL_KEY, CONNECTION_URL),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, "destination"),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -281,7 +281,7 @@ class JobErrorReporterTest {
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, SOURCE),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -340,7 +340,7 @@ class JobErrorReporterTest {
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
         Map.entry(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
         Map.entry(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, "destination"),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -393,7 +393,7 @@ class JobErrorReporterTest {
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, "destination"),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -435,7 +435,7 @@ class JobErrorReporterTest {
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
         Map.entry(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
         Map.entry(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, SOURCE),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -471,7 +471,7 @@ class JobErrorReporterTest {
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, SOURCE),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
@@ -518,7 +518,7 @@ class JobErrorReporterTest {
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
+        Map.entry(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name()),
         Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
         Map.entry(FAILURE_ORIGIN_KEY, SOURCE),
         Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),

@@ -19,7 +19,7 @@ export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Ta
   const { mutateAsync: createTag } = useCreateTag();
   const initialValue = props.getValue();
   const [selectedTags, setSelectedTags] = useState(props.getValue());
-  const { mutateAsync: updateConnectionTags } = useUpdateConnectionOptimistically();
+  const { mutateAsync: updateConnectionOptimistically } = useUpdateConnectionOptimistically();
 
   useEffect(() => {
     setSelectedTags(initialValue);
@@ -39,11 +39,12 @@ export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Ta
   };
 
   const updateTags = useCallback(() => {
-    updateConnectionTags({
+    updateConnectionOptimistically({
       connectionId: props.row.original.connectionId,
       tags: selectedTags,
+      skipReset: true,
     });
-  }, [props.row.original.connectionId, selectedTags, updateConnectionTags]);
+  }, [props.row.original.connectionId, selectedTags, updateConnectionOptimistically]);
 
   return (
     <Box py="md" px="lg">

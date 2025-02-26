@@ -776,6 +776,7 @@ components:
           description: "Prefix that will be prepended to the name of each stream when\
             \ it is written to the destination (ex. “airbyte_” causes “projects” =>\
             \ “airbyte_projects”)."
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
@@ -1712,6 +1713,7 @@ components:
       properties:
         streams:
           type: "array"
+          format: "set"
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-speakeasy-component: true
@@ -1753,6 +1755,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
       - "full_refresh_overwrite"
+      - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
       - "incremental_append"
       - "incremental_deduped_history"
@@ -11068,6 +11071,15 @@ components:
             \ is intended for usecases which can easily rebuild the dependent objects."
           title: "Drop tables with CASCADE. (WARNING! Risk of unrecoverable data loss)"
           order: 11
+        unconstrained_number:
+          type: "boolean"
+          default: false
+          description: "Create numeric columns as unconstrained DECIMAL instead of\
+            \ NUMBER(38, 9). This will allow increased precision in numeric values.\
+            \ (this is disabled by default for backwards compatibility, but is recommended\
+            \ to enable)"
+          title: "Unconstrained numeric columns"
+          order: 12
         tunnel_method:
           type: "object"
           title: "SSH Tunnel Method"
@@ -11414,6 +11426,15 @@ components:
             \ is intended for usecases which can easily rebuild the dependent objects."
           title: "Drop tables with CASCADE. (WARNING! Risk of unrecoverable data loss)"
           order: 11
+        unconstrained_number:
+          type: "boolean"
+          default: false
+          description: "Create numeric columns as unconstrained DECIMAL instead of\
+            \ NUMBER(38, 9). This will allow increased precision in numeric values.\
+            \ (this is disabled by default for backwards compatibility, but is recommended\
+            \ to enable)"
+          title: "Unconstrained numeric columns"
+          order: 12
         tunnel_method:
           type: "object"
           title: "SSH Tunnel Method"

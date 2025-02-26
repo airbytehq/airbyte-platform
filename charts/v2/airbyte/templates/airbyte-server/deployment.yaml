@@ -67,7 +67,7 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
-        {{- if (eq .Values.global.deploymentMode "oss") }}
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
         {{- end}}
@@ -96,7 +96,7 @@ spec:
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
-        {{- else if (eq .Values.global.deploymentMode "oss") }}
+        {{- else if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
         {{- else }}

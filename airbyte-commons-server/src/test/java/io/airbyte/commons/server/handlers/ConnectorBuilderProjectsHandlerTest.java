@@ -642,7 +642,7 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(A_CONFIG_INJECTION));
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
@@ -672,7 +672,7 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withProtocolVersion("0.2.0")),
         eq(workspaceId),
         eq(ScopeType.WORKSPACE));
-    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
+    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionsForPath(eq(List.of(A_CONFIG_INJECTION)));
   }
 
   @Test
@@ -826,7 +826,8 @@ class ConnectorBuilderProjectsHandlerTest {
     final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null);
     final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
     final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
-        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),
+        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null,
+            List.of())),
         false, null, null, null, null);
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);

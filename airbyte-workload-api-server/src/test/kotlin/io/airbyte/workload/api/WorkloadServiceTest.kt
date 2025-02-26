@@ -6,7 +6,7 @@ package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.DataplaneApi
-import io.airbyte.api.client.model.generated.DataplaneRead
+import io.airbyte.api.client.model.generated.DataplaneReadId
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
@@ -45,7 +45,7 @@ class WorkloadServiceTest {
     every { messageProducer.publish(any(), any(), any()) } returns Unit
     every { metricClient.count(metric = any(), value = any(), attributes = anyVararg<MetricAttribute>()) } returns mockk<Counter>()
     every { airbyteApiClient.dataplaneApi } returns dataplaneApi
-    every { dataplaneApi.getDataplaneId(any()) } returns DataplaneRead(dataplaneId)
+    every { dataplaneApi.getDataplaneId(any()) } returns DataplaneReadId(dataplaneId)
   }
 
   @ParameterizedTest

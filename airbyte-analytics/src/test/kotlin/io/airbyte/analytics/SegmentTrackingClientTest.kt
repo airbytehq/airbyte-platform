@@ -30,7 +30,7 @@ class SegmentTrackingClientTest {
   private val deploymentMetadata: DeploymentMetadataRead =
     DeploymentMetadataRead(
       id = deploymentId,
-      mode = Configs.DeploymentMode.OSS.name,
+      mode = Configs.AirbyteEdition.COMMUNITY.name,
       version = airbyteVersion.serialize(),
     )
   private val deployment: Deployment = Deployment(deploymentMetadata)

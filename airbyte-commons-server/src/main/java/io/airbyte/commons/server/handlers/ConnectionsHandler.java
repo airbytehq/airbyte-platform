@@ -26,9 +26,12 @@ import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventList;
+import io.airbyte.api.model.generated.ConnectionEventListMinimal;
+import io.airbyte.api.model.generated.ConnectionEventMinimal;
 import io.airbyte.api.model.generated.ConnectionEventType;
 import io.airbyte.api.model.generated.ConnectionEventWithDetails;
 import io.airbyte.api.model.generated.ConnectionEventsBackfillRequestBody;
+import io.airbyte.api.model.generated.ConnectionEventsListMinimalRequestBody;
 import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
@@ -123,6 +126,7 @@ import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
+import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
@@ -1221,6 +1225,23 @@ public class ConnectionsHandler {
       connectionTimelineEventService.writeEventWithTimestamp(
           UUID.fromString(job.getScope()), event, null, Instant.ofEpochSecond(job.getUpdatedAtInSecond()).atOffset(ZoneOffset.UTC));
     });
+  }
+
+  public ConnectionEventListMinimal listConnectionEventsMinimal(ConnectionEventsListMinimalRequestBody requestBody) {
+    final List<ConnectionTimelineEventMinimal> events = connectionTimelineEventService.listEventsMinimal(
+        requestBody.getConnectionIds(),
+        convertConnectionType(requestBody.getEventTypes()),
+        requestBody.getCreatedAtStart(),
+        requestBody.getCreatedAtEnd());
+    return new ConnectionEventListMinimal().events(events.stream().map(this::minimalTimelineEventToApiResponse).collect(Collectors.toList()));
+  }
+
+  private ConnectionEventMinimal minimalTimelineEventToApiResponse(final ConnectionTimelineEventMinimal timelineEvent) {
+    return new ConnectionEventMinimal()
+        .connectionId(timelineEvent.getConnectionId())
+        .createdAt(timelineEvent.getCreatedAt())
+        .eventType(ConnectionEventType.fromString(timelineEvent.getEventType()))
+        .eventId(timelineEvent.getId());
   }
 
   /**

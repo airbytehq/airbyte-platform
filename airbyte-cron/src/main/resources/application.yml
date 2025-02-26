@@ -40,7 +40,6 @@ airbyte:
   cron:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}

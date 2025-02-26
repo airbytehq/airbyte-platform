@@ -10,6 +10,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
@@ -88,10 +89,10 @@ class InternalApiAuthenticationFactory {
         com.auth0.jwt.algorithms.Algorithm
           .RSA256(null, key)
       val signedToken = token.sign(algorithm)
-      metricClient.count(metricName = "api-client.auth-token.success")
+      metricClient.count(metric = OssMetricsRegistry.API_CLIENT_AUTH_TOKEN_SUCCESS)
       return "Bearer $signedToken"
     } catch (e: Exception) {
-      metricClient.count(metricName = "api-client.auth-token.failure")
+      metricClient.count(metric = OssMetricsRegistry.API_CLIENT_AUTH_TOKEN_FAILURE)
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }

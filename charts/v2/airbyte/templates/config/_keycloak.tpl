@@ -153,7 +153,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.deploymentMode "oss")) }}
+    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.edition "community")) }}
 {{- end }}
 
 {{/*
