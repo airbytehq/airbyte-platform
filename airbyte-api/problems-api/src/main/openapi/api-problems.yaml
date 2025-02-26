@@ -919,6 +919,27 @@ components:
               default: A data plane group with this name already exists for this organization.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    DataplaneNameAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:dataplane-name-already-exists
+            title:
+              type: string
+              default: Data plane name already exists
+            detail:
+              type: string
+              default: A data plane with this name already exists for the data plane group.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     TagAlreadyExistsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

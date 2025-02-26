@@ -113,7 +113,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test 2",
         enabled = false,
         updatedBy = UUID.randomUUID(),
-        tombstone = false,
+        tombstone = true,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
       )
     val dataplaneGroup3 =

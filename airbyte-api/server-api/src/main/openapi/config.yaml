@@ -5932,6 +5932,94 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/create:
+    post:
+      summary: Create a dataplane
+      tags:
+        - dataplane
+      operationId: createDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/update:
+    post:
+      summary: Update a dataplane
+      tags:
+        - dataplane
+      operationId: updateDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/delete:
+    post:
+      summary: Delete a dataplane
+      tags:
+        - dataplane
+      operationId: deleteDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/list:
+    post:
+      summary: List dataplanes for the dataplane group
+      tags:
+        - dataplane
+      operationId: listDataplanes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplanes for the dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/get_dataplane_id:
     post:
       summary: Get a dataplane ID given the provided request body params
@@ -5950,7 +6038,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataplaneRead"
+                $ref: "#/components/schemas/DataplaneReadId"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -16843,6 +16931,99 @@ components:
           items:
             $ref: "#/components/schemas/DataplaneGroupRead"
 
+    DataplaneCreateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        dataplane_group_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneCreateResponse:
+      type: object
+      required:
+        - dataplane_id
+        - client_id
+        - client_secret
+      properties:
+        dataplane_id:
+          type: string
+          format: UUID
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    DataplaneUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+    DataplaneListRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneRead:
+      type: object
+      required:
+        - name
+        - dataplane_id
+        - dataplane_group_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_group_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneListResponse:
+      type: object
+      properties:
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneRead"
     DataplaneGetIdRequestBody:
       type: object
       required:
@@ -16858,7 +17039,7 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         workloadPriority:
           $ref: "#/components/schemas/WorkloadPriority"
-    DataplaneRead:
+    DataplaneReadId:
       type: object
       required:
         - id

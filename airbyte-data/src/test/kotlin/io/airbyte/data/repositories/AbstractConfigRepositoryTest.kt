@@ -99,4 +99,5 @@ abstract class AbstractConfigRepositoryTest {
   val organizationPaymentConfigRepository = context.getBean(OrganizationPaymentConfigRepository::class.java)!!
   val tagRepository = context.getBean(TagRepository::class.java)!!
   val dataplaneGroupRepository = context.getBean(DataplaneGroupRepository::class.java)!!
+  val dataplaneRepository = context.getBean(DataplaneRepository::class.java)!!
 }

@@ -12,6 +12,8 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.runtime.http.scope.RequestScope;
 import io.micronaut.security.utils.SecurityService;
 import java.lang.invoke.MethodHandles;
+import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,16 @@ public class SecurityAwareCurrentUserService implements CurrentUserService {
       }
     }
     return this.retrievedCurrentUser;
+  }
+
+  @Override
+  public Optional<UUID> getCurrentUserIdIfExists() {
+    try {
+      return Optional.of(UUID.fromString(getCurrentUser().getAuthUserId()));
+    } catch (final Exception e) {
+      log.error("Unable to get current user associated with the request", e);
+      return Optional.empty();
+    }
   }
 
 }

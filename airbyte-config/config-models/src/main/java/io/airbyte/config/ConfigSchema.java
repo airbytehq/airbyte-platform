@@ -118,7 +118,8 @@ public enum ConfigSchema implements AirbyteConfig {
   CONNECTOR_ROLLOUT("ConnectorRollout.yaml", ConnectorRollout.class),
   USER_INVITATION("UserInvitation.yaml", UserInvitation.class),
   TAG("Tag.yaml", Tag.class),
-  DATAPLANE_GROUP("DataplaneGroup.yaml", DataplaneGroup.class);
+  DATAPLANE_GROUP("DataplaneGroup.yaml", DataplaneGroup.class),
+  DATAPLANE("Dataplane.yaml", Dataplane.class);
 
   static final Path KNOWN_SCHEMAS_ROOT = JsonSchemas.prepareSchemas("types", ConfigSchema.class);
 

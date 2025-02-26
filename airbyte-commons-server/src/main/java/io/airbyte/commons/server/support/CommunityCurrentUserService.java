@@ -8,6 +8,8 @@ import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.runtime.http.scope.RequestScope;
 import java.lang.invoke.MethodHandles;
+import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,16 @@ public class CommunityCurrentUserService implements CurrentUserService {
       }
     }
     return this.retrievedDefaultUser;
+  }
+
+  @Override
+  public Optional<UUID> getCurrentUserIdIfExists() {
+    try {
+      return Optional.of(getCurrentUser().getUserId());
+    } catch (final Exception e) {
+      log.error("Unable to get current user associated with the request", e);
+      return Optional.empty();
+    }
   }
 
 }

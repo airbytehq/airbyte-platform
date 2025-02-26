@@ -28,7 +28,7 @@ import org.jooq.exception.DataAccessException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 @Controller("/api/v1/dataplane_group")
 @Context
@@ -48,7 +48,7 @@ class DataplaneGroupApiController(
         organizationId = dataplaneGroupCreateRequestBody.organizationId
         name = dataplaneGroupCreateRequestBody.name
         enabled = dataplaneGroupCreateRequestBody.enabled
-        updatedBy = getCurrentUserIdIfExist()
+        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
       }
     return toDataplaneGroupRead(writeDataplaneGroup(createdDataplaneGroup))
   }
@@ -65,7 +65,7 @@ class DataplaneGroupApiController(
       updatedDataplaneGroup.apply {
         name = dataplaneGroupUpdateRequestBody.name
         enabled = dataplaneGroupUpdateRequestBody.enabled
-        updatedBy = getCurrentUserIdIfExist()
+        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
       }
 
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
@@ -82,7 +82,7 @@ class DataplaneGroupApiController(
     val tombstonedGroup =
       deletedDataplaneGroup.apply {
         tombstone = true
-        updatedBy = getCurrentUserIdIfExist()
+        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
       }
 
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))
@@ -126,16 +126,6 @@ class DataplaneGroupApiController(
         throw DataplaneGroupNameAlreadyExistsProblem()
       }
       throw e
-    }
-  }
-
-  fun getCurrentUserIdIfExist(): UUID? {
-    try {
-      return currentUserService.currentUser.userId
-    } catch (e: Exception) {
-      io.airbyte.commons.server.handlers.logger
-        .info { "Unable to get current user associated with the request $e" }
-      return null
     }
   }
 }

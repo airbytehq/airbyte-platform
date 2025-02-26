@@ -20,6 +20,7 @@ import org.jooq.exception.DataAccessException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
+import java.util.Optional
 import java.util.UUID
 
 class DataplaneGroupApiControllerTest {
@@ -34,7 +35,9 @@ class DataplaneGroupApiControllerTest {
 
   @Test
   fun `writeDataplaneGroup returns the dataplane group`() {
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns createDataplaneGroup()
+
     val dataplaneGroup = dataplaneGroupApiController.createDataplaneGroup(DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID))
     val responseDataplaneGroups = dataplaneGroup!!
 
@@ -43,7 +46,9 @@ class DataplaneGroupApiControllerTest {
 
   @Test
   fun `writeDataplaneGroup with a duplicate name returns a problem`() {
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
+
     val dataplaneGroupCreateRequestBody = DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID)
 
     assertThrows<DataplaneGroupNameAlreadyExistsProblem> {
@@ -56,12 +61,15 @@ class DataplaneGroupApiControllerTest {
     val mockDataplaneGroup = createDataplaneGroup()
     val newName = "new name"
     val newEnabled = true
+
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns
       mockDataplaneGroup.apply {
         name = newName
         enabled = newEnabled
       }
+
     val updatedDataplaneGroup =
       dataplaneGroupApiController.updateDataplaneGroup(
         DataplaneGroupUpdateRequestBody()
@@ -79,6 +87,8 @@ class DataplaneGroupApiControllerTest {
   @Test
   fun `updateDataplaneGroup with a duplicate name returns a problem`() {
     val mockDataplaneGroup = createDataplaneGroup()
+
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
@@ -90,6 +100,8 @@ class DataplaneGroupApiControllerTest {
   @Test
   fun `deleteDataplaneGroup tombstones dataplane group `() {
     val mockDataplaneGroup = createDataplaneGroup()
+
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true }) } returns
       mockDataplaneGroup.apply { tombstone = true }
@@ -107,6 +119,7 @@ class DataplaneGroupApiControllerTest {
     val dataplaneGroupId1 = UUID.randomUUID()
     val dataplaneGroupId2 = UUID.randomUUID()
 
+    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.listDataplaneGroups(MOCK_ORGANIZATION_ID, any()) } returns
       listOf(
         createDataplaneGroup(dataplaneGroupId1),
