@@ -1726,7 +1726,7 @@ components:
       properties:
         streams:
           type: "array"
-          x-speakeasy-plan-modifiers: "StreamConfigurationModifier"
+          format: "set"
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-speakeasy-component: true
@@ -2575,10 +2575,10 @@ components:
             \ syncs."
           order: 3
           title: "Start date"
+          default: "2023-12-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
-          default: "2023-12-01T00:00:00Z"
         site:
           type: "string"
           description: "The site where Datadog data resides in."
@@ -2599,10 +2599,10 @@ components:
             \ syncs."
           order: 5
           title: "End date"
+          default: "2024-01-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
-          default: "2024-01-01T00:00:00Z"
         max_records_per_request:
           type: "integer"
           description: "Maximum number of records to collect per request."
@@ -2682,10 +2682,10 @@ components:
             \ syncs."
           order: 3
           title: "Start date"
+          default: "2023-12-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
-          default: "2023-12-01T00:00:00Z"
         site:
           type: "string"
           description: "The site where Datadog data resides in."
@@ -2706,10 +2706,10 @@ components:
             \ syncs."
           order: 5
           title: "End date"
+          default: "2024-01-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
-          default: "2024-01-01T00:00:00Z"
         max_records_per_request:
           type: "integer"
           description: "Maximum number of records to collect per request."
@@ -6503,6 +6503,69 @@ components:
           order: 3
           title: "User Id"
           airbyte_secret: true
+    source-younium:
+      title: "Younium Spec"
+      type: "object"
+      required:
+      - "username"
+      - "password"
+      - "legal_entity"
+      - "sourceType"
+      properties:
+        username:
+          title: "Username"
+          type: "string"
+          description: "Username for Younium account"
+        password:
+          title: "Password"
+          type: "string"
+          description: "Account password for younium account API key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        legal_entity:
+          title: "Legal Entity"
+          type: "string"
+          description: "Legal Entity that data should be pulled from"
+        playground:
+          title: "Playground environment"
+          type: "boolean"
+          description: "Property defining if connector is used against playground\
+            \ or production environment"
+          default: false
+        sourceType:
+          title: "younium"
+          const: "younium"
+          enum:
+          - "younium"
+          order: 0
+          type: "string"
+    source-younium-update:
+      title: "Younium Spec"
+      type: "object"
+      required:
+      - "username"
+      - "password"
+      - "legal_entity"
+      properties:
+        username:
+          title: "Username"
+          type: "string"
+          description: "Username for Younium account"
+        password:
+          title: "Password"
+          type: "string"
+          description: "Account password for younium account API key"
+          airbyte_secret: true
+        legal_entity:
+          title: "Legal Entity"
+          type: "string"
+          description: "Legal Entity that data should be pulled from"
+        playground:
+          title: "Playground environment"
+          type: "boolean"
+          description: "Property defining if connector is used against playground\
+            \ or production environment"
+          default: false
     source-less-annoying-crm:
       type: "object"
       required:
@@ -6779,6 +6842,73 @@ components:
       type: "object"
       required: []
       properties: {}
+    source-tyntec-sms:
+      type: "object"
+      required:
+      - "api_key"
+      - "to"
+      - "from"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "Tyntec API Key"
+          airbyte_secret: true
+          description: "Your Tyntec API Key. See <a href=\"https://www.tyntec.com/docs/docs-center-sms-api-quick-start\"\
+            >here</a>"
+          order: 0
+          x-speakeasy-param-sensitive: true
+        to:
+          type: "string"
+          title: "SMS Message Recipient Phone"
+          description: "The phone number of the SMS message recipient (international)."
+          order: 1
+        from:
+          type: "string"
+          title: "SMS Message Sender Phone"
+          description: "The phone number of the SMS message sender (international)."
+          order: 2
+        message:
+          type: "string"
+          title: "SMS Message Body"
+          description: "The content of the SMS message to be sent."
+          order: 3
+        sourceType:
+          title: "tyntec-sms"
+          const: "tyntec-sms"
+          enum:
+          - "tyntec-sms"
+          order: 0
+          type: "string"
+    source-tyntec-sms-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "to"
+      - "from"
+      properties:
+        api_key:
+          type: "string"
+          title: "Tyntec API Key"
+          airbyte_secret: true
+          description: "Your Tyntec API Key. See <a href=\"https://www.tyntec.com/docs/docs-center-sms-api-quick-start\"\
+            >here</a>"
+          order: 0
+        to:
+          type: "string"
+          title: "SMS Message Recipient Phone"
+          description: "The phone number of the SMS message recipient (international)."
+          order: 1
+        from:
+          type: "string"
+          title: "SMS Message Sender Phone"
+          description: "The phone number of the SMS message sender (international)."
+          order: 2
+        message:
+          type: "string"
+          title: "SMS Message Body"
+          description: "The content of the SMS message to be sent."
+          order: 3
     source-elasticemail:
       type: "object"
       required:
@@ -6848,6 +6978,69 @@ components:
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 3
+    source-rocket-chat:
+      type: "object"
+      required:
+      - "endpoint"
+      - "token"
+      - "user_id"
+      - "sourceType"
+      properties:
+        endpoint:
+          type: "string"
+          title: "Endpoint"
+          description: "Your rocket.chat instance URL."
+          examples:
+          - "https://airbyte-connector-poc.rocket.chat"
+          - "https://hey.yoursite.com"
+          order: 0
+        token:
+          type: "string"
+          title: "Token"
+          description: "Your API Token. See <a href=\"https://developer.rocket.chat/reference/api/rest-api/endpoints/other-important-endpoints/access-tokens-endpoints\"\
+            >here</a>. The token is case sensitive."
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        user_id:
+          type: "string"
+          title: "User ID."
+          description: "Your User Id."
+          order: 2
+        sourceType:
+          title: "rocket-chat"
+          const: "rocket-chat"
+          enum:
+          - "rocket-chat"
+          order: 0
+          type: "string"
+    source-rocket-chat-update:
+      type: "object"
+      required:
+      - "endpoint"
+      - "token"
+      - "user_id"
+      properties:
+        endpoint:
+          type: "string"
+          title: "Endpoint"
+          description: "Your rocket.chat instance URL."
+          examples:
+          - "https://airbyte-connector-poc.rocket.chat"
+          - "https://hey.yoursite.com"
+          order: 0
+        token:
+          type: "string"
+          title: "Token"
+          description: "Your API Token. See <a href=\"https://developer.rocket.chat/reference/api/rest-api/endpoints/other-important-endpoints/access-tokens-endpoints\"\
+            >here</a>. The token is case sensitive."
+          airbyte_secret: true
+          order: 1
+        user_id:
+          type: "string"
+          title: "User ID."
+          description: "Your User Id."
+          order: 2
     source-vwo:
       type: "object"
       required:
@@ -7044,6 +7237,93 @@ components:
           title: "Token expiry date"
           format: "date-time"
           order: 4
+    source-tmdb:
+      type: "object"
+      required:
+      - "api_key"
+      - "language"
+      - "movie_id"
+      - "query"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "Unique key for establishing connection"
+          description: "API Key from tmdb account"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        language:
+          type: "string"
+          title: "Language for filtering"
+          description: "Language expressed in ISO 639-1 scheme, Mandate for required\
+            \ streams (Example en-US)"
+          examples:
+          - "en-US"
+          - "en-UK"
+          order: 1
+        movie_id:
+          type: "string"
+          title: "Movie ID for targeting movies"
+          description: "Target movie ID, Mandate for movie streams (Example is 550)"
+          examples:
+          - 550
+          - 560
+          order: 2
+        query:
+          type: "string"
+          title: "Query for search streams"
+          description: "Target movie ID, Mandate for search streams"
+          examples:
+          - "Marvel"
+          - "DC"
+          order: 3
+        sourceType:
+          title: "tmdb"
+          const: "tmdb"
+          enum:
+          - "tmdb"
+          order: 0
+          type: "string"
+    source-tmdb-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "language"
+      - "movie_id"
+      - "query"
+      properties:
+        api_key:
+          type: "string"
+          title: "Unique key for establishing connection"
+          description: "API Key from tmdb account"
+          airbyte_secret: true
+          order: 0
+        language:
+          type: "string"
+          title: "Language for filtering"
+          description: "Language expressed in ISO 639-1 scheme, Mandate for required\
+            \ streams (Example en-US)"
+          examples:
+          - "en-US"
+          - "en-UK"
+          order: 1
+        movie_id:
+          type: "string"
+          title: "Movie ID for targeting movies"
+          description: "Target movie ID, Mandate for movie streams (Example is 550)"
+          examples:
+          - 550
+          - 560
+          order: 2
+        query:
+          type: "string"
+          title: "Query for search streams"
+          description: "Target movie ID, Mandate for search streams"
+          examples:
+          - "Marvel"
+          - "DC"
+          order: 3
     source-drift:
       type: "object"
       required:
@@ -8193,6 +8473,55 @@ components:
             required:
             - "name"
             - "format"
+        delivery_method:
+          title: "Delivery Method"
+          default: "use_records_transfer"
+          type: "object"
+          order: 1
+          display_type: "radio"
+          group: "advanced"
+          oneOf:
+          - title: "Replicate Records"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_records_transfer"
+                const: "use_records_transfer"
+                enum:
+                - "use_records_transfer"
+                type: "string"
+            description: "Recommended - Extract and load structured records into your\
+              \ destination of choice. This is the classic method of moving data in\
+              \ Airbyte. It allows for blocking and hashing individual fields or files\
+              \ from a structured schema. Data can be flattened, typed and deduped\
+              \ depending on the destination."
+            required:
+            - "delivery_type"
+          - title: "Copy Raw Files"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_file_transfer"
+                const: "use_file_transfer"
+                enum:
+                - "use_file_transfer"
+                type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
+            description: "Copy raw files without parsing their contents. Bits are\
+              \ copied into the destination exactly as they appeared in the source.\
+              \ Recommended for use with unstructured text data, non-text and compressed\
+              \ files."
+            required:
+            - "delivery_type"
         credentials:
           title: "Authentication"
           description: "Credentials for connecting to the One Drive API"
@@ -8700,6 +9029,55 @@ components:
             required:
             - "name"
             - "format"
+        delivery_method:
+          title: "Delivery Method"
+          default: "use_records_transfer"
+          type: "object"
+          order: 1
+          display_type: "radio"
+          group: "advanced"
+          oneOf:
+          - title: "Replicate Records"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_records_transfer"
+                const: "use_records_transfer"
+                enum:
+                - "use_records_transfer"
+                type: "string"
+            description: "Recommended - Extract and load structured records into your\
+              \ destination of choice. This is the classic method of moving data in\
+              \ Airbyte. It allows for blocking and hashing individual fields or files\
+              \ from a structured schema. Data can be flattened, typed and deduped\
+              \ depending on the destination."
+            required:
+            - "delivery_type"
+          - title: "Copy Raw Files"
+            type: "object"
+            properties:
+              delivery_type:
+                title: "Delivery Type"
+                default: "use_file_transfer"
+                const: "use_file_transfer"
+                enum:
+                - "use_file_transfer"
+                type: "string"
+              preserve_directory_structure:
+                title: "Preserve Sub-Directories in File Paths"
+                description: "If enabled, sends subdirectory folder structure along\
+                  \ with source file names to the destination. Otherwise, files will\
+                  \ be synced by their names only. This option is ignored when file-based\
+                  \ replication is not enabled."
+                default: true
+                type: "boolean"
+            description: "Copy raw files without parsing their contents. Bits are\
+              \ copied into the destination exactly as they appeared in the source.\
+              \ Recommended for use with unstructured text data, non-text and compressed\
+              \ files."
+            required:
+            - "delivery_type"
         credentials:
           title: "Authentication"
           description: "Credentials for connecting to the One Drive API"
@@ -9152,6 +9530,39 @@ components:
             >here</a>. The token is case sensitive."
           airbyte_secret: true
           order: 4
+    source-everhour:
+      type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "Everhour API Key. See the <a href=\"https://everhour.docs.apiary.io/#introduction/authentication\"\
+            >docs</a> for information on how to generate this key."
+          order: 0
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "everhour"
+          const: "everhour"
+          enum:
+          - "everhour"
+          order: 0
+          type: "string"
+    source-everhour-update:
+      type: "object"
+      required:
+      - "api_key"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "Everhour API Key. See the <a href=\"https://everhour.docs.apiary.io/#introduction/authentication\"\
+            >docs</a> for information on how to generate this key."
+          order: 0
     source-tinyemail:
       type: "object"
       required:
@@ -9276,8 +9687,8 @@ components:
           airbyte_secret: true
           order: 0
     source-railz:
-      title: "Railz Spec"
       type: "object"
+      schema: "http://json-schema.org/draft-07/schema#"
       required:
       - "client_id"
       - "secret_key"
@@ -9310,8 +9721,8 @@ components:
           order: 0
           type: "string"
     source-railz-update:
-      title: "Railz Spec"
       type: "object"
+      schema: "http://json-schema.org/draft-07/schema#"
       required:
       - "client_id"
       - "secret_key"
@@ -10330,6 +10741,59 @@ components:
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    source-hellobaton:
+      type: "object"
+      required:
+      - "api_key"
+      - "api_key"
+      - "company"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          description: "authentication key required to access the api endpoints"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        company:
+          type: "string"
+          title: "company"
+          description: "Company name that generates your base api url"
+          examples:
+          - "google"
+          - "facebook"
+          - "microsoft"
+          order: 2
+        sourceType:
+          title: "hellobaton"
+          const: "hellobaton"
+          enum:
+          - "hellobaton"
+          order: 0
+          type: "string"
+    source-hellobaton-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "api_key"
+      - "company"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          description: "authentication key required to access the api endpoints"
+          airbyte_secret: true
+          order: 1
+        company:
+          type: "string"
+          title: "company"
+          description: "Company name that generates your base api url"
+          examples:
+          - "google"
+          - "facebook"
+          - "microsoft"
+          order: 2
     source-inflowinventory:
       type: "object"
       required:
@@ -13291,6 +13755,67 @@ components:
           order: 0
           title: "Account Name"
           airbyte_secret: false
+    source-mailersend:
+      type: "object"
+      required:
+      - "api_token"
+      - "domain_id"
+      - "sourceType"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your API Token. See <a href=\"https://www.mailersend.com/help/managing-api-tokens\"\
+            >here</a>."
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        domain_id:
+          type: "string"
+          description: "The domain entity in mailersend"
+          examples:
+          - "airbyte.com"
+          - "linkana.com"
+          order: 1
+        start_date:
+          type: "number"
+          description: "Timestamp is assumed to be UTC."
+          examples:
+          - 123131321
+          title: "1668311800"
+          order: 2
+        sourceType:
+          title: "mailersend"
+          const: "mailersend"
+          enum:
+          - "mailersend"
+          order: 0
+          type: "string"
+    source-mailersend-update:
+      type: "object"
+      required:
+      - "api_token"
+      - "domain_id"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your API Token. See <a href=\"https://www.mailersend.com/help/managing-api-tokens\"\
+            >here</a>."
+          airbyte_secret: true
+          order: 0
+        domain_id:
+          type: "string"
+          description: "The domain entity in mailersend"
+          examples:
+          - "airbyte.com"
+          - "linkana.com"
+          order: 1
+        start_date:
+          type: "number"
+          description: "Timestamp is assumed to be UTC."
+          examples:
+          - 123131321
+          title: "1668311800"
+          order: 2
     source-okta:
       type: "object"
       required:
@@ -18530,6 +19055,182 @@ components:
           type: "integer"
           description: "Lag in minutes for each sync, i.e., at time T, data for the\
             \ time range [prev_sync_time, T-30] will be fetched"
+    source-workday:
+      type: "object"
+      required:
+      - "tenant_id"
+      - "host"
+      - "credentials"
+      - "sourceType"
+      properties:
+        tenant_id:
+          type: "string"
+          order: 0
+          title: "Workday tenant"
+        host:
+          type: "string"
+          order: 1
+          title: "Workday hostname"
+        credentials:
+          type: "object"
+          title: "Authentication"
+          description: "Report Based Streams and REST API Streams use different methods\
+            \ of Authentication. Choose streams type you want to sync and provide\
+            \ needed credentials for them."
+          oneOf:
+          - title: "Report Based Streams"
+            required:
+            - "username"
+            - "password"
+            - "report_ids"
+            - "auth_type"
+            properties:
+              username:
+                type: "string"
+                order: 0
+                title: "Username of your Workday account"
+              password:
+                type: "string"
+                order: 1
+                title: "Password of your Workday account"
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+              report_ids:
+                type: "array"
+                order: 2
+                title: "Report IDs you want to sync."
+                description: "Report IDs can be found by clicking the three dots on\
+                  \ the right side of the report > Web Service > View URLs > in JSON\
+                  \ url copy everything between Workday tenant/ and ?format=json."
+                examples:
+                - "for JSON url https://hostname/ccx/service/customreport2/tenant/report/id?format=json\
+                  \ Report ID is report/id."
+              auth_type:
+                order: 3
+                const: "RAAS"
+                title: "RAAS"
+                enum:
+                - "RAAS"
+          - title: "REST API Streams"
+            required:
+            - "access_token"
+            - "auth_type"
+            properties:
+              access_token:
+                type: "string"
+                order: 0
+                title: "Access token."
+                description: "Follow the instructions in the \"OAuth 2.0 in Postman\
+                  \ - API Client for Integrations\" article in the Workday community\
+                  \ docs to obtain access token."
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+              start_date:
+                type: "string"
+                order: 1
+                format: "date-time"
+                title: "Start date"
+                description: "Rows after this date will be synced, default 2 years\
+                  \ ago."
+                examples:
+                - "2024-10-26T07:00:00.000Z"
+                pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$"
+              auth_type:
+                order: 2
+                const: "REST"
+                title: "REST"
+                enum:
+                - "REST"
+        sourceType:
+          title: "workday"
+          const: "workday"
+          enum:
+          - "workday"
+          order: 0
+          type: "string"
+    source-workday-update:
+      type: "object"
+      required:
+      - "tenant_id"
+      - "host"
+      - "credentials"
+      properties:
+        tenant_id:
+          type: "string"
+          order: 0
+          title: "Workday tenant"
+        host:
+          type: "string"
+          order: 1
+          title: "Workday hostname"
+        credentials:
+          type: "object"
+          title: "Authentication"
+          description: "Report Based Streams and REST API Streams use different methods\
+            \ of Authentication. Choose streams type you want to sync and provide\
+            \ needed credentials for them."
+          oneOf:
+          - title: "Report Based Streams"
+            required:
+            - "username"
+            - "password"
+            - "report_ids"
+            - "auth_type"
+            properties:
+              username:
+                type: "string"
+                order: 0
+                title: "Username of your Workday account"
+              password:
+                type: "string"
+                order: 1
+                title: "Password of your Workday account"
+                airbyte_secret: true
+              report_ids:
+                type: "array"
+                order: 2
+                title: "Report IDs you want to sync."
+                description: "Report IDs can be found by clicking the three dots on\
+                  \ the right side of the report > Web Service > View URLs > in JSON\
+                  \ url copy everything between Workday tenant/ and ?format=json."
+                examples:
+                - "for JSON url https://hostname/ccx/service/customreport2/tenant/report/id?format=json\
+                  \ Report ID is report/id."
+              auth_type:
+                order: 3
+                const: "RAAS"
+                title: "RAAS"
+                enum:
+                - "RAAS"
+          - title: "REST API Streams"
+            required:
+            - "access_token"
+            - "auth_type"
+            properties:
+              access_token:
+                type: "string"
+                order: 0
+                title: "Access token."
+                description: "Follow the instructions in the \"OAuth 2.0 in Postman\
+                  \ - API Client for Integrations\" article in the Workday community\
+                  \ docs to obtain access token."
+                airbyte_secret: true
+              start_date:
+                type: "string"
+                order: 1
+                format: "date-time"
+                title: "Start date"
+                description: "Rows after this date will be synced, default 2 years\
+                  \ ago."
+                examples:
+                - "2024-10-26T07:00:00.000Z"
+                pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$"
+              auth_type:
+                order: 2
+                const: "REST"
+                title: "REST"
+                enum:
+                - "REST"
     source-aha:
       type: "object"
       required:
@@ -20066,6 +20767,55 @@ components:
           description: "Max Waiting Time for rate limit. Set higher value to wait\
             \ till rate limits will be resetted to continue sync"
           order: 5
+    source-service-now:
+      type: "object"
+      required:
+      - "base_url"
+      - "username"
+      - "sourceType"
+      properties:
+        base_url:
+          type: "string"
+          order: 0
+          title: "Base URL"
+        username:
+          type: "string"
+          title: "Username"
+          order: 1
+        password:
+          type: "string"
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+          order: 2
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "service-now"
+          const: "service-now"
+          enum:
+          - "service-now"
+          order: 0
+          type: "string"
+    source-service-now-update:
+      type: "object"
+      required:
+      - "base_url"
+      - "username"
+      properties:
+        base_url:
+          type: "string"
+          order: 0
+          title: "Base URL"
+        username:
+          type: "string"
+          title: "Username"
+          order: 1
+        password:
+          type: "string"
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+          order: 2
     source-guru:
       type: "object"
       required:
@@ -20141,6 +20891,113 @@ components:
           description: "Query for searching cards"
           order: 4
           title: "search_cards_query"
+    source-alpha-vantage:
+      type: "object"
+      required:
+      - "api_key"
+      - "symbol"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        symbol:
+          type: "string"
+          description: "Stock symbol (with exchange code)"
+          title: "Symbol"
+          examples:
+          - "AAPL"
+          - "TSCO.LON"
+          order: 1
+        interval:
+          type: "string"
+          description: "Time-series data point interval. Required for intraday endpoints.\n"
+          title: "Interval"
+          enum:
+          - "1min"
+          - "5min"
+          - "15min"
+          - "30min"
+          - "60min"
+          default: "1min"
+          order: 2
+        adjusted:
+          type: "boolean"
+          description: "Whether to return adjusted data. Only applicable to intraday\
+            \ endpoints.\n"
+          title: "Adjusted?"
+          default: false
+          order: 3
+        outputsize:
+          type: "string"
+          description: "Whether to return full or compact data (the last 100 data\
+            \ points).\n"
+          title: "Output Size"
+          enum:
+          - "compact"
+          - "full"
+          default: "compact"
+          order: 4
+        sourceType:
+          title: "alpha-vantage"
+          const: "alpha-vantage"
+          enum:
+          - "alpha-vantage"
+          order: 0
+          type: "string"
+    source-alpha-vantage-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "symbol"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        symbol:
+          type: "string"
+          description: "Stock symbol (with exchange code)"
+          title: "Symbol"
+          examples:
+          - "AAPL"
+          - "TSCO.LON"
+          order: 1
+        interval:
+          type: "string"
+          description: "Time-series data point interval. Required for intraday endpoints.\n"
+          title: "Interval"
+          enum:
+          - "1min"
+          - "5min"
+          - "15min"
+          - "30min"
+          - "60min"
+          default: "1min"
+          order: 2
+        adjusted:
+          type: "boolean"
+          description: "Whether to return adjusted data. Only applicable to intraday\
+            \ endpoints.\n"
+          title: "Adjusted?"
+          default: false
+          order: 3
+        outputsize:
+          type: "string"
+          description: "Whether to return full or compact data (the last 100 data\
+            \ points).\n"
+          title: "Output Size"
+          enum:
+          - "compact"
+          - "full"
+          default: "compact"
+          order: 4
     source-picqer:
       type: "object"
       required:
@@ -22618,6 +23475,106 @@ components:
           description: "Hubplanner API key. See https://github.com/hubplanner/API#authentication\
             \ for more details."
           airbyte_secret: true
+    source-babelforce:
+      type: "object"
+      required:
+      - "access_key_id"
+      - "access_token"
+      - "region"
+      - "sourceType"
+      properties:
+        access_key_id:
+          type: "string"
+          title: "Access Key ID"
+          description: "The Babelforce access key ID"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        access_token:
+          type: "string"
+          title: "Access Token"
+          description: "The Babelforce access token"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        date_created_from:
+          type: "integer"
+          title: "Date Created from"
+          description: "Timestamp in Unix the replication from Babelforce API will\
+            \ start from. For example 1651363200 which corresponds to 2022-05-01 00:00:00."
+          examples:
+          - 1651363200
+          order: 2
+        date_created_to:
+          type: "integer"
+          title: "Date Created to"
+          description: "Timestamp in Unix the replication from Babelforce will be\
+            \ up to. For example 1651363200 which corresponds to 2022-05-01 00:00:00."
+          examples:
+          - 1651363200
+          order: 3
+        region:
+          type: "string"
+          title: "Region"
+          description: "Babelforce region"
+          default: "services"
+          enum:
+          - "services"
+          - "us-east"
+          - "ap-southeast"
+          order: 4
+        sourceType:
+          title: "babelforce"
+          const: "babelforce"
+          enum:
+          - "babelforce"
+          order: 0
+          type: "string"
+    source-babelforce-update:
+      type: "object"
+      required:
+      - "access_key_id"
+      - "access_token"
+      - "region"
+      properties:
+        access_key_id:
+          type: "string"
+          title: "Access Key ID"
+          description: "The Babelforce access key ID"
+          airbyte_secret: true
+          order: 0
+        access_token:
+          type: "string"
+          title: "Access Token"
+          description: "The Babelforce access token"
+          airbyte_secret: true
+          order: 1
+        date_created_from:
+          type: "integer"
+          title: "Date Created from"
+          description: "Timestamp in Unix the replication from Babelforce API will\
+            \ start from. For example 1651363200 which corresponds to 2022-05-01 00:00:00."
+          examples:
+          - 1651363200
+          order: 2
+        date_created_to:
+          type: "integer"
+          title: "Date Created to"
+          description: "Timestamp in Unix the replication from Babelforce will be\
+            \ up to. For example 1651363200 which corresponds to 2022-05-01 00:00:00."
+          examples:
+          - 1651363200
+          order: 3
+        region:
+          type: "string"
+          title: "Region"
+          description: "Babelforce region"
+          default: "services"
+          enum:
+          - "services"
+          - "us-east"
+          - "ap-southeast"
+          order: 4
     source-redshift:
       title: "Redshift Source Spec"
       type: "object"
@@ -22753,6 +23710,117 @@ components:
             \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
           type: "string"
           order: 7
+    source-coingecko-coins:
+      title: "CoinGecko Coins Spec"
+      type: "object"
+      required:
+      - "coin_id"
+      - "vs_currency"
+      - "days"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key (for pro users)"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        coin_id:
+          type: "string"
+          description: "CoinGecko coin ID (e.g. bitcoin). Can be retrieved from the\n\
+            `/coins/list` endpoint.\n"
+          order: 1
+        vs_currency:
+          type: "string"
+          description: "The target currency of market data (e.g. usd, eur, jpy, etc.)\n"
+          order: 2
+        days:
+          type: "string"
+          description: "The number of days of data for market chart.\n"
+          enum:
+          - "1"
+          - "7"
+          - "14"
+          - "30"
+          - "90"
+          - "180"
+          - "365"
+          - "max"
+          default: "30"
+          order: 3
+        start_date:
+          type: "string"
+          description: "The start date for the historical data stream in dd-mm-yyyy\
+            \ format.\n"
+          format: "date"
+          pattern: "^[0-9]{2}-[0-9]{2}-[0-9]{4}$"
+          order: 4
+        end_date:
+          type: "string"
+          description: "The end date for the historical data stream in dd-mm-yyyy\
+            \ format.\n"
+          format: "date"
+          pattern: "^[0-9]{2}-[0-9]{2}-[0-9]{4}$"
+          order: 5
+        sourceType:
+          title: "coingecko-coins"
+          const: "coingecko-coins"
+          enum:
+          - "coingecko-coins"
+          order: 0
+          type: "string"
+    source-coingecko-coins-update:
+      title: "CoinGecko Coins Spec"
+      type: "object"
+      required:
+      - "coin_id"
+      - "vs_currency"
+      - "days"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key (for pro users)"
+          airbyte_secret: true
+          order: 0
+        coin_id:
+          type: "string"
+          description: "CoinGecko coin ID (e.g. bitcoin). Can be retrieved from the\n\
+            `/coins/list` endpoint.\n"
+          order: 1
+        vs_currency:
+          type: "string"
+          description: "The target currency of market data (e.g. usd, eur, jpy, etc.)\n"
+          order: 2
+        days:
+          type: "string"
+          description: "The number of days of data for market chart.\n"
+          enum:
+          - "1"
+          - "7"
+          - "14"
+          - "30"
+          - "90"
+          - "180"
+          - "365"
+          - "max"
+          default: "30"
+          order: 3
+        start_date:
+          type: "string"
+          description: "The start date for the historical data stream in dd-mm-yyyy\
+            \ format.\n"
+          format: "date"
+          pattern: "^[0-9]{2}-[0-9]{2}-[0-9]{4}$"
+          order: 4
+        end_date:
+          type: "string"
+          description: "The end date for the historical data stream in dd-mm-yyyy\
+            \ format.\n"
+          format: "date"
+          pattern: "^[0-9]{2}-[0-9]{2}-[0-9]{4}$"
+          order: 5
     source-open-data-dc:
       type: "object"
       required:
@@ -23455,6 +24523,123 @@ components:
                 type: "string"
                 airbyte_secret: true
                 order: 4
+    source-breezometer:
+      title: "Breezometer Spec"
+      type: "object"
+      required:
+      - "api_key"
+      - "latitude"
+      - "longitude"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          tittle: "API Key"
+          description: "Your API Access Key. See <a href=\"https://docs.breezometer.com/api-documentation/introduction/#authentication/\"\
+            >here</a>."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        latitude:
+          type: "string"
+          tittle: "Latitude"
+          description: "Latitude of the monitored location."
+          examples:
+          - "54.675003"
+        longitude:
+          type: "string"
+          tittle: "Longitude"
+          description: "Longitude of the monitored location."
+          examples:
+          - "-113.550282"
+        days_to_forecast:
+          type: "integer"
+          tittle: "Days to Forecast"
+          description: "Number of days to forecast. Minimum 1, maximum 3. Valid for\
+            \ Polen and Weather Forecast streams."
+          examples:
+          - 3
+        hours_to_forecast:
+          type: "integer"
+          tittle: "Hours to Forecast"
+          description: "Number of hours to forecast. Minimum 1, maximum 96. Valid\
+            \ for Air Quality Forecast stream."
+          examples:
+          - 30
+        historic_hours:
+          type: "integer"
+          tittle: "Historic Hours"
+          description: "Number of hours retireve from Air Quality History stream.\
+            \ Minimum 1, maximum 720."
+          examples:
+          - 30
+        radius:
+          type: "integer"
+          tittle: "Radius"
+          description: "Desired radius from the location provided. Minimum 5, maximum\
+            \ 100. Valid for Wildfires streams."
+          examples:
+          - 50
+        sourceType:
+          title: "breezometer"
+          const: "breezometer"
+          enum:
+          - "breezometer"
+          order: 0
+          type: "string"
+    source-breezometer-update:
+      title: "Breezometer Spec"
+      type: "object"
+      required:
+      - "api_key"
+      - "latitude"
+      - "longitude"
+      properties:
+        api_key:
+          type: "string"
+          tittle: "API Key"
+          description: "Your API Access Key. See <a href=\"https://docs.breezometer.com/api-documentation/introduction/#authentication/\"\
+            >here</a>."
+          airbyte_secret: true
+        latitude:
+          type: "string"
+          tittle: "Latitude"
+          description: "Latitude of the monitored location."
+          examples:
+          - "54.675003"
+        longitude:
+          type: "string"
+          tittle: "Longitude"
+          description: "Longitude of the monitored location."
+          examples:
+          - "-113.550282"
+        days_to_forecast:
+          type: "integer"
+          tittle: "Days to Forecast"
+          description: "Number of days to forecast. Minimum 1, maximum 3. Valid for\
+            \ Polen and Weather Forecast streams."
+          examples:
+          - 3
+        hours_to_forecast:
+          type: "integer"
+          tittle: "Hours to Forecast"
+          description: "Number of hours to forecast. Minimum 1, maximum 96. Valid\
+            \ for Air Quality Forecast stream."
+          examples:
+          - 30
+        historic_hours:
+          type: "integer"
+          tittle: "Historic Hours"
+          description: "Number of hours retireve from Air Quality History stream.\
+            \ Minimum 1, maximum 720."
+          examples:
+          - 30
+        radius:
+          type: "integer"
+          tittle: "Radius"
+          description: "Desired radius from the location provided. Minimum 5, maximum\
+            \ 100. Valid for Wildfires streams."
+          examples:
+          - 50
     source-salesforce:
       title: "Salesforce Source Spec"
       type: "object"
@@ -24259,6 +25444,76 @@ components:
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 1
+    source-merge:
+      type: "object"
+      required:
+      - "account_token"
+      - "api_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        account_token:
+          type: "string"
+          description: "Link your other integrations with account credentials on accounts\
+            \ section to get account token (ref - https://app.merge.dev/linked-accounts/accounts)"
+          title: "Account Token"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        api_token:
+          type: "string"
+          description: "API token can be seen at  https://app.merge.dev/keys"
+          title: "Api token"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          description: "Date time filter for incremental filter, Specify which date\
+            \ to extract from."
+          title: "Date-From Filter"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$"
+          examples:
+          - "2022-03-01T00:00:00.000Z"
+          format: "date-time"
+          order: 2
+        sourceType:
+          title: "merge"
+          const: "merge"
+          enum:
+          - "merge"
+          order: 0
+          type: "string"
+    source-merge-update:
+      type: "object"
+      required:
+      - "account_token"
+      - "api_token"
+      - "start_date"
+      properties:
+        account_token:
+          type: "string"
+          description: "Link your other integrations with account credentials on accounts\
+            \ section to get account token (ref - https://app.merge.dev/linked-accounts/accounts)"
+          title: "Account Token"
+          airbyte_secret: true
+          order: 0
+        api_token:
+          type: "string"
+          description: "API token can be seen at  https://app.merge.dev/keys"
+          title: "Api token"
+          airbyte_secret: true
+          order: 1
+        start_date:
+          type: "string"
+          description: "Date time filter for incremental filter, Specify which date\
+            \ to extract from."
+          title: "Date-From Filter"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$"
+          examples:
+          - "2022-03-01T00:00:00.000Z"
+          format: "date-time"
+          order: 2
     source-referralhero:
       type: "object"
       required:
@@ -30259,6 +31514,411 @@ components:
       type: "object"
       required: []
       properties: {}
+    source-newsdata:
+      type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "API Key"
+          order: 0
+          x-speakeasy-param-sensitive: true
+        domain:
+          type: "array"
+          description: "Domains (maximum 5) to restrict the search to. Use the sources\
+            \ stream to find top sources id."
+          maxitems: 5
+          items:
+            type: "string"
+          order: 1
+        country:
+          type: "array"
+          description: "2-letter ISO 3166-1 countries (maximum 5) to restrict the\
+            \ search to."
+          maxitems: 5
+          order: 2
+          items:
+            type: "string"
+            enum:
+            - "ar"
+            - "au"
+            - "at"
+            - "bd"
+            - "by"
+            - "be"
+            - "br"
+            - "bg"
+            - "ca"
+            - "cl"
+            - "cn"
+            - "co"
+            - "cr"
+            - "cu"
+            - "cz"
+            - "dk"
+            - "do"
+            - "ec"
+            - "eg"
+            - "ee"
+            - "et"
+            - "fi"
+            - "fr"
+            - "de"
+            - "gr"
+            - "hk"
+            - "hu"
+            - "in"
+            - "id"
+            - "iq"
+            - "ie"
+            - "il"
+            - "it"
+            - "jp"
+            - "kz"
+            - "kw"
+            - "lv"
+            - "lb"
+            - "lt"
+            - "my"
+            - "mx"
+            - "ma"
+            - "mm"
+            - "nl"
+            - "nz"
+            - "ng"
+            - "kp"
+            - "no"
+            - "pk"
+            - "pe"
+            - "ph"
+            - "pl"
+            - "pt"
+            - "pr"
+            - "ro"
+            - "ru"
+            - "sa"
+            - "rs"
+            - "sg"
+            - "sk"
+            - "si"
+            - "za"
+            - "kr"
+            - "es"
+            - "se"
+            - "ch"
+            - "tw"
+            - "tz"
+            - "th"
+            - "tr"
+            - "ua"
+            - "ae"
+            - "gb"
+            - "us"
+            - "ve"
+            - "vi"
+        category:
+          type: "array"
+          description: "Categories (maximum 5) to restrict the search to."
+          maxitems: 5
+          order: 3
+          items:
+            type: "string"
+            enum:
+            - "business"
+            - "entertainment"
+            - "environment"
+            - "food"
+            - "health"
+            - "politics"
+            - "science"
+            - "sports"
+            - "technology"
+            - "top"
+            - "world"
+        language:
+          type: "array"
+          description: "Languages (maximum 5) to restrict the search to."
+          maxitems: 5
+          order: 4
+          items:
+            type: "string"
+            enum:
+            - "be"
+            - "am"
+            - "ar"
+            - "bn"
+            - "bs"
+            - "bg"
+            - "my"
+            - "ckb"
+            - "zh"
+            - "hr"
+            - "cs"
+            - "da"
+            - "nl"
+            - "en"
+            - "et"
+            - "fi"
+            - "fr"
+            - "de"
+            - "el"
+            - "he"
+            - "hi"
+            - "hu"
+            - "in"
+            - "it"
+            - "jp"
+            - "ko"
+            - "lv"
+            - "lt"
+            - "ms"
+            - "no"
+            - "pl"
+            - "pt"
+            - "ro"
+            - "ru"
+            - "sr"
+            - "sk"
+            - "sl"
+            - "es"
+            - "sw"
+            - "sv"
+            - "th"
+            - "tr"
+            - "uk"
+            - "ur"
+            - "vi"
+        OneOf:
+          query:
+            type: "string"
+            description: "Keywords or phrases to search for in the news title and\
+              \ content. Advanced Search options:\n  - Search `Social`: query = \"\
+              social\"\n  - Search `Social Pizza`: query = \"social pizza\"\n  - Search\
+              \ `Social` but not with `pizza`: query = \"social -pizza\"\n  - Search\
+              \ `Social` but not with `pizza` and `wildfire`: query = \"social\n-pizza\
+              \ -wildfire\"\n  - Search `Social` and `pizza`: query = \"social AND\
+              \ pizza\"\n  - Search `Social` and `pizza` and `pasta`: query = \"social\
+              \ AND pizza\nAND pasta\"\n  - Search `Social` or `pizza`: query = \"\
+              social OR pizza\"\n  - Search `Social` or `pizza` but not `pasta`: query\
+              \ = \"social OR pizza\n-pasta\"\n  - Search `Social` or `pizza` or `pasta`:\
+              \ query = \"social OR pizza OR\npasta\" Note: You can't use AND and\
+              \ OR in the same query."
+            order: 1
+          query_in_title:
+            type: "string"
+            description: "Same as `query`, but restricting the search to only the\
+              \ news title. It cannot be used along with `query`."
+            order: 1
+          order: 5
+        sourceType:
+          title: "newsdata"
+          const: "newsdata"
+          enum:
+          - "newsdata"
+          order: 0
+          type: "string"
+    source-newsdata-update:
+      type: "object"
+      required:
+      - "api_key"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "API Key"
+          order: 0
+        domain:
+          type: "array"
+          description: "Domains (maximum 5) to restrict the search to. Use the sources\
+            \ stream to find top sources id."
+          maxitems: 5
+          items:
+            type: "string"
+          order: 1
+        country:
+          type: "array"
+          description: "2-letter ISO 3166-1 countries (maximum 5) to restrict the\
+            \ search to."
+          maxitems: 5
+          order: 2
+          items:
+            type: "string"
+            enum:
+            - "ar"
+            - "au"
+            - "at"
+            - "bd"
+            - "by"
+            - "be"
+            - "br"
+            - "bg"
+            - "ca"
+            - "cl"
+            - "cn"
+            - "co"
+            - "cr"
+            - "cu"
+            - "cz"
+            - "dk"
+            - "do"
+            - "ec"
+            - "eg"
+            - "ee"
+            - "et"
+            - "fi"
+            - "fr"
+            - "de"
+            - "gr"
+            - "hk"
+            - "hu"
+            - "in"
+            - "id"
+            - "iq"
+            - "ie"
+            - "il"
+            - "it"
+            - "jp"
+            - "kz"
+            - "kw"
+            - "lv"
+            - "lb"
+            - "lt"
+            - "my"
+            - "mx"
+            - "ma"
+            - "mm"
+            - "nl"
+            - "nz"
+            - "ng"
+            - "kp"
+            - "no"
+            - "pk"
+            - "pe"
+            - "ph"
+            - "pl"
+            - "pt"
+            - "pr"
+            - "ro"
+            - "ru"
+            - "sa"
+            - "rs"
+            - "sg"
+            - "sk"
+            - "si"
+            - "za"
+            - "kr"
+            - "es"
+            - "se"
+            - "ch"
+            - "tw"
+            - "tz"
+            - "th"
+            - "tr"
+            - "ua"
+            - "ae"
+            - "gb"
+            - "us"
+            - "ve"
+            - "vi"
+        category:
+          type: "array"
+          description: "Categories (maximum 5) to restrict the search to."
+          maxitems: 5
+          order: 3
+          items:
+            type: "string"
+            enum:
+            - "business"
+            - "entertainment"
+            - "environment"
+            - "food"
+            - "health"
+            - "politics"
+            - "science"
+            - "sports"
+            - "technology"
+            - "top"
+            - "world"
+        language:
+          type: "array"
+          description: "Languages (maximum 5) to restrict the search to."
+          maxitems: 5
+          order: 4
+          items:
+            type: "string"
+            enum:
+            - "be"
+            - "am"
+            - "ar"
+            - "bn"
+            - "bs"
+            - "bg"
+            - "my"
+            - "ckb"
+            - "zh"
+            - "hr"
+            - "cs"
+            - "da"
+            - "nl"
+            - "en"
+            - "et"
+            - "fi"
+            - "fr"
+            - "de"
+            - "el"
+            - "he"
+            - "hi"
+            - "hu"
+            - "in"
+            - "it"
+            - "jp"
+            - "ko"
+            - "lv"
+            - "lt"
+            - "ms"
+            - "no"
+            - "pl"
+            - "pt"
+            - "ro"
+            - "ru"
+            - "sr"
+            - "sk"
+            - "sl"
+            - "es"
+            - "sw"
+            - "sv"
+            - "th"
+            - "tr"
+            - "uk"
+            - "ur"
+            - "vi"
+        OneOf:
+          query:
+            type: "string"
+            description: "Keywords or phrases to search for in the news title and\
+              \ content. Advanced Search options:\n  - Search `Social`: query = \"\
+              social\"\n  - Search `Social Pizza`: query = \"social pizza\"\n  - Search\
+              \ `Social` but not with `pizza`: query = \"social -pizza\"\n  - Search\
+              \ `Social` but not with `pizza` and `wildfire`: query = \"social\n-pizza\
+              \ -wildfire\"\n  - Search `Social` and `pizza`: query = \"social AND\
+              \ pizza\"\n  - Search `Social` and `pizza` and `pasta`: query = \"social\
+              \ AND pizza\nAND pasta\"\n  - Search `Social` or `pizza`: query = \"\
+              social OR pizza\"\n  - Search `Social` or `pizza` but not `pasta`: query\
+              \ = \"social OR pizza\n-pasta\"\n  - Search `Social` or `pizza` or `pasta`:\
+              \ query = \"social OR pizza OR\npasta\" Note: You can't use AND and\
+              \ OR in the same query."
+            order: 1
+          query_in_title:
+            type: "string"
+            description: "Same as `query`, but restricting the search to only the\
+              \ news title. It cannot be used along with `query`."
+            order: 1
+          order: 5
     source-flexport:
       type: "object"
       required:
@@ -36867,6 +38527,95 @@ components:
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 2
+    source-toggl:
+      title: "Toggl Spec"
+      type: "object"
+      required:
+      - "api_token"
+      - "organization_id"
+      - "workspace_id"
+      - "start_date"
+      - "end_date"
+      - "sourceType"
+      properties:
+        api_token:
+          title: "API token"
+          type: "string"
+          description: "Your API Token. See <a href=\"https://developers.track.toggl.com/docs/authentication\"\
+            >here</a>. The token is case sensitive."
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        organization_id:
+          title: "Organization ID"
+          type: "integer"
+          description: "Your organization id. See <a href=\"https://developers.track.toggl.com/docs/organization\"\
+            >here</a>."
+        workspace_id:
+          title: "Workspace ID"
+          type: "integer"
+          description: "Your workspace id. See <a href=\"https://developers.track.toggl.com/docs/workspaces\"\
+            >here</a>."
+        start_date:
+          title: "Start date"
+          type: "string"
+          description: "To retrieve time entries created after the given date (inclusive)."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          examples:
+          - "YYYY-MM-DD"
+        end_date:
+          title: "End date"
+          type: "string"
+          description: "To retrieve time entries created before the given date (inclusive)."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          examples:
+          - "YYYY-MM-DD"
+        sourceType:
+          title: "toggl"
+          const: "toggl"
+          enum:
+          - "toggl"
+          order: 0
+          type: "string"
+    source-toggl-update:
+      title: "Toggl Spec"
+      type: "object"
+      required:
+      - "api_token"
+      - "organization_id"
+      - "workspace_id"
+      - "start_date"
+      - "end_date"
+      properties:
+        api_token:
+          title: "API token"
+          type: "string"
+          description: "Your API Token. See <a href=\"https://developers.track.toggl.com/docs/authentication\"\
+            >here</a>. The token is case sensitive."
+          airbyte_secret: true
+        organization_id:
+          title: "Organization ID"
+          type: "integer"
+          description: "Your organization id. See <a href=\"https://developers.track.toggl.com/docs/organization\"\
+            >here</a>."
+        workspace_id:
+          title: "Workspace ID"
+          type: "integer"
+          description: "Your workspace id. See <a href=\"https://developers.track.toggl.com/docs/workspaces\"\
+            >here</a>."
+        start_date:
+          title: "Start date"
+          type: "string"
+          description: "To retrieve time entries created after the given date (inclusive)."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          examples:
+          - "YYYY-MM-DD"
+        end_date:
+          title: "End date"
+          type: "string"
+          description: "To retrieve time entries created before the given date (inclusive)."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          examples:
+          - "YYYY-MM-DD"
     source-snowflake:
       title: "Snowflake Source Spec"
       type: "object"
@@ -37440,6 +39189,52 @@ components:
           order: 1
           title: "API Key"
           airbyte_secret: true
+    source-fullstory:
+      type: "object"
+      required:
+      - "api_key"
+      - "uid"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key for the fullstory.com API."
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        uid:
+          type: "string"
+          description: "User ID for the fullstory.com API."
+          title: "User ID"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "fullstory"
+          const: "fullstory"
+          enum:
+          - "fullstory"
+          order: 0
+          type: "string"
+    source-fullstory-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "uid"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key for the fullstory.com API."
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        uid:
+          type: "string"
+          description: "User ID for the fullstory.com API."
+          title: "User ID"
+          airbyte_secret: true
+          order: 1
     source-oveit:
       type: "object"
       required:
@@ -41946,6 +43741,49 @@ components:
           order: 1
           title: "Company ID"
           airbyte_secret: true
+    source-captain-data:
+      type: "object"
+      required:
+      - "api_key"
+      - "project_uid"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "Your Captain Data project API key."
+          order: 0
+          x-speakeasy-param-sensitive: true
+        project_uid:
+          type: "string"
+          title: "Project UID"
+          description: "Your Captain Data project uuid."
+          order: 1
+        sourceType:
+          title: "captain-data"
+          const: "captain-data"
+          enum:
+          - "captain-data"
+          order: 0
+          type: "string"
+    source-captain-data-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "project_uid"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          description: "Your Captain Data project API key."
+          order: 0
+        project_uid:
+          type: "string"
+          title: "Project UID"
+          description: "Your Captain Data project uuid."
+          order: 1
     source-hoorayhr:
       type: "object"
       required:
@@ -42844,6 +44682,163 @@ components:
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    source-serpstat:
+      type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          description: "Serpstat API key can be found here: https://serpstat.com/users/profile/"
+          x-speakeasy-param-sensitive: true
+        domain:
+          type: "string"
+          order: 1
+          title: "Domain"
+          default: "serpstat.com"
+          description: "The domain name to get data for (ex. serpstat.com)"
+        page_size:
+          type: "integer"
+          order: 2
+          title: "Page size"
+          default: 10
+          description: "The number of data rows per page to be returned. Each data\
+            \ row can contain multiple data points. The max value is 1000. Reducing\
+            \ the size of the page will result in fewer API credits spent."
+        domains:
+          type: "array"
+          order: 3
+          title: "Domains"
+          description: "The list of domains that will be used in streams that support\
+            \ batch operations"
+        filter_by:
+          type: "string"
+          order: 4
+          title: "Filter by"
+          description: "The field name by which the results should be filtered. Filtering\
+            \ the results will result in fewer API credits spent. Each stream has\
+            \ different filtering options. See https://serpstat.com/api/ for more\
+            \ details."
+        filter_value:
+          type: "string"
+          order: 5
+          title: "Filter value"
+          description: "The value of the field to filter by. Each stream has different\
+            \ filtering options. See https://serpstat.com/api/ for more details."
+        sort_by:
+          type: "string"
+          order: 6
+          title: "Sort by"
+          description: "The field name by which the results should be sorted. Each\
+            \ stream has different sorting options. See https://serpstat.com/api/\
+            \ for more details."
+        sort_value:
+          type: "string"
+          order: 7
+          title: "Sort value"
+          description: "The value of the field to sort by. Each stream has different\
+            \ sorting options. See https://serpstat.com/api/ for more details."
+        pages_to_fetch:
+          type: "integer"
+          order: 8
+          title: "Pages to fetch"
+          default: 1
+          description: "The number of pages that should be fetched. All results will\
+            \ be obtained if left blank. Reducing the number of pages will result\
+            \ in fewer API credits spent."
+        region_id:
+          type: "string"
+          order: 9
+          title: "Region ID"
+          default: "g_us"
+          description: "The ID of a region to get data from in the form of a two-letter\
+            \ country code prepended with the g_ prefix. See the list of supported\
+            \ region IDs here: https://serpstat.com/api/664-request-parameters-v4/."
+        sourceType:
+          title: "serpstat"
+          const: "serpstat"
+          enum:
+          - "serpstat"
+          order: 0
+          type: "string"
+    source-serpstat-update:
+      type: "object"
+      required:
+      - "api_key"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          description: "Serpstat API key can be found here: https://serpstat.com/users/profile/"
+        domain:
+          type: "string"
+          order: 1
+          title: "Domain"
+          default: "serpstat.com"
+          description: "The domain name to get data for (ex. serpstat.com)"
+        page_size:
+          type: "integer"
+          order: 2
+          title: "Page size"
+          default: 10
+          description: "The number of data rows per page to be returned. Each data\
+            \ row can contain multiple data points. The max value is 1000. Reducing\
+            \ the size of the page will result in fewer API credits spent."
+        domains:
+          type: "array"
+          order: 3
+          title: "Domains"
+          description: "The list of domains that will be used in streams that support\
+            \ batch operations"
+        filter_by:
+          type: "string"
+          order: 4
+          title: "Filter by"
+          description: "The field name by which the results should be filtered. Filtering\
+            \ the results will result in fewer API credits spent. Each stream has\
+            \ different filtering options. See https://serpstat.com/api/ for more\
+            \ details."
+        filter_value:
+          type: "string"
+          order: 5
+          title: "Filter value"
+          description: "The value of the field to filter by. Each stream has different\
+            \ filtering options. See https://serpstat.com/api/ for more details."
+        sort_by:
+          type: "string"
+          order: 6
+          title: "Sort by"
+          description: "The field name by which the results should be sorted. Each\
+            \ stream has different sorting options. See https://serpstat.com/api/\
+            \ for more details."
+        sort_value:
+          type: "string"
+          order: 7
+          title: "Sort value"
+          description: "The value of the field to sort by. Each stream has different\
+            \ sorting options. See https://serpstat.com/api/ for more details."
+        pages_to_fetch:
+          type: "integer"
+          order: 8
+          title: "Pages to fetch"
+          default: 1
+          description: "The number of pages that should be fetched. All results will\
+            \ be obtained if left blank. Reducing the number of pages will result\
+            \ in fewer API credits spent."
+        region_id:
+          type: "string"
+          order: 9
+          title: "Region ID"
+          default: "g_us"
+          description: "The ID of a region to get data from in the form of a two-letter\
+            \ country code prepended with the g_ prefix. See the list of supported\
+            \ region IDs here: https://serpstat.com/api/664-request-parameters-v4/."
     source-wasabi-stats-api:
       type: "object"
       required:
@@ -44119,6 +46114,27 @@ components:
           airbyte_secret: true
           order: 4
           x-speakeasy-param-sensitive: true
+        lookback_window:
+          type: "integer"
+          default: 30
+          description: "Apple Search Ads uses a 30-day attribution window. However,\
+            \ you may consider smaller values in order to shorten sync durations,\
+            \ at the cost of missing late data attributions."
+          title: "Lookback Window"
+          pattern: "^(30|[1-2][0-9]|[1-9])$"
+          examples:
+          - 7
+          order: 5
+        backoff_factor:
+          type: "integer"
+          default: 5
+          description: "This factor factor determines the delay increase factor between\
+            \ retryable failures. Valid values are integers between 1 and 20."
+          title: "Exponential Backoff Factor"
+          pattern: "^(20|1[0-9]|[1-9])$"
+          examples:
+          - 10
+          order: 6
         sourceType:
           title: "apple-search-ads"
           const: "apple-search-ads"
@@ -44171,6 +46187,27 @@ components:
           title: "Client Secret"
           airbyte_secret: true
           order: 4
+        lookback_window:
+          type: "integer"
+          default: 30
+          description: "Apple Search Ads uses a 30-day attribution window. However,\
+            \ you may consider smaller values in order to shorten sync durations,\
+            \ at the cost of missing late data attributions."
+          title: "Lookback Window"
+          pattern: "^(30|[1-2][0-9]|[1-9])$"
+          examples:
+          - 7
+          order: 5
+        backoff_factor:
+          type: "integer"
+          default: 5
+          description: "This factor factor determines the delay increase factor between\
+            \ retryable failures. Valid values are integers between 1 and 20."
+          title: "Exponential Backoff Factor"
+          pattern: "^(20|1[0-9]|[1-9])$"
+          examples:
+          - 10
+          order: 6
     source-spotlercrm:
       type: "object"
       required:
@@ -52335,29 +54372,20 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         project_id:
           type: "string"
-          description: "Project ID found in the project settings"
+          description: "Project ID found in the project settings, Visit `https://app.circleci.com/settings/project/circleci/ORG_SLUG/YYYYY`"
           order: 3
           title: "Project ID"
-        job_id:
-          type: "string"
-          description: "Job ID for fetching information"
-          order: 4
-          title: "Job ID"
         workflow_id:
-          type: "string"
-          description: "workflow ID of a project pipeline"
-          order: 5
+          type: "array"
+          description: "Workflow ID of a project pipeline, Could be seen in the URL\
+            \ of pipeline build, Example `https://app.circleci.com/pipelines/circleci/55555xxxxxx/7yyyyyyyyxxxxx/2/workflows/WORKFLOW_ID`"
+          order: 4
           title: "Workflow ID"
-        workflow_name:
-          type: "string"
-          description: "Workflow name for fetching information"
-          order: 6
-          title: "Workflow Name"
-          default: "build-and-test"
         job_number:
           type: "string"
-          description: "Job Number of the workflow"
-          order: 7
+          description: "Job Number of the workflow for `jobs` stream, Auto fetches\
+            \ from `workflow_jobs` stream, if not configured"
+          order: 5
           title: "Job Number"
           default: "2"
         sourceType:
@@ -52393,29 +54421,20 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         project_id:
           type: "string"
-          description: "Project ID found in the project settings"
+          description: "Project ID found in the project settings, Visit `https://app.circleci.com/settings/project/circleci/ORG_SLUG/YYYYY`"
           order: 3
           title: "Project ID"
-        job_id:
-          type: "string"
-          description: "Job ID for fetching information"
-          order: 4
-          title: "Job ID"
         workflow_id:
-          type: "string"
-          description: "workflow ID of a project pipeline"
-          order: 5
+          type: "array"
+          description: "Workflow ID of a project pipeline, Could be seen in the URL\
+            \ of pipeline build, Example `https://app.circleci.com/pipelines/circleci/55555xxxxxx/7yyyyyyyyxxxxx/2/workflows/WORKFLOW_ID`"
+          order: 4
           title: "Workflow ID"
-        workflow_name:
-          type: "string"
-          description: "Workflow name for fetching information"
-          order: 6
-          title: "Workflow Name"
-          default: "build-and-test"
         job_number:
           type: "string"
-          description: "Job Number of the workflow"
-          order: 7
+          description: "Job Number of the workflow for `jobs` stream, Auto fetches\
+            \ from `workflow_jobs` stream, if not configured"
+          order: 5
           title: "Job Number"
           default: "2"
     source-persona:
@@ -53890,18 +55909,6 @@ components:
           examples:
           - "2017-01-25 00:00:00Z"
           type: "string"
-        num_workers:
-          title: "Number of concurrent workers"
-          description: "Number of concurrent workers to be used in the sync. This\
-            \ number should be set according to your Pipedrive subscription plan and\
-            \ its rate limits, which coule be found <a href=\"https://pipedrive.readme.io/docs/core-api-concepts-rate-limiting\"\
-            >here</a> on Pipedrive Rate limiting page. Please note that Pipedrive\
-            \ API rate limits are reset daily. If you experience rate limiting issues,\
-            \ please lower the number of workers according to your plan."
-          type: "integer"
-          default: 10
-          minimum: 1
-          maximum: 40
         sourceType:
           title: "pipedrive"
           const: "pipedrive"
@@ -53929,18 +55936,6 @@ components:
           examples:
           - "2017-01-25 00:00:00Z"
           type: "string"
-        num_workers:
-          title: "Number of concurrent workers"
-          description: "Number of concurrent workers to be used in the sync. This\
-            \ number should be set according to your Pipedrive subscription plan and\
-            \ its rate limits, which coule be found <a href=\"https://pipedrive.readme.io/docs/core-api-concepts-rate-limiting\"\
-            >here</a> on Pipedrive Rate limiting page. Please note that Pipedrive\
-            \ API rate limits are reset daily. If you experience rate limiting issues,\
-            \ please lower the number of workers according to your plan."
-          type: "integer"
-          default: 10
-          minimum: 1
-          maximum: 40
     source-gocardless:
       type: "object"
       required:
@@ -54030,6 +56025,39 @@ components:
           examples:
           - "2017-01-25T00:00:00Z"
           order: 3
+    source-intruder:
+      type: "object"
+      required:
+      - "access_token"
+      - "sourceType"
+      properties:
+        access_token:
+          type: "string"
+          title: "API Access token"
+          description: "Your API Access token. See <a href=\"https://developers.intruder.io/docs/authentication\"\
+            >here</a>."
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "intruder"
+          const: "intruder"
+          enum:
+          - "intruder"
+          order: 0
+          type: "string"
+    source-intruder-update:
+      type: "object"
+      required:
+      - "access_token"
+      properties:
+        access_token:
+          type: "string"
+          title: "API Access token"
+          description: "Your API Access token. See <a href=\"https://developers.intruder.io/docs/authentication\"\
+            >here</a>."
+          airbyte_secret: true
+          order: 0
     source-microsoft-dataverse:
       title: "Microsoft Dataverse Spec"
       type: "object"
@@ -54121,6 +56149,49 @@ components:
           title: "Max page size"
           default: 5000
           order: 4
+    source-fastbill:
+      type: "object"
+      required:
+      - "username"
+      - "api_key"
+      - "sourceType"
+      properties:
+        username:
+          type: "string"
+          description: "Username for Fastbill account"
+          order: 0
+          title: "Username"
+        api_key:
+          type: "string"
+          description: "Fastbill API key"
+          order: 1
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "fastbill"
+          const: "fastbill"
+          enum:
+          - "fastbill"
+          order: 0
+          type: "string"
+    source-fastbill-update:
+      type: "object"
+      required:
+      - "username"
+      - "api_key"
+      properties:
+        username:
+          type: "string"
+          description: "Username for Fastbill account"
+          order: 0
+          title: "Username"
+        api_key:
+          type: "string"
+          description: "Fastbill API key"
+          order: 1
+          title: "API Key"
+          airbyte_secret: true
     source-visma-economic:
       type: "object"
       required:
@@ -56490,6 +58561,71 @@ components:
           order: 6
           title: "Is Sandbox App?"
           default: false
+    source-ringcentral:
+      type: "object"
+      required:
+      - "account_id"
+      - "auth_token"
+      - "extension_id"
+      - "sourceType"
+      properties:
+        account_id:
+          type: "string"
+          title: "Account Id"
+          description: "Could be seen at response to basic api call to an endpoint\
+            \ with ~ operator.  Example- (https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/business-hours)\n"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        auth_token:
+          type: "string"
+          title: "Auth Token"
+          description: "Token could be recieved by following instructions at https://developers.ringcentral.com/api-reference/authentication"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        extension_id:
+          type: "string"
+          title: "Extension Id"
+          description: "Could be seen at response to basic api call to an endpoint\
+            \ with ~ operator.  Example- (https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/business-hours)\n"
+          airbyte_secret: true
+          order: 2
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "ringcentral"
+          const: "ringcentral"
+          enum:
+          - "ringcentral"
+          order: 0
+          type: "string"
+    source-ringcentral-update:
+      type: "object"
+      required:
+      - "account_id"
+      - "auth_token"
+      - "extension_id"
+      properties:
+        account_id:
+          type: "string"
+          title: "Account Id"
+          description: "Could be seen at response to basic api call to an endpoint\
+            \ with ~ operator.  Example- (https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/business-hours)\n"
+          airbyte_secret: true
+          order: 0
+        auth_token:
+          type: "string"
+          title: "Auth Token"
+          description: "Token could be recieved by following instructions at https://developers.ringcentral.com/api-reference/authentication"
+          airbyte_secret: true
+          order: 1
+        extension_id:
+          type: "string"
+          title: "Extension Id"
+          description: "Could be seen at response to basic api call to an endpoint\
+            \ with ~ operator.  Example- (https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/business-hours)\n"
+          airbyte_secret: true
+          order: 2
     source-nytimes:
       title: "Nytimes Spec"
       type: "object"
@@ -57438,6 +59574,8 @@ components:
           $ref: "#/components/schemas/source-akeneo"
         - title: source-algolia
           $ref: "#/components/schemas/source-algolia"
+        - title: source-alpha-vantage
+          $ref: "#/components/schemas/source-alpha-vantage"
         - title: source-amazon-ads
           $ref: "#/components/schemas/source-amazon-ads"
         - title: source-amazon-seller-partner
@@ -57470,6 +59608,8 @@ components:
           $ref: "#/components/schemas/source-azure-blob-storage"
         - title: source-azure-table
           $ref: "#/components/schemas/source-azure-table"
+        - title: source-babelforce
+          $ref: "#/components/schemas/source-babelforce"
         - title: source-bamboo-hr
           $ref: "#/components/schemas/source-bamboo-hr"
         - title: source-basecamp
@@ -57492,6 +59632,8 @@ components:
           $ref: "#/components/schemas/source-braintree"
         - title: source-braze
           $ref: "#/components/schemas/source-braze"
+        - title: source-breezometer
+          $ref: "#/components/schemas/source-breezometer"
         - title: source-breezy-hr
           $ref: "#/components/schemas/source-breezy-hr"
         - title: source-brevo
@@ -57520,6 +59662,8 @@ components:
           $ref: "#/components/schemas/source-canny"
         - title: source-capsule-crm
           $ref: "#/components/schemas/source-capsule-crm"
+        - title: source-captain-data
+          $ref: "#/components/schemas/source-captain-data"
         - title: source-care-quality-commission
           $ref: "#/components/schemas/source-care-quality-commission"
         - title: source-cart
@@ -57568,6 +59712,8 @@ components:
           $ref: "#/components/schemas/source-codefresh"
         - title: source-coin-api
           $ref: "#/components/schemas/source-coin-api"
+        - title: source-coingecko-coins
+          $ref: "#/components/schemas/source-coingecko-coins"
         - title: source-coinmarketcap
           $ref: "#/components/schemas/source-coinmarketcap"
         - title: source-concord
@@ -57630,6 +59776,8 @@ components:
           $ref: "#/components/schemas/source-eventee"
         - title: source-eventzilla
           $ref: "#/components/schemas/source-eventzilla"
+        - title: source-everhour
+          $ref: "#/components/schemas/source-everhour"
         - title: source-exchange-rates
           $ref: "#/components/schemas/source-exchange-rates"
         - title: source-ezofficeinventory
@@ -57640,6 +59788,8 @@ components:
           $ref: "#/components/schemas/source-factorial"
         - title: source-faker
           $ref: "#/components/schemas/source-faker"
+        - title: source-fastbill
+          $ref: "#/components/schemas/source-fastbill"
         - title: source-fauna
           $ref: "#/components/schemas/source-fauna"
         - title: source-file
@@ -57690,6 +59840,8 @@ components:
           $ref: "#/components/schemas/source-front"
         - title: source-fulcrum
           $ref: "#/components/schemas/source-fulcrum"
+        - title: source-fullstory
+          $ref: "#/components/schemas/source-fullstory"
         - title: source-gainsight-px
           $ref: "#/components/schemas/source-gainsight-px"
         - title: source-gcs
@@ -57758,6 +59910,8 @@ components:
           $ref: "#/components/schemas/source-harvest"
         - title: source-height
           $ref: "#/components/schemas/source-height"
+        - title: source-hellobaton
+          $ref: "#/components/schemas/source-hellobaton"
         - title: source-help-scout
           $ref: "#/components/schemas/source-help-scout"
         - title: source-hibob
@@ -57790,6 +59944,8 @@ components:
           $ref: "#/components/schemas/source-instatus"
         - title: source-intercom
           $ref: "#/components/schemas/source-intercom"
+        - title: source-intruder
+          $ref: "#/components/schemas/source-intruder"
         - title: source-invoiced
           $ref: "#/components/schemas/source-invoiced"
         - title: source-invoiceninja
@@ -57856,6 +60012,8 @@ components:
           $ref: "#/components/schemas/source-mailchimp"
         - title: source-mailerlite
           $ref: "#/components/schemas/source-mailerlite"
+        - title: source-mailersend
+          $ref: "#/components/schemas/source-mailersend"
         - title: source-mailgun
           $ref: "#/components/schemas/source-mailgun"
         - title: source-mailjet-mail
@@ -57872,6 +60030,8 @@ components:
           $ref: "#/components/schemas/source-marketstack"
         - title: source-mention
           $ref: "#/components/schemas/source-mention"
+        - title: source-merge
+          $ref: "#/components/schemas/source-merge"
         - title: source-metabase
           $ref: "#/components/schemas/source-metabase"
         - title: source-microsoft-dataverse
@@ -57918,6 +60078,8 @@ components:
           $ref: "#/components/schemas/source-netsuite"
         - title: source-news-api
           $ref: "#/components/schemas/source-news-api"
+        - title: source-newsdata
+          $ref: "#/components/schemas/source-newsdata"
         - title: source-newsdata-io
           $ref: "#/components/schemas/source-newsdata-io"
         - title: source-nocrm
@@ -58074,8 +60236,12 @@ components:
           $ref: "#/components/schemas/source-revenuecat"
         - title: source-revolut-merchant
           $ref: "#/components/schemas/source-revolut-merchant"
+        - title: source-ringcentral
+          $ref: "#/components/schemas/source-ringcentral"
         - title: source-rki-covid
           $ref: "#/components/schemas/source-rki-covid"
+        - title: source-rocket-chat
+          $ref: "#/components/schemas/source-rocket-chat"
         - title: source-rocketlane
           $ref: "#/components/schemas/source-rocketlane"
         - title: source-rollbar
@@ -58120,6 +60286,10 @@ components:
           $ref: "#/components/schemas/source-senseforce"
         - title: source-sentry
           $ref: "#/components/schemas/source-sentry"
+        - title: source-serpstat
+          $ref: "#/components/schemas/source-serpstat"
+        - title: source-service-now
+          $ref: "#/components/schemas/source-service-now"
         - title: source-sftp
           $ref: "#/components/schemas/source-sftp"
         - title: source-sftp-bulk
@@ -58218,8 +60388,12 @@ components:
           $ref: "#/components/schemas/source-timely"
         - title: source-tinyemail
           $ref: "#/components/schemas/source-tinyemail"
+        - title: source-tmdb
+          $ref: "#/components/schemas/source-tmdb"
         - title: source-todoist
           $ref: "#/components/schemas/source-todoist"
+        - title: source-toggl
+          $ref: "#/components/schemas/source-toggl"
         - title: source-track-pms
           $ref: "#/components/schemas/source-track-pms"
         - title: source-trello
@@ -58238,6 +60412,8 @@ components:
           $ref: "#/components/schemas/source-twilio-taskrouter"
         - title: source-twitter
           $ref: "#/components/schemas/source-twitter"
+        - title: source-tyntec-sms
+          $ref: "#/components/schemas/source-tyntec-sms"
         - title: source-typeform
           $ref: "#/components/schemas/source-typeform"
         - title: source-ubidots
@@ -58284,6 +60460,8 @@ components:
           $ref: "#/components/schemas/source-wordpress"
         - title: source-workable
           $ref: "#/components/schemas/source-workable"
+        - title: source-workday
+          $ref: "#/components/schemas/source-workday"
         - title: source-workflowmax
           $ref: "#/components/schemas/source-workflowmax"
         - title: source-workramp
@@ -58304,6 +60482,8 @@ components:
           $ref: "#/components/schemas/source-yotpo"
         - title: source-you-need-a-budget-ynab
           $ref: "#/components/schemas/source-you-need-a-budget-ynab"
+        - title: source-younium
+          $ref: "#/components/schemas/source-younium"
         - title: source-youtube-analytics
           $ref: "#/components/schemas/source-youtube-analytics"
         - title: source-youtube-data

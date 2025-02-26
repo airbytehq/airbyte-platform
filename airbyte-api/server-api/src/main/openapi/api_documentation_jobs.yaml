@@ -1664,7 +1664,7 @@ components:
       properties:
         streams:
           type: "array"
-          x-speakeasy-plan-modifiers: "StreamConfigurationModifier"
+          format: "set"
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-speakeasy-component: true
