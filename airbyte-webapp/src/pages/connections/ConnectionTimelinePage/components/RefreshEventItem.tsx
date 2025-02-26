@@ -1,5 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -19,7 +19,7 @@ import { refreshEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface RefreshEventItemProps {
-  event: z.infer<typeof refreshEventSchema>;
+  event: InferType<typeof refreshEventSchema>;
 }
 export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => {
   const titleId = titleIdMap[event.eventType];
@@ -43,7 +43,8 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
             {jobStatus === "cancelled" && !!event.user && (
               <UserCancelledDescription user={event.user} jobType="refresh" />
             )}
-            <JobStats summary={event.summary} />
+
+            <JobStats {...event.summary} />
           </FlexContainer>
           {failureUiDetails && (
             <Box pt="xs">

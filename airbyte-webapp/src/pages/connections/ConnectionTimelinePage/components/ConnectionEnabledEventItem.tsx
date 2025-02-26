@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -13,7 +13,7 @@ import { connectionEnabledEventSchema } from "../types";
 import { titleIdMap } from "../utils";
 
 interface ConnectionEnabledEventItemProps {
-  event: z.infer<typeof connectionEnabledEventSchema>;
+  event: InferType<typeof connectionEnabledEventSchema>;
 }
 
 export const ConnectionEnabledEventItem: React.FC<ConnectionEnabledEventItemProps> = ({ event }) => {

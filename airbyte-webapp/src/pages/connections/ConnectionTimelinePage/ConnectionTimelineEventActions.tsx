@@ -8,7 +8,7 @@ import { JobEventMenu } from "./JobEventMenu";
 interface ConnectionTimelineEventActionsProps {
   jobId?: number;
   eventId?: string;
-  createdAt?: number;
+  createdAt: number;
   attemptCount?: number;
 }
 
@@ -20,11 +20,9 @@ export const ConnectionTimelineEventActions: React.FC<ConnectionTimelineEventAct
 }) => {
   return (
     <div className={styles.eventActions}>
-      {createdAt && (
-        <Text color="grey400">
-          <FormattedDate value={createdAt * 1000} timeStyle="short" dateStyle="medium" />
-        </Text>
-      )}
+      <Text color="grey400">
+        <FormattedDate value={createdAt * 1000} timeStyle="short" dateStyle="medium" />
+      </Text>
       {jobId && <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />}
     </div>
   );

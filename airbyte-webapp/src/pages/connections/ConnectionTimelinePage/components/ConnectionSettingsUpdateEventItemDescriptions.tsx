@@ -1,7 +1,7 @@
 import capitalize from "lodash/capitalize";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { FormattedScheduleDataMessage } from "components/connection/ConnectionHeaderControls/FormattedScheduleDataMessage";
 import { Text } from "components/ui/Text";
@@ -9,9 +9,9 @@ import { Text } from "components/ui/Text";
 import { ConnectionScheduleData } from "core/api/types/AirbyteClient";
 
 import { TimelineEventUser } from "./TimelineEventUser";
-import { connectionSettingsUpdateEventSummaryPatchesShape, generalEventSchema, scheduleDataSchema } from "../types";
+import { patchFields, generalEventSchema, scheduleDataSchema } from "../types";
 
-const patchedFieldToI8n: Record<keyof typeof connectionSettingsUpdateEventSummaryPatchesShape, string> = {
+const patchedFieldToI8n: Record<string, string> = {
   scheduleType: "form.scheduleType",
   name: "form.connectionName",
   namespaceDefinition: "connectionForm.namespaceDefinition.title",
@@ -38,9 +38,9 @@ const translateScheduleData = (scheduleData?: ConnectionScheduleData) => {
 };
 
 function translateFieldValues(
-  field: keyof typeof connectionSettingsUpdateEventSummaryPatchesShape,
-  from: string | boolean | z.infer<typeof scheduleDataSchema> | undefined,
-  to: string | boolean | z.infer<typeof scheduleDataSchema> | undefined,
+  field: string,
+  from: string | boolean | InferType<typeof scheduleDataSchema> | undefined,
+  to: string | boolean | InferType<typeof scheduleDataSchema> | undefined,
   formatMessage: ReturnType<typeof useIntl>["formatMessage"]
 ) {
   switch (field) {
@@ -75,10 +75,10 @@ function translateFieldValues(
 }
 
 interface ConnectionSettingsUpdateEventItemDescriptionProps {
-  user: z.infer<typeof generalEventSchema>["user"];
-  field: keyof typeof connectionSettingsUpdateEventSummaryPatchesShape;
-  to?: string | z.infer<typeof scheduleDataSchema> | boolean;
-  from?: string | z.infer<typeof scheduleDataSchema> | boolean;
+  user: InferType<typeof generalEventSchema>["user"];
+  field: (typeof patchFields)[number];
+  to?: string | InferType<typeof scheduleDataSchema> | boolean;
+  from?: string | InferType<typeof scheduleDataSchema> | boolean;
 }
 
 export const ConnectionSettingsUpdateEventItemDescription: React.FC<

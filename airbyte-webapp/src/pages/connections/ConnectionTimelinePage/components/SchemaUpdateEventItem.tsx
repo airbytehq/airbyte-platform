@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { FormattedDate, FormattedList, FormattedMessage, useIntl } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { CatalogDiffModal } from "components/connection/CatalogDiffModal";
 import { getSortedDiff } from "components/connection/CatalogDiffModal/utils";
@@ -18,11 +18,7 @@ import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummar
 import { schemaUpdateEventSchema } from "../types";
 import { titleIdMap } from "../utils";
 
-interface SchemaUpdateEventItemProps {
-  event: z.infer<typeof schemaUpdateEventSchema>;
-}
-
-export const SchemaUpdateEventItem: React.FC<SchemaUpdateEventItemProps> = ({ event }) => {
+export const SchemaUpdateEventItem: React.FC<{ event: InferType<typeof schemaUpdateEventSchema> }> = ({ event }) => {
   const titleId = titleIdMap[event.eventType];
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
@@ -66,11 +62,9 @@ export const SchemaUpdateEventItem: React.FC<SchemaUpdateEventItemProps> = ({ ev
             <Text size="lg">
               <FormattedMessage id="connection.timeline.schema_update" />
             </Text>
-            {event.createdAt && (
-              <Text size="lg" color="grey400">
-                <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
-              </Text>
-            )}
+            <Text size="lg" color="grey400">
+              <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
+            </Text>
           </FlexContainer>
         </FlexContainer>
       ),

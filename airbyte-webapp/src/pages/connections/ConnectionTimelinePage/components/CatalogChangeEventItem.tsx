@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { FormattedDate, FormattedList, FormattedMessage, useIntl } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -18,6 +18,7 @@ import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
 import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { schemaConfigUpdateEventSchema } from "../types";
 import { transformCatalogDiffToCatalogConfigDiff } from "../utils";
+
 export interface CatalogConfigDiffExtended extends CatalogConfigDiff {
   streamsAdded?: StreamFieldStatusChanged[];
   streamsRemoved?: StreamFieldStatusChanged[];
@@ -26,7 +27,7 @@ export interface CatalogConfigDiffExtended extends CatalogConfigDiff {
 }
 
 interface CatalogChangeEventItemProps {
-  event: z.infer<typeof schemaConfigUpdateEventSchema>;
+  event: InferType<typeof schemaConfigUpdateEventSchema>;
 }
 
 export const CatalogChangeEventItem: React.FC<CatalogChangeEventItemProps> = ({ event }) => {
@@ -68,12 +69,8 @@ export const CatalogChangeEventItem: React.FC<CatalogChangeEventItemProps> = ({ 
             </Text>
             <Text size="lg" color="grey400">
               {!!event.user ? <TimelineEventUser user={event.user} /> : <FormattedMessage id="general.airbyte" />}
-              {event.createdAt && (
-                <>
-                  <span className={styles.dot} />
-                  <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
-                </>
-              )}
+              <span className={styles.dot} />
+              <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
             </Text>
           </FlexContainer>
         </FlexContainer>

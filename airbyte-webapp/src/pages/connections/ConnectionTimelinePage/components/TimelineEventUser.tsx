@@ -1,16 +1,16 @@
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { Text } from "components/ui/Text";
 
 import { userInEventSchema } from "../types";
 
 interface TimelineEventUserProps {
-  user?: z.infer<typeof userInEventSchema>;
+  user?: InferType<typeof userInEventSchema>;
 }
 
 interface UserCancelledDescriptionProps {
-  user?: z.infer<typeof userInEventSchema>;
+  user?: InferType<typeof userInEventSchema>;
   jobType: string;
 }
 

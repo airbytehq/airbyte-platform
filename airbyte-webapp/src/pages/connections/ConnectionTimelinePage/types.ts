@@ -1,47 +1,25 @@
-import { z } from "zod";
+import * as yup from "yup";
 
 import {
-  CatalogDiff,
   ConnectionEventType,
   ConnectionScheduleDataBasicScheduleTimeUnit,
   ConnectionScheduleType,
   FailureOrigin,
   FailureReason,
   FailureType,
-  FieldSchema,
-  FieldSchemaUpdate,
-  FieldTransform,
   FieldTransformTransformType,
   Geography,
   JobConfigType,
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
-  StreamAttributePrimaryKeyUpdate,
-  StreamAttributeTransform,
   StreamAttributeTransformTransformType,
   StreamConfigDiff,
   StreamConfigDiffConfigType,
-  StreamDescriptor,
+  StreamFieldStatusChanged,
   StreamFieldStatusChangedStatus,
   StreamMapperType,
   StreamTransformTransformType,
-  UserReadInConnectionEvent,
 } from "core/api/types/AirbyteClient";
-import { ToZodSchema } from "core/utils/zod";
-
-import { CatalogChangeEventItem } from "./components/CatalogChangeEventItem";
-import { ClearEventItem } from "./components/ClearEventItem";
-import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
-import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
-import { ConnectionSettingsUpdateEventItem } from "./components/ConnectionSettingsUpdateEventItem";
-import { ConnectorUpdateEventItem } from "./components/ConnectorUpdateEventItem";
-import { JobStartEventItem } from "./components/JobStartEventItem";
-import { MappingEventItem } from "./components/MappingEventItem";
-import { RefreshEventItem } from "./components/RefreshEventItem";
-import { RunningJobItem } from "./components/RunningJobItem";
-import { SchemaUpdateEventItem } from "./components/SchemaUpdateEventItem";
-import { SyncEventItem } from "./components/SyncEventItem";
-import { SyncFailEventItem } from "./components/SyncFailEventItem";
 
 /**
  * add a new event type to the connection timeline:
@@ -74,400 +52,432 @@ const connectionAutoDisabledReasons = [
   // can be removed once all such events are expired/removed
   "ONLY_FAILED_JOBS_RECENTLY",
   "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
-] as const;
+];
 
-const connectorChangeReasons = ["SYSTEM", "USER"] as const;
+const connectorChangeReasons = ["SYSTEM", "USER"];
 // TODO: ask BE team to use already defined types - ConnectorType
-const ConnectorType = ["SOURCE", "DESTINATION"] as const;
+const ConnectorType = ["SOURCE", "DESTINATION"];
 
 // property-specific schemas
 /**
  * @typedef {import("core/api/types/AirbyteClient").StreamDescriptor}
  */
-const streamDescriptorSchema = z.object({
-  name: z.string(),
-  namespace: z.string().optional(),
-} satisfies ToZodSchema<StreamDescriptor>);
+const streamDescriptorSchema = yup.object({
+  name: yup.string().required(),
+  namespace: yup.string().optional(),
+});
 
-const jobRunningStreamSchema = z.object({
-  streamName: z.string(),
-  streamNamespace: z.string().optional(),
-  configType: z.enum([JobConfigType.sync, JobConfigType.refresh, JobConfigType.clear, JobConfigType.reset_connection]),
+const jobRunningStreamSchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  configType: yup.mixed<JobConfigType>().oneOf(["sync", "refresh", "clear", "reset_connection"]).required(),
 });
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").FieldSchema}
  */
-const fieldSchema = z.object({
-  schema: z.record(z.any()).optional(),
-} satisfies ToZodSchema<FieldSchema>);
+const fieldSchema = yup.object({
+  schema: yup.object().optional(),
+});
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").FieldSchemaUpdate}
  */
-const fieldSchemaUpdateSchema = z.object({
-  newSchema: fieldSchema,
-  oldSchema: fieldSchema,
-} satisfies ToZodSchema<FieldSchemaUpdate>);
+const fieldSchemaUpdateSchema = yup.object({
+  newSchema: fieldSchema.required(),
+  oldSchema: fieldSchema.required(),
+});
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").FieldTransform}
  */
-const fieldTransformSchema = z.object({
+const fieldTransformSchema = yup.object({
   addField: fieldSchema.optional(),
-  breaking: z.boolean(),
-  fieldName: z.array(z.string()),
+  breaking: yup.boolean().required(),
+  fieldName: yup.array().of(yup.string()).required(),
   removeField: fieldSchema.optional(),
-  transformType: z.nativeEnum(FieldTransformTransformType),
+  transformType: yup
+    .mixed<FieldTransformTransformType>()
+    .oneOf(["add_field", "remove_field", "update_field_schema"])
+    .required(),
   updateFieldSchema: fieldSchemaUpdateSchema.optional(),
-} satisfies ToZodSchema<FieldTransform>);
+});
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").StreamAttributePrimaryKeyUpdate}
  */
-const streamAttributePrimaryKeyUpdateSchema = z.object({
-  newPrimaryKey: z.array(z.array(z.string())).optional(),
-  oldPrimaryKey: z.array(z.array(z.string())).optional(),
-} satisfies ToZodSchema<StreamAttributePrimaryKeyUpdate>);
+const streamAttributePrimaryKeyUpdateSchema = yup.object({
+  newPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
+  oldPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
+});
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").StreamAttributeTransform}
  */
-const streamAttributeTransformSchema = z.object({
-  breaking: z.boolean(),
-  transformType: z.enum([StreamAttributeTransformTransformType.update_primary_key]),
+const streamAttributeTransformSchema = yup.object({
+  breaking: yup.boolean().required(),
+  transformType: yup.mixed<StreamAttributeTransformTransformType>().oneOf(["update_primary_key"]).required(),
   updatePrimaryKey: streamAttributePrimaryKeyUpdateSchema.optional(),
-} satisfies ToZodSchema<StreamAttributeTransform>);
+});
+
+/**
+ * @typedef {import("core/api/types/AirbyteClient").StreamTransformUpdateStream}
+ */
+const streamTransformUpdateStreamSchema = yup.object({
+  fieldTransforms: yup.array().of(fieldTransformSchema).optional(),
+  streamAttributeTransforms: yup.array().of(streamAttributeTransformSchema).optional(),
+});
+
+/**
+ * @typedef {import("core/api/types/AirbyteClient").StreamTransform}
+ */
+const streamTransformsSchema = yup.object({
+  streamDescriptor: streamDescriptorSchema.required(),
+  transformType: yup
+    .mixed<StreamTransformTransformType>()
+    .oneOf(["add_stream", "remove_stream", "update_stream"])
+    .required(),
+  updateStream: streamTransformUpdateStreamSchema.optional(),
+});
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").CatalogDiff}
  */
-const catalogDiffSchema = z.object({
-  transforms: z.array(
-    z.object({
-      streamDescriptor: streamDescriptorSchema,
-      transformType: z.nativeEnum(StreamTransformTransformType),
-      updateStream: z.object({
-        fieldTransforms: z.array(fieldTransformSchema),
-        streamAttributeTransforms: z.array(streamAttributeTransformSchema),
-      }),
-    })
-  ),
-} satisfies ToZodSchema<CatalogDiff>);
+const catalogDiffSchema = yup.object({
+  transforms: yup.array().of(streamTransformsSchema).required(),
+});
 
-const connectorUpdateSchema = z.object({
-  toVersion: z.string(),
-  fromVersion: z.string(),
-  connectorName: z.string(),
-  connectorType: z.enum(ConnectorType),
+const connectorUpdateSchema = yup.object({
+  toVersion: yup.string().required(),
+  fromVersion: yup.string().required(),
+  connectorName: yup.string().required(),
+  connectorType: yup.string().oneOf(ConnectorType).required(),
   // TODO: ask BE team to add this prop, untill then it is optional
-  changeReason: z.enum(connectorChangeReasons).optional(),
+  changeReason: yup.string().oneOf(connectorChangeReasons).optional(),
   // TODO: ask BE team how to handle this prop, untill then it is optional
-  triggeredBy: z.enum(["BREAKING_CHANGE_MANUAL"]).optional(),
+  triggeredBy: yup.string().oneOf(["BREAKING_CHANGE_MANUAL"]).optional(),
 });
 
-const streamFieldStatusChangedSchema = z.object({
-  streamName: z.string().optional(),
-  streamNamespace: z.string().optional(),
-  fields: z.array(z.string()).optional(),
-  status: z.nativeEnum(StreamFieldStatusChangedStatus).optional(),
+const streamFieldStatusChangedSchema: yup.SchemaOf<StreamFieldStatusChanged> = yup.object({
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+  fields: yup.array().of(yup.string()).optional(),
+  status: yup.mixed<StreamFieldStatusChangedStatus>().oneOf(["enabled", "disabled"]).optional(),
 });
 
-const syncModeChangedSchema = z.object({
-  currentDestinationSyncMode: z.string().optional(),
-  currentSourceSyncMode: z.string().optional(),
-  prevDestinationSyncMode: z.string().optional(),
-  prevSourceSyncMode: z.string().optional(),
-  streamName: z.string().optional(),
-  streamNamespace: z.string().optional(),
+const syncModeChangedSchema = yup.object({
+  currentDestinationSyncMode: yup.string().optional(),
+  currentSourceSyncMode: yup.string().optional(),
+  prevDestinationSyncMode: yup.string().optional(),
+  prevSourceSyncMode: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
 });
 
-const streamConfigDiffSchema = z.object({
-  configType: z.nativeEnum(StreamConfigDiffConfigType).optional(),
-  current: z.string().optional(),
-  prev: z.string().optional(),
-  streamName: z.string().optional(),
-  streamNamespace: z.string().optional(),
-} satisfies ToZodSchema<StreamConfigDiff>);
-
-export const fieldDataTypeDiffSchema = z.object({
-  current: z.string().optional(),
-  fieldName: z.string().optional(),
-  prev: z.string().optional(),
-  streamName: z.string().optional(),
-  streamNamespace: z.string().optional(),
+const streamConfigDiffSchema: yup.SchemaOf<StreamConfigDiff> = yup.object({
+  configType: yup.mixed<StreamConfigDiffConfigType>().oneOf(["primary_key", "cursor_field"]).optional(),
+  current: yup.string().optional(),
+  prev: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
 });
 
-const catalogConfigDiffSchema = z.object({
-  streamsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
-  streamsDisabled: z.array(streamFieldStatusChangedSchema).optional(),
-  fieldsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
-  fieldsDisabled: z.array(streamFieldStatusChangedSchema).optional(),
-  syncModesChanged: z.array(syncModeChangedSchema).optional(),
-  cursorFieldsChanged: z.array(streamConfigDiffSchema).optional(),
-  primaryKeysChanged: z.array(streamConfigDiffSchema).optional(),
+export const fieldDataTypeDiffSchema = yup.object({
+  current: yup.string().optional(),
+  fieldName: yup.string().optional(),
+  prev: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+});
+
+const catalogConfigDiffSchema = yup.object({
+  // user changes
+  streamsEnabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  streamsDisabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsEnabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsDisabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  syncModesChanged: yup.array().of(syncModeChangedSchema).optional(),
+  cursorFieldsChanged: yup.array().of(streamConfigDiffSchema).optional(),
+  primaryKeysChanged: yup.array().of(streamConfigDiffSchema).optional(),
+
+  // system changes
+  streamsAdded: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  streamsRemoved: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsAdded: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsRemoved: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsDataTypeChanged: yup.array().of(fieldDataTypeDiffSchema).optional(),
 });
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
 
-export const jobFailureReasonSchema = z.object({
-  failureType: z.nativeEnum(FailureType).optional(),
-  failureOrigin: z.nativeEnum(FailureOrigin).optional(),
-  externalMessage: z.string().optional(),
-  internalMessage: z.string().optional(),
-  retryable: z.boolean().optional(),
-  timestamp: z.number().optional(),
-  stacktrace: z.string().optional(),
+export const jobFailureReasonSchema = yup.object({
+  failureType: yup.mixed<FailureType>().optional(),
+  failureOrigin: yup.mixed<FailureOrigin>().optional(),
+  externalMessage: yup.string().optional(),
+  internalMessage: yup.string().optional(),
+  retryable: yup.boolean().optional(),
+  timestamp: yup.number().optional(),
+  stacktrace: yup.string().optional(),
 });
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").UserReadInConnectionEvent}
  */
-export const userInEventSchema = z.object({
-  email: z.string().optional(),
-  id: z.string().optional(),
-  name: z.string().optional(),
-  isDeleted: z.boolean(),
-} satisfies ToZodSchema<UserReadInConnectionEvent>);
+export const userInEventSchema = yup.object({
+  email: yup.string().optional(),
+  id: yup.string().optional(),
+  name: yup.string().optional(),
+});
 
 // artificial job events
-export const jobRunningSummarySchema = z.object({
-  jobId: z.number(),
-  streams: z.array(jobRunningStreamSchema),
-  configType: z.enum([JobConfigType.clear, JobConfigType.reset_connection, JobConfigType.sync, JobConfigType.refresh]),
+export const jobRunningSummarySchema = yup.object({
+  jobId: yup.number().required(),
+  streams: yup.array().of(jobRunningStreamSchema).required(),
+  configType: yup.mixed<JobConfigType>().oneOf(["clear", "reset_connection", "sync", "refresh"]).required(),
 });
 
 // jobs
-export const jobSummarySchema = z.object({
-  attemptsCount: z.number().optional(),
-  bytesLoaded: z.number().optional(),
-  recordsLoaded: z.number().optional(),
-  endTimeEpochSeconds: z.number(),
-  startTimeEpochSeconds: z.number(),
-  jobId: z.number(),
+export const syncEventSummarySchema = yup.object({
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
+  attemptsCount: yup.number().optional(),
+  bytesLoaded: yup.number().required(),
+  recordsLoaded: yup.number().optional(),
+  jobId: yup.number().required(),
 });
 
-export const syncEventSummarySchema = jobSummarySchema;
-
-export const syncFailureEventSummarySchema = jobSummarySchema.extend({
+export const syncFailureEventSummarySchema = yup.object({
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
+  attemptsCount: yup.number().optional(),
+  bytesLoaded: yup.number().optional(),
+  recordsLoaded: yup.number().optional(),
+  jobId: yup.number().required(),
   failureReason: jobFailureReasonSchema.nullable(),
 });
 
-export const refreshEventSummarySchema = jobSummarySchema.extend({
-  streams: z.array(streamDescriptorSchema),
+export const refreshEventSummarySchema = yup.object({
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
+  attemptsCount: yup.number().optional(),
+  bytesLoaded: yup.number().required(),
+  streams: yup.array().of(streamDescriptorSchema).required(),
   failureReason: jobFailureReasonSchema.nullable(),
+  jobId: yup.number().required(),
 });
 
-export const clearEventSummarySchema = jobSummarySchema
-  .omit({
-    bytesLoaded: true,
-    recordsLoaded: true,
-  })
-  .extend({
-    streams: z.array(streamDescriptorSchema),
-  });
-
-export const jobStartedSummarySchema = jobSummarySchema
-  .omit({
-    bytesLoaded: true,
-    recordsLoaded: true,
-    endTimeEpochSeconds: true,
-  })
-  .extend({
-    streams: z.array(streamDescriptorSchema).optional(),
-  });
-
-export const connectionDisabledEventSummarySchema = z.object({
-  disabledReason: z.enum(connectionAutoDisabledReasons).optional(),
+export const clearEventSummarySchema = yup.object({
+  startTimeEpochSeconds: yup.number().required(),
+  endTimeEpochSeconds: yup.number().required(),
+  attemptsCount: yup.number().optional(),
+  streams: yup.array().of(streamDescriptorSchema).required(),
+  jobId: yup.number().required(),
 });
 
-const ConnectionScheduleDataBasicScheduleSchema = z.object({
-  timeUnit: z.nativeEnum(ConnectionScheduleDataBasicScheduleTimeUnit),
-  units: z.number(),
+export const jobStartedSummarySchema = yup.object({
+  streams: yup.array().of(streamDescriptorSchema).optional(),
+  startTimeEpochSeconds: yup.number().required(),
+  jobId: yup.number().required(),
 });
 
-const ConnectionScheduleDataCronSchema = z.object({
-  cronExpression: z.string().optional(),
-  cronTimeZone: z.string().optional(),
+export const connectionDisabledEventSummarySchema = yup.object({
+  disabledReason: yup.string().oneOf(connectionAutoDisabledReasons),
 });
 
-export const scheduleDataSchema = z.object({
+const ConnectionScheduleDataBasicScheduleSchema = yup.object().shape({
+  timeUnit: yup
+    .mixed<ConnectionScheduleDataBasicScheduleTimeUnit>()
+    .oneOf(["minutes", "hours", "days", "weeks", "months"])
+    .optional(),
+  units: yup.number().optional(),
+});
+
+const ConnectionScheduleDataCronSchema = yup.object().shape({
+  cronExpression: yup.string().optional(),
+  cronTimeZone: yup.string().optional(),
+});
+
+export const scheduleDataSchema = yup.object().shape({
   basicSchedule: ConnectionScheduleDataBasicScheduleSchema.optional(),
   cron: ConnectionScheduleDataCronSchema.optional(),
 });
 
 export const connectionSettingsUpdateEventSummaryPatchesShape = {
-  scheduleType: z.object({
-    from: z.nativeEnum(ConnectionScheduleType),
-    to: z.nativeEnum(ConnectionScheduleType),
+  scheduleType: yup.object({
+    from: yup.string().oneOf(Object.values(ConnectionScheduleType)),
+    to: yup.string().oneOf(Object.values(ConnectionScheduleType)),
   }),
-  scheduleData: z.object({
-    from: scheduleDataSchema,
-    to: scheduleDataSchema,
+  scheduleData: yup.object().shape({ from: scheduleDataSchema, to: scheduleDataSchema }),
+  name: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  namespaceDefinition: yup.object().shape({
+    from: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
+    to: yup.string().oneOf(Object.values(NamespaceDefinitionType)),
   }),
-  name: z.object({
-    from: z.string(),
-    to: z.string(),
-  }),
-  namespaceDefinition: z.object({
-    from: z.nativeEnum(NamespaceDefinitionType),
-    to: z.nativeEnum(NamespaceDefinitionType),
-  }),
-  namespaceFormat: z.object({ from: z.string(), to: z.string() }),
-  prefix: z.object({ from: z.string(), to: z.string() }),
-  geography: z.object({
-    from: z.nativeEnum(Geography),
-    to: z.nativeEnum(Geography),
-  }),
-  notifySchemaChanges: z.object({
-    from: z.boolean(),
-    to: z.boolean(),
-  }),
-  nonBreakingChangesPreference: z.object({
-    from: z.nativeEnum(NonBreakingChangesPreference),
-    to: z.nativeEnum(NonBreakingChangesPreference),
+  namespaceFormat: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  prefix: yup.object().shape({ from: yup.string(), to: yup.string() }),
+  geography: yup
+    .object()
+    .shape({ from: yup.string().oneOf(Object.values(Geography)), to: yup.string().oneOf(Object.values(Geography)) }),
+  notifySchemaChanges: yup.object().shape({ from: yup.boolean(), to: yup.boolean() }),
+  nonBreakingChangesPreference: yup.object().shape({
+    from: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
+    to: yup.string().oneOf(Object.values(NonBreakingChangesPreference)),
   }),
 
-  backfillPreference: z.object({ from: z.string(), to: z.string() }),
+  backfillPreference: yup.object().shape({ from: yup.string(), to: yup.string() }),
 } as const;
 
-export const connectionSettingsUpdateEventSummarySchema = z.object({
-  patches: z
-    .record(
-      z.object({
-        from: z.union([z.string(), z.boolean(), scheduleDataSchema]).optional(),
-        to: z.union([z.string(), z.boolean(), scheduleDataSchema]).optional(),
-      })
-    )
+export const patchFields = Object.keys(connectionSettingsUpdateEventSummaryPatchesShape) as Array<
+  keyof typeof connectionSettingsUpdateEventSummaryPatchesShape
+>;
+
+export const connectionSettingsUpdateEventSummarySchema = yup.object({
+  patches: yup
+    .object(connectionSettingsUpdateEventSummaryPatchesShape)
     // ensure that at least one of the known patch fields is present
-    .refine(
-      (data: Partial<typeof connectionSettingsUpdateEventSummaryPatchesShape>) =>
-        Object.keys(data).length > 0 &&
+    // pull `originalValue` from the test context as the obj argument provided has all of the known fields set to non-confirming objects
+    .test((_, testContext) => {
+      const { originalValue } = testContext as unknown as { originalValue: Record<string, unknown> };
+      return Object.keys(originalValue).some(
         // resourceRequirements is a valid patch, and we want to continue logging it, but we do not want to surface it in the UI at this time.
-        Object.keys(data).some((key) => key in connectionSettingsUpdateEventSummaryPatchesShape),
-      "At least one valid patch field must be present"
-    ),
+        (key) => (patchFields as string[]).includes(key)
+      );
+    })
+    .required(),
 });
 
-export const schemaUpdateSummarySchema = z.object({
-  catalogDiff: catalogDiffSchema,
-  updateReason: z.enum(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
+export const schemaUpdateSummarySchema = yup.object({
+  catalogDiff: catalogDiffSchema.required(),
+  updateReason: yup.mixed().oneOf(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
 });
 
-export const schemaConfigUpdateSchema = z.object({
-  airbyteCatalogDiff: z.object({
-    catalogDiff: catalogDiffSchema,
-    catalogConfigDiff: catalogConfigDiffSchema,
+export const schemaConfigUpdateSchema = yup.object({
+  airbyteCatalogDiff: yup.object({
+    catalogDiff: catalogDiffSchema.required(),
+    catalogConfigDiff: catalogConfigDiffSchema.required(),
   }),
 });
 
-export const mappingEventSummarySchema = z.object({
-  streamName: z.string(),
-  streamNamespace: z.string().optional(),
-  mapperType: z.nativeEnum(StreamMapperType),
+export const mappingEventSummarySchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  mapperType: yup
+    .mixed<StreamMapperType>()
+    .oneOf([...Object.values(StreamMapperType)])
+    .required(),
 });
 
 /**
  * @typedef {import("core/api/types/AirbyteClient").ConnectionEvent}
  */
-export const generalEventSchema = z.object({
-  id: z.string(),
-  connectionId: z.string(),
+export const generalEventSchema = yup.object({
+  id: yup.string().required(),
+  connectionId: yup.string().required(),
   user: userInEventSchema.optional(),
-  createdAt: z.number().optional(),
-  eventType: z.union([z.nativeEnum(ConnectionEventType), z.literal("RUNNING_JOB")]),
-  summary: z
-    .object({
-      patches: z.record(z.unknown()).optional(),
-    })
-    .passthrough(),
+  createdAt: yup.number().required(),
+  eventType: yup
+    .mixed<ConnectionEventType | "RUNNING_JOB">()
+    .oneOf([...Object.values(ConnectionEventType), "RUNNING_JOB"])
+    .required(),
+  summary: yup.mixed().required(),
 });
 
-export const syncEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.SYNC_SUCCEEDED, ConnectionEventType.SYNC_CANCELLED]),
-  summary: syncEventSummarySchema,
+export const syncEventSchema = generalEventSchema.shape({
+  eventType: yup
+    .mixed<ConnectionEventType>()
+    .oneOf([ConnectionEventType.SYNC_SUCCEEDED, ConnectionEventType.SYNC_CANCELLED])
+    .required(),
+  summary: syncEventSummarySchema.required(),
 });
 
-export const syncFailEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.SYNC_FAILED, ConnectionEventType.SYNC_INCOMPLETE]),
-  summary: syncFailureEventSummarySchema,
+export const syncFailEventSchema = generalEventSchema.shape({
+  eventType: yup
+    .mixed<ConnectionEventType>()
+    .oneOf([ConnectionEventType.SYNC_FAILED, ConnectionEventType.SYNC_INCOMPLETE])
+    .required(),
+  summary: syncFailureEventSummarySchema.required(),
 });
 
-export const refreshEventSchema = generalEventSchema.extend({
-  eventType: z.enum([
-    ConnectionEventType.REFRESH_SUCCEEDED,
-    ConnectionEventType.REFRESH_FAILED,
-    ConnectionEventType.REFRESH_INCOMPLETE,
-    ConnectionEventType.REFRESH_CANCELLED,
-  ]),
-  summary: refreshEventSummarySchema,
+export const refreshEventSchema = generalEventSchema.shape({
+  eventType: yup
+    .mixed<ConnectionEventType>()
+    .oneOf([
+      ConnectionEventType.REFRESH_SUCCEEDED,
+      ConnectionEventType.REFRESH_FAILED,
+      ConnectionEventType.REFRESH_INCOMPLETE,
+      ConnectionEventType.REFRESH_CANCELLED,
+    ])
+    .required(),
+  summary: refreshEventSummarySchema.required(),
 });
 
-export const clearEventSchema = generalEventSchema.extend({
-  eventType: z.enum([
-    ConnectionEventType.CLEAR_SUCCEEDED,
-    ConnectionEventType.CLEAR_FAILED,
-    ConnectionEventType.CLEAR_INCOMPLETE,
-    ConnectionEventType.CLEAR_CANCELLED,
-  ]),
-  summary: clearEventSummarySchema,
+export const clearEventSchema = generalEventSchema.shape({
+  eventType: yup
+    .mixed<ConnectionEventType>()
+    .oneOf([
+      ConnectionEventType.CLEAR_SUCCEEDED,
+      ConnectionEventType.CLEAR_FAILED,
+      ConnectionEventType.CLEAR_INCOMPLETE,
+      ConnectionEventType.CLEAR_CANCELLED,
+    ])
+    .required(),
+  summary: clearEventSummarySchema.required(),
 });
 
-export const jobStartedEventSchema = generalEventSchema.extend({
-  eventType: z.enum([
-    ConnectionEventType.CLEAR_STARTED,
-    ConnectionEventType.REFRESH_STARTED,
-    ConnectionEventType.SYNC_STARTED,
-  ]),
-  summary: jobStartedSummarySchema,
+export const jobStartedEventSchema = generalEventSchema.shape({
+  eventType: yup
+    .mixed<ConnectionEventType>()
+    .oneOf([ConnectionEventType.CLEAR_STARTED, ConnectionEventType.REFRESH_STARTED, ConnectionEventType.SYNC_STARTED])
+    .required(),
+  summary: jobStartedSummarySchema.required(),
 });
 
-export const jobRunningSchema = generalEventSchema.extend({
-  eventType: z.enum(["RUNNING_JOB"]),
-  summary: jobRunningSummarySchema,
+export const jobRunningSchema = generalEventSchema.shape({
+  eventType: yup.string().oneOf(["RUNNING_JOB"]).required(),
+  summary: jobRunningSummarySchema.required(),
 });
 
-export const connectionEnabledEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.CONNECTION_ENABLED]),
+export const connectionEnabledEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_ENABLED]).required(),
 });
 
-export const connectionDisabledEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.CONNECTION_DISABLED]),
-  summary: connectionDisabledEventSummarySchema,
+export const connectionDisabledEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_DISABLED]).required(),
+  summary: connectionDisabledEventSummarySchema.required(),
 });
 
-export const connectionSettingsUpdateEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.CONNECTION_SETTINGS_UPDATE]),
-  summary: connectionSettingsUpdateEventSummarySchema,
+export const connectionSettingsUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTION_SETTINGS_UPDATE]).required(),
+  summary: connectionSettingsUpdateEventSummarySchema.required(),
 });
 
-export const schemaUpdateEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.SCHEMA_UPDATE]),
-  summary: schemaUpdateSummarySchema,
+export const schemaUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
+  summary: schemaUpdateSummarySchema.required(),
 });
 
-export const connectorUpdateEventSchema = generalEventSchema.extend({
-  eventType: z.enum([ConnectionEventType.CONNECTOR_UPDATE]),
-  summary: connectorUpdateSchema,
+export const connectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: connectorUpdateSchema.required(),
 });
 
-export const schemaConfigUpdateEventSchema = generalEventSchema.extend({
+export const schemaConfigUpdateEventSchema = generalEventSchema.shape({
   // TODO: add schema config update event type from AirbyteClient once it is defined
-  // eventType: z.enum([ConnectionEventType.SCHEMA_CONFIG_UPDATE]).required(),
-  eventType: z.enum(["SCHEMA_CONFIG_UPDATE"]),
-  summary: schemaConfigUpdateSchema,
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_CONFIG_UPDATE]).required(),
+  eventType: yup.string().oneOf(["SCHEMA_CONFIG_UPDATE"]).required(),
+  summary: schemaConfigUpdateSchema.required(),
 });
 
-export const mappingEventSchema = generalEventSchema.extend({
+export const mappingEventSchema = generalEventSchema.shape({
   // TODO: add mapping event types from AirbyteClient once they are defined
-  // eventType: z.enum([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
-  eventType: z.enum(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]),
-  summary: mappingEventSummarySchema,
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
+  eventType: yup.mixed().oneOf(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]).required(),
+  summary: mappingEventSummarySchema.required(),
 });
 
 export interface ConnectionTimelineRunningEvent {
   id: string;
-  eventType: "RUNNING_JOB";
+  eventType: string;
   connectionId: string;
   createdAt: number;
   summary: {
@@ -485,73 +495,3 @@ export interface ConnectionTimelineRunningEvent {
     id: string;
   };
 }
-
-export interface EventTypeToSchema {
-  RUNNING_JOB: z.infer<typeof jobRunningSchema>;
-  [ConnectionEventType.SYNC_SUCCEEDED]: z.infer<typeof syncEventSchema>;
-  [ConnectionEventType.SYNC_CANCELLED]: z.infer<typeof syncEventSchema>;
-  [ConnectionEventType.SYNC_FAILED]: z.infer<typeof syncFailEventSchema>;
-  [ConnectionEventType.SYNC_INCOMPLETE]: z.infer<typeof syncFailEventSchema>;
-  [ConnectionEventType.REFRESH_SUCCEEDED]: z.infer<typeof refreshEventSchema>;
-  [ConnectionEventType.REFRESH_FAILED]: z.infer<typeof refreshEventSchema>;
-  [ConnectionEventType.REFRESH_INCOMPLETE]: z.infer<typeof refreshEventSchema>;
-  [ConnectionEventType.REFRESH_CANCELLED]: z.infer<typeof refreshEventSchema>;
-  [ConnectionEventType.CLEAR_SUCCEEDED]: z.infer<typeof clearEventSchema>;
-  [ConnectionEventType.CLEAR_FAILED]: z.infer<typeof clearEventSchema>;
-  [ConnectionEventType.CLEAR_INCOMPLETE]: z.infer<typeof clearEventSchema>;
-  [ConnectionEventType.CLEAR_CANCELLED]: z.infer<typeof clearEventSchema>;
-  [ConnectionEventType.CLEAR_STARTED]: z.infer<typeof jobStartedEventSchema>;
-  [ConnectionEventType.REFRESH_STARTED]: z.infer<typeof jobStartedEventSchema>;
-  [ConnectionEventType.SYNC_STARTED]: z.infer<typeof jobStartedEventSchema>;
-  [ConnectionEventType.CONNECTION_ENABLED]: z.infer<typeof connectionEnabledEventSchema>;
-  [ConnectionEventType.CONNECTION_DISABLED]: z.infer<typeof connectionDisabledEventSchema>;
-  [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: z.infer<typeof connectionSettingsUpdateEventSchema>;
-  [ConnectionEventType.SCHEMA_UPDATE]: z.infer<typeof schemaUpdateEventSchema>;
-  [ConnectionEventType.CONNECTOR_UPDATE]: z.infer<typeof connectorUpdateEventSchema>;
-  SCHEMA_CONFIG_UPDATE: z.infer<typeof schemaConfigUpdateEventSchema>;
-  MAPPING_CREATE: z.infer<typeof mappingEventSchema>;
-  MAPPING_UPDATE: z.infer<typeof mappingEventSchema>;
-  MAPPING_DELETE: z.infer<typeof mappingEventSchema>;
-}
-
-export const eventTypeToSchemaMap: {
-  [K in keyof EventTypeToSchema]: {
-    schema: z.ZodSchema<EventTypeToSchema[K]>;
-    component: React.FC<{ event: EventTypeToSchema[K] }>;
-  };
-} = {
-  RUNNING_JOB: { schema: jobRunningSchema, component: RunningJobItem },
-  [ConnectionEventType.SYNC_SUCCEEDED]: { schema: syncEventSchema, component: SyncEventItem },
-  [ConnectionEventType.SYNC_CANCELLED]: { schema: syncEventSchema, component: SyncEventItem },
-  [ConnectionEventType.SYNC_FAILED]: { schema: syncFailEventSchema, component: SyncFailEventItem },
-  [ConnectionEventType.SYNC_INCOMPLETE]: { schema: syncFailEventSchema, component: SyncFailEventItem },
-  [ConnectionEventType.REFRESH_SUCCEEDED]: { schema: refreshEventSchema, component: RefreshEventItem },
-  [ConnectionEventType.REFRESH_FAILED]: { schema: refreshEventSchema, component: RefreshEventItem },
-  [ConnectionEventType.REFRESH_INCOMPLETE]: { schema: refreshEventSchema, component: RefreshEventItem },
-  [ConnectionEventType.REFRESH_CANCELLED]: { schema: refreshEventSchema, component: RefreshEventItem },
-  [ConnectionEventType.CLEAR_SUCCEEDED]: { schema: clearEventSchema, component: ClearEventItem },
-  [ConnectionEventType.CLEAR_FAILED]: { schema: clearEventSchema, component: ClearEventItem },
-  [ConnectionEventType.CLEAR_INCOMPLETE]: { schema: clearEventSchema, component: ClearEventItem },
-  [ConnectionEventType.CLEAR_CANCELLED]: { schema: clearEventSchema, component: ClearEventItem },
-  [ConnectionEventType.CLEAR_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
-  [ConnectionEventType.REFRESH_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
-  [ConnectionEventType.SYNC_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
-  [ConnectionEventType.CONNECTION_ENABLED]: {
-    schema: connectionEnabledEventSchema,
-    component: ConnectionEnabledEventItem,
-  },
-  [ConnectionEventType.CONNECTION_DISABLED]: {
-    schema: connectionDisabledEventSchema,
-    component: ConnectionDisabledEventItem,
-  },
-  [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: {
-    schema: connectionSettingsUpdateEventSchema,
-    component: ConnectionSettingsUpdateEventItem,
-  },
-  [ConnectionEventType.SCHEMA_UPDATE]: { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
-  [ConnectionEventType.CONNECTOR_UPDATE]: { schema: connectorUpdateEventSchema, component: ConnectorUpdateEventItem },
-  SCHEMA_CONFIG_UPDATE: { schema: schemaConfigUpdateEventSchema, component: CatalogChangeEventItem },
-  MAPPING_CREATE: { schema: mappingEventSchema, component: MappingEventItem },
-  MAPPING_UPDATE: { schema: mappingEventSchema, component: MappingEventItem },
-  MAPPING_DELETE: { schema: mappingEventSchema, component: MappingEventItem },
-} as const;

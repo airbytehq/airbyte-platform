@@ -1,5 +1,4 @@
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -8,14 +7,22 @@ import { formatBytes } from "core/utils/numberHelper";
 import { useFormatDuration } from "core/utils/time";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
-import { jobSummarySchema } from "../types";
-
 interface JobStatsProps {
-  summary: z.infer<typeof jobSummarySchema>;
+  attemptsCount?: number;
+  bytesLoaded?: number;
+  endTimeEpochSeconds: number;
+  jobId: number;
+  recordsLoaded?: number;
+  startTimeEpochSeconds: number;
 }
 
 export const JobStats: React.FC<JobStatsProps> = ({
-  summary: { attemptsCount, bytesLoaded, endTimeEpochSeconds, jobId, recordsLoaded, startTimeEpochSeconds },
+  attemptsCount,
+  bytesLoaded,
+  endTimeEpochSeconds,
+  jobId,
+  recordsLoaded,
+  startTimeEpochSeconds,
 }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
   const duration = useFormatDuration(startTimeEpochSeconds * 1000, endTimeEpochSeconds * 1000);

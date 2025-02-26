@@ -1,6 +1,6 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
@@ -19,7 +19,7 @@ import { connectionDisabledEventSchema } from "../types";
 import { titleIdMap } from "../utils";
 
 interface ConnectionDisabledEventItemProps {
-  event: z.infer<typeof connectionDisabledEventSchema>;
+  event: InferType<typeof connectionDisabledEventSchema>;
 }
 
 export const ConnectionDisabledEventItem: React.FC<ConnectionDisabledEventItemProps> = ({ event }) => {

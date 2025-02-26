@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -15,7 +15,7 @@ import { connectorUpdateEventSchema } from "../types";
 import { isSemanticVersionTags, isVersionUpgraded } from "../utils";
 
 interface ConnectorUpdateEventItemProps {
-  event: z.infer<typeof connectorUpdateEventSchema>;
+  event: InferType<typeof connectorUpdateEventSchema>;
 }
 
 export const ConnectorUpdateEventItem: React.FC<ConnectorUpdateEventItemProps> = ({ event }) => {

@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { z } from "zod";
+import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -16,7 +16,7 @@ import { clearEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface ClearEventProps {
-  event: z.infer<typeof clearEventSchema>;
+  event: InferType<typeof clearEventSchema>;
 }
 export const ClearEventItem: React.FC<ClearEventProps> = ({ event }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
