@@ -28,7 +28,7 @@ import { UiYamlToggleButton } from "../UiYamlToggleButton";
 import { useBuilderWatch, useBuilderWatchWithPreview } from "../useBuilderWatch";
 import { useCopyValueIncludingArrays } from "../utils";
 
-interface BuilderCardProps {
+export interface BuilderCardProps {
   className?: string;
   label?: string;
   tooltip?: string;

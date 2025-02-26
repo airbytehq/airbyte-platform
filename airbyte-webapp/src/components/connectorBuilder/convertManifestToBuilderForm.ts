@@ -50,13 +50,14 @@ import {
   CheckDynamicStreamType,
   JwtAuthenticator,
   RequestOptionInjectInto,
+  CsvDecoderType,
 } from "core/api/types/ConnectorManifest";
 
 import {
+  BuilderDecoderConfig,
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
-  BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
   BuilderFormOAuthAuthenticator,
@@ -425,13 +426,17 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   };
 }
 
-const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+const manifestDecoderToBuilder = (
+  decoder: SimpleRetrieverDecoder | undefined,
+  streamName: string
+): BuilderDecoderConfig => {
   const supportedDecoderTypes: Array<string | undefined> = [
     undefined,
     JsonDecoderType.JsonDecoder,
     JsonlDecoderType.JsonlDecoder,
     XmlDecoderType.XmlDecoder,
     IterableDecoderType.IterableDecoder,
+    CsvDecoderType.CsvDecoder,
   ];
   const decoderType = decoder?.type;
   if (!supportedDecoderTypes.includes(decoderType)) {
@@ -440,15 +445,17 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
 
   switch (decoderType) {
     case JsonDecoderType.JsonDecoder:
-      return "JSON";
+      return { type: "JSON" };
     case XmlDecoderType.XmlDecoder:
-      return "XML";
+      return { type: "XML" };
     case JsonlDecoderType.JsonlDecoder:
-      return "JSON Lines";
+      return { type: "JSON Lines" };
     case IterableDecoderType.IterableDecoder:
-      return "Iterable";
+      return { type: "Iterable" };
+    case CsvDecoderType.CsvDecoder:
+      return { type: "CSV", delimiter: decoder?.delimiter, encoding: decoder?.encoding };
     default:
-      return "JSON";
+      return { type: "JSON" };
   }
 };
 
