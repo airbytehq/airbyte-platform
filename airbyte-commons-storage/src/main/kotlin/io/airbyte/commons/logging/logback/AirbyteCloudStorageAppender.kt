@@ -28,17 +28,9 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-
-/**
- * Shared executor service used to reduce the number of threads created to handle
- * uploading log data to remote storage.
- */
-private val executorService =
-  Executors.newScheduledThreadPool(
-    EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
-    ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
-  )
 
 /**
  * Builds the ID of the uploaded file.  This is typically the path in blob storage.
@@ -59,13 +51,48 @@ fun createFileId(
   return "${baseId.trim('/')}/${timestamp}_${hostname}_${uniqueIdentifier.replace("-", "")}$STRUCTURED_LOG_FILE_EXTENSION"
 }
 
-/**
- * Stops the shared executor service.  This method should be called from a JVM shutdown hook
- * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
- */
-fun stopAirbyteCloudStorageAppenderExecutorService() {
-  executorService.shutdownNow()
-  executorService.awaitTermination(30, TimeUnit.SECONDS)
+object AirbyteCloudStorageAppenderExecutorServiceHelper {
+  /**
+   * Shared executor service used to reduce the number of threads created to handle
+   * uploading log data to remote storage.
+   */
+  private val executorService =
+    Executors.newScheduledThreadPool(
+      EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
+      ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
+    )
+
+  /**
+   * Schedules a runnable task on the underlying executor service.
+   *
+   * @param runnable The task to be executed.
+   * @param initDelay The time to delay first execution.
+   * @param period The period between successive executions.
+   * @param unit The time unit of the initialDelay and period parameters
+   * @return A [ScheduledFuture] representing pending completion of the series of repeated tasks.
+   */
+  fun scheduleTask(
+    runnable: Runnable,
+    initDelay: Long,
+    period: Long,
+    unit: TimeUnit,
+  ): ScheduledFuture<*> = executorService.scheduleAtFixedRate(runnable, initDelay, period, unit)
+
+  /**
+   * Stops the shared executor service.  This method should be called from a JVM shutdown hook
+   * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
+   */
+  fun stopAirbyteCloudStorageAppenderExecutorService() {
+    executorService.shutdownNow()
+    executorService.awaitTermination(30, TimeUnit.SECONDS)
+  }
+
+  init {
+    // Enable cancellation of tasks to prevent executor queue from growing unbounded
+    if (executorService is ScheduledThreadPoolExecutor) {
+      executorService.removeOnCancelPolicy = true
+    }
+  }
 }
 
 /**
@@ -84,16 +111,18 @@ class AirbyteCloudStorageAppender(
   private var currentStorageId: String = createFileId(baseId = baseStorageId)
   private val encoder = AirbyteLogEventEncoder()
   private val uploadLock = Any()
+  private lateinit var uploadTask: ScheduledFuture<*>
 
   override fun start() {
     super.start()
     encoder.start()
-    executorService.scheduleAtFixedRate(this::upload, period, period, unit)
+    uploadTask = AirbyteCloudStorageAppenderExecutorServiceHelper.scheduleTask(this::upload, period, period, unit)
   }
 
   override fun stop() {
     try {
       super.stop()
+      uploadTask.cancel(false)
     } finally {
       // Do one final upload attempt to ensure that all logs are published
       upload()
