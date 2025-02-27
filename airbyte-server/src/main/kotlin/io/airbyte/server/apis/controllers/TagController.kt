@@ -22,7 +22,7 @@ class TagController(
   private val tagHandler: TagHandler,
 ) {
   @Post("/list")
-  @RequiresIntent(Intent.CreateOrEditConnection)
+  @RequiresIntent(Intent.ViewConnection)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   fun listTags(
     @Body tagListRequestBody: TagListRequestBody,
