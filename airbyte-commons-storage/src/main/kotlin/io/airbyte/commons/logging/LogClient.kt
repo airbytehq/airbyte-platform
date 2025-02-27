@@ -68,7 +68,7 @@ class LogClient(
         metric = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED,
         attributes = arrayOf(MetricAttribute(MetricTags.LOG_CLIENT_TYPE, client.storageType.name.lowercase())),
         stateObject = files,
-        function = { files.size.toDouble() },
+        function = { _ -> files.size.toDouble() },
       )
     val timer =
       metricClient.timer(
@@ -110,7 +110,7 @@ class LogClient(
         metric = OssMetricsRegistry.LOG_CLIENT_FILES_RETRIEVED,
         attributes = arrayOf(MetricAttribute(MetricTags.LOG_CLIENT_TYPE, client.storageType.name.lowercase())),
         stateObject = files,
-        function = { files.size.toDouble() },
+        function = { _ -> files.size.toDouble() },
       )
     val timer =
       metricClient.timer(

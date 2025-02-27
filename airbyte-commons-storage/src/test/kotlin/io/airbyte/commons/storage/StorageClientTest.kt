@@ -280,6 +280,7 @@ internal class GcsStorageClientTest {
     every { gcsClient.get(blobId) } returns
       mockk<Blob> {
         every { exists() } returns true
+        every { getBlobId() } returns blobId
       }
     every { gcsClient.readAllBytes(blobId) } returns DOC1.toByteArray()
 
