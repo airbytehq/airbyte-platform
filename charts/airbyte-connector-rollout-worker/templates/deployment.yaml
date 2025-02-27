@@ -1,4 +1,3 @@
-{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.connectorRolloutOptIn true)}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -238,4 +237,3 @@ spec:
       {{- if .Values.extraVolumes }}
   {{ toYaml .Values.extraVolumes | nindent 6 }}
   {{- end }}
-{{- end }}
