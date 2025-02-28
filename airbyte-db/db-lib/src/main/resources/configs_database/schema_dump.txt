@@ -533,6 +533,18 @@ create table "public"."workload_label" (
   constraint "workload_label_pkey" primary key ("id"),
   constraint "workload_label_workload_id_key_key" unique ("workload_id", "key")
 );
+create table "public"."workload_queue" (
+  "id" uuid not null,
+  "dataplane_group" varchar(256) not null,
+  "priority" int not null,
+  "workload_id" varchar(256) not null,
+  "poll_deadline" timestamp(6) with time zone not null default current_timestamp,
+  "acked_at" timestamp(6) with time zone,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "workload_queue_pkey" primary key ("id"),
+  constraint "uniq_workload_id" unique ("workload_id")
+);
 create table "public"."workspace" (
   "id" uuid not null,
   "customer_id" uuid,
@@ -617,6 +629,9 @@ create index "workload_pending_status_by_dataplane_group_idx" on "public"."workl
 where ((status = 'pending'::workload_status));
 create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
+create index "dataplane_group_priority_poll_deadline_idx" on "public"."workload_queue"("dataplane_group" asc, "priority" asc, "poll_deadline" asc)
+where ((acked_at IS NULL));
+create index "workload_id_idx" on "public"."workload_queue"("workload_id" asc);
 alter table "public"."active_declarative_manifest" add constraint "active_declarative_manifest_actor_definition_id_version_fkey" foreign key ("actor_definition_id", "version") references "public"."declarative_manifest" ("actor_definition_id", "version");
 alter table "public"."actor" add constraint "actor_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."actor" add constraint "actor_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
