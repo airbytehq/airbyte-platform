@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
@@ -19,6 +20,7 @@ interface StreamTestButtonProps {
   hasResolveErrors: boolean;
   isStreamTestQueued: boolean;
   isStreamTestRunning: boolean;
+  className?: string;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -28,6 +30,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   hasResolveErrors,
   isStreamTestQueued,
   isStreamTestRunning,
+  className,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
@@ -85,7 +88,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const testButton = (
     <Button
-      className={styles.testButton}
+      className={classNames(styles.testButton, className)}
       size="sm"
       onClick={executeTestRead}
       disabled={buttonDisabled}

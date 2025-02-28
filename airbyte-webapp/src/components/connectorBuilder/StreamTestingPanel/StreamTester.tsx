@@ -65,8 +65,12 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const { getStreamTestWarnings, getStreamTestMetadataStatus } = useStreamTestMetadata();
   const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+  const streamTestMetadataStatus = useMemo(
+    () => getStreamTestMetadataStatus(streamName),
+    [getStreamTestMetadataStatus, streamName]
+  );
 
   const logNumByType = useMemo(
     () =>
@@ -143,6 +147,7 @@ export const StreamTester: React.FC<{
         hasResolveErrors={Boolean(resolveErrorMessage)}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
+        className={!streamTestMetadataStatus || streamTestMetadataStatus.isStale ? styles.pulsateButton : undefined}
       />
 
       {resolveErrorMessage !== undefined && (
