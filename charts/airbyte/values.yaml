@@ -1704,25 +1704,6 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-# External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
-externalDatabase:
-  # -- Database host
-  host: ""
-  # -- non-root Username for Airbyte Database
-  user: ""
-  # -- Database password
-  password: ""
-  # -- Name of an existing secret resource containing the DB password
-  existingSecret: ""
-  # -- Name of an existing secret key containing the DB password
-  existingSecretPasswordKey: ""
-  # -- Database name
-  database: ""
-  # -- Database port number
-  port: ""
-  # -- Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
-  jdbcUrl: ""
-
 minio:
   image:
     # -- Minio image used by Minio helm chart
