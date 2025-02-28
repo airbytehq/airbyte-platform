@@ -792,7 +792,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private const val CURRENT_CONFIGS_MIGRATION_VERSION = "1.1.1.009"
+    private const val CURRENT_CONFIGS_MIGRATION_VERSION = "1.1.1.010"
     private const val CURRENT_JOBS_MIGRATION_VERSION = "1.1.0.001"
   }
 }
