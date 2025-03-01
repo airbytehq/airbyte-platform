@@ -16,4 +16,5 @@ dependencies {
 
   testImplementation(libs.mockito.core)
   testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.assertj.core)
 }
