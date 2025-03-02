@@ -1668,6 +1668,10 @@ postgresql:
   postgresqlPassword: airbyte
   # -- Airbyte Postgresql database
   postgresqlDatabase: db-airbyte
+
+  storage:
+    volumeClaimValue: 500Mi
+
   # fullnameOverride: *db-hostname
   ## This secret is used in case of postgresql.enabled=true and we would like to specify password for newly created postgresql instance
   # -- Name of an existing secret containing the PostgreSQL password ('postgresql-password' key)
