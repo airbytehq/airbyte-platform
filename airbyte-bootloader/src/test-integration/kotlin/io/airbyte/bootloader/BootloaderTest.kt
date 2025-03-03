@@ -44,8 +44,10 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
+import io.airbyte.db.instance.configs.migrations.V1_1_1_010__CreateWorkloadQueueTable
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
+import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -290,10 +292,10 @@ internal class BootloaderTest {
     bootloader.load()
 
     val jobsMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
-    Assertions.assertEquals(CURRENT_JOBS_MIGRATION_VERSION, jobsMigrator.latestMigration.version.version)
+    Assertions.assertEquals(getMigrationVersion(CURRENT_JOBS_MIGRATION), jobsMigrator.latestMigration.version.version)
 
     val configsMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
-    Assertions.assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.latestMigration.version.version)
+    Assertions.assertEquals(getMigrationVersion(CURRENT_CONFIGS_MIGRATION), configsMigrator.latestMigration.version.version)
 
     Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.version.get())
     Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.airbyteProtocolVersionMin.get())
@@ -792,7 +794,13 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private const val CURRENT_CONFIGS_MIGRATION_VERSION = "1.1.1.010"
-    private const val CURRENT_JOBS_MIGRATION_VERSION = "1.1.0.001"
+    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_010__CreateWorkloadQueueTable::class.java
+    private val CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable::class.java
+
+    private fun getMigrationVersion(cls: Class<*>): String =
+      cls.simpleName
+        .split("__")[0]
+        .substring(1)
+        .replace('_', '.')
   }
 }
