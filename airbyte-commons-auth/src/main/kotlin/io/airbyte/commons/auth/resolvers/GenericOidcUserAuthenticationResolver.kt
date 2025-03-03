@@ -24,7 +24,7 @@ class GenericOidcUserAuthenticationResolver(
   private val securityService: SecurityService,
   private val fieldMappings: GenericOidcFieldMappingConfig,
 ) : UserAuthenticationResolver {
-  override fun resolveUser(unused: String?): AuthenticatedUser {
+  override fun resolveUser(unused: String): AuthenticatedUser {
     val authUserId: String =
       securityService
         .username()
@@ -46,15 +46,15 @@ class GenericOidcUserAuthenticationResolver(
       .withAuthProvider(AuthProvider.AIRBYTE)
   }
 
-  override fun resolveRealm(): Optional<String> {
+  override fun resolveRealm(): String? {
     val jwtMap: Optional<Authentication> = securityService.authentication
     if (jwtMap.isEmpty) {
-      return Optional.empty()
+      return null
     }
     val issuer: String = jwtMap.get().attributes[fieldMappings.issuer] as String
     if (issuer.isBlank()) {
-      return Optional.empty()
+      return null
     }
-    return Optional.of(issuer)
+    return issuer
   }
 }
