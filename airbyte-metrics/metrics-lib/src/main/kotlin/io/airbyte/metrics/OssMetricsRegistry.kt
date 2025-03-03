@@ -197,10 +197,6 @@ enum class OssMetricsRegistry(
     metricName = "job_succeeded_by_release_stage",
     metricDescription = "increments when a job succeeds. jobs are double counted as this is tagged by release stage.",
   ),
-  JSON_STRING_LENGTH(
-    metricName = "json_string_length",
-    metricDescription = "string length of a raw json string",
-  ),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
     metricName = "kube_pod_process_create_time_millisecs",
     metricDescription = "time taken to create a new kube pod process",

@@ -145,22 +145,29 @@ class StreamStatusStateStore {
     return sourceComplete && destComplete
   }
 
-  private fun resolveRunState(
+  internal fun resolveRunState(
     current: ApiEnum,
     incoming: ApiEnum,
   ): ApiEnum =
-    when (current to incoming) {
-      RUNNING to COMPLETE,
-      RUNNING to INCOMPLETE,
-      RUNNING to RATE_LIMITED,
-      RATE_LIMITED to RUNNING,
-      RATE_LIMITED to INCOMPLETE,
-      RATE_LIMITED to COMPLETE,
-      -> {
+    if (current === RUNNING) {
+      if (incoming === COMPLETE ||
+        incoming === INCOMPLETE ||
+        incoming === RATE_LIMITED
+      ) {
         incoming
-      }
-      else -> {
+      } else {
         current
       }
+    } else if (current === RATE_LIMITED) {
+      if (incoming === RUNNING ||
+        incoming === COMPLETE ||
+        incoming === INCOMPLETE
+      ) {
+        incoming
+      } else {
+        current
+      }
+    } else {
+      current
     }
 }

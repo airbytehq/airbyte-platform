@@ -32,7 +32,6 @@ import io.airbyte.workers.helper.GsonPksExtractor;
 import io.micronaut.core.util.StringUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -228,10 +227,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
     return bufferedReader
         .lines()
-        .peek(str -> {
-          final long messageSize = str.getBytes(StandardCharsets.UTF_8).length;
-          metricClient.distribution(OssMetricsRegistry.JSON_STRING_LENGTH, messageSize);
-        })
         .flatMap(this::toAirbyteMessage)
         .filter(this::filterLog);
   }
