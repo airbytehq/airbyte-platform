@@ -339,6 +339,9 @@ components:
         stream:
           type: string
           description: Name of the stream to read
+        custom_components_code:
+          type: string
+          description: The custom components code that should be used to run the connector
         form_generated_manifest:
           type: boolean
           description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI

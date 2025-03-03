@@ -9342,6 +9342,9 @@ components:
         streamName:
           type: string
           description: Name of the stream to read
+        customComponentsCode:
+          type: string
+          description: Custom components python code to use during source execution
         formGeneratedManifest:
           type: boolean
           description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI

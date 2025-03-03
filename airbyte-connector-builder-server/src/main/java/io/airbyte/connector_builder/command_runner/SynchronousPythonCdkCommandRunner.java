@@ -46,9 +46,9 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
                                            final String pythonPath) {
     this.writer = writer;
     this.streamFactory = streamFactory;
-    this.python = python;
+    this.python = python; // TODO: Remove this and invoke directly
     this.cdkEntrypoint = cdkEntrypoint;
-    this.pythonPath = pythonPath;
+    this.pythonPath = pythonPath; // TODO: Remove this and invoke directly
   }
 
   /**
@@ -85,7 +85,7 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
     final AirbyteArgument state = this.write("state", stateContents);
 
     final List<String> command = Lists.newArrayList(
-        this.python,
+        this.python, // TODO: Remove this and invoke directly
         this.cdkEntrypoint,
         "read",
         "--config",
@@ -110,6 +110,7 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
     return arg;
   }
 
+  // TODO: Remove this and invoke directly
   private void addPythonPathToSubprocessEnvironment(ProcessBuilder processBuilder) {
     processBuilder.environment().put("PYTHONPATH", this.pythonPath);
   }

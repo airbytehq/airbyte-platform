@@ -82,6 +82,7 @@ export type TestingValuesUpdate = UseMutateAsyncFunction<
 
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
+  customComponentsCode: string | undefined;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
   savingState: SavingState;
@@ -569,6 +570,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const ctx: FormStateContext = {
     jsonManifest,
+    customComponentsCode,
     yamlEditorIsMounted,
     yamlIsValid,
     savingState,
@@ -774,6 +776,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   useEffect(() => {
     if (typeof view === "number") {
@@ -821,6 +824,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     {
       builderProjectId: projectId,
       manifest: filteredManifest,
+      customComponentsCode,
       streamName,
       recordLimit,
       pageLimit,

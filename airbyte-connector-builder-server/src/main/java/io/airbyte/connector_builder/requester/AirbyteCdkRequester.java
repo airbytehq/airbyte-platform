@@ -21,6 +21,7 @@ public interface AirbyteCdkRequester {
       throws IOException, AirbyteCdkInvalidInputException, ConnectorBuilderException;
 
   StreamRead readStream(final JsonNode manifest,
+                        final String customComponentsCode,
                         final JsonNode config,
                         final List<JsonNode> state,
                         final String stream,

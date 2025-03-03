@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.connector_builder.TracingHelper;
@@ -25,8 +27,10 @@ import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +46,8 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   private static final String commandKey = "__command";
   private static final String commandConfigKey = "__test_read_config";
   private static final String manifestKey = "__injected_declarative_manifest";
+  private static final String customComponentsKey = "__injected_components_py";
+  private static final String customComponentsChecksumsKey = "__injected_components_py_checksums";
   private static final String recordLimitKey = "max_records";
   private static final String sliceLimitKey = "max_slices";
   private static final String pageLimitKey = "max_pages_per_slice";
@@ -77,6 +83,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   @Override
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   public StreamRead readStream(final JsonNode manifest,
+                               final String customComponentsCode,
                                final JsonNode config,
                                final List<JsonNode> state,
                                final String stream,
@@ -87,7 +94,8 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     if (stream == null) {
       throw new AirbyteCdkInvalidInputException("Missing required `stream` field.");
     }
-    final AirbyteRecordMessage record = request(manifest, config, state, readStreamCommand, stream, recordLimit, pageLimit, sliceLimit);
+    final AirbyteRecordMessage record =
+        request(manifest, customComponentsCode, config, state, readStreamCommand, stream, recordLimit, pageLimit, sliceLimit);
     return recordToResponse(record);
   }
 
@@ -114,7 +122,10 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   public ResolveManifest resolveManifest(final JsonNode manifest)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
-    final AirbyteRecordMessage record = request(manifest, CONFIG_NODE, resolveManifestCommand);
+    final AirbyteRecordMessage record = request(manifest,
+        null, // As of now, we don't validate custom python when resolving manifests.
+        CONFIG_NODE,
+        resolveManifestCommand);
     return new ResolveManifest().manifest(record.getData().get("manifest"));
   }
 
@@ -122,14 +133,16 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
    * Launch a CDK process responsible for handling requests.
    */
   private AirbyteRecordMessage request(final JsonNode manifest,
+                                       final String customComponentsCode,
                                        final JsonNode config,
                                        final String cdkCommand)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     LOGGER.debug("Creating CDK process: {}.", cdkCommand);
-    return this.commandRunner.runCommand(cdkCommand, this.adaptConfig(manifest, config, cdkCommand), "", "");
+    return this.commandRunner.runCommand(cdkCommand, this.adaptConfig(manifest, customComponentsCode, config, cdkCommand), "", "");
   }
 
   private AirbyteRecordMessage request(final JsonNode manifest,
+                                       final String customComponentsCode,
                                        final JsonNode config,
                                        final List<JsonNode> state,
                                        final String cdkCommand,
@@ -140,7 +153,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     LOGGER.debug("Creating CDK process: {}.", cdkCommand);
     return this.commandRunner.runCommand(cdkCommand,
-        this.adaptConfig(manifest, config, cdkCommand, recordLimit, pageLimit, sliceLimit),
+        this.adaptConfig(manifest, customComponentsCode, config, cdkCommand, recordLimit, pageLimit, sliceLimit),
         this.adaptCatalog(stream), this.adaptState(state));
   }
 
@@ -157,15 +170,39 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     }
   }
 
-  private String adaptConfig(final JsonNode manifest, final JsonNode config, final String command) throws IOException {
+  /**
+   * Calculates the MD5 checksum of the provided custom components code.
+   *
+   * Currently, this only calculates the MD5 but in future it may calculate other checksums in
+   * addition or instead.
+   *
+   * @param customComponentsCode the custom components code to calculate the checksum for
+   * @return a JsonNode containing the checksum(s)
+   */
+  private JsonNode calculateChecksums(final String customComponentsCode) {
+    final HashFunction hashFunction = Hashing.md5();
+    final String md5_checksum = hashFunction.hashString(customComponentsCode, StandardCharsets.UTF_8).toString();
+    return Jsons.jsonNode(Collections.singletonMap("md5", md5_checksum));
+  }
+
+  private String adaptConfig(final JsonNode manifest,
+                             final String customComponentsCode,
+                             final JsonNode config,
+                             final String command)
+      throws IOException {
     final JsonNode adaptedConfig = Jsons.deserializeIfText(config).deepCopy();
     ((ObjectNode) adaptedConfig).set(manifestKey, Jsons.deserializeIfText(manifest));
+    if (!StringUtils.isBlank(customComponentsCode)) {
+      ((ObjectNode) adaptedConfig).put(customComponentsKey, customComponentsCode);
+      ((ObjectNode) adaptedConfig).set(customComponentsChecksumsKey, calculateChecksums(customComponentsCode));
+    }
     ((ObjectNode) adaptedConfig).put(commandKey, command);
 
     return OBJECT_WRITER.writeValueAsString(adaptedConfig);
   }
 
   private String adaptConfig(final JsonNode manifest,
+                             final String customComponentsCode,
                              final JsonNode config,
                              final String command,
                              final Integer userProvidedRecordLimit,
@@ -175,7 +212,10 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     final JsonNode adaptedConfig = Jsons.deserializeIfText(config).deepCopy();
     ((ObjectNode) adaptedConfig).set(manifestKey, Jsons.deserializeIfText(manifest));
     ((ObjectNode) adaptedConfig).put(commandKey, command);
-
+    if (!StringUtils.isBlank(customComponentsCode)) {
+      ((ObjectNode) adaptedConfig).put(customComponentsKey, customComponentsCode);
+      ((ObjectNode) adaptedConfig).set(customComponentsChecksumsKey, calculateChecksums(customComponentsCode));
+    }
     final ObjectMapper mapper = new ObjectMapper();
     final ObjectNode commandConfig = mapper.createObjectNode();
 

@@ -799,7 +799,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .pageLimit(null)
         .sliceLimit(null);
 
-    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, null, false,
         project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode record1 = Jsons.deserialize(
@@ -864,7 +864,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .pageLimit(null)
         .sliceLimit(null);
 
-    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, null, false,
         project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode newTestingValues = Jsons.deserialize(

@@ -498,6 +498,7 @@ public class ConnectorBuilderProjectsHandler {
           new StreamReadRequestBody(existingHydratedTestingValues,
               requestBody.getManifest(),
               requestBody.getStreamName(),
+              requestBody.getCustomComponentsCode(),
               requestBody.getFormGeneratedManifest(),
               requestBody.getBuilderProjectId().toString(),
               requestBody.getRecordLimit(),
