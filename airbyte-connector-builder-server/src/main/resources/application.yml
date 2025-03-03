@@ -52,6 +52,7 @@ micronaut:
       sensitive: false
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   connector-builder-server:
     github:
       airbyte-pat-token: ${BUILDER_GITHUB_AIRBYTE_PAT_TOKEN:}

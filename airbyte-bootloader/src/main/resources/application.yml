@@ -21,6 +21,7 @@ micronaut:
         port: ${STATSD_PORT:8125}
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   bootloader:
     auto-upgrade-connectors: ${AUTO_UPGRADE_CONNECTORS_PROTOCOL:false}
     migration-baseline-version: ${BOOTLOADER_MIGRATION_BASELINE_VERSION:0.29.0.001}

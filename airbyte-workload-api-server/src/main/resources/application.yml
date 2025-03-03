@@ -62,6 +62,7 @@ micronaut:
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
