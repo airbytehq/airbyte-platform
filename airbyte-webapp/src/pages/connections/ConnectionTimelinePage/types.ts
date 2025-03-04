@@ -24,7 +24,9 @@ import {
   StreamDescriptor,
   StreamFieldStatusChangedStatus,
   StreamMapperType,
+  StreamTransform,
   StreamTransformTransformType,
+  StreamTransformUpdateStream,
   UserReadInConnectionEvent,
 } from "core/api/types/AirbyteClient";
 import { ToZodSchema } from "core/utils/zod";
@@ -140,19 +142,27 @@ const streamAttributeTransformSchema = z.object({
 } satisfies ToZodSchema<StreamAttributeTransform>);
 
 /**
+ * @typedef {import("core/api/types/AirbyteClient").StreamTransformUpdateStream}
+ */
+const streamTransformUpdateStreamSchema = z.object({
+  fieldTransforms: z.array(fieldTransformSchema),
+  streamAttributeTransforms: z.array(streamAttributeTransformSchema),
+} satisfies ToZodSchema<StreamTransformUpdateStream>);
+
+/**
+ * @typedef {import("core/api/types/AirbyteClient").StreamTransform}
+ */
+const streamTransformSchema = z.object({
+  streamDescriptor: streamDescriptorSchema,
+  transformType: z.nativeEnum(StreamTransformTransformType),
+  updateStream: streamTransformUpdateStreamSchema.optional(),
+} satisfies ToZodSchema<StreamTransform>);
+
+/**
  * @typedef {import("core/api/types/AirbyteClient").CatalogDiff}
  */
 const catalogDiffSchema = z.object({
-  transforms: z.array(
-    z.object({
-      streamDescriptor: streamDescriptorSchema,
-      transformType: z.nativeEnum(StreamTransformTransformType),
-      updateStream: z.object({
-        fieldTransforms: z.array(fieldTransformSchema),
-        streamAttributeTransforms: z.array(streamAttributeTransformSchema),
-      }),
-    })
-  ),
+  transforms: z.array(streamTransformSchema),
 } satisfies ToZodSchema<CatalogDiff>);
 
 const connectorUpdateSchema = z.object({
