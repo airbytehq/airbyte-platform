@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.config
+
+import java.time.OffsetDateTime
+import java.util.UUID
+
+/**
+ * A secret config is a representation of a secret whose value is stored in an external secret storage.
+ * The external coordinate describes the location of the secret within the secret storage.
+ */
+data class SecretConfig(
+  val id: UUID?,
+  val secretStorageId: UUID,
+  val descriptor: String,
+  val externalCoordinate: String,
+  val tombstone: Boolean = false,
+  val createdBy: UUID,
+  val updatedBy: UUID,
+  val createdAt: OffsetDateTime?,
+  val updatedAt: OffsetDateTime?,
+)

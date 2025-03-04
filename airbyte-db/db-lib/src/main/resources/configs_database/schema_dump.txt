@@ -403,6 +403,20 @@ create table "public"."scoped_configuration" (
     "scope_id"
   )
 );
+create table "public"."secret_config" (
+  "id" uuid not null,
+  "secret_storage_id" uuid not null,
+  "descriptor" varchar(256) not null,
+  "external_coordinate" varchar(256) not null,
+  "tombstone" boolean not null default false,
+  "created_by" uuid not null,
+  "updated_by" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "secret_config_pkey" primary key ("id"),
+  constraint "secret_config_secret_storage_id_descriptor_key" unique ("secret_storage_id", "descriptor"),
+  constraint "secret_config_secret_storage_id_external_coordinate_key" unique ("secret_storage_id", "external_coordinate")
+);
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
   "scope_id" uuid,
@@ -413,6 +427,31 @@ create table "public"."secret_persistence_config" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "secret_persistence_config_pkey" primary key ("id"),
   constraint "secret_persistence_config_scope_id_scope_type_key" unique ("scope_id", "scope_type")
+);
+create table "public"."secret_reference" (
+  "id" uuid not null,
+  "secret_config_id" uuid not null,
+  "scope_type" "public"."secret_reference_scope_type" not null,
+  "scope_id" uuid not null,
+  "hydration_path" text,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "secret_reference_pkey" primary key ("id")
+);
+create table "public"."secret_storage" (
+  "id" uuid not null,
+  "scope_type" "public"."secret_storage_scope_type" not null,
+  "scope_id" uuid not null,
+  "descriptor" varchar(256) not null,
+  "storage_type" "public"."secret_storage_type" not null,
+  "configured_from_environment" boolean not null default false,
+  "tombstone" boolean not null default false,
+  "created_by" uuid not null,
+  "updated_by" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "secret_storage_pkey" primary key ("id"),
+  constraint "secret_storage_scope_id_scope_type_storage_type_descriptor_key" unique ("scope_id", "scope_type", "storage_type", "descriptor")
 );
 create table "public"."sso_config" (
   "id" uuid not null,
@@ -603,6 +642,12 @@ create index "permission_organization_id_idx" on "public"."permission"("organiza
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
+create unique index "secret_reference_scope_type_scope_id_hydration_path_idx" on "public"."secret_reference"(
+  "scope_type" asc,
+  "scope_id" asc,
+  COALESCE(hydration_path, ''::text) asc
+);
+create index "secret_reference_secret_config_id_idx" on "public"."secret_reference"("secret_config_id" asc);
 create index "sso_config_keycloak_realm_idx" on "public"."sso_config"("keycloak_realm" asc);
 create index "sso_config_organization_id_idx" on "public"."sso_config"("organization_id" asc);
 create index "stream_generation_connection_id_stream_name_generation_id_idx" on "public"."stream_generation"("connection_id" asc, "stream_name" asc, "generation_id" desc);
@@ -671,6 +716,9 @@ alter table "public"."permission" add constraint "permission_organization_id_fke
 alter table "public"."permission" add constraint "permission_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."permission" add constraint "permission_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
+alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey1" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
+alter table "public"."secret_reference" add constraint "secret_reference_secret_config_id_fkey" foreign key ("secret_config_id") references "public"."secret_config" ("id");
 alter table "public"."sso_config" add constraint "sso_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."stream_generation" add constraint "stream_generation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
