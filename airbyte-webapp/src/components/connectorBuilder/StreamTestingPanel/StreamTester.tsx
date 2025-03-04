@@ -65,12 +65,13 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const { getStreamTestWarnings, getStreamTestMetadataStatus } = useStreamTestMetadata();
+  const { getStreamTestWarnings, getStreamTestMetadataStatus, getStreamHasCustomType } = useStreamTestMetadata();
   const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
   const streamTestMetadataStatus = useMemo(
     () => getStreamTestMetadataStatus(streamName),
     [getStreamTestMetadataStatus, streamName]
   );
+  const streamHasCustomType = getStreamHasCustomType(streamName);
 
   const logNumByType = useMemo(
     () =>
@@ -134,6 +135,10 @@ export const StreamTester: React.FC<{
         </Text>
       )}
 
+      {streamHasCustomType && (
+        <Message type="error" text={formatMessage({ id: "connectorBuilder.warnings.containsCustomComponent" })} />
+      )}
+
       <StreamTestButton
         queueStreamRead={() => {
           queueStreamRead();
@@ -147,7 +152,12 @@ export const StreamTester: React.FC<{
         hasResolveErrors={Boolean(resolveErrorMessage)}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
-        className={!streamTestMetadataStatus || streamTestMetadataStatus.isStale ? styles.pulsateButton : undefined}
+        className={
+          !streamHasCustomType && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+            ? styles.pulsateButton
+            : undefined
+        }
+        forceDisabled={streamHasCustomType}
       />
 
       {resolveErrorMessage !== undefined && (

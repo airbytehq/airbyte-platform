@@ -818,13 +818,15 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
-  const { updateStreamTestResults } = useStreamTestMetadata();
+  const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
+
+  const streamUsesCustomCode = getStreamHasCustomType(streamName);
 
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
       manifest: filteredManifest,
-      customComponentsCode,
+      customComponentsCode: streamUsesCustomCode ? customComponentsCode : undefined,
       streamName,
       recordLimit,
       pageLimit,

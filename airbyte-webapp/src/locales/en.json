@@ -1868,6 +1868,7 @@
   "connectorBuilder.warnings.noRecords": "No records could be extracted from the response. Check the Response tab to see the raw response. If this looks correct, make sure the Record Selector is configured correctly.",
   "connectorBuilder.warnings.primaryKeyMissing": "In at least one record, the configured primary key is not set. Primary keys must be present in every record.",
   "connectorBuilder.warnings.primaryKeyDuplicate": "Primary key is not unique. Each record must have a unique primary key value.",
+  "connectorBuilder.warnings.containsCustomComponent": "This stream relies on custom component code to execute, which is not currently supported in the test stream flow.",
   "connectorBuilder.resolvingStreamList": "Checking configuration…",
   "connectorBuilder.documentationLink": "Open documentation in separate tab",
   "connectorBuilder.interpolationHeading": "Variables available for interpolation",

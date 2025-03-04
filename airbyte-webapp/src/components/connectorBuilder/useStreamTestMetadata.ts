@@ -177,11 +177,20 @@ export const useStreamTestMetadata = () => {
     [formatMessage, getStreamTestMetadataStatus]
   );
 
+  const getStreamHasCustomType = useCallback(
+    (streamName: string): boolean => {
+      const currentStream = resolvedManifest.streams?.find((stream) => stream.name === streamName);
+      return hasCustomType(currentStream);
+    },
+    [resolvedManifest]
+  );
+
   return {
     getStreamNameFromIndex,
     updateStreamTestResults,
     getStreamTestMetadataStatus,
     getStreamTestWarnings,
+    getStreamHasCustomType,
   };
 };
 
@@ -296,4 +305,32 @@ const normalizePrimaryKey = (primaryKey: PrimaryKey | undefined): string[][] | u
 
 const isDoublyNestedArray = <T>(value: T[] | T[][]): value is T[][] => {
   return isArray(value[0]);
+};
+
+// Recursively scans `obj` to extract any string "type" values.
+const collectTypes = (obj: unknown) => {
+  const types: string[] = [];
+
+  if (typeof obj === "object" && obj != null) {
+    if ("type" in obj && typeof obj.type === "string") {
+      types.push(obj.type);
+    }
+
+    Object.values(obj).forEach((value) => {
+      types.push(...collectTypes(value));
+    });
+  }
+
+  return types;
+};
+
+// Checks if `obj` has any "type" values that start with "Custom".
+const hasCustomType = (obj: unknown) => {
+  const types = new Set<string>(collectTypes(obj));
+  for (const type of types) {
+    if (type.match(/^Custom[A-Z]/)) {
+      return true;
+    }
+  }
+  return false;
 };

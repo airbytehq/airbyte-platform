@@ -21,6 +21,7 @@ interface StreamTestButtonProps {
   isStreamTestQueued: boolean;
   isStreamTestRunning: boolean;
   className?: string;
+  forceDisabled?: boolean;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -31,6 +32,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   isStreamTestQueued,
   isStreamTestRunning,
   className,
+  forceDisabled,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
@@ -48,7 +50,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const isLoading = isStreamTestQueued || isStreamTestRunning;
 
-  let buttonDisabled = false;
+  let buttonDisabled = forceDisabled || false;
   let showWarningIcon = false;
   let tooltipContent = isLoading ? (
     <FormattedMessage id="connectorBuilder.testRead.running" />

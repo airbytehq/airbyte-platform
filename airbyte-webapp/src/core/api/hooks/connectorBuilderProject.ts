@@ -501,6 +501,7 @@ export const useBuilderProjectReadStream = (
         // this shouldn't happen, because read stream can only be triggered when a stream is selected
         throw new Error("No test stream provided - this state should not be reached!");
       }
+
       const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
       return transformSlices(streamRead, testStream);
     },
