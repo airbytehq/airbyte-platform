@@ -98,6 +98,10 @@ spec:
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
+        {{- end }}
+
         # Values from secret
         {{- if .Values.workloadLauncher.secrets }}
         {{- range $k, $v := .Values.workloadLauncher.secrets }}

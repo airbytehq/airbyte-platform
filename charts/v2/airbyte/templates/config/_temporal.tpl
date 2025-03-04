@@ -175,7 +175,7 @@ Renders the temporal.database.sqlTlsDisableHostVerification environment variable
 Renders the temporal.host value
 */}}
 {{- define "airbyte.temporal.host" }}
-    {{- (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) }}
+    {{- ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (include "airbyte.temporal.cloud.enabled" .) }}
 {{- end }}
 
 {{/*

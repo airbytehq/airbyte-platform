@@ -1273,6 +1273,9 @@ workloadLauncher:
   containerOrchestrator:
     # -- Enable or disable Orchestrator
     enabled: true
+
+    secretName: ""
+
     # -- Orchestrator image
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/container-orchestrator:{{ default .Chart.AppVersion .Values.global.image.tag }}"

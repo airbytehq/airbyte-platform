@@ -3,7 +3,7 @@ common:
   config:
     - env: AIRBYTE_EDITION
       key: edition
-      valueExp: ternary "pro" .Values.global.edition (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise"))
+      defaultValue: community
 
     - env: AIRBYTE_VERSION
       key: version
@@ -527,7 +527,7 @@ keycloak.admin.client:
 
     - env: KEYCLOAK_INTERNAL_HOST
       key: internalHost
-      valueExp: ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.edition "community"))
+      valueExp: ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))
 
     - env: KEYCLOAK_INTERNAL_PROTOCOL
       key: internalProtocol
@@ -908,7 +908,7 @@ temporal:
 
     - env: TEMPORAL_HOST
       key: host
-      valueExp: (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port))
+      valueExp: ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (include "airbyte.temporal.cloud.enabled" .)
 
     - env: DYNAMIC_CONFIG_FILE_PATH
       key: configFilePath
@@ -1093,7 +1093,7 @@ workloadApiServer:
 
     - env: WORKLOAD_API_HOST
       key: host
-      valueExp: (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port))
+      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane")
 
     - env: WORKLOAD_API_BEARER_TOKEN
       key: bearerToken
@@ -1135,6 +1135,10 @@ workloadLauncher:
 workloadLauncher.images:
   keyBasePath: workloadLauncher
   config:
+    - env: CONNECTOR_PROFILER_IMAGE
+      key: connectorProfiler.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $)
+
     - env: CONNECTOR_SIDECAR_IMAGE
       key:  connectorSidecar.image
       valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorSidecar.image $)
@@ -1152,11 +1156,10 @@ workloadLauncher.images:
 
 workloads:
   keyBasePath: global.workloads
-  secretNamePath: global.workloads.secretName
   config:
     - env: CONTAINER_ORCHESTRATOR_SECRET_NAME
       key: containerOrchestrator.secretName
-      valueExp: include "airbyte.workloads.secretName" .
+      defaultValueExp: .Values.global.secretName
 
     - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH
       key: containerOrchestrator.dataPlane.secretMountPath

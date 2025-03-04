@@ -9,7 +9,7 @@
 Renders the global.workloads.containerOrchestrator.secretName value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretName" }}
-    {{- .Values.global.workloads.containerOrchestrator.secretName }}
+    {{- .Values.global.workloads.containerOrchestrator.secretName | default .Values.global.secretName }}
 {{- end }}
 
 {{/*

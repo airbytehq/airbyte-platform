@@ -118,6 +118,24 @@ WORKLOAD_LAUNCHER_PARALLELISM: {{ include "airbyte.workloadLauncher.parallelism"
 {{- end }}
 
 {{/*
+Renders the workloadLauncher.connectorProfiler.image value
+*/}}
+{{- define "airbyte.workloadLauncher.images.connectorProfiler.image" }}
+    {{- include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $) }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.images.connectorProfiler.image environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.images.connectorProfiler.image.env" }}
+- name: CONNECTOR_PROFILER_IMAGE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONNECTOR_PROFILER_IMAGE
+{{- end }}
+
+{{/*
 Renders the workloadLauncher.connectorSidecar.image value
 */}}
 {{- define "airbyte.workloadLauncher.images.connectorSidecar.image" }}
@@ -190,40 +208,23 @@ Renders the workloadLauncher.images.workloadInit.image environment variable
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.connectorProfiler.image value
-*/}}
-{{- define "airbyte.workloadLauncher.images.connectorProfiler.image" }}
-    {{- include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $) }}
-{{- end }}
-
-{{/*
-Renders the workloadLauncher.images.connectorProfiler.image environment variable
-*/}}
-{{- define "airbyte.workloadLauncher.images.connectorProfiler.image.env" }}
-- name: CONNECTOR_PROFILER_IMAGE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: CONNECTOR_PROFILER_IMAGE
-{{- end }}
-{{/*
 Renders the set of all workloadLauncher.images environment variables
 */}}
 {{- define "airbyte.workloadLauncher.images.envs" }}
+{{- include "airbyte.workloadLauncher.images.connectorProfiler.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.connectorSidecar.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.enabled.env" . }}
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.workloadInit.image.env" . }}
-{{- include "airbyte.workloadLauncher.images.connectorProfiler.image.env" . }}
 {{- end }}
 
 {{/*
 Renders the set of all workloadLauncher.images config map variables
 */}}
 {{- define "airbyte.workloadLauncher.images.configVars" }}
+CONNECTOR_PROFILER_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorProfiler.image" . | quote }}
 CONNECTOR_SIDECAR_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorSidecar.image" . | quote }}
 CONTAINER_ORCHESTRATOR_ENABLED: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.enabled" . | quote }}
 CONTAINER_ORCHESTRATOR_IMAGE: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.image" . | quote }}
 WORKLOAD_INIT_IMAGE: {{ include "airbyte.workloadLauncher.images.workloadInit.image" . | quote }}
-CONNECTOR_PROFILER_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorProfiler.image" . | quote }}
 {{- end }}

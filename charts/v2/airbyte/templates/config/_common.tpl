@@ -9,7 +9,7 @@
 Renders the global.edition value
 */}}
 {{- define "airbyte.common.edition" }}
-    {{- ternary "pro" .Values.global.edition (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
+    {{- .Values.global.edition | default "community" }}
 {{- end }}
 
 {{/*
