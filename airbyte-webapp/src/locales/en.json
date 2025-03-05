@@ -988,6 +988,8 @@
   "connection.rateLimitedMessageWithQuota": "This sync is being rate limited by the source. We'll try to complete syncing once the time limit is up in {quota}",
 
   "connection.stream.actions.refreshStream": "Refresh stream",
+  "connection.stream.actions.refreshDisabled.destinationNotSupported": "This destination does not support refreshing data",
+  "connection.stream.actions.refreshDisabled.streamNotIncremental": "Refreshing data is only supported for incremental streams",
   "connection.stream.actions.refreshStream.confirm.title": "Are you sure you want to refresh the {streamName} stream?",
   "connection.stream.actions.refreshStream.confirm.submit": "Refresh my stream",
   "connection.stream.actions.refreshStream.learnMoreLink": "Learn more about refreshing streams.",
