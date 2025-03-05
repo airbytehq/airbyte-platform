@@ -45,7 +45,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
 
@@ -67,8 +66,8 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
-    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns replCustomSelectors
     val annotations = mapOf("annotation" to "value2")
     every { replConfigs.workerKubeAnnotations } returns annotations
     val ffClient: TestClient = mockk()
@@ -205,14 +204,14 @@ class PayloadKubeInputMapperTest {
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
     val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { checkConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { checkConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { checkConfigs.jobImagePullPolicy } returns pullPolicy
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
@@ -290,8 +289,8 @@ class PayloadKubeInputMapperTest {
     )
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -319,13 +318,13 @@ class PayloadKubeInputMapperTest {
     val checkConfigs: WorkerConfigs = mockk()
     val discoverConfigs: WorkerConfigs = mockk()
     every { discoverConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { discoverConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { discoverConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { discoverConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { discoverConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { discoverConfigs.jobImagePullPolicy } returns pullPolicy
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
@@ -404,8 +403,8 @@ class PayloadKubeInputMapperTest {
     )
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -431,8 +430,8 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     every { specConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { specConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { specConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { specConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { specConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
     val replConfigs: WorkerConfigs = mockk()
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
@@ -498,8 +497,8 @@ class PayloadKubeInputMapperTest {
     assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -521,7 +520,7 @@ class PayloadKubeInputMapperTest {
     val orchestratorContainerInfo = KubeContainerInfo("orch-img", "Always")
     val reqs = ResourceRequirements()
     val resourceReqFactory = ResourceRequirementsFactory(reqs, reqs, reqs, reqs, reqs)
-    val workerConfigs = WorkerConfigs(reqs, emptyList(), emptyMap(), Optional.empty(), emptyMap(), emptyMap(), emptyList(), "Always")
+    val workerConfigs = WorkerConfigs(reqs, emptyList(), emptyMap(), null, emptyMap(), emptyMap(), emptyList(), "Always")
     val workloadId = "workload-1"
     val jobConfig =
       JobRunConfig().apply {
@@ -604,13 +603,13 @@ class PayloadKubeInputMapperTest {
       )
 
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
@@ -635,13 +634,13 @@ class PayloadKubeInputMapperTest {
         listOf(),
       )
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
@@ -653,13 +652,13 @@ class PayloadKubeInputMapperTest {
     testConfig.dockerImage = "my.registry.com/test-img"
 
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("my.registry.com/test-img", it.sourceImage)

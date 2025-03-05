@@ -245,9 +245,9 @@ class PayloadKubeInputMapper(
     connectionId: UUID? = null,
   ): Map<String, String> =
     if (usesCustomConnector) {
-      workerConfigs.workerIsolatedKubeNodeSelectors.orElse(workerConfigs.getworkerKubeNodeSelectors())
+      workerConfigs.workerIsolatedKubeNodeSelectors ?: workerConfigs.workerKubeNodeSelectors
     } else {
-      getNodeSelectorsOverride(connectionId) ?: workerConfigs.getworkerKubeNodeSelectors()
+      getNodeSelectorsOverride(connectionId) ?: workerConfigs.workerKubeNodeSelectors
     }
 
   private fun getNodeSelectorsOverride(connectionId: UUID?): Map<String, String>? {

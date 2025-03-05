@@ -53,7 +53,7 @@ data class ConnectorPodFactory(
     val volumeMountPairs = volumeFactory.connector()
 
     val init: Container = initContainerFactory.create(initContainerReqs, volumeMountPairs.initMounts, runtimeEnvVars, workspaceId)
-    val main: Container = buildMainContainer(connectorContainerReqs, volumeMountPairs.mainMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
+    val main: Container = buildMainContainer(connectorContainerReqs, volumeMountPairs.mainMounts, kubePodInfo.mainContainerInfo!!, runtimeEnvVars)
     val sidecar: Container = buildSidecarContainer(volumeMountPairs.sidecarMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
