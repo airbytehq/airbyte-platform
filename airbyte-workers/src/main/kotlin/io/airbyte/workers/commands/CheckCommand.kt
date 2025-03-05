@@ -18,6 +18,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
+import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel
@@ -35,6 +36,7 @@ class CheckCommand(
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
   private val metricClient: MetricClient,
+  private val dataplaneGroupResolver: DataplaneGroupResolver,
 ) : WorkloadCommandBase<CheckConnectionInput>(
     airbyteApiClient = airbyteApiClient,
     workloadClient = workloadClient,
@@ -56,6 +58,12 @@ class CheckCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.checkConnectionInput.actorContext.workspaceId
+    val dataplaneGroup =
+      dataplaneGroupResolver.resolveForCheck(
+        organizationId = input.checkConnectionInput.actorContext.organizationId,
+        workspaceId = workspaceId,
+        actorId = input.checkConnectionInput.actorContext.actorId,
+      )
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -73,6 +81,7 @@ class CheckCommand(
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,
+      dataplaneGroup = dataplaneGroup,
     )
   }
 

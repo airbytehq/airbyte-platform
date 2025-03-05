@@ -39,6 +39,7 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.sync.WorkloadClient;
+import io.airbyte.workers.workload.DataplaneGroupResolver;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.WorkloadApiClient;
@@ -74,6 +75,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
   private final PayloadChecker payloadChecker;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
   private final LogClientManager logClientManager;
+  private final DataplaneGroupResolver dataplaneGroupResolver;
 
   public AsyncReplicationActivityImpl(
                                       @Named("workspaceRoot") final Path workspaceRoot,
@@ -85,7 +87,8 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                       final FeatureFlagClient featureFlagClient,
                                       final PayloadChecker payloadChecker,
                                       @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
-                                      final LogClientManager logClientManager) {
+                                      final LogClientManager logClientManager,
+                                      final DataplaneGroupResolver dataplaneGroupResolver) {
     this.replicationInputMapper = new ReplicationInputMapper();
     this.workspaceRoot = workspaceRoot;
     this.jobOutputDocStore = jobOutputDocStore;
@@ -97,6 +100,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     this.payloadChecker = payloadChecker;
     this.catalogStorageClient = catalogStorageClient;
     this.logClientManager = logClientManager;
+    this.dataplaneGroupResolver = dataplaneGroupResolver;
   }
 
   @VisibleForTesting
@@ -110,7 +114,8 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                final FeatureFlagClient featureFlagClient,
                                final PayloadChecker payloadChecker,
                                @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
-                               final LogClientManager logClientManager) {
+                               final LogClientManager logClientManager,
+                               final DataplaneGroupResolver dataplaneGroupResolver) {
     this.replicationInputMapper = replicationInputMapper;
     this.workspaceRoot = workspaceRoot;
     this.jobOutputDocStore = jobOutputDocStore;
@@ -122,6 +127,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     this.payloadChecker = payloadChecker;
     this.catalogStorageClient = catalogStorageClient;
     this.logClientManager = logClientManager;
+    this.dataplaneGroupResolver = dataplaneGroupResolver;
   }
 
   record TracingContext(UUID connectionId, String jobId, Long attemptNumber, Map<String, Object> traceAttributes) {}
@@ -249,7 +255,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
     replicationInput = replicationInputMapper.toReplicationInput(replicationActivityInput);
     worker = new WorkloadApiWorker(jobOutputDocStore, workloadApiClient,
-        workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
+        workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager, dataplaneGroupResolver);
 
     return new WorkerAndReplicationInput(worker, replicationInput);
   }

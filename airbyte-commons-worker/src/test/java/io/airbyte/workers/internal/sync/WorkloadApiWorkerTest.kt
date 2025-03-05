@@ -102,6 +102,9 @@ internal class WorkloadApiWorkerTest {
         replicationActivityInput,
         featureFlagClient,
         logClientManager,
+        mockk {
+          every { resolveForSync(any(), any(), any()) } returns Geography.US.value
+        },
       )
   }
 
