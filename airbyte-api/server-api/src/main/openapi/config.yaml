@@ -6042,6 +6042,28 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/token:
+    post:
+      summary: Get a token for dataplane requests
+      tags:
+        - dataplane
+      operationId: getDataplaneToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneTokenRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -17048,6 +17070,16 @@ components:
         - id
       properties:
         id:
+          type: string
+    DataplaneTokenRequestBody:
+      required:
+        - client_id
+        - client_secret
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
           type: string
 
   responses:

@@ -8,10 +8,14 @@ import io.airbyte.api.model.generated.ActorType
 import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
 import io.airbyte.config.ConfigScopeType
+import io.airbyte.config.Dataplane
 import io.airbyte.config.Geography
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.DataplaneAuthService
+import io.airbyte.data.services.DataplaneService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
@@ -28,18 +32,22 @@ import io.airbyte.featureflag.Priority
 import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
 import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.featureflag.Workspace
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import jakarta.validation.constraints.NotNull
+import org.jooq.exception.DataAccessException
 import java.util.UUID
 
 @Singleton
-class DataplaneService(
+open class DataplaneService(
   private val connectionService: ConnectionService,
   private val workspaceService: WorkspaceService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val featureFlagClient: FeatureFlagClient,
   private val scopedConfigurationService: ScopedConfigurationService,
+  private val dataplaneDataService: DataplaneService,
+  private val dataplaneAuthService: DataplaneAuthService,
 ) {
   /**
    * Get queue name from given data. Pulled from the WorkloadService.
@@ -140,6 +148,65 @@ class DataplaneService(
     }
 
     return context
+  }
+
+  fun createCredentials(
+    dataplaneId: UUID,
+    createdById: UUID,
+  ): io.airbyte.config.DataplaneClientCredentials = dataplaneAuthService.createCredentials(dataplaneId, createdById)
+
+  fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
+
+  fun updateDataplane(
+    dataplaneId: UUID,
+    updatedName: String,
+    updatedEnabled: Boolean,
+    updatedById: UUID,
+  ): Dataplane {
+    val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
+
+    val updatedDataplane =
+      existingDataplane.apply {
+        name = updatedName
+        enabled = updatedEnabled
+        updatedBy = updatedById
+      }
+
+    return writeDataplane(updatedDataplane)
+  }
+
+  @Transactional("config")
+  open fun deleteDataplane(
+    dataplaneId: UUID,
+    updatedById: UUID,
+  ): Dataplane {
+    val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
+    val tombstonedDataplane =
+      existingDataplane.apply {
+        tombstone = true
+        updatedBy = updatedById
+      }
+
+    dataplaneAuthService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneAuthService.deleteCredentials(it.id) }
+    return writeDataplane(tombstonedDataplane)
+  }
+
+  fun getToken(
+    clientId: String,
+    clientSecret: String,
+  ): String = dataplaneAuthService.getToken(clientId, clientSecret)
+
+  fun writeDataplane(dataplane: Dataplane): Dataplane {
+    try {
+      return dataplaneDataService.writeDataplane(dataplane)
+    } catch (e: DataAccessException) {
+      if (e.message?.contains("duplicate key value violates unique constraint") == true &&
+        e.message?.contains("dataplane_dataplane_group_id_name_key") == true
+      ) {
+        throw DataplaneNameAlreadyExistsProblem()
+      }
+      throw e
+    }
   }
 }
 
