@@ -9,6 +9,7 @@ import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.auth.config.AuthMode
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.config.InstanceAdminConfig
@@ -25,6 +26,7 @@ import java.util.UUID
 @RequiresAuthMode(AuthMode.SIMPLE)
 class ApplicationServiceMicronautImpl(
   private val instanceAdminConfig: InstanceAdminConfig,
+  private val tokenExpirationConfig: TokenExpirationConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
 ) : ApplicationService {
   override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
@@ -56,9 +58,16 @@ class ApplicationServiceMicronautImpl(
               addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
               addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
             },
-          "exp" to Instant.now().plus(24, ChronoUnit.HOURS).epochSecond,
+          "exp" to
+            Instant
+              .now()
+              .plus(
+                tokenExpirationConfig.applicationTokenExpirationInMinutes,
+                ChronoUnit.MINUTES,
+              ).epochSecond,
         ),
-      ) // Necessary now that this is no longer optional, but I don't know under what conditions we could
+      )
+      // Necessary now that this is no longer optional, but I don't know under what conditions we could
       // end up here.
       .orElseThrow { BadRequestException("Could not generate token") }
   }

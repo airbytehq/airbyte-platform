@@ -2,6 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.helpers.DataplanePasswordEncoder
 import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.repositories.entities.DataplaneClientCredentials
@@ -25,7 +26,13 @@ class DataplaneAuthServiceDataImplTest {
     val dataplaneClientCredentialsRepository = mockk<DataplaneClientCredentialsRepository>()
     val jwtTokenGenerator = mockk<JwtTokenGenerator>()
     val dataplanePasswordEncoder = mockk<DataplanePasswordEncoder>()
-    val service = DataplaneAuthServiceDataImpl(dataplaneClientCredentialsRepository, jwtTokenGenerator, dataplanePasswordEncoder)
+    val service =
+      DataplaneAuthServiceDataImpl(
+        dataplaneClientCredentialsRepository,
+        jwtTokenGenerator,
+        dataplanePasswordEncoder,
+        TokenExpirationConfig(),
+      )
   }
 
   @Test

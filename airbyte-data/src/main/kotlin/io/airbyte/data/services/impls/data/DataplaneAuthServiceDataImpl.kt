@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.helpers.DataplanePasswordEncoder
 import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.repositories.entities.DataplaneClientCredentials
@@ -18,7 +19,6 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import kotlin.time.Duration.Companion.days
 
 private val logger = KotlinLogging.logger {}
 
@@ -29,10 +29,10 @@ class DataplaneAuthServiceDataImpl(
   private val dataplaneClientCredentialsRepository: DataplaneClientCredentialsRepository,
   private val jwtTokenGenerator: JwtTokenGenerator,
   private val dataplanePasswordEncoder: DataplanePasswordEncoder,
+  private val tokenExpirationConfig: TokenExpirationConfig,
 ) : DataplaneAuthService {
   companion object {
     const val SECRET_LENGTH = 2096
-    val TOKEN_EXPIRATION_LENGTH = 1.days.inWholeMinutes
   }
 
   /**
@@ -114,7 +114,7 @@ class DataplaneAuthServiceDataImpl(
             buildSet {
               addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN))
             },
-          "exp" to Instant.now().plus(TOKEN_EXPIRATION_LENGTH, ChronoUnit.MINUTES).epochSecond,
+          "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {
         IllegalStateException(
