@@ -274,6 +274,7 @@ create table "public"."dataplane_client_credentials" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "created_by" uuid not null,
   constraint "dataplane_client_credentials_pkey" primary key ("id"),
+  constraint "dataplane_client_credentials_client_id_key" unique ("client_id"),
   constraint "dataplane_client_credentials_dataplane_id_client_id_client__key" unique ("dataplane_id", "client_id", "client_secret")
 );
 create table "public"."dataplane_group" (
