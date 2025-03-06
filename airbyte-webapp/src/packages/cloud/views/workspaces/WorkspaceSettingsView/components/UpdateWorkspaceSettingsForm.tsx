@@ -1,7 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
-import { SchemaOf } from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
@@ -14,15 +13,12 @@ import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
-interface WorkspaceFormValues {
-  name: string;
-  defaultGeography?: Geography;
-}
-
-const ValidationSchema: SchemaOf<WorkspaceFormValues> = yup.object().shape({
-  name: yup.string().required("form.empty.error"),
-  defaultGeography: yup.mixed<Geography>().optional(),
+const ValidationSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  defaultGeography: z.nativeEnum(Geography).optional(),
 });
+
+type WorkspaceFormValues = z.infer<typeof ValidationSchema>;
 
 export const UpdateWorkspaceSettingsForm: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -67,7 +63,7 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
         name,
         defaultGeography,
       }}
-      schema={ValidationSchema}
+      zodSchema={ValidationSchema}
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}

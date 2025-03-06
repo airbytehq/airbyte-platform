@@ -1,5 +1,5 @@
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -9,13 +9,11 @@ import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
-interface UpdateWorkspaceNameFormValues {
-  name: string;
-}
-
-const schema = yup.object().shape({
-  name: yup.string().required("form.empty.error"),
+const updateWorkspaceNameSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
 });
+
+type UpdateWorkspaceNameFormValues = z.infer<typeof updateWorkspaceNameSchema>;
 
 export const UpdateWorkspaceNameForm = () => {
   const { name, workspaceId, organizationId } = useCurrentWorkspace();
@@ -52,7 +50,7 @@ export const UpdateWorkspaceNameForm = () => {
   return (
     <Form<UpdateWorkspaceNameFormValues>
       defaultValues={{ name }}
-      schema={schema}
+      zodSchema={updateWorkspaceNameSchema}
       onSubmit={onSubmit}
       onError={onError}
       onSuccess={onSuccess}

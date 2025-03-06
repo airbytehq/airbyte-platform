@@ -1,6 +1,5 @@
 import { useIntl } from "react-intl";
-import { SchemaOf } from "yup";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -10,13 +9,11 @@ import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
-interface WorkspaceEmailFormValues {
-  email: string;
-}
-
-const ValidationSchema: SchemaOf<WorkspaceEmailFormValues> = yup.object().shape({
-  email: yup.string().email("form.email.error").required(),
+const ValidationSchema = z.object({
+  email: z.string().email("form.email.error"),
 });
+
+type WorkspaceEmailFormValues = z.infer<typeof ValidationSchema>;
 
 export const WorkspaceEmailForm = () => {
   const { formatMessage } = useIntl();
@@ -58,7 +55,7 @@ export const WorkspaceEmailForm = () => {
       defaultValues={{
         email,
       }}
-      schema={ValidationSchema}
+      zodSchema={ValidationSchema}
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}

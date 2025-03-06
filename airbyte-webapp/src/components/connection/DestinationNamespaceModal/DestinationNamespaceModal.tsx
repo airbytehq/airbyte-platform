@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
@@ -15,12 +15,22 @@ import { DestinationNamespaceDescription } from "./DestinationNamespaceDescripti
 import styles from "./DestinationNamespaceModal.module.scss";
 import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
-import { namespaceDefinitionSchema, namespaceFormatSchema } from "../ConnectionForm/schema";
 
-export interface DestinationNamespaceFormValues {
-  namespaceDefinition: NamespaceDefinitionType;
-  namespaceFormat?: string;
-}
+const destinationNamespaceSchema = z
+  .object({
+    namespaceDefinition: z.nativeEnum(NamespaceDefinitionType),
+    namespaceFormat: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      data.namespaceDefinition === NamespaceDefinitionType.customformat ? data.namespaceFormat?.trim() !== "" : true,
+    {
+      path: ["namespaceFormat"],
+      message: "form.empty.error",
+    }
+  );
+
+export type DestinationNamespaceFormValues = z.infer<typeof destinationNamespaceSchema>;
 
 const NameSpaceCustomFormatInput: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -45,11 +55,6 @@ const NameSpaceCustomFormatInput: React.FC = () => {
   );
 };
 
-const destinationNamespaceValidationSchema = yup.object().shape({
-  namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
-  namespaceFormat: namespaceFormatSchema,
-});
-
 interface DestinationNamespaceModalProps {
   initialValues: Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
   onCancel: () => void;
@@ -64,13 +69,13 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
   const { formatMessage } = useIntl();
 
   return (
-    <Form
+    <Form<DestinationNamespaceFormValues>
+      zodSchema={destinationNamespaceSchema}
       defaultValues={{
         namespaceDefinition: initialValues.namespaceDefinition,
         // eslint-disable-next-line no-template-curly-in-string
         namespaceFormat: initialValues.namespaceFormat ?? "${SOURCE_NAMESPACE}",
       }}
-      schema={destinationNamespaceValidationSchema}
       onSubmit={onSubmit}
     >
       <>

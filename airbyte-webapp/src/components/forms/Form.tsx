@@ -1,8 +1,10 @@
 import { yupResolver } from "@hookform/resolvers/yup";
+import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import { ReactNode, useEffect } from "react";
 import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
-import { SchemaOf } from "yup";
+import * as yup from "yup";
+import { z } from "zod";
 
 import styles from "./Form.module.scss";
 import { FormChangeTracker } from "./FormChangeTracker";
@@ -24,7 +26,14 @@ interface FormProps<T extends FormValues> {
   onSubmit?: FormSubmissionHandler<T>;
   onSuccess?: (values: T) => void;
   onError?: (e: Error, values: T, methods: UseFormReturn<T>) => void;
-  schema: SchemaOf<T>;
+  /**
+   * Yup schema for form validation
+   */
+  schema?: yup.SchemaOf<T>;
+  /**
+   * Zod schema for form validation
+   */
+  zodSchema?: z.ZodSchema<T>;
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
@@ -52,6 +61,7 @@ export const Form = <T extends FormValues>({
   onError,
   defaultValues,
   schema,
+  zodSchema,
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
   mode = "onChange",
@@ -62,7 +72,7 @@ export const Form = <T extends FormValues>({
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
-    resolver: yupResolver(schema),
+    resolver: zodSchema ? zodResolver(zodSchema) : yupResolver((schema ?? yup.object()) as yup.ObjectSchema<T>),
     mode,
     reValidateMode,
   });

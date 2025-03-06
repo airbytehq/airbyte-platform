@@ -1,7 +1,7 @@
 import React from "react";
-import { useFormState } from "react-hook-form";
+import { useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -9,40 +9,55 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useGetInstanceConfiguration, useSetupInstanceConfiguration } from "core/api";
+import { useGetInstanceConfiguration, useOssSecurityCheck, useSetupInstanceConfiguration } from "core/api";
 import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
 import { SecurityCheck } from "./SecurityCheck";
 
-type SecurityCheckStatus = "loading" | "check_failed" | "succeeded" | "ignored" | "failed" | "skipped";
+export const SecurityCheckStatus = {
+  loading: "loading",
+  check_failed: "check_failed",
+  succeeded: "succeeded",
+  ignored: "ignored",
+  failed: "failed",
+  skipped: "skipped",
+} as const;
 
-export interface SetupFormValues {
-  email: string;
-  anonymousDataCollection: boolean;
-  securityCheck: SecurityCheckStatus;
-  organizationName: string;
-}
+const setupFormValidationSchema = z.object({
+  email: z.string().email("form.email.error"),
+  anonymousDataCollection: z.boolean(),
+  securityCheck: z.nativeEnum(SecurityCheckStatus),
+  organizationName: z.string().trim().nonempty("form.empty.error"),
+});
+
+export type SetupFormValues = z.infer<typeof setupFormValidationSchema>;
 
 const SubmissionButton: React.FC = () => {
   const { isDirty, isSubmitting, isValid } = useFormState();
+  const { isLoading } = useOssSecurityCheck(window.location.origin);
+  const securityCheck = useWatch({ name: "securityCheck" });
 
   return (
     <Text align="center">
-      <Button size="lg" type="submit" disabled={!isDirty || !isValid} isLoading={isSubmitting}>
+      <Button
+        size="lg"
+        type="submit"
+        disabled={
+          !isDirty ||
+          !isValid ||
+          isLoading ||
+          securityCheck === SecurityCheckStatus.failed ||
+          securityCheck === SecurityCheckStatus.loading
+        }
+        isLoading={isSubmitting}
+      >
         <FormattedMessage id="setupForm.submit" />
       </Button>
     </Text>
   );
 };
-
-const setupFormValidationSchema = yup.object().shape({
-  email: yup.string().email("form.email.error").required("form.empty.error"),
-  anonymousDataCollection: yup.bool().required(),
-  securityCheck: yup.mixed<SecurityCheckStatus>().oneOf(["succeeded", "ignored", "check_failed", "skipped"]).required(),
-  organizationName: yup.string().required("form.empty.error"),
-});
 
 export const SetupForm: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -62,7 +77,7 @@ export const SetupForm: React.FC = () => {
   };
 
   // The security check only makes sense for instances with no auth. If auth is enabled, we should just skip it.
-  const defaultSecurityCheckValue = authType === "none" ? "loading" : "skipped";
+  const defaultSecurityCheckValue = authType === "none" ? SecurityCheckStatus.loading : SecurityCheckStatus.skipped;
 
   return (
     <Form<SetupFormValues>
@@ -71,7 +86,7 @@ export const SetupForm: React.FC = () => {
         anonymousDataCollection: trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment,
         securityCheck: defaultSecurityCheckValue,
       }}
-      schema={setupFormValidationSchema}
+      zodSchema={setupFormValidationSchema}
       onSubmit={onSubmit}
     >
       <FlexContainer direction="column">
@@ -98,7 +113,7 @@ export const SetupForm: React.FC = () => {
             description={formatMessage({ id: "preferences.collectData" })}
           />
         )}
-        {defaultSecurityCheckValue !== "skipped" && (
+        {defaultSecurityCheckValue !== SecurityCheckStatus.skipped && (
           <Box mb="md">
             <SecurityCheck />
           </Box>

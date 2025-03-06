@@ -1,8 +1,7 @@
 import { useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
-import { SchemaOf } from "yup";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { THEMED_HEX_OPTIONS } from "components/connection/SelectConnectionTags/SelectConnectionTags";
 import { Form } from "components/forms/Form";
@@ -30,23 +29,15 @@ const getRandomTagColor = () => {
   return THEMED_HEX_OPTIONS[randomIndex];
 };
 
-interface TagFormValues {
-  name: string;
-  color: string;
-}
-
-const ValidationSchema: SchemaOf<TagFormValues> = yup.object().shape({
-  name: yup
+const tagFormSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error").max(30, "settings.workspace.tags.tagForm.validation.maxLength"),
+  color: z
     .string()
-    .trim()
-    .required("form.empty.error")
-    .max(30, "settings.workspace.tags.tagForm.validation.maxLength"),
-  color: yup
-    .string()
-    .required("form.empty.error")
     .length(7, "settings.workspace.tags.tagForm.validation.invalidHexColor")
-    .matches(/^#([A-Fa-f0-9]{6})$/, "settings.workspace.tags.tagForm.validation.invalidHexColor"),
+    .regex(/^#([A-Fa-f0-9]{6})$/, "settings.workspace.tags.tagForm.validation.invalidHexColor"),
 });
+
+type TagFormValues = z.infer<typeof tagFormSchema>;
 
 interface TagFormModalProps {
   tag?: Tag;
@@ -160,7 +151,7 @@ export const TagFormModal: React.FC<TagFormModalProps> = ({ tag, onCancel, onCom
 
   return (
     <Form<TagFormValues>
-      schema={ValidationSchema}
+      zodSchema={tagFormSchema}
       defaultValues={{
         name: tag?.name ?? "",
         color: tag ? `#${tag.color}` : `#${getRandomTagColor()}`,
