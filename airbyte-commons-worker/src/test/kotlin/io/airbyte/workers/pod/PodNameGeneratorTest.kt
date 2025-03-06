@@ -63,6 +63,7 @@ internal class PodNameGeneratorTest {
       "hello:1,check,100,0,hello-check-100-0-",
       "registry.internal:1234/foo/bar:1,sync,1,3,bar-sync-1-3-",
       "really-really-really-long-name-to-cause-overflow,job-type,12345,6789,ly-really-long-name-to-cause-overflow-job-type-12345-6789-",
+      "non_compliant/Image_Name:dev,discover,1,0,image-name-discover-1-0-",
     ],
   )
   fun testCreateProcessName(

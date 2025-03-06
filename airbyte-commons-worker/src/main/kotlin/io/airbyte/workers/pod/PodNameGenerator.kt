@@ -70,7 +70,8 @@ internal fun createProcessName(
   jobId: String,
   attempt: Int,
 ): String {
-  val imageName = shortImageName(fullImagePath)
+  // Make image name RFC 1123 subdomain compliant
+  val imageName = shortImageName(fullImagePath).replace("_", "-").lowercase()
   val suffix = "$jobType-$jobId-$attempt-${randomAlpha(5).lowercase()}"
 
   val processName =
