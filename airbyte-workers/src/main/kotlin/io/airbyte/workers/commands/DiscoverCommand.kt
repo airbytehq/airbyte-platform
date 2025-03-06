@@ -10,6 +10,7 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.workers.input.isReset
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
@@ -52,7 +53,7 @@ class DiscoverCommand(
     input: DiscoverCatalogInput,
     signalPayload: String?,
   ): String {
-    if (isAutoRefresh(input) && discoverAutoRefreshWindow == Duration.INFINITE) {
+    if (input.launcherConfig.isReset() || (isAutoRefresh(input) && discoverAutoRefreshWindow == Duration.INFINITE)) {
       return NOOP_DISCOVER_PLACEHOLDER_ID
     }
     return super.start(input, signalPayload)
