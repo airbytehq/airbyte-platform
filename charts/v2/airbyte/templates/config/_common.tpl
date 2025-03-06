@@ -189,7 +189,7 @@ Renders the common.connectorBuilderServer.apiHost environment variable
 Renders the global.api.internalHost value
 */}}
 {{- define "airbyte.common.api.internalHost" }}
-    {{- (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) }}
+    {{- ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
 {{- end }}
 
 {{/*

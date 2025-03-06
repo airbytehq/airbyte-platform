@@ -91,6 +91,10 @@ spec:
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
+        {{- end }}
+
         # Values from secret
         {{- if .Values.worker.secrets }}
         {{- range $k, $v := .Values.worker.secrets }}
@@ -184,7 +188,7 @@ spec:
         volumeMounts:
         {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
           readOnly: true
         {{- end }}
         {{- if .Values.worker.extraVolumeMounts }}
@@ -204,7 +208,7 @@ spec:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ include "airbyte.storage.secretName" }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"

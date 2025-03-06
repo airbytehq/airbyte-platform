@@ -105,6 +105,7 @@ spec:
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- end}}
 
         # Values from secret
@@ -171,7 +172,7 @@ spec:
         volumeMounts:
         {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
           readOnly: true
         {{- end }}
 
@@ -192,7 +193,7 @@ spec:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ include "airbyte.storage.secretName" }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"

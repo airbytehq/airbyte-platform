@@ -41,7 +41,7 @@ common:
 
     - env: INTERNAL_API_HOST
       key: api.internalHost
-      valueExp: (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port))
+      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")
     
     - env: LOCAL
       key: local
@@ -209,7 +209,7 @@ cluster:
       discriminatorOpts:
        - data-plane
        - hybrid
-
+  
 connector:
   keyBasePath: global.connectorRegistry
   config: 
@@ -908,7 +908,7 @@ temporal:
 
     - env: TEMPORAL_HOST
       key: host
-      valueExp: ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (include "airbyte.temporal.cloud.enabled" .)
+      valueExp: ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (eq (include "airbyte.temporal.cloud.enabled" .) "true")
 
     - env: DYNAMIC_CONFIG_FILE_PATH
       key: configFilePath
@@ -938,7 +938,24 @@ temporal.cli:
 
 temporal.cloud:
   keyBasePath: global.temporal.cloud
+  secretNamePath: global.temporal.secretName
   config:
+    - env: TEMPORAL_CLOUD_BILLING_HOST
+      key: billing.host
+      refKey: TEMPORAL_CLOUD_HOST
+
+    - env: TEMPORAL_CLOUD_BILLING_NAMESPACE
+      key: billing.namespace
+      refKey: TEMPORAL_CLOUD_NAMESPACE
+
+    - env: TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT
+      key: connectorRollout.host
+      refKey: TEMPORAL_CLOUD_HOST
+
+    - env: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
+      key: connectorRollout.namespace
+      refKey: TEMPORAL_CLOUD_NAMESPACE
+
     - env: TEMPORAL_CLOUD_ENABLED
       key: enabled
       defaultValue: false
@@ -1167,6 +1184,10 @@ workloads:
 
     - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
       key: containerOrchestrator.dataPlane.secretName
+
+    - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+      key: containerOrchestrator.dataPlane.secretKey
+      defaultValue: sa.json
 
     - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
       key: containerOrchestrator.javaOpts

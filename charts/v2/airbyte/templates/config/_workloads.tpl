@@ -60,6 +60,24 @@ Renders the workloads.containerOrchestrator.dataPlane.secretName environment var
 {{- end }}
 
 {{/*
+Renders the global.workloads.containerOrchestrator.dataPlane.secretKey value
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" }}
+    {{- .Values.global.workloads.containerOrchestrator.dataPlane.secretKey | default "sa.json" }}
+{{- end }}
+
+{{/*
+Renders the workloads.containerOrchestrator.dataPlane.secretKey environment variable
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretKey.env" }}
+- name: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+{{- end }}
+
+{{/*
 Renders the global.workloads.containerOrchestrator.javaOpts value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.javaOpts" }}
@@ -192,6 +210,7 @@ Renders the set of all workloads environment variables
 {{- include "airbyte.workloads.containerOrchestrator.secretName.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretName.env" . }}
+{{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.javaOpts.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.secretMountPath.env" . }}
 {{- include "airbyte.workloads.kubernetesClientMaxIdleConnections.env" . }}
@@ -208,6 +227,7 @@ Renders the set of all workloads config map variables
 CONTAINER_ORCHESTRATOR_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.secretName" . | quote }}
 CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" . | quote }}
 CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretName" . | quote }}
+CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" . | quote }}
 CONTAINER_ORCHESTRATOR_JAVA_OPTS: {{ include "airbyte.workloads.containerOrchestrator.javaOpts" . | quote }}
 CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.secretMountPath" . | quote }}
 KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: {{ include "airbyte.workloads.kubernetesClientMaxIdleConnections" . | quote }}
