@@ -193,3 +193,5 @@ object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
+
+object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)

@@ -62,10 +62,13 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData;
+import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ApiConverters;
@@ -116,6 +119,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
@@ -141,13 +145,16 @@ import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
+import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
+import io.airbyte.metrics.lib.ApmTraceConstants;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
@@ -172,6 +179,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -440,6 +448,77 @@ public class ConnectionsHandler {
     }
   }
 
+  private String generateDestinationStreamKey(final String namespaceDefinition,
+                                              final String namespaceFormat,
+                                              final String prefix,
+                                              final String streamNamespace,
+                                              final String streamName) {
+
+    return namespaceDefinition + namespaceFormat + streamNamespace + prefix + streamName;
+  }
+
+  private void validateStreamsDoNotConflictWithExistingDestinationStreams(final AirbyteCatalog newCatalog,
+                                                                          final UUID destinationId,
+                                                                          final String namespaceDefinitionType,
+                                                                          final String namespaceFormat,
+                                                                          final String prefix)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+
+    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(destinationId);
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+
+    ApmTraceUtils.addTagsToTrace(
+        List.of(
+            new MetricAttribute(ApmTraceConstants.Tags.ORGANIZATION_ID_KEY, organizationId.toString()),
+            new MetricAttribute(ApmTraceConstants.Tags.DESTINATION_ID_KEY, destinationId.toString())));
+
+    final List<StreamDescriptorForDestination> existingStreams = connectionService.listStreamsForDestination(destinationId);
+
+    // Create map of existing streams once
+    final Map<String, StreamDescriptorForDestination> existingStreamMap = existingStreams.stream()
+        .collect(Collectors.toMap(
+            newStream -> generateDestinationStreamKey(
+                namespaceDefinitionType,
+                namespaceFormat,
+                prefix,
+                newStream.getStreamNamespace(),
+                newStream.getStreamName()),
+            stream -> stream,
+            (existing, replacement) -> existing));
+
+    // Get only selected streams from the catalog
+    final List<AirbyteStreamAndConfiguration> selectedStreams = newCatalog.getStreams().stream()
+        .filter(s -> s.getConfig().getSelected())
+        .toList();
+
+    // Process all selected streams
+    final List<StreamDescriptorForDestination> conflictingStreams = selectedStreams.stream()
+        .map(streamAndConfig -> {
+          final String key = generateDestinationStreamKey(
+              namespaceDefinitionType,
+              namespaceFormat,
+              prefix,
+              streamAndConfig.getStream().getNamespace(),
+              streamAndConfig.getStream().getName());
+          return existingStreamMap.getOrDefault(key, null);
+        })
+        .filter(Objects::nonNull)
+        .toList();
+
+    // If any conflicts found, throw exception
+    if (!conflictingStreams.isEmpty()) {
+      final List<ProblemConnectionConflictingStreamsDataItem> streams = conflictingStreams.stream()
+          .map(stream -> new ProblemConnectionConflictingStreamsDataItem()
+              .connectionIds(stream.getConnectionIds())
+              .streamName(stream.getStreamName())
+              .streamNamespace(stream.getStreamNamespace()))
+          .toList();
+
+      throw new ConnectionConflictingStreamProblem(new ProblemConnectionConflictingStreamsData().streams(streams));
+
+    }
+  }
+
   public ConnectionRead createConnection(final ConnectionCreate connectionCreate)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
 
@@ -499,6 +578,14 @@ public class ConnectionsHandler {
     if (connectionCreate.getSyncCatalog() != null) {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
+      if (featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new Organization(organizationId))) {
+        validateStreamsDoNotConflictWithExistingDestinationStreams(
+            connectionCreate.getSyncCatalog(),
+            connectionCreate.getDestinationId(),
+            String.valueOf(connectionCreate.getNamespaceDefinition()),
+            connectionCreate.getNamespaceFormat(),
+            connectionCreate.getPrefix());
+      }
 
       assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
@@ -641,6 +728,13 @@ public class ConnectionsHandler {
     return metadata;
   }
 
+  private boolean isPatchRelevantForDestinationValidation(ConnectionUpdate connectionPatch) {
+    return connectionPatch.getSyncCatalog() != null
+        || connectionPatch.getNamespaceDefinition() != null
+        || connectionPatch.getNamespaceFormat() != null
+        || connectionPatch.getPrefix() != null;
+  }
+
   public ConnectionRead updateConnection(final ConnectionUpdate connectionPatch, final String updateReason, final Boolean autoUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
 
@@ -659,6 +753,18 @@ public class ConnectionsHandler {
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinition.getSourceDefinitionId());
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinition.getDestinationDefinitionId());
+
+    if (isPatchRelevantForDestinationValidation(connectionPatch)
+        && !Objects.equals(updateReason, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name())
+        && featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new Organization(organizationId))) {
+      validateStreamsDoNotConflictWithExistingDestinationStreams(
+          connectionPatch.getSyncCatalog() != null ? connectionPatch.getSyncCatalog() : catalogConverter.toApi(sync.getCatalog(), null),
+          sync.getDestinationId(),
+          connectionPatch.getNamespaceDefinition() != null ? String.valueOf(connectionPatch.getNamespaceDefinition())
+              : String.valueOf((sync.getNamespaceDefinition())),
+          connectionPatch.getNamespaceFormat() != null ? connectionPatch.getNamespaceFormat() : sync.getNamespaceFormat(),
+          connectionPatch.getPrefix() != null ? connectionPatch.getPrefix() : sync.getPrefix());
+    }
 
     validateConnectionPatch(workspaceHelper, sync, connectionPatch);
 

@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -154,6 +155,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -179,6 +181,7 @@ import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.mappers.helpers.MapperHelperKt;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
@@ -248,6 +251,7 @@ class ConnectionsHandlerTest {
   private ConnectionsHandler connectionsHandler;
   private MatchSearchHandler matchSearchHandler;
   private UUID workspaceId;
+  private UUID organizationId;
   private UUID sourceId;
   private UUID destinationId;
   private UUID sourceDefinitionId;
@@ -312,6 +316,7 @@ class ConnectionsHandlerTest {
   void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
 
     workspaceId = UUID.randomUUID();
+    organizationId = UUID.randomUUID();
     sourceId = UUID.randomUUID();
     destinationId = UUID.randomUUID();
     sourceDefinitionId = UUID.randomUUID();
@@ -478,6 +483,7 @@ class ConnectionsHandlerTest {
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(otherOperationId)).thenReturn(workspaceId);
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(organizationId);
 
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
@@ -943,6 +949,7 @@ class ConnectionsHandlerTest {
         when(workspaceHelper.getWorkspaceForDestinationId(standardSync.getDestinationId())).thenReturn(workspaceId);
         // for update calls
         when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+        when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(organizationId);
       }
 
       private ConnectionCreate buildConnectionCreateRequest(final StandardSync standardSync, final AirbyteCatalog catalog) {
@@ -1284,6 +1291,73 @@ class ConnectionsHandlerTest {
       }
 
       @Test
+      void testCreateConnectionWithConflictingStreamsThrows()
+          throws IOException {
+
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final String streamName = catalog.getStreams().getFirst().getStream().getName();
+        final String streamNamespace = catalog.getStreams().getFirst().getStream().getNamespace();
+
+        final List<StreamDescriptorForDestination> mockDestinationStreamData = List.of(new StreamDescriptorForDestination().withStreamName(streamName)
+            .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
+            .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(mockDestinationStreamData);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        assertThrows(io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem.class,
+            () -> connectionsHandler.createConnection(connectionCreate));
+
+      }
+
+      @Test
+      void testCreateConnectionWithNoConflictingStreamSucceeds()
+          throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(List.of());
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        assertDoesNotThrow(() -> connectionsHandler.createConnection(connectionCreate));
+      }
+
+      @Test
+      void testCreateConnectionWithConflictingStreamButUnselected()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().selected(false);
+
+        final String streamName = catalog.getStreams().getFirst().getStream().getName();
+        final String streamNamespace = catalog.getStreams().getFirst().getStream().getNamespace();
+
+        final List<StreamDescriptorForDestination> mockDestinationStreamData = List.of(new StreamDescriptorForDestination().withStreamName(streamName)
+            .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
+            .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(mockDestinationStreamData);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        assertDoesNotThrow(() -> connectionsHandler.createConnection(connectionCreate));
+      }
+
+      @Test
       void testValidateConnectionCreateOperationInDifferentWorkspace() {
 
         when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(UUID.randomUUID());
@@ -1364,7 +1438,9 @@ class ConnectionsHandlerTest {
       @BeforeEach
       void setup() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
         final UUID connection3Id = UUID.randomUUID();
+        when(workspaceHelper.getWorkspaceForDestinationId(any())).thenReturn(workspaceId);
         when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+        when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(organizationId);
 
         complexConfiguredCatalog = new ConfiguredAirbyteCatalog()
             .withStreams(catalogStreamNames.stream().map(this::buildConfiguredStream).toList());
@@ -1904,6 +1980,75 @@ class ConnectionsHandlerTest {
         assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionWithConflictingStreamsThrows()
+          throws IOException {
+
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final String streamName = catalog.getStreams().getFirst().getStream().getName();
+        final String streamNamespace = catalog.getStreams().getFirst().getStream().getNamespace();
+
+        final List<StreamDescriptorForDestination> mockDestinationStreamData = List.of(new StreamDescriptorForDestination().withStreamName(streamName)
+            .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
+            .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(mockDestinationStreamData);
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+        assertThrows(io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem.class,
+            () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+
+      }
+
+      @Test
+      void testCreateConnectionWithNoConflictingStreamSucceeds()
+          throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(List.of());
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        assertDoesNotThrow(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+      }
+
+      @Test
+      void testUpdateConnectionWithConflictingStreamButUnselected()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
+            .thenReturn(true);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().selected(false);
+
+        final String streamName = catalog.getStreams().getFirst().getStream().getName();
+        final String streamNamespace = catalog.getStreams().getFirst().getStream().getNamespace();
+
+        final List<StreamDescriptorForDestination> mockDestinationStreamData = List.of(new StreamDescriptorForDestination().withStreamName(streamName)
+            .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
+            .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
+
+        when(connectionService.listStreamsForDestination(any()))
+            .thenReturn(mockDestinationStreamData);
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        assertDoesNotThrow(() -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
