@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.analytics.config
 
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
@@ -6,9 +10,6 @@ import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
 import io.airbyte.config.Organization
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
-import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -23,12 +24,12 @@ class AnalyticsTrackingBeanFactory {
   @Named("deploymentSupplier")
   fun deploymentSupplier(
     airbyteVersion: AirbyteVersion,
-    deploymentMode: Configs.DeploymentMode,
+    airbyteEdition: Configs.AirbyteEdition,
   ): Supplier<DeploymentMetadataRead> =
     Supplier {
       DeploymentMetadataRead(
         id = BLANK_UUID,
-        mode = deploymentMode.name,
+        mode = airbyteEdition.name,
         version = airbyteVersion.serialize(),
       )
     }
@@ -53,22 +54,4 @@ class AnalyticsTrackingBeanFactory {
     Function { organizationId: UUID ->
       Organization().withOrganizationId(organizationId).withName("").withEmail("")
     }
-
-  @Singleton
-  @Requires(missingBeans = [AirbyteVersion::class])
-  fun airbyteVersion(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-  ): AirbyteVersion = AirbyteVersion(airbyteVersion)
-
-  @Singleton
-  @Requires(missingBeans = [Configs.DeploymentMode::class])
-  fun deploymentMode(
-    @Value("\${airbyte.deployment-mode}") deploymentMode: String,
-  ): Configs.DeploymentMode = convertToEnum(deploymentMode, Configs.DeploymentMode::valueOf, Configs.DeploymentMode.OSS)
-
-  private fun <T> convertToEnum(
-    value: String,
-    creatorFunction: Function<String, T>,
-    @Suppress("SameParameterValue") defaultValue: T,
-  ): T = if (StringUtils.isNotEmpty(value)) creatorFunction.apply(value.uppercase()) else defaultValue
 }

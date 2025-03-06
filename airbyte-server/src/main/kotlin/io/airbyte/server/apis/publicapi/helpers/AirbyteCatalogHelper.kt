@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -31,9 +31,11 @@ import io.airbyte.publicApi.server.generated.models.StreamConfiguration
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
 import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.Valid
-import org.slf4j.LoggerFactory
 import java.io.IOException
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Does everything necessary to both build and validate the AirbyteCatalog.
@@ -41,13 +43,12 @@ import java.io.IOException
 object AirbyteCatalogHelper {
   private val cronDefinition: CronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ)
   private val parser: CronParser = CronParser(cronDefinition)
-  private val log = LoggerFactory.getLogger(AirbyteCatalogHelper.javaClass)
   private const val MAX_LENGTH_OF_CRON = 7
 
   /**
    * Check whether stream configurations exist.
    *
-   * @param streamConfigurations StreamConfigurations from conneciton create/update request
+   * @param streamConfigurations StreamConfigurations from connection create/update request
    * @return true if they exist, false if they don't
    */
   fun hasStreamConfigurations(streamConfigurations: StreamConfigurations?): Boolean = !streamConfigurations?.streams.isNullOrEmpty()
@@ -60,12 +61,12 @@ object AirbyteCatalogHelper {
   fun updateConfigDefaultFullRefreshOverwrite(config: AirbyteStreamConfiguration?): AirbyteStreamConfiguration {
     val updatedStreamConfiguration = AirbyteStreamConfiguration()
     config?.let {
-      updatedStreamConfiguration.aliasName = config.aliasName
-      updatedStreamConfiguration.cursorField = config.cursorField
-      updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
-      updatedStreamConfiguration.selected = config.selected
-      updatedStreamConfiguration.selectedFields = config.selectedFields
-      updatedStreamConfiguration.suggested = config.suggested
+      updatedStreamConfiguration.aliasName = it.aliasName
+      updatedStreamConfiguration.cursorField = it.cursorField
+      updatedStreamConfiguration.fieldSelectionEnabled = it.fieldSelectionEnabled
+      updatedStreamConfiguration.selected = it.selected
+      updatedStreamConfiguration.selectedFields = it.selectedFields
+      updatedStreamConfiguration.suggested = it.suggested
     }
     updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
     updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
@@ -81,12 +82,11 @@ object AirbyteCatalogHelper {
     val updatedAirbyteCatalog = AirbyteCatalog()
     updatedAirbyteCatalog.streams =
       airbyteCatalog.streams
-        .stream()
-        .map { stream: AirbyteStreamAndConfiguration ->
-          val updatedAirbyteStreamAndConfiguration = AirbyteStreamAndConfiguration()
-          updatedAirbyteStreamAndConfiguration.config = updateConfigDefaultFullRefreshOverwrite(stream.config)
-          updatedAirbyteStreamAndConfiguration.stream = stream.stream
-          updatedAirbyteStreamAndConfiguration
+        .map {
+          AirbyteStreamAndConfiguration().apply {
+            config = updateConfigDefaultFullRefreshOverwrite(it.config)
+            stream = it.stream
+          }
         }.toList()
 
     return updatedAirbyteCatalog
@@ -137,7 +137,7 @@ object AirbyteCatalogHelper {
     sourceStream: AirbyteStream,
   ) {
     if (streamConfiguration.selectedFields == null) {
-      log.debug("Selected fields not provided. Bypass validation.")
+      log.debug { "Selected fields not provided. Bypass validation." }
       return
     }
 
@@ -188,7 +188,9 @@ object AirbyteCatalogHelper {
       )
     }
     // 3. Selected fields must contain primary key(s) in dedup mode.
-    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY) {
+    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY ||
+      streamConfiguration.syncMode == ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED
+    ) {
       val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
       val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
       require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
@@ -237,10 +239,10 @@ object AirbyteCatalogHelper {
   }
 
   /**
-   * Validate cron configuration for a given connectionschedule.
+   * Validate cron configuration for a given connectionSchedule.
    *
    * @param connectionSchedule the schedule to validate
-   * @return boolean, but mostly so we can callwithTracker.
+   * @return boolean, but mostly so we can callWithTracker.
    */
   fun validateCronConfiguration(connectionSchedule: @Valid AirbyteApiConnectionSchedule): Boolean {
     if (connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
@@ -261,8 +263,8 @@ object AirbyteCatalogHelper {
           Integer.valueOf(cronStrings[1])
         }
       } catch (e: NumberFormatException) {
-        log.debug("Invalid cron expression: $cronExpression")
-        log.debug("NumberFormatException: $e")
+        log.debug { "Invalid cron expression: $cronExpression" }
+        log.debug { "NumberFormatException: $e" }
         throw BadRequestProblem(
           ProblemMessageData().message(
             "The cron expression ${connectionSchedule.cronExpression}" +
@@ -270,8 +272,8 @@ object AirbyteCatalogHelper {
           ),
         )
       } catch (e: IllegalArgumentException) {
-        log.debug("Invalid cron expression: $cronExpression")
-        log.debug("IllegalArgumentException: $e")
+        log.debug { "Invalid cron expression: $cronExpression" }
+        log.debug { "IllegalArgumentException: $e" }
         throw BadRequestProblem(
           ProblemMessageData().message(
             "The cron expression ${connectionSchedule.cronExpression} is not valid. Error: ${e.message}" +
@@ -354,6 +356,13 @@ object AirbyteCatalogHelper {
           updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
           updatedStreamConfiguration.cursorField = config.cursorField
           updatedStreamConfiguration.primaryKey = config.primaryKey
+        }
+
+        ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> {
+          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE_DEDUP
+          updatedStreamConfiguration.cursorField = config.cursorField
+          updatedStreamConfiguration.primaryKey = selectPrimaryKey(airbyteStream, streamConfiguration)
         }
 
         ConnectionSyncModeEnum.INCREMENTAL_APPEND -> {
@@ -522,7 +531,7 @@ object AirbyteCatalogHelper {
     // Validate the actual key passed in
     val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
 
-    primaryKey?.let {
+    primaryKey?.let { primaryKey ->
       for (singlePrimaryKey in primaryKey) {
         if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
           throw BadRequestProblem(
@@ -584,7 +593,7 @@ object AirbyteCatalogHelper {
       try {
         yamlMapper.readTree(connectorSchema.traverse())
       } catch (e: IOException) {
-        log.error("Error getting stream fields from schema", e)
+        log.error(e) { "Error getting stream fields from schema" }
         throw UnexpectedProblem()
       }
     val fields = spec.fields()
@@ -615,7 +624,7 @@ object AirbyteCatalogHelper {
       try {
         yamlMapper.readTree(connectorSchema.traverse())
       } catch (e: IOException) {
-        log.error("Error getting stream fields from schema", e)
+        log.error(e) { "Error getting stream fields from schema" }
         throw UnexpectedProblem()
       }
     val fields = spec.fields()

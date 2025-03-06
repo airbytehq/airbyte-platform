@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.micronaut.core.util.CollectionUtils
 import io.micronaut.http.uri.UriBuilder
-import java.util.Optional
 import java.util.UUID
 import kotlin.math.max
 
@@ -27,9 +26,7 @@ object PaginationMapper {
   fun getBuilder(
     publicApiHost: String,
     path: String,
-  ): UriBuilder {
-    return UriBuilder.of(publicApiHost).path(path)
-  }
+  ): UriBuilder = UriBuilder.of(publicApiHost).path(path)
 
   /**
    * Get next offset.
@@ -43,12 +40,12 @@ object PaginationMapper {
     collection: Collection<*>,
     limit: Int,
     offset: Int,
-  ): Optional<Int> {
+  ): Int? {
     // If we have no more entries, or we had no entries this page, just return empty - no next URL
     return if (CollectionUtils.isEmpty(collection)) {
-      Optional.empty()
+      null
     } else {
-      Optional.of(offset + limit)
+      offset + limit
     }
   }
 
@@ -83,9 +80,11 @@ object PaginationMapper {
     uriBuilder: UriBuilder,
   ): String {
     val nextOffset = getNextOffset(collection, limit, offset)
-    return if (nextOffset.isPresent) {
-      uriBuilder.queryParam(LIMIT, limit)
-        .replaceQueryParam(OFFSET, nextOffset.get()).toString()
+    return if (nextOffset != null) {
+      uriBuilder
+        .queryParam(LIMIT, limit)
+        .replaceQueryParam(OFFSET, nextOffset)
+        .toString()
     } else {
       ""
     }
@@ -103,23 +102,22 @@ object PaginationMapper {
     limit: Int,
     offset: Int,
     uriBuilder: UriBuilder,
-  ): String {
-    return if (offset != 0) {
-      uriBuilder.queryParam(LIMIT, limit).replaceQueryParam(
-        OFFSET,
-        getPreviousOffset(limit, offset),
-      ).toString()
+  ): String =
+    if (offset != 0) {
+      uriBuilder
+        .queryParam(LIMIT, limit)
+        .replaceQueryParam(
+          OFFSET,
+          getPreviousOffset(limit, offset),
+        ).toString()
     } else {
       ""
     }
-  }
 
   /**
    * Helper to turn a list of UUIDs into a pagination acceptable string.
    *
    * @param uuids uuids to stringify
    */
-  fun uuidListToQueryString(uuids: List<UUID>): String {
-    return java.lang.String.join(",", uuids.stream().map { obj: UUID -> obj.toString() }.toList())
-  }
+  fun uuidListToQueryString(uuids: List<UUID>): String = java.lang.String.join(",", uuids.stream().map { obj: UUID -> obj.toString() }.toList())
 }

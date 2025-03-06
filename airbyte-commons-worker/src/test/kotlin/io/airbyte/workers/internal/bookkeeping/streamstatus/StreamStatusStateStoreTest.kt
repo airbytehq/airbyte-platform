@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
@@ -382,8 +386,8 @@ class StreamStatusStateStoreTest {
 
   companion object {
     @JvmStatic
-    fun runStateValidTransitionMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateValidTransitionMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null, ApiEnum.RUNNING),
         Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
@@ -395,17 +399,15 @@ class StreamStatusStateStoreTest {
         Arguments.of(ApiEnum.RUNNING, ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.RUNNING, ApiEnum.INCOMPLETE),
       )
-    }
 
     @JvmStatic
-    fun runStateInvalidTransitionMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateInvalidTransitionMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(ApiEnum.COMPLETE, ApiEnum.RUNNING),
         Arguments.of(ApiEnum.INCOMPLETE, ApiEnum.RUNNING),
         Arguments.of(ApiEnum.COMPLETE, ApiEnum.RATE_LIMITED),
         Arguments.of(ApiEnum.INCOMPLETE, ApiEnum.RATE_LIMITED),
       )
-    }
   }
 
   object Fixtures {

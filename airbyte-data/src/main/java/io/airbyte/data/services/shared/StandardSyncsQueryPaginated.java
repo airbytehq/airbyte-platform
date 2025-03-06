@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.shared;
@@ -20,6 +20,7 @@ import java.util.UUID;
  */
 public record StandardSyncsQueryPaginated(
                                           @Nonnull List<UUID> workspaceIds,
+                                          List<UUID> tagIds,
                                           List<UUID> sourceId,
                                           List<UUID> destinationId,
                                           boolean includeDeleted,

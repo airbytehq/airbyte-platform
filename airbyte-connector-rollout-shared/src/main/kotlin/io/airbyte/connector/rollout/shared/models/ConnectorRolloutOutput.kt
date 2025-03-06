@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared.models
 
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
@@ -27,6 +31,7 @@ data class ConnectorRolloutOutput(
   var expiresAt: OffsetDateTime? = null,
   var errorMsg: String? = null,
   var failedReason: String? = null,
+  var pausedReason: String? = null,
   var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
-  var actorSyncs: List<ConnectorRolloutActorSyncInfo>? = null,
+  var actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
 )

@@ -7,6 +7,7 @@ import { MouseEventHandler, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { Button } from "components/ui/Button";
 import { IconColor } from "components/ui/Icon/types";
 import { Tooltip } from "components/ui/Tooltip";
@@ -32,7 +33,7 @@ import {
   parseAssistErrorToFormErrors,
   computeStreamResponse,
 } from "./assist";
-import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
+import { AssistData, BuilderFormInput, BuilderFormValues } from "../../types";
 
 /**
  * HELPERS

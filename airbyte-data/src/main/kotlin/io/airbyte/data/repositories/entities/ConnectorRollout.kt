@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories.entities
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
@@ -44,4 +48,6 @@ data class ConnectorRollout(
   var errorMsg: String? = null,
   @Nullable
   var failedReason: String? = null,
+  @Nullable
+  var pausedReason: String? = null,
 )

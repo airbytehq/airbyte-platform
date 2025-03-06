@@ -25,7 +25,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.commons.io)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
@@ -50,7 +49,8 @@ dependencies {
 
 val workloadSpecFile = "$projectDir/src/main/openapi/workload-openapi.yaml"
 
-val genWorkloadApiClient = tasks.register<GenerateTask>("genWorkloadApiClient") {
+val genWorkloadApiClient =
+  tasks.register<GenerateTask>("genWorkloadApiClient") {
     val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/workloadapi/client"
 
     inputs.file(workloadSpecFile)
@@ -64,38 +64,40 @@ val genWorkloadApiClient = tasks.register<GenerateTask>("genWorkloadApiClient") 
     packageName = "io.airbyte.workload.api.client.generated"
     modelPackage = "io.airbyte.workload.api.client.model.generated"
 
-    schemaMappings = mapOf(
-            "OAuthConfiguration"                to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceDefinitionSpecification"     to "com.fasterxml.jackson.databind.JsonNode",
-            "SourceConfiguration"               to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "StreamJsonSchema"                  to "com.fasterxml.jackson.databind.JsonNode",
-            "StateBlob"                         to "com.fasterxml.jackson.databind.JsonNode",
-            "FieldSchema"                       to "com.fasterxml.jackson.databind.JsonNode",
-            "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-    )
+    schemaMappings =
+      mapOf(
+        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
+        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
+        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
+      )
 
     generateApiDocumentation = false
 
-    configOptions = mapOf(
-      "enumPropertyNaming"  to "UPPERCASE",
-      "generatePom"         to "false",
-      "interfaceOnly"       to "true",
-      "serializationLibrary" to "jackson",
-    )
+    configOptions =
+      mapOf(
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "serializationLibrary" to "jackson",
+      )
 
     doLast {
-        val apiClientPath = "${outputDir.get()}/src/main/kotlin/io/airbyte/workload/api/client/generated/infrastructure/ApiClient.kt"
-        updateApiClientWithFailsafe(apiClientPath)
-        val generatedDomainClientsPath = "${outputDir.get()}/src/main/kotlin/io/airbyte/workload/api/client/generated"
-        updateDomainClientsWithFailsafe(generatedDomainClientsPath)
-        // the kotlin client (as opposed to the java client) doesn't include the response body in the exception message.
-        updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
+      val apiClientPath = "${outputDir.get()}/src/main/kotlin/io/airbyte/workload/api/client/generated/infrastructure/ApiClient.kt"
+      updateApiClientWithFailsafe(apiClientPath)
+      val generatedDomainClientsPath = "${outputDir.get()}/src/main/kotlin/io/airbyte/workload/api/client/generated"
+      updateDomainClientsWithFailsafe(generatedDomainClientsPath)
+      // the kotlin client (as opposed to the java client) doesn't include the response body in the exception message.
+      updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
     }
 
     dependsOn(":oss:airbyte-workload-api-server:compileKotlin", ":oss:airbyte-api:server-api:genApiClient")
-}
+  }
 
 sourceSets {
   main {
@@ -116,7 +118,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(genWorkloadApiClient)
+  dependsOn(genWorkloadApiClient)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
@@ -130,69 +132,75 @@ afterEvaluate {
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
-    enabled = false
+  enabled = false
 }
 
 private fun updateApiClientWithFailsafe(clientPath: String) {
     /*
      * UPDATE ApiClient.kt to use Failsafe.
      */
-    val apiClientFile = file(clientPath)
-    var apiClientFileText = apiClientFile.readText()
-        // replace class declaration
-        .replace(
-            "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient) {",
-            "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {")
+  val apiClientFile = file(clientPath)
+  var apiClientFileText =
+    apiClientFile
+      .readText()
+      // replace class declaration
+      .replace(
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient) {",
+        "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {",
+      )
       // replace execute call
-      .replace("val response = client.newCall(request).execute()",
+      .replace(
+        "val response = client.newCall(request).execute()",
         """val call = client.newCall(request)
         val failsafeCall = FailsafeCall.with(policy).compose(call)
-        val response: Response = failsafeCall.execute()""")
+        val response: Response = failsafeCall.execute()""",
+      )
 
-    // add imports if not exist
-    if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
-        val newImports = """import dev.failsafe.RetryPolicy
+  // add imports if not exist
+  if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+    val newImports = """import dev.failsafe.RetryPolicy
 import dev.failsafe.okhttp.FailsafeCall"""
-        apiClientFileText = apiClientFileText.replaceFirst("import ", "$newImports\nimport ")
-
-    }
-    apiClientFile.writeText(apiClientFileText)
+    apiClientFileText = apiClientFileText.replaceFirst("import ", "$newImports\nimport ")
+  }
+  apiClientFile.writeText(apiClientFileText)
 }
 
 private fun generateProblemThrowables(problemsOutputDir: String) {
-    val dir = file(problemsOutputDir)
+  val dir = file(problemsOutputDir)
 
-    val throwableDir = File("${getLayout().buildDirectory.get()}/generated/api/problems/src/gen/kotlin/throwable")
-    if (!throwableDir.exists()) {
-        throwableDir.mkdirs()
+  val throwableDir = File("${getLayout().buildDirectory.get()}/generated/api/problems/src/gen/kotlin/throwable")
+  if (!throwableDir.exists()) {
+    throwableDir.mkdirs()
+  }
+
+  dir.walk().forEach { errorFile ->
+    if (errorFile.name.endsWith("ProblemResponse.java")) {
+      val errorFileText = errorFile.readText()
+      val problemName: String = "public class (\\S+)ProblemResponse ".toRegex().find(errorFileText)!!.destructured.component1()
+      var dataFieldType: String = "private (@Valid )?\n(\\S+) data;".toRegex().find(errorFileText)!!.destructured.component2()
+      var dataFieldImport = "import io.airbyte.api.problems.model.generated.$dataFieldType"
+
+      if (dataFieldType == "Object") {
+        dataFieldType = "Any"
+        dataFieldImport = ""
+      }
+
+      val responseClassName = "${problemName}ProblemResponse"
+      val throwableClassName = "${problemName}Problem"
+
+      val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt")
+      val throwableText =
+        template
+          .readText()
+          .replace("<problem-class-name>", responseClassName)
+          .replace("<problem-throwable-class-name>", throwableClassName)
+          .replace("<problem-data-class-import>", dataFieldImport)
+          .replace("<problem-data-class-name>", dataFieldType)
+
+      val throwableFile = File(throwableDir, "$throwableClassName.kt")
+      throwableFile.writeText(throwableText)
     }
-
-    dir.walk().forEach { errorFile ->
-        if (errorFile.name.endsWith("ProblemResponse.java")) {
-            val errorFileText = errorFile.readText()
-            val problemName: String = "public class (\\S+)ProblemResponse ".toRegex().find(errorFileText)!!.destructured.component1()
-            var dataFieldType: String = "private (@Valid )?\n(\\S+) data;".toRegex().find(errorFileText)!!.destructured.component2()
-            var dataFieldImport = "import io.airbyte.api.problems.model.generated.$dataFieldType"
-
-            if (dataFieldType == "Object") {
-                dataFieldType = "Any"
-                dataFieldImport = ""
-            }
-
-            val responseClassName = "${problemName}ProblemResponse"
-            val throwableClassName = "${problemName}Problem"
-
-            val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt")
-            val throwableText = template.readText()
-                .replace("<problem-class-name>", responseClassName)
-                .replace("<problem-throwable-class-name>", throwableClassName)
-                .replace("<problem-data-class-import>", dataFieldImport)
-                .replace("<problem-data-class-name>", dataFieldType)
-
-            val throwableFile = File(throwableDir, "$throwableClassName.kt")
-            throwableFile.writeText(throwableText)
-        }
-    }
+  }
 }
 
 private fun updateDomainClientsWithFailsafe(clientPath: String) {
@@ -205,13 +213,15 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
       var domainClientFileText = domainClient.readText()
 
       // replace class declaration
-      domainClientFileText = domainClientFileText.replace(
-        "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)".toRegex(),
-        "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)"
-      )
+      domainClientFileText =
+        domainClientFileText.replace(
+          "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
+            .toRegex(),
+          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
+        )
 
       // add imports if not exist
-      if(!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+      if (!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
         val newImports = "import dev.failsafe.RetryPolicy"
         domainClientFileText = domainClientFileText.replaceFirst("import ", "$newImports\nimport ")
       }
@@ -222,14 +232,16 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
 }
 
 private fun updateDomainClientsToIncludeHttpResponseBodyOnClientException(clientPath: String) {
-    val dir = file(clientPath)
-    dir.walk().forEach { domainClient ->
-        if (domainClient.name.endsWith(".kt")) {
-            val domainClientFileText = domainClient.readText().replace(
-                    "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()}\", localVarError.statusCode, localVarResponse)",
-                    "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()} \${localVarError.body ?: \"\"}\", localVarError.statusCode, localVarResponse)")
+  val dir = file(clientPath)
+  dir.walk().forEach { domainClient ->
+    if (domainClient.name.endsWith(".kt")) {
+      val domainClientFileText =
+        domainClient.readText().replace(
+          "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()}\", localVarError.statusCode, localVarResponse)",
+          "throw ClientException(\"Client error : \${localVarError.statusCode} \${localVarError.message.orEmpty()} \${localVarError.body ?: \"\"}\", localVarError.statusCode, localVarResponse)",
+        )
 
-            domainClient.writeText(domainClientFileText)
-        }
+      domainClient.writeText(domainClientFileText)
     }
+  }
 }

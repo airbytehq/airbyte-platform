@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.converters;
@@ -13,16 +13,13 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.MapperConfig;
 import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.mappers.transformations.Mapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,11 +34,9 @@ import java.util.stream.Collectors;
 public class CatalogClientConverters {
 
   private final FieldGenerator fieldGenerator;
-  private final Map<String, Mapper<? extends MapperConfig>> mappers;
 
-  public CatalogClientConverters(final FieldGenerator fieldGenerator, final List<Mapper<? extends MapperConfig>> mappers) {
+  public CatalogClientConverters(final FieldGenerator fieldGenerator) {
     this.fieldGenerator = fieldGenerator;
-    this.mappers = mappers.stream().collect(Collectors.toMap(Mapper::getName, c -> c));
   }
 
   /**
@@ -208,17 +203,21 @@ public class CatalogClientConverters {
             .withIsResumable(stream.isResumable());
   }
 
+  private io.airbyte.api.model.generated.ConfiguredStreamMapper toModel(final io.airbyte.api.client.model.generated.ConfiguredStreamMapper mapper) {
+    return new io.airbyte.api.model.generated.ConfiguredStreamMapper()
+        .id(mapper.getId())
+        .type(io.airbyte.api.model.generated.StreamMapperType.fromValue(mapper.getType().getValue()))
+        .mapperConfiguration(mapper.getMapperConfiguration());
+
+  }
+
   private List<MapperConfig> toConfiguredMappers(final @Nullable List<ConfiguredStreamMapper> mapperConfigs) {
     if (mapperConfigs == null) {
       return Collections.emptyList();
     }
     return mapperConfigs.stream()
-        .map(mapperConfig -> {
-          final String mapperName = mapperConfig.getType().toString();
-          final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
-          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration(), mapperConfig.getId()));
-        })
-        .collect(Collectors.toList());
+        .map(mapperConfig -> MapperConvertersKt.toInternal(toModel(mapperConfig)))
+        .toList();
   }
 
   private ConfiguredAirbyteStream toConfiguredStreamInternal(

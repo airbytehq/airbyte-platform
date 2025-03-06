@@ -6,8 +6,11 @@ import isEmpty from "lodash/isEmpty";
 import isEqual from "lodash/isEqual";
 import isObject from "lodash/isObject";
 import isString from "lodash/isString";
+import omit from "lodash/omit";
 import pick from "lodash/pick";
 import { match } from "ts-pattern";
+
+import { formatGraphqlQuery } from "components/ui/CodeEditor/GraphqlFormatter";
 
 import {
   ConnectorManifest,
@@ -43,16 +46,22 @@ import {
   XmlDecoderType,
   IterableDecoderType,
   SimpleRetrieverDecoder,
-  GzipJsonDecoderType,
+  OAuthConfigSpecificationOauthConnectorInputSpecification,
+  CheckDynamicStreamType,
+  JwtAuthenticator,
+  RequestOptionInjectInto,
+  CsvDecoderType,
 } from "core/api/types/ConnectorManifest";
 
 import {
+  BuilderDecoderConfig,
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
-  BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
+  BuilderFormOAuthAuthenticator,
+  BuilderFormDeclarativeOAuthAuthenticator,
   BuilderFormInput,
   BuilderFormValues,
   BuilderIncrementalSync,
@@ -64,6 +73,7 @@ import {
   BuilderRequestBody,
   BuilderStream,
   BuilderTransformation,
+  DeclarativeOAuthAuthenticatorType,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   extractInterpolatedConfigKey,
@@ -78,6 +88,7 @@ import {
   SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
   YamlString,
   YamlSupportedComponentName,
+  JWT_AUTHENTICATOR,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -89,6 +100,9 @@ import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
+  if (resolvedManifest.check.type === CheckDynamicStreamType.CheckDynamicStream) {
+    throw new ManifestCompatibilityError(undefined, `${CheckDynamicStreamType.CheckDynamicStream} is not supported`);
+  }
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
   builderFormValues.description = resolvedManifest.description;
 
@@ -163,6 +177,7 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "refresh_token",
   "token_refresh_endpoint",
   "access_token_name",
+  "access_token_value",
   "expires_in_name",
   "grant_type",
   "refresh_request_body",
@@ -171,6 +186,13 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "token_expiry_date_format",
   "refresh_token_updater",
   "inject_into",
+  "client_id_name",
+  "client_secret_name",
+  "grant_type_name",
+  "profile_assertion",
+  "refresh_request_headers",
+  "refresh_token_name",
+  "use_profile_assertion",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -372,6 +394,26 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (isString(requester.request_body_json)) {
     return { type: "string_freeform", value: requester.request_body_json };
   }
+
+  if (
+    isObject(requester.request_body_json) &&
+    Object.keys(requester.request_body_json).length === 1 &&
+    "query" in requester.request_body_json
+  ) {
+    try {
+      const formattedQuery = formatGraphqlQuery(requester.request_body_json.query);
+      return {
+        type: "graphql",
+        value: formattedQuery,
+      };
+    } catch {
+      return {
+        type: "graphql",
+        value: requester.request_body_json.query as string,
+      };
+    }
+  }
+
   if (
     isObject(requester.request_body_json) &&
     Object.values(requester.request_body_json).every((value) => isString(value))
@@ -384,14 +426,17 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   };
 }
 
-const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+const manifestDecoderToBuilder = (
+  decoder: SimpleRetrieverDecoder | undefined,
+  streamName: string
+): BuilderDecoderConfig => {
   const supportedDecoderTypes: Array<string | undefined> = [
     undefined,
     JsonDecoderType.JsonDecoder,
     JsonlDecoderType.JsonlDecoder,
     XmlDecoderType.XmlDecoder,
     IterableDecoderType.IterableDecoder,
-    GzipJsonDecoderType.GzipJsonDecoder,
+    CsvDecoderType.CsvDecoder,
   ];
   const decoderType = decoder?.type;
   if (!supportedDecoderTypes.includes(decoderType)) {
@@ -400,17 +445,17 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
 
   switch (decoderType) {
     case JsonDecoderType.JsonDecoder:
-      return "JSON";
+      return { type: "JSON" };
     case XmlDecoderType.XmlDecoder:
-      return "XML";
+      return { type: "XML" };
     case JsonlDecoderType.JsonlDecoder:
-      return "JSON Lines";
+      return { type: "JSON Lines" };
     case IterableDecoderType.IterableDecoder:
-      return "Iterable";
-    case GzipJsonDecoderType.GzipJsonDecoder:
-      return "gzip JSON";
+      return { type: "Iterable" };
+    case CsvDecoderType.CsvDecoder:
+      return { type: "CSV", delimiter: decoder?.delimiter, encoding: decoder?.encoding };
     default:
-      return "JSON";
+      return { type: "JSON" };
   }
 };
 
@@ -485,7 +530,11 @@ export function manifestListPartitionRouterToBuilder(
     streamName
   );
   if (listPartitionRouter.request_option) {
-    filterRequestOption(listPartitionRouter.request_option, `${partitionRouter.type}.request_option`, streamName);
+    listPartitionRouter.request_option = validateAndConvertRequestOption(
+      listPartitionRouter.request_option,
+      `${partitionRouter.type}.request_option`,
+      streamName
+    );
   }
 
   return [
@@ -573,9 +622,10 @@ export function manifestSubstreamPartitionRouterToBuilder(
     streamName
   );
   if (parentStreamConfig.request_option) {
-    filterRequestOption(
+    parentStreamConfig.request_option = validateAndConvertRequestOption(
       parentStreamConfig.request_option,
-      `${partitionRouter.type}.parent_stream_configs.request_option`
+      `${partitionRouter.type}.parent_stream_configs.request_option`,
+      streamName
     );
   }
 
@@ -822,14 +872,18 @@ export function manifestIncrementalSyncToBuilder(
     streamName
   );
   if (datetimeBasedCursor.start_time_option) {
-    filterRequestOption(
+    datetimeBasedCursor.start_time_option = validateAndConvertRequestOption(
       datetimeBasedCursor.start_time_option,
       `${datetimeBasedCursor.type}.start_time_option`,
       streamName
     );
   }
   if (datetimeBasedCursor.end_time_option) {
-    filterRequestOption(datetimeBasedCursor.end_time_option, `${datetimeBasedCursor.type}.end_time_option`, streamName);
+    datetimeBasedCursor.end_time_option = validateAndConvertRequestOption(
+      datetimeBasedCursor.end_time_option,
+      `${datetimeBasedCursor.type}.end_time_option`,
+      streamName
+    );
   }
 
   if (datetimeBasedCursor.partition_field_start || datetimeBasedCursor.partition_field_end) {
@@ -1003,24 +1057,27 @@ export function manifestPaginatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
-  const pageSizeOption = paginator.page_size_option
-    ? filterRequestOption(paginator.page_size_option, `${paginator.type}.page_size_option`, streamName)
-    : undefined;
+  let pageSizeOption: RequestOption | undefined = undefined;
+
+  if (paginator.page_size_option) {
+    pageSizeOption = validateAndConvertRequestOption(
+      paginator.page_size_option,
+      `${paginator.type}.page_size_option`,
+      streamName
+    );
+  }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
+
   if (paginator.page_token_option?.type === "RequestPath") {
     filterKnownFields(paginator.page_token_option, ["type"], paginator.page_token_option.type, streamName);
     pageTokenOption = { inject_into: "path" };
   } else if (paginator.page_token_option?.type === "RequestOption") {
-    const requestOption = filterRequestOption(
+    pageTokenOption = validateAndConvertRequestOption(
       paginator.page_token_option,
       `${paginator.type}.page_token_option`,
       streamName
     );
-    pageTokenOption = {
-      inject_into: requestOption.inject_into,
-      field_name: requestOption.field_name,
-    };
   }
 
   return {
@@ -1061,6 +1118,7 @@ type SupportedAuthenticator =
   | BearerAuthenticator
   | OAuthAuthenticator
   | NoAuth
+  | JwtAuthenticator
   | SessionTokenAuthenticator;
 
 function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticator {
@@ -1069,11 +1127,24 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
     API_KEY_AUTHENTICATOR,
     BEARER_AUTHENTICATOR,
     BASIC_AUTHENTICATOR,
+    JWT_AUTHENTICATOR,
     OAUTH_AUTHENTICATOR,
     SESSION_TOKEN_AUTHENTICATOR,
   ];
   return supportedAuthTypes.includes(authenticator.type);
 }
+
+const isSpecDeclarativeOAuth = (
+  spec: Spec | undefined
+): spec is Spec & {
+  advanced_auth: {
+    oauth_config_specification: {
+      oauth_connector_input_specification: OAuthConfigSpecificationOauthConnectorInputSpecification;
+    };
+  };
+} => {
+  return !!spec?.advanced_auth?.oauth_config_specification?.oauth_connector_input_specification;
+};
 
 export function manifestAuthenticatorToBuilder(
   authenticator: HttpRequesterAuthenticator | undefined,
@@ -1103,17 +1174,25 @@ export function manifestAuthenticatorToBuilder(
         ["type", "api_token", "inject_into", "header"],
         authenticator.type
       );
-      if (authenticator.inject_into) {
-        filterRequestOption(authenticator.inject_into, `${authenticator.type}.inject_into`);
+
+      let inject_into = apiKeyAuth.inject_into;
+      if (authenticator.inject_into && apiKeyAuth.inject_into) {
+        inject_into = validateAndConvertRequestOption(
+          apiKeyAuth.inject_into,
+          `${authenticator.type}.inject_into`,
+          undefined
+        );
+      } else {
+        inject_into = {
+          type: "RequestOption",
+          field_name: apiKeyAuth.header || "",
+          inject_into: "header",
+        };
       }
 
       return {
         ...apiKeyAuth,
-        inject_into: apiKeyAuth.inject_into ?? {
-          type: "RequestOption",
-          field_name: apiKeyAuth.header || "",
-          inject_into: "header",
-        },
+        inject_into,
         api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], apiKeyAuth, spec)),
       };
     }
@@ -1137,12 +1216,47 @@ export function manifestAuthenticatorToBuilder(
       };
     }
 
+    case JWT_AUTHENTICATOR: {
+      const jwtAuth = filterKnownFields(
+        authenticator,
+        [
+          "type",
+          "secret_key",
+          "algorithm",
+          "token_duration",
+          "additional_jwt_headers",
+          "additional_jwt_payload",
+          "jwt_headers",
+          "jwt_payload",
+          "header_prefix",
+          "base64_encode_secret_key",
+        ],
+        authenticator.type
+      );
+
+      const jwtHeaders = pick(jwtAuth.jwt_headers, ["kid", "typ", "cty"]);
+      const jwtPayload = pick(jwtAuth.jwt_payload, ["iss", "sub", "aud"]);
+      const headerPrefix = jwtAuth.header_prefix === "" ? undefined : jwtAuth.header_prefix;
+
+      return {
+        ...jwtAuth,
+        secret_key: interpolateConfigKey(extractAndValidateAuthKey(["secret_key"], jwtAuth, spec)),
+        additional_jwt_headers: Object.entries(jwtAuth.additional_jwt_headers ?? {}),
+        additional_jwt_payload: Object.entries(jwtAuth.additional_jwt_payload ?? {}),
+        jwt_headers: jwtHeaders,
+        jwt_payload: jwtPayload,
+        header_prefix: headerPrefix,
+        token_duration: jwtAuth.token_duration ?? undefined,
+      };
+    }
+
     case OAUTH_AUTHENTICATOR: {
       const oauth = filterKnownFields(
         authenticator,
         [
           "type",
           "access_token_name",
+          "access_token_value",
           "client_id",
           "client_secret",
           "expires_in_name",
@@ -1158,6 +1272,8 @@ export function manifestAuthenticatorToBuilder(
         authenticator.type
       );
 
+      const isDeclarativeOAuth = isSpecDeclarativeOAuth(spec);
+
       if (Object.values(oauth.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0) {
         throw new ManifestCompatibilityError(
           undefined,
@@ -1171,8 +1287,11 @@ export function manifestAuthenticatorToBuilder(
         );
       }
 
-      let builderAuthenticator: BuilderFormAuthenticator = {
+      let builderAuthenticator: BuilderFormOAuthAuthenticator & {
+        declarative?: BuilderFormDeclarativeOAuthAuthenticator["declarative"];
+      } = {
         ...oauth,
+        type: isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : OAUTH_AUTHENTICATOR,
         refresh_request_body: Object.entries(oauth.refresh_request_body ?? {}),
         grant_type: oauth.grant_type ?? "refresh_token",
         refresh_token_updater: undefined,
@@ -1180,7 +1299,44 @@ export function manifestAuthenticatorToBuilder(
         client_secret: interpolateConfigKey(extractAndValidateAuthKey(["client_secret"], oauth, spec)),
       };
 
-      if (!oauth.grant_type || oauth.grant_type === "refresh_token") {
+      if (isDeclarativeOAuth) {
+        if (!spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output) {
+          throw new ManifestCompatibilityError(undefined, "OAuthAuthenticator.extract_output is missing");
+        }
+
+        builderAuthenticator.declarative = {
+          ...(omit(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification,
+            "extract_output",
+            "access_token_params",
+            "access_token_headers",
+            "state"
+          ) as BuilderFormDeclarativeOAuthAuthenticator["declarative"]),
+          access_token_key:
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.extract_output[0],
+
+          access_token_params: Object.entries(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_params ?? {}
+          ),
+          access_token_headers: Object.entries(
+            spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.access_token_headers ?? {}
+          ),
+
+          state: spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state
+            ? JSON.stringify(
+                spec.advanced_auth.oauth_config_specification.oauth_connector_input_specification.state,
+                null,
+                2
+              )
+            : undefined,
+        };
+      }
+
+      const authenticatorDefinesRefreshToken =
+        !isDeclarativeOAuth /* Legacy OAuth flow */ ||
+        !!authenticator.refresh_token_updater; /* declarative w/refresh_token */
+
+      if (authenticatorDefinesRefreshToken && (!oauth.grant_type || oauth.grant_type === "refresh_token")) {
         const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], oauth, spec);
         builderAuthenticator = {
           ...builderAuthenticator,
@@ -1199,29 +1355,33 @@ export function manifestAuthenticatorToBuilder(
             `${authenticator.type}.refresh_token_updater`
           );
 
-          if (!isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
+          if (!isDeclarativeOAuth && !isEqual(refreshTokenUpdater?.refresh_token_config_path, [refreshTokenSpecKey])) {
             throw new ManifestCompatibilityError(
               undefined,
               "OAuthAuthenticator.refresh_token_updater.refresh_token_config_path needs to match the config path used for refresh_token"
             );
           }
+
           const {
             access_token_config_path,
             token_expiry_date_config_path,
             refresh_token_config_path,
             ...refresh_token_updater
           } = refreshTokenUpdater;
+
           builderAuthenticator = {
             ...builderAuthenticator,
-            refresh_token_updater: {
-              ...refresh_token_updater,
-              access_token: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
-              ),
-              token_expiry_date: interpolateConfigKey(
-                extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
-              ),
-            },
+            refresh_token_updater: isDeclarativeOAuth
+              ? { ...refresh_token_updater, access_token: "", token_expiry_date: "" }
+              : {
+                  ...refresh_token_updater,
+                  access_token: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], oauth, spec)
+                  ),
+                  token_expiry_date: interpolateConfigKey(
+                    extractAndValidateAuthKey(["refresh_token_updater", "token_expiry_date_config_path"], oauth, spec)
+                  ),
+                },
           };
         }
       }
@@ -1259,7 +1419,12 @@ export function manifestAuthenticatorToBuilder(
       }
 
       const decoderType = sessionTokenAuth.decoder?.type;
-      if (![undefined, JsonDecoderType.JsonDecoder, XmlDecoderType.XmlDecoder].includes(decoderType)) {
+      const supportedDecoders: Array<string | undefined> = [
+        undefined,
+        JsonDecoderType.JsonDecoder,
+        XmlDecoderType.XmlDecoder,
+      ];
+      if (!supportedDecoders.includes(decoderType)) {
         throw new ManifestCompatibilityError(undefined, "SessionTokenAuthenticator decoder is not supported");
       }
 
@@ -1420,10 +1585,16 @@ const extractAndValidateAuthKey = (
   manifestSpec: Spec | undefined,
   streamName?: string
 ) => {
+  const isDeclarativeOAuth = isSpecDeclarativeOAuth(manifestSpec);
   return extractAndValidateSpecKey(
     path,
     get(authenticator, path),
-    get(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type], path),
+    get(
+      LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[
+        isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : authenticator.type
+      ],
+      path
+    ),
     authenticator.type,
     manifestSpec,
     streamName
@@ -1526,7 +1697,12 @@ const extractAndValidateSpecKey = (
 };
 
 function filterRequestOption(requestOption: RequestOption, componentName: string, streamName?: string) {
-  return filterKnownFields(requestOption, ["type", "field_name", "inject_into"], componentName, streamName);
+  return filterKnownFields(
+    requestOption,
+    ["type", "field_name", "field_path", "inject_into"],
+    componentName,
+    streamName
+  );
 }
 
 function filterKnownFields<T extends object, K extends keyof T>(
@@ -1589,4 +1765,45 @@ function convertToNumber(
     throw new ManifestCompatibilityError(streamName, `${fieldName} must be a number; found '${value}'`);
   }
   return numericValue;
+}
+
+function convertRequestOptionLegacyFieldNameToFieldPath(option: RequestOption, streamName?: string): RequestOption {
+  // We are introducing a new field_path (type: string[]) to the RequestOption type, to support nested field injection.
+  // Eventually, we should deprecate field_name (type: string), since field_path is more flexible.
+  // However, because existing builder projects already use field_name and we trigger stream change warnings on any schema change,
+  // we need to support both fields for now to avoid triggering unnecessary and potentially confusing warnings.
+  // This function converts a manifest field_name into a single element field_path array for the UI component:
+  // RequestOption.field_name: 'page_size' -> RequestOption.field_path: ['page_size']
+
+  // TODO: Remove this function once we are ready to fully deprecate RequestOption.field_name
+
+  const base = filterRequestOption(option, `${option.type}`, streamName);
+  if (option.inject_into === RequestOptionInjectInto.body_json && option.field_name) {
+    const value = {
+      ...base,
+      field_path: [option.field_name],
+      field_name: undefined,
+    };
+
+    return value;
+  }
+
+  return base;
+}
+
+function validateRequestOptionFieldExclusivity(option: RequestOption, componentPath: string, streamName?: string) {
+  // Validates that a RequestOption has either a field_name OR field_path
+  if (option.field_name && option.field_path) {
+    throw new ManifestCompatibilityError(streamName, `${componentPath} cannot have both field_name and field_path`);
+  }
+}
+
+function validateAndConvertRequestOption(
+  // Helper function combining the validation and conversion of a RequestOption field_name to field_path
+  option: RequestOption,
+  componentPath: string,
+  streamName?: string
+): RequestOption {
+  validateRequestOptionFieldExclusivity(option, componentPath, streamName);
+  return convertRequestOptionLegacyFieldNameToFieldPath(option, streamName);
 }

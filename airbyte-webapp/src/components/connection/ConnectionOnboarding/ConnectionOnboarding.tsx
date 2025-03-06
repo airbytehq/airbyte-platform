@@ -125,7 +125,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
 
   return (
     <div className={styles.container}>
-      <Heading as="h2" size="lg" centered className={styles.heading}>
+      <Heading as="h2" size="lg" className={styles.heading}>
         <FormattedMessage id="connection.onboarding.title" />
       </Heading>
       <div className={styles.connectors}>

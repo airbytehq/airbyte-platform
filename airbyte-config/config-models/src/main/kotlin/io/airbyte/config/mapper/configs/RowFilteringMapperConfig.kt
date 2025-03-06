@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.mapper.configs
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -37,9 +41,7 @@ data class NotOperation(
   @field:SchemaDescription("Conditions to evaluate with the NOT operator.")
   val conditions: List<Operation>,
 ) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean {
-    return conditions.none { it.eval(record) }
-  }
+  override fun eval(record: AirbyteRecord): Boolean = conditions.none { it.eval(record) }
 }
 
 data class EqualOperation(
@@ -77,9 +79,7 @@ data class OrOperation(
   @field:SchemaDescription("Conditions to evaluate with the OR operator.")
   val conditions: List<Operation>,
 ) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean {
-    return conditions.any { it.eval(record) }
-  }
+  override fun eval(record: AirbyteRecord): Boolean = conditions.any { it.eval(record) }
 }
 
 data class AndOperation(
@@ -93,9 +93,7 @@ data class AndOperation(
   @field:SchemaDescription("Conditions to evaluate with the AND operator.")
   val conditions: List<Operation>,
 ) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean {
-    return conditions.all { it.eval(record) }
-  }
+  override fun eval(record: AirbyteRecord): Boolean = conditions.all { it.eval(record) }
 }
 
 data class RowFilteringConfig(
@@ -121,19 +119,11 @@ data class RowFilteringMapperConfig(
   val config: RowFilteringConfig,
   val id: UUID? = null,
 ) : MapperConfig {
-  override fun name(): String {
-    return name
-  }
+  override fun name(): String = name
 
-  override fun documentationUrl(): String? {
-    return documentationUrl
-  }
+  override fun documentationUrl(): String? = documentationUrl
 
-  override fun id(): UUID? {
-    return id
-  }
+  override fun id(): UUID? = id
 
-  override fun config(): Any {
-    return config
-  }
+  override fun config(): Any = config
 }

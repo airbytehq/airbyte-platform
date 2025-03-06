@@ -1,0 +1,9 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.syncMode {
+  padding: 0 variables.$spacing-sm;
+  color: colors.$grey-500;
+  background-color: colors.$grey-100;
+  border-radius: variables.$border-radius-xs;
+}

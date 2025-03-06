@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.scheduling.retries;
@@ -32,12 +32,13 @@ class RetryManagerTest {
                               final boolean shouldRetry5,
                               final boolean shouldRetry6) {
     // configure limits
-    final var manager = RetryManager.builder()
-        .successiveCompleteFailureLimit(successiveCompleteFailureLimit)
-        .successivePartialFailureLimit(successivePartialFailureLimit)
-        .totalCompleteFailureLimit(totalCompleteFailureLimit)
-        .totalPartialFailureLimit(totalPartialFailureLimit)
-        .build();
+    final var manager = new RetryManager(
+        null,
+        null,
+        successiveCompleteFailureLimit,
+        successivePartialFailureLimit,
+        totalCompleteFailureLimit,
+        totalPartialFailureLimit);
 
     // simulate some failures and check `shouldRetry` returns value expected in each state
     manager.incrementFailure();
@@ -73,12 +74,12 @@ class RetryManagerTest {
 
   @Test
   void noBackoffIfNoMatchingBackoffPolicy() {
-    final var manager = RetryManager.builder().build();
+    final var manager = new RetryManager(null, null, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
     manager.incrementFailure(true);
-    assertEquals(manager.getBackoff(), Duration.ZERO);
+    assertEquals(Duration.ZERO, manager.getBackoff());
     manager.incrementFailure(false);
-    assertEquals(manager.getBackoff(), Duration.ZERO);
+    assertEquals(Duration.ZERO, manager.getBackoff());
   }
 
   @ParameterizedTest
@@ -88,10 +89,7 @@ class RetryManagerTest {
                                 final boolean failureIsPartial,
                                 final int expectedFBCalls,
                                 final int expectedSFBCalls) {
-    final var manager = RetryManager.builder()
-        .completeFailureBackoffPolicy(fb)
-        .partialFailureBackoffPolicy(sfb)
-        .build();
+    final var manager = new RetryManager(fb, sfb, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
     manager.incrementFailure(failureIsPartial);
     manager.getBackoff();

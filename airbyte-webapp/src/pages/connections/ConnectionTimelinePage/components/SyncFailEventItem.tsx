@@ -1,7 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 import { InferType } from "yup";
 
-import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
@@ -9,7 +8,6 @@ import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
 import { JobStats } from "./JobStats";
-import styles from "./SyncFailEventItem.module.scss";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -38,11 +36,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
           <FormattedMessage id={titleId} />
         </Text>
         <JobStats {...event.summary} />
-        {failureUiDetails && (
-          <Box pt="xs" className={styles.details}>
-            <JobFailureDetails failureUiDetails={failureUiDetails} />
-          </Box>
-        )}
+        {failureUiDetails && <JobFailureDetails failureUiDetails={failureUiDetails} />}
         {!failureUiDetails && showExtendedStats && (
           <Text as="span" color="grey400" size="sm">
             <FormattedMessage id="jobs.jobId" values={{ id: event.summary.jobId }} />

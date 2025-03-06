@@ -122,7 +122,8 @@ export const SyncCatalogTable: FC = () => {
 
   const isHashingSupported = useFeature(FeatureItem.FieldHashing);
   const isHashingEnabled = useExperiment("connection.hashingUI");
-  const showHashing = isHashingSupported && isHashingEnabled;
+  const isMappingEnabled = useExperiment("connection.mappingsUI");
+  const showHashing = isHashingSupported && isHashingEnabled && !isMappingEnabled;
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");

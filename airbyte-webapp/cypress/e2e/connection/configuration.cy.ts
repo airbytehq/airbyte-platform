@@ -5,7 +5,7 @@ import {
   requestDeleteSource,
   requestUpdateConnection,
 } from "@cy/commands/api";
-import { appendRandomString, deleteEntity, submitButtonClick } from "@cy/commands/common";
+import { deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
   createJsonDestinationViaApi,
   createNewConnectionViaApi,
@@ -454,34 +454,11 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     });
 
     describe("Settings tab", () => {
-      it("Can edit the connection name", () => {
-        interceptUpdateConnectionRequest();
-
-        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
-          const newName = appendRandomString("new connection name");
-          connectionForm.toggleAdvancedSettingsSection();
-          // I am not 100% sure why this call is so long.  I assume it may have something to do with the fact
-          // that this connection is tombstoned
-          cy.get(`${getTestId("nonBreakingChangesPreference")} button`, { timeout: 8000 }).should("be.disabled");
-          cy.get(getTestId("connectionName")).clear();
-          cy.get(getTestId("connectionName")).type(newName);
-          submitButtonClick();
-
-          waitForUpdateConnectionRequest().then((interception) => {
-            expect(interception.request.body).to.include({
-              name: newName,
-              connectionId: connection.connectionId,
-              notifySchemaChanges: connection.notifySchemaChanges,
-            });
-          });
-        });
-      });
-
       it("Cannot edit non-name fields", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
           connectionForm.toggleAdvancedSettingsSection();
+          cy.get(getTestId("connectionName")).should("be.disabled");
           cy.get(connectionForm.scheduleTypeDropdown).should("be.disabled");
           cy.get(connectionForm.destinationNamespaceListBox).should("be.disabled");
           cy.get(connectionForm.streamPrefixInput).should("be.disabled");

@@ -1,0 +1,14 @@
+@use "scss/variables";
+
+.dot {
+  &::after {
+    content: "•";
+    margin: 0 variables.$spacing-sm;
+  }
+}
+
+// trick to round the bottom right corner of the modal
+.modalContent {
+  overflow: hidden;
+  border-bottom-right-radius: variables.$border-radius-lg;
+}

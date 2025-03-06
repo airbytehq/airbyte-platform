@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync
@@ -38,9 +38,11 @@ class InvokeOperationsActivityImpl(
     jobRunConfig: JobRunConfig,
   ): WebhookOperationSummary {
     val webhookOperationSummary = WebhookOperationSummary()
-    MdcScope.Builder()
+    MdcScope
+      .Builder()
       .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
-      .build().use { _ ->
+      .build()
+      .use { _ ->
         try {
           logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId))
           logger.info { LineGobbler.formatStartSection(SECTION_NAME) }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -85,6 +85,9 @@ object ConnectionUpdateMapper {
     }
     if (connectionPatchRequest.status != null) {
       connectionUpdateOss.status = ConnectionStatus.fromValue(connectionPatchRequest.status.toString())
+    }
+    if (connectionPatchRequest.tags != null) {
+      connectionUpdateOss.tags = ConnectionHelper.convertTags(connectionPatchRequest.tags ?: emptyList())
     }
     return connectionUpdateOss
   }

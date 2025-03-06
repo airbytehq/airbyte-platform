@@ -7,8 +7,9 @@ import { AnyObjectSchema } from "yup";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState, useBuilderWatch } from "components/connectorBuilder/types";
+import { BuilderState } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
 import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
@@ -31,19 +32,21 @@ import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
+    projectId,
     initialFormValues,
     failedInitialFormValueConversion,
     initialYaml,
     builderProject: {
-      builderProject: { name },
+      builderProject: { name, componentsFileContent },
       testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
-  const { storedMode } = useConnectorBuilderLocalStorage();
+  const { getStoredMode } = useConnectorBuilderLocalStorage();
   const values = {
-    mode: failedInitialFormValueConversion ? "yaml" : storedMode,
+    mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
+    customComponentsCode: componentsFileContent,
     name,
     view: "global" as const,
     testStreamIndex: 0,

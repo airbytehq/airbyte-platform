@@ -1,33 +1,29 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useMemo } from "react";
+import classNames from "classnames";
+import { PropsWithChildren, useMemo } from "react";
+import { FieldValues, Path, get, useFormContext, useFormState } from "react-hook-form";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { Input } from "components/ui/Input";
 
 import { EncryptionRow } from "./EncryptionRow";
 import { FieldRenamingRow } from "./FieldRenamingRow";
 import { HashFieldRow } from "./HashFieldRow";
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
-import { RowFilteringRow } from "./RowFilterRow";
-
-export const SupportedMappingTypes = [
-  StreamMapperType.hashing,
-  StreamMapperType["field-renaming"],
-  StreamMapperType["row-filtering"],
-  StreamMapperType.encryption,
-] as const;
+import { RowFilteringMapperForm } from "./RowFilteringMapperForm";
+import { isEncryptionMapping, isFieldRenamingMapping, isHashingMapping, isRowFilteringMapping } from "./typeHelpers";
 
 export const MappingRow: React.FC<{
-  streamName: string;
+  streamDescriptorKey: string;
   id: string;
-}> = ({ streamName, id }) => {
-  const { removeMapping, streamsWithMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === id);
+}> = ({ streamDescriptorKey, id }) => {
+  const { removeMapping, streamsWithMappings, validatingStreams } = useMappingContext();
+  const mapping = streamsWithMappings[streamDescriptorKey].find((m) => m.id === id);
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -38,31 +34,35 @@ export const MappingRow: React.FC<{
   };
 
   const RowContent = useMemo(() => {
-    if (mapping?.type === StreamMapperType.hashing) {
-      return <HashFieldRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (!mapping) {
+      return null;
     }
-    if (mapping?.type === StreamMapperType["field-renaming"]) {
-      return <FieldRenamingRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+
+    if (isHashingMapping(mapping)) {
+      return <HashFieldRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
-    if (mapping?.type === StreamMapperType["row-filtering"]) {
-      return <RowFilteringRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (isFieldRenamingMapping(mapping)) {
+      return <FieldRenamingRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
-    if (mapping?.type === StreamMapperType.encryption) {
-      return <EncryptionRow streamName={streamName} mappingId={mapping.mapperConfiguration.id} />;
+    if (isRowFilteringMapping(mapping)) {
+      return <RowFilteringMapperForm streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
+    }
+    if (isEncryptionMapping(mapping)) {
+      return <EncryptionRow streamDescriptorKey={streamDescriptorKey} mapping={mapping} />;
     }
 
     return null;
-  }, [mapping, streamName]);
+  }, [mapping, streamDescriptorKey]);
 
   if (!RowContent || !mapping) {
     return null;
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-testid={`${streamDescriptorKey}-mapper-${mapping.id}`}>
       <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.row}>
         <FlexContainer direction="row" alignItems="center">
-          <Button type="button" variant="clear" {...listeners} {...attributes}>
+          <Button type="button" variant="clear" {...listeners} {...attributes} disabled={isStreamValidating}>
             <Icon color="disabled" type="drag" />
           </Button>
           {RowContent}
@@ -71,11 +71,53 @@ export const MappingRow: React.FC<{
           key={`remove-${id}`}
           variant="clear"
           type="button"
-          onClick={() => removeMapping(streamName, mapping.mapperConfiguration.id)}
+          onClick={() => removeMapping(streamDescriptorKey, mapping.id)}
+          disabled={isStreamValidating}
         >
           <Icon color="disabled" type="trash" />
         </Button>
       </FlexContainer>
     </div>
+  );
+};
+
+export const MappingRowContent: React.FC<PropsWithChildren> = ({ children }) => {
+  return (
+    <FlexContainer alignItems="flex-start" className={styles.row__content}>
+      {children}
+    </FlexContainer>
+  );
+};
+
+export const MappingRowItem: React.FC<PropsWithChildren> = ({ children }) => {
+  return <div className={styles.row__contentItem}>{children}</div>;
+};
+
+interface MappingFormTextInputProps<TFormValues> {
+  name: Path<TFormValues>;
+  placeholder: string;
+  testId?: string;
+  disabled: boolean;
+}
+
+export const MappingFormTextInput = <TFormValues extends FieldValues>({
+  name,
+  placeholder,
+  testId,
+  disabled,
+}: MappingFormTextInputProps<TFormValues>) => {
+  const { register } = useFormContext();
+  const { errors } = useFormState<TFormValues>({ name });
+  const error = get(errors, name);
+
+  return (
+    <Input
+      error={!!error}
+      placeholder={placeholder}
+      {...register(name)}
+      data-testid={testId}
+      disabled={disabled}
+      containerClassName={classNames({ [styles.disabled]: disabled })}
+    />
   );
 };

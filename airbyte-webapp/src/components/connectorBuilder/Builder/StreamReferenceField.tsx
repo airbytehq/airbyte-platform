@@ -7,7 +7,7 @@ import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import styles from "./StreamReferenceField.module.scss";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamReferenceFieldProps {
   // path to the location in the Connector Manifest schema which should be set by this component

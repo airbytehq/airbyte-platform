@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ScopedConfiguration
@@ -643,7 +647,13 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         organizationId,
       )
     assert(organizationScopedConfigs.size == 1)
-    assert(organizationScopedConfigs.stream().findFirst().get().value == valueA)
+    assert(
+      organizationScopedConfigs
+        .stream()
+        .findFirst()
+        .get()
+        .value == valueA,
+    )
 
     val workspaceScopedConfigs =
       scopedConfigurationRepository.findByKeyAndResourceTypeAndScopeTypeAndScopeId(
@@ -653,6 +663,12 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         workspaceId,
       )
     assert(workspaceScopedConfigs.size == 1)
-    assert(workspaceScopedConfigs.stream().findFirst().get().value == valueB)
+    assert(
+      workspaceScopedConfigs
+        .stream()
+        .findFirst()
+        .get()
+        .value == valueB,
+    )
   }
 }

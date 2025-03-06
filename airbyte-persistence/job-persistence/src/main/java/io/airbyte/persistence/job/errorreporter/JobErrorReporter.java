@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.errorreporter;
@@ -10,7 +10,7 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -43,7 +43,7 @@ public class JobErrorReporter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobErrorReporter.class);
   private static final String FROM_TRACE_MESSAGE = "from_trace_message";
-  public static final String DEPLOYMENT_MODE_META_KEY = "deployment_mode";
+  public static final String AIRBYTE_EDITION_META_KEY = "airbyte_edition";
   public static final String AIRBYTE_VERSION_META_KEY = "airbyte_version";
   public static final String FAILURE_ORIGIN_META_KEY = "failure_origin";
   public static final String FAILURE_TYPE_META_KEY = "failure_type";
@@ -66,7 +66,7 @@ public class JobErrorReporter {
   private final DestinationService destinationService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
-  private final DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
   private final String airbyteVersion;
   private final WebUrlHelper webUrlHelper;
   private final JobErrorReportingClient jobErrorReportingClient;
@@ -75,7 +75,7 @@ public class JobErrorReporter {
                           final SourceService sourceService,
                           final DestinationService destinationService,
                           final WorkspaceService workspaceService,
-                          final DeploymentMode deploymentMode,
+                          final Configs.AirbyteEdition airbyteEdition,
                           final String airbyteVersion,
                           final WebUrlHelper webUrlHelper,
                           final JobErrorReportingClient jobErrorReportingClient) {
@@ -83,7 +83,7 @@ public class JobErrorReporter {
     this.destinationService = destinationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
     this.airbyteVersion = airbyteVersion;
     this.webUrlHelper = webUrlHelper;
     this.jobErrorReportingClient = jobErrorReportingClient;
@@ -321,7 +321,7 @@ public class JobErrorReporter {
 
     final Map<String, String> commonMetadata = new HashMap<>(Map.ofEntries(
         Map.entry(AIRBYTE_VERSION_META_KEY, airbyteVersion),
-        Map.entry(DEPLOYMENT_MODE_META_KEY, deploymentMode.name())));
+        Map.entry(AIRBYTE_EDITION_META_KEY, airbyteEdition.name())));
 
     if (workspace != null) {
       commonMetadata.putAll(getWorkspaceMetadata(workspace.getWorkspaceId()));

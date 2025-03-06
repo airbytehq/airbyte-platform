@@ -6,8 +6,6 @@
 global:
   ##  serviceAccountName -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
   edition: "pro"
 
   env_vars: {}
@@ -129,16 +127,6 @@ global:
       ## image pull secret to use for job pod
       ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
       main_container_image_pull_secret: ""
-
-      images:
-        ## JOB_KUBE_BUSYBOX_IMAGE
-        ## busybox image used by the job pod
-        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
-        busybox: ""
-        ## JOB_KUBE_CURL_IMAGE
-        ## curl image used by the job pod
-        ##   jobs.kube.images.curl [string] curl image used by the job pod
-        curl: ""
 
 ## @section Common Parameters
 
@@ -1093,7 +1081,7 @@ temporal:
   image:
     repository: temporalio/auto-setup
     pullPolicy: IfNotPresent
-    tag: "1.23.0"
+    tag: "1.26"
 
   ##  temporal.service.type The Kubernetes Service Type
   ##  temporal.service.port The temporal port and exposed kubernetes port
@@ -1251,26 +1239,6 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-1"
-## External PostgreSQL configuration
-## All of these values are only used when postgresql.enabled is set to false
-##  externalDatabase.host Database host
-##  externalDatabase.user non-root Username for Airbyte Database
-##  externalDatabase.password Database password
-##  externalDatabase.existingSecret Name of an existing secret resource containing the DB password
-##  externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the DB password
-##  externalDatabase.database Database name
-##  externalDatabase.port Database port number
-##  externalDatabase.jdbcUrl Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
-##
-externalDatabase:
-  host: localhost
-  user: airbyte
-  password: ""
-  existingSecret: ""
-  existingSecretPasswordKey: ""
-  database: db-airbyte
-  port: 5432
-  jdbcUrl: ""
 
 ## @section Logs parameters
 

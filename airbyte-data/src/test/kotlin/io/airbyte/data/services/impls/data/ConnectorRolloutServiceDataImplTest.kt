@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -231,8 +235,8 @@ internal class ConnectorRolloutServiceDataImplTest {
     actorDefinitionId: UUID = UUID.randomUUID(),
     releaseCandidateVersionId: UUID = UUID.randomUUID(),
     state: ConnectorRolloutStateType = ConnectorRolloutStateType.initialized,
-  ): EntityConnectorRollout {
-    return EntityConnectorRollout(
+  ): EntityConnectorRollout =
+    EntityConnectorRollout(
       id = id,
       actorDefinitionId = actorDefinitionId,
       releaseCandidateVersionId = releaseCandidateVersionId,
@@ -247,5 +251,4 @@ internal class ConnectorRolloutServiceDataImplTest {
       updatedAt = OffsetDateTime.now(),
       expiresAt = OffsetDateTime.now().plusDays(1),
     )
-  }
 }

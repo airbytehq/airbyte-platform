@@ -1,12 +1,16 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.Geography;
+import io.airbyte.api.model.generated.Limit;
+import io.airbyte.api.model.generated.WorkspaceLimits;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.limits.ConsumptionService;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.config.StandardWorkspace;
 
 public class WorkspaceConverter {
@@ -33,6 +37,17 @@ public class WorkspaceConverter {
       result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
     }
     return result;
+  }
+
+  public static WorkspaceLimits domainToApiModel(final ProductLimitsProvider.WorkspaceLimits limits,
+                                                 ConsumptionService.WorkspaceConsumption consumption) {
+    if (limits == null) {
+      return null;
+    }
+    return new WorkspaceLimits()
+        .activeConnections(new Limit().max(limits.getMaxConnections()).current(consumption.getConnections()))
+        .destinations(new Limit().max(limits.getMaxDestinations()).current(consumption.getDestinations()))
+        .sources(new Limit().max(limits.getMaxSourcesOfSameType()).current(consumption.getSources()));
   }
 
 }

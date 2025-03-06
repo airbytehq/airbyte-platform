@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient
@@ -22,7 +22,7 @@ class EnforceMutexStageTest {
     val mutexKey = "a unique key"
 
     val launcher: KubePodClient = mockk()
-    val metricClient: CustomMetricPublisher = mockk()
+    val metricClient: MetricClient = mockk()
     every { launcher.deleteMutexPods(any()) } returns false
 
     val stage = EnforceMutexStage(launcher, metricClient, "dataplane-id")
@@ -43,7 +43,7 @@ class EnforceMutexStageTest {
     val payload = SyncPayload(ReplicationInput())
 
     val launcher: KubePodClient = mockk()
-    val metricClient: CustomMetricPublisher = mockk()
+    val metricClient: MetricClient = mockk()
     every { launcher.deleteMutexPods(any()) } returns false
 
     val stage = EnforceMutexStage(launcher, metricClient, "dataplane-id")

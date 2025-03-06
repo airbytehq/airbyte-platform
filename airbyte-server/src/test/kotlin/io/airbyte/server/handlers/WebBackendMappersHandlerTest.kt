@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.handlers
 
 import io.airbyte.api.model.generated.AirbyteCatalog
@@ -33,6 +37,8 @@ class WebBackendMappersHandlerTest {
     private const val USERNAME_FIELD = "username"
     private const val PASSWORD_FIELD = "password"
     private const val PASSWORD_FIELD_HASHED = "password_hashed"
+    private const val CURSOR_FIELD = "updated_at"
+    private const val PK_FIELD = "id"
   }
 
   private val connectionsHandler = mockk<ConnectionsHandler>()
@@ -48,7 +54,7 @@ class WebBackendMappersHandlerTest {
     val apiCatalog = mockk<AirbyteCatalog>()
     every { connectionsHandler.getConnection(any()) } returns ConnectionRead().syncCatalog(apiCatalog)
 
-    val ogFields = buildFields(USERNAME_FIELD, PASSWORD_FIELD)
+    val ogFields = buildFields(USERNAME_FIELD, PASSWORD_FIELD, CURSOR_FIELD, PK_FIELD)
     val configuredStream = buildStream(STREAM_NAME, ogFields)
     val configuredCatalog =
       ConfiguredAirbyteCatalog(
@@ -66,7 +72,7 @@ class WebBackendMappersHandlerTest {
 
     // First mapper hashes the password field
     val streamWithFirstMapper = configuredStream.copy(mappers = listOf(allMappers[0]))
-    val outputFields = buildFields(USERNAME_FIELD, PASSWORD_FIELD_HASHED)
+    val outputFields = buildFields(USERNAME_FIELD, PASSWORD_FIELD_HASHED, PK_FIELD, CURSOR_FIELD)
     every {
       destinationCatalogGenerator.generateDestinationCatalog(buildCatalog(streamWithFirstMapper))
     } returns
@@ -83,7 +89,10 @@ class WebBackendMappersHandlerTest {
       DestinationCatalogGenerator.CatalogGenerationResult(
         buildCatalog(streamWithBothMappers, outputFields),
         mapOf(
-          io.airbyte.config.StreamDescriptor().withName(STREAM_NAME).withNamespace(STREAM_NAMESPACE) to
+          io.airbyte.config
+            .StreamDescriptor()
+            .withName(STREAM_NAME)
+            .withNamespace(STREAM_NAMESPACE) to
             mapOf(
               allMappers[1] to
                 DestinationCatalogGenerator.MapperError(
@@ -102,32 +111,88 @@ class WebBackendMappersHandlerTest {
 
     val res = webBackendMappersHandler.validateMappers(req)
 
-    assertEquals(
+    val expectedInitialFields =
       listOf(
-        FieldSpec().name(USERNAME_FIELD).type(FieldSpec.TypeEnum.STRING),
-        FieldSpec().name(PASSWORD_FIELD).type(FieldSpec.TypeEnum.STRING),
-      ),
-      res.initialFields,
-    )
+        FieldSpec()
+          .name(USERNAME_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PASSWORD_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(CURSOR_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(true)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PK_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(true),
+      )
+    assertEquals(expectedInitialFields, res.initialFields)
 
     assertEquals(2, res.mappers.size)
-    assertEquals(
+    val expectedFirstMapperOutputFields =
       listOf(
-        FieldSpec().name(USERNAME_FIELD).type(FieldSpec.TypeEnum.STRING),
-        FieldSpec().name(PASSWORD_FIELD_HASHED).type(FieldSpec.TypeEnum.STRING),
-      ),
-      res.mappers[0].outputFields,
-    )
-    assertEquals(
+        FieldSpec()
+          .name(USERNAME_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PASSWORD_FIELD_HASHED)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PK_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(true),
+        FieldSpec()
+          .name(CURSOR_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(true)
+          .isSelectedPrimaryKey(false),
+      )
+    assertEquals(expectedInitialFields, res.mappers[0].inputFields)
+    assertEquals(expectedFirstMapperOutputFields, res.mappers[0].outputFields)
+
+    val expectedSecondMapperOutputFields =
       listOf(
-        FieldSpec().name(USERNAME_FIELD).type(FieldSpec.TypeEnum.STRING),
-        FieldSpec().name(PASSWORD_FIELD_HASHED).type(FieldSpec.TypeEnum.STRING),
-      ),
-      res.mappers[1].outputFields,
-    )
+        FieldSpec()
+          .name(USERNAME_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PASSWORD_FIELD_HASHED)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(false),
+        FieldSpec()
+          .name(PK_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(false)
+          .isSelectedPrimaryKey(true),
+        FieldSpec()
+          .name(CURSOR_FIELD)
+          .type(FieldSpec.TypeEnum.STRING)
+          .isSelectedCursor(true)
+          .isSelectedPrimaryKey(false),
+      )
+    assertEquals(expectedFirstMapperOutputFields, res.mappers[1].inputFields)
+    assertEquals(expectedSecondMapperOutputFields, res.mappers[1].outputFields)
 
     assertEquals(MapperValidationErrorType.FIELD_NOT_FOUND, res.mappers[1].validationError.type)
     assertEquals("Field not found", res.mappers[1].validationError.message)
+
+    assertEquals(expectedSecondMapperOutputFields, res.outputFields)
 
     verify {
       catalogConverter.toConfiguredInternal(apiCatalog)
@@ -139,29 +204,26 @@ class WebBackendMappersHandlerTest {
     }
   }
 
-  private fun buildFields(vararg fields: String): List<Field> {
-    return fields.map { Field(it, FieldType.STRING) }
-  }
+  private fun buildFields(vararg fields: String): List<Field> = fields.map { Field(it, FieldType.STRING) }
 
   private fun buildStream(
     name: String,
     fields: List<Field>? = null,
-  ): ConfiguredAirbyteStream {
-    return ConfiguredAirbyteStream.Builder()
+  ): ConfiguredAirbyteStream =
+    ConfiguredAirbyteStream
+      .Builder()
       .stream(
         AirbyteStream(name, Jsons.emptyObject(), listOf())
           .withNamespace(STREAM_NAMESPACE),
-      )
-      .syncMode(SyncMode.FULL_REFRESH)
+      ).syncMode(SyncMode.FULL_REFRESH)
       .destinationSyncMode(DestinationSyncMode.OVERWRITE)
       .fields(fields)
+      .primaryKey(listOf(listOf(PK_FIELD)))
+      .cursorField(listOf(CURSOR_FIELD))
       .build()
-  }
 
   private fun buildCatalog(
     stream: ConfiguredAirbyteStream,
     fields: List<Field>? = null,
-  ): ConfiguredAirbyteCatalog {
-    return ConfiguredAirbyteCatalog(listOf(stream.copy(fields = fields ?: stream.fields)))
-  }
+  ): ConfiguredAirbyteCatalog = ConfiguredAirbyteCatalog(listOf(stream.copy(fields = fields ?: stream.fields)))
 }

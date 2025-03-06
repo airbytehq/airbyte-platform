@@ -29,6 +29,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.junit.jupiter.system.stubs)
+  testImplementation(libs.platform.testcontainers.postgresql)
 
   testImplementation(project(":oss:airbyte-test-utils"))
 }
@@ -41,4 +42,13 @@ airbyte {
   docker {
     imageName = "keycloak-setup"
   }
+}
+
+val copyScripts = tasks.register<Copy>("copyScripts") {
+  from("scripts")
+  into("build/airbyte/docker/")
+}
+
+tasks.named("dockerCopyDistribution") {
+  dependsOn(copyScripts)
 }

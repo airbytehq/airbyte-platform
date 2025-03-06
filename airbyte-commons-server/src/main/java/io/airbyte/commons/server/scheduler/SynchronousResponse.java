@@ -1,12 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
 
+import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.TemporalResponse;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobConfig.ConfigType;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,19 +47,24 @@ public class SynchronousResponse<T> {
    * @param <U> output type for job type of temporal job
    * @return response
    */
-  public static <T, U> SynchronousResponse<T> fromTemporalResponse(final TemporalResponse<ConnectorJobOutput> temporalResponse,
-                                                                   final Function<ConnectorJobOutput, T> outputMapper,
-                                                                   final UUID id,
-                                                                   final ConfigType configType,
-                                                                   final UUID configId,
-                                                                   final long createdAt,
-                                                                   final long endedAt) {
+  public static <T> SynchronousResponse<T> fromTemporalResponse(final TemporalResponse<ConnectorJobOutput> temporalResponse,
+                                                                final Function<ConnectorJobOutput, T> outputMapper,
+                                                                final UUID id,
+                                                                final ConfigType configType,
+                                                                final UUID configId,
+                                                                final long createdAt,
+                                                                final long endedAt) {
 
     final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
     final T responseOutput = jobOutput.map(outputMapper).orElse(null);
 
+    final Path logPath = temporalResponse.getMetadata() == null ? null : temporalResponse.getMetadata().getLogPath();
+    final JobMetadata metadataResponse = responseOutput == null
+        ? new JobMetadata(false, logPath)
+        : temporalResponse.getMetadata();
+
     final SynchronousJobMetadata metadata = SynchronousJobMetadata.fromJobMetadata(
-        temporalResponse.getMetadata(),
+        metadataResponse,
         jobOutput.orElse(null),
         id,
         configType,

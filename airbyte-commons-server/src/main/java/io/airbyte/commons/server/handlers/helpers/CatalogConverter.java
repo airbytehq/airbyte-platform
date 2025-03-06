@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -11,20 +11,18 @@ import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
-import io.airbyte.api.model.generated.ConfiguredStreamMapper;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.StreamDescriptor;
-import io.airbyte.api.model.generated.StreamMapperType;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.converters.ApiConverters;
+import io.airbyte.commons.converters.MapperConvertersKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.ConfiguredMapper;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.MapperConfig;
 import io.airbyte.config.MapperOperationName;
@@ -73,14 +71,6 @@ public class CatalogConverter {
         .isResumable(stream.getIsResumable());
   }
 
-  public ConfiguredStreamMapper toApi(final MapperConfig mapper) {
-    return new ConfiguredStreamMapper()
-        .id(mapper.id())
-        .type(Enums.toEnum(mapper.name(), StreamMapperType.class)
-            .orElseThrow(() -> new IllegalArgumentException("Unexpected mapper name: " + mapper.name())))
-        .mapperConfiguration(Jsons.jsonNode(mapper.config()));
-  }
-
   /**
    * Convert an internal catalog and field selection mask to an api catalog model.
    *
@@ -112,7 +102,7 @@ public class CatalogConverter {
                   .hashedFields(configuredStream.getMappers().stream().filter(mapper -> MapperOperationName.HASHING.equals(mapper.name()))
                       .map(this::toApiFieldInfo)
                       .collect(Collectors.toList()))
-                  .mappers(configuredStream.getMappers().stream().map(this::toApi).collect(Collectors.toList()))
+                  .mappers(configuredStream.getMappers().stream().map(MapperConvertersKt::toApi).collect(Collectors.toList()))
                   .generationId(configuredStream.getGenerationId())
                   .minimumGenerationId(configuredStream.getMinimumGenerationId())
                   .syncId(configuredStream.getSyncId());
@@ -240,11 +230,7 @@ public class CatalogConverter {
     }
 
     return mapperConfigs.stream()
-        .map(mapperConfig -> {
-          final String mapperName = mapperConfig.getType().toString();
-          final Mapper<? extends MapperConfig> mapper = mappers.get(mapperName);
-          return mapper.spec().deserialize(new ConfiguredMapper(mapperName, mapperConfig.getMapperConfiguration(), mapperConfig.getId()));
-        })
+        .map(MapperConvertersKt::toInternal)
         .collect(Collectors.toList());
   }
 

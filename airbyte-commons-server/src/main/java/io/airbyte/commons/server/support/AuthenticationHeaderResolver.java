@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -103,7 +103,7 @@ public class AuthenticationHeaderResolver {
         }
       }
       return organizationIds;
-    } catch (final ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
+    } catch (final IllegalArgumentException | ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve organization ID.", e);
       return null;
     } catch (final IOException e) {
@@ -172,7 +172,8 @@ public class AuthenticationHeaderResolver {
         log.debug("Request does not contain any headers that resolve to a workspace ID.");
         return null;
       }
-    } catch (final JsonValidationException | ConfigNotFoundException | io.airbyte.config.persistence.ConfigNotFoundException e) {
+    } catch (final IllegalArgumentException | JsonValidationException | ConfigNotFoundException
+        | io.airbyte.config.persistence.ConfigNotFoundException e) {
       log.debug("Unable to resolve workspace ID.", e);
       return null;
     } catch (final IOException e) {

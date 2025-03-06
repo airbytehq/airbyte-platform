@@ -63,10 +63,10 @@ function section(blocks: FormBlock[], displayType: DisplayType = "expanded"): Se
   };
 }
 
-const isHiddenAuthField = jest.fn(() => false);
+const isHiddenField = jest.fn(() => false);
 
 function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = []) {
-  return generateGroupsAndSections(blocks, groups, true, isHiddenAuthField);
+  return generateGroupsAndSections(blocks, groups, true, isHiddenField);
 }
 
 describe("useGroupsAndSections", () => {

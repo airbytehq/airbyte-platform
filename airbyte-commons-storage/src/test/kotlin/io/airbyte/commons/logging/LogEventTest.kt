@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging
@@ -257,9 +257,33 @@ internal class LogEventTest {
     assertEquals(logEvents.events.first().message, obj.events.first().message)
     assertEquals(logEvents.events.first().timestamp, obj.events.first().timestamp)
     logEvents.events.first().throwable?.stackTrace?.forEachIndexed { index, expected ->
-      assertEquals(expected.className, obj.events.first().throwable?.stackTrace?.get(index)?.className)
-      assertEquals(expected.methodName, obj.events.first().throwable?.stackTrace?.get(index)?.methodName)
-      assertEquals(expected.lineNumber, obj.events.first().throwable?.stackTrace?.get(index)?.lineNumber)
+      assertEquals(
+        expected.className,
+        obj.events
+          .first()
+          .throwable
+          ?.stackTrace
+          ?.get(index)
+          ?.className,
+      )
+      assertEquals(
+        expected.methodName,
+        obj.events
+          .first()
+          .throwable
+          ?.stackTrace
+          ?.get(index)
+          ?.methodName,
+      )
+      assertEquals(
+        expected.lineNumber,
+        obj.events
+          .first()
+          .throwable
+          ?.stackTrace
+          ?.get(index)
+          ?.lineNumber,
+      )
     }
   }
 }

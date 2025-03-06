@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Job
@@ -36,6 +40,18 @@ interface JobsRepository : PageableRepository<Job, Long> {
     """,
   )
   fun countFailedJobsSinceLastSuccessForScope(scope: String): Int
+
+  @Query(
+    """
+    SELECT *
+    FROM jobs
+    WHERE scope = :scope
+      AND status = 'succeeded'
+    ORDER BY created_at ASC
+    LIMIT 1
+    """,
+  )
+  fun firstSuccessfulJobForScope(scope: String): Job?
 
   @Query(
     """

@@ -1,7 +1,8 @@
+import { autoUpdate, useFloating } from "@floating-ui/react-dom";
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import React, { ReactNode, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useIntl } from "react-intl";
 
@@ -254,44 +255,42 @@ export const ComboBox = ({
       data-testid={testId}
       className={className}
     >
-      <Float adaptiveWidth placement="bottom-start" as={React.Fragment}>
-        <ComboboxInput as={React.Fragment}>
-          <Input
-            {...fieldInputProps}
-            spellCheck={false}
-            value={currentInputValue}
-            error={error}
-            adornment={
-              adornment ?? (
-                <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
-                  <Icon type="caretDown" />
-                </ComboboxButton>
-              )
-            }
-            autoComplete="off"
-            onChange={(event) => {
-              const newQuery = event.target.value;
-              setQuery(newQuery);
+      <ComboboxInput as={React.Fragment}>
+        <Input
+          {...fieldInputProps}
+          spellCheck={false}
+          value={currentInputValue}
+          error={error}
+          adornment={
+            adornment ?? (
+              <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
+                <Icon type="caretDown" />
+              </ComboboxButton>
+            )
+          }
+          autoComplete="off"
+          onChange={(event) => {
+            const newQuery = event.target.value;
+            setQuery(newQuery);
 
-              const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
-              if (allowCustomValue) {
-                onChange(selectedOption?.value ?? newQuery);
-              } else if (selectedOption) {
-                onChange(selectedOption.value);
-              } else {
-                onChange("");
-              }
-            }}
-            onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
-            disabled={disabled}
-            data-testid={testId ? `${testId}--input` : undefined}
-            placeholder={placeholder}
-          />
-        </ComboboxInput>
-        <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
-          <Options optionSections={displayOptionSections} {...optionsConfig} />
-        </ComboboxOptions>
-      </Float>
+            const selectedOption = findMatchingOption(newQuery, "label", inputOptionSections);
+            if (allowCustomValue) {
+              onChange(selectedOption?.value ?? newQuery);
+            } else if (selectedOption) {
+              onChange(selectedOption.value);
+            } else {
+              onChange("");
+            }
+          }}
+          onBlur={onBlur ? (e) => onBlur?.(e) : fieldInputProps?.onBlur}
+          disabled={disabled}
+          data-testid={testId ? `${testId}--input` : undefined}
+          placeholder={placeholder}
+        />
+      </ComboboxInput>
+      <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false} anchor="bottom start">
+        <Options optionSections={displayOptionSections} {...optionsConfig} />
+      </ComboboxOptions>
     </Combobox>
   );
 };
@@ -304,20 +303,40 @@ export const MultiComboBox = ({
   error,
   fieldInputProps,
   disabled,
-}: MultiComboBoxProps) => (
-  <Combobox value={value} onChange={onChange} multiple immediate>
-    <ComboboxInput as={React.Fragment}>
-      <TagInput
-        name={name}
-        fieldValue={value ?? []}
-        onChange={onChange}
-        onBlur={fieldInputProps?.onBlur}
-        error={error}
-        disabled={disabled}
-      />
-    </ComboboxInput>
-    <ComboboxOptions as="ul" className={styles.optionsMenu} modal={false}>
-      <Options optionSections={normalizeOptionsAsSections(options)} />
-    </ComboboxOptions>
-  </Combobox>
-);
+}: MultiComboBoxProps) => {
+  const { x, y, reference, floating, strategy } = useFloating({
+    whileElementsMounted: autoUpdate,
+    placement: "bottom-start",
+  });
+
+  return (
+    <Combobox ref={reference} as="div" value={value} onChange={onChange} multiple immediate>
+      <ComboboxInput as={React.Fragment}>
+        <TagInput
+          name={name}
+          fieldValue={value ?? []}
+          onChange={onChange}
+          onBlur={fieldInputProps?.onBlur}
+          error={error}
+          disabled={disabled}
+        />
+      </ComboboxInput>
+      {createPortal(
+        <ComboboxOptions
+          ref={floating}
+          as="ul"
+          className={styles.optionsMenu}
+          modal={false}
+          style={{
+            position: strategy,
+            top: y ?? 0,
+            left: x ?? 0,
+          }}
+        >
+          <Options optionSections={normalizeOptionsAsSections(options)} />
+        </ComboboxOptions>,
+        document.body
+      )}
+    </Combobox>
+  );
+};

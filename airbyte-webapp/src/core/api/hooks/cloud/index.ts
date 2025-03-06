@@ -1,5 +1,4 @@
-export * from "./cloudWorkspaces";
 export * from "./dbtCloud";
-export * from "./usePrefetchCloudWorkspaceData";
+export * from "./usePrefetchWorkspaceData";
 export * from "./users";
 export * from "./useGetWorkspaceUsage";

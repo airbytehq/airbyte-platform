@@ -15,10 +15,10 @@ spec:
     {{- end }}
   {{- end }}
   containers:
-  - name: wget
+  - name: webapp-test
     image: {{ include "imageUrl" (list .Values.testWebapp.image $) }}
-    command: ['wget']
-    args: ['{{ .Release.Name }}-airbyte-webapp-svc:{{ .Values.webapp.service.port }}']
+    command: ['curl']
+    args: ['-s', '{{ .Release.Name }}-airbyte-webapp-svc:{{ .Values.webapp.service.port }}', '>', '/dev/null']
     resources:
       requests:
         memory: "64Mi"

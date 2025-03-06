@@ -1,6 +1,7 @@
 export interface AirbyteWebappConfig {
   keycloakBaseUrl: string;
   segmentToken?: string;
+  hockeyStackApiKey?: string;
   apiUrl: string;
   connectorBuilderApiUrl: string;
   version?: string;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -91,8 +91,11 @@ public class JobConverter {
     return new JobInfoLightRead().job(getJobRead(job));
   }
 
-  public JobOptionalRead getJobOptionalRead(final Job job) {
-    return new JobOptionalRead().job(getJobRead(job));
+  public JobOptionalRead getJobOptionalRead(final Optional<Job> job) {
+    if (job.isEmpty()) {
+      return new JobOptionalRead();
+    }
+    return new JobOptionalRead().job(getJobRead(job.get()));
   }
 
   public static JobDebugRead getDebugJobInfoRead(final JobInfoRead jobInfoRead,

@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.initContainer.system
 
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
@@ -43,7 +43,7 @@ class FileClient(
         StandardCharsets.UTF_8,
       )
     } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, 1, MetricAttribute("step", "input-file"))
+      metricClient.count(metric = OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, attributes = arrayOf(MetricAttribute("step", "input-file")))
       throw e
     }
   }
@@ -59,7 +59,7 @@ class FileClient(
       makeNamedPipe("$destDir/$STDERR_PIPE_FILE")
       makeNamedPipe("$destDir/$STDIN_PIPE_FILE")
     } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, 1, MetricAttribute("step", "pipes"))
+      metricClient.count(metric = OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, attributes = arrayOf(MetricAttribute("step", "pipes")))
       throw e
     }
   }

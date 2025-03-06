@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -14,7 +14,6 @@ import io.airbyte.publicApi.server.generated.models.SourcePatchRequest
 import io.airbyte.publicApi.server.generated.models.SourcePutRequest
 import io.airbyte.server.apis.publicapi.constants.DESTINATION_TYPE
 import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
-import java.util.Optional
 
 /**
  * Removes the sourceType node from the actor's configuration.
@@ -57,17 +56,11 @@ fun removeConfigurationNode(
   node: String,
 ) {
   val configuration = getConfiguration(actor) ?: return
-
-  val configurationObjectNode = Optional.ofNullable((configuration as ObjectNode))
-  configurationObjectNode.ifPresent { config: ObjectNode ->
-    config.remove(
-      node,
-    )
-  }
+  (configuration as? ObjectNode)?.remove(node)
 }
 
-internal fun getConfiguration(actor: Any): JsonNode? {
-  return when (actor) {
+internal fun getConfiguration(actor: Any): JsonNode? =
+  when (actor) {
     is DestinationCreateRequest -> actor.configuration
     is DestinationPatchRequest -> actor.configuration
     is DestinationPutRequest -> actor.configuration
@@ -76,4 +69,3 @@ internal fun getConfiguration(actor: Any): JsonNode? {
     is SourcePutRequest -> actor.configuration
     else -> null
   }
-}

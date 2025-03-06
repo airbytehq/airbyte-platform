@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker.activities
@@ -22,7 +22,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class FinalizeRolloutActivityImpl(private val airbyteApiClient: AirbyteApiClient) : FinalizeRolloutActivity {
+class FinalizeRolloutActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : FinalizeRolloutActivity {
   init {
     logger.info { "Initialized FinalizeRolloutActivityImpl" }
   }

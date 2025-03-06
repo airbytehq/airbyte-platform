@@ -30,7 +30,6 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.reactor.core)
-  implementation(libs.slugify)
   implementation(libs.temporal.sdk)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
@@ -49,6 +48,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
@@ -99,6 +99,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.kotest)
@@ -129,7 +130,7 @@ tasks.named("assemble") {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.server.Application"
+    mainClass = "io.airbyte.server.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
@@ -183,9 +184,8 @@ tasks.named<Test>("test") {
   )
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// By default, Gradle runs all annotation processors and disables annotation processing by javac, however.  Once lombok has
-// been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

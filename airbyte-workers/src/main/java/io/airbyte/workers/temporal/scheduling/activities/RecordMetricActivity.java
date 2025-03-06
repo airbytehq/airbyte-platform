@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.Arrays;

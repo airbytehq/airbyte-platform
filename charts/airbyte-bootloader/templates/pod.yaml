@@ -2,20 +2,20 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "airbyte.fullname" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
     {{- if .Values.podLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 4 }}
+      {{- include "airbyte.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 4 }}
     {{- end }}
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "0"
     {{- if .Values.podAnnotations }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 4 }}
+      {{- include "airbyte.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 4 }}
     {{- end }}
 spec:
   serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -27,13 +27,13 @@ spec:
   {{- end }}
   restartPolicy: Never
   {{- if .Values.nodeSelector }}
-  nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+  nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
   {{- end }}
   {{- if .Values.tolerations }}
-  tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+  tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
   {{- end }}
   {{- if .Values.affinity }}
-  affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+  affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
   {{- end }}
   {{- if .Values.extraInitContainers }}
   initContainers:
@@ -44,17 +44,72 @@ spec:
       image: {{ include "imageUrl" (list .Values.image $) }}
       imagePullPolicy: "{{ .Values.image.pullPolicy }}"
       env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_VERSION
           valueFrom:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STEP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STEP
+        - name: MICROMETER_METRICS_OTLP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_OTLP_ENABLED
+        - name: OTEL_COLLECTOR_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: OTEL_COLLECTOR_ENDPOINT
+        - name: MICROMETER_METRICS_STATSD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
         - name: RUN_DATABASE_MIGRATION_ON_STARTUP
           valueFrom:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: RUN_DATABASE_MIGRATION_ON_STARTUP
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+           configMapKeyRef:
+             name: {{ .Release.Name }}-airbyte-env
+             key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
 
         # Airbyte auth secret keys and values
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}

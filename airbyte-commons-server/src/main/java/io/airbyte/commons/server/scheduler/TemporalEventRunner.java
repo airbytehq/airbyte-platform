@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StreamDescriptor;
 import java.util.List;

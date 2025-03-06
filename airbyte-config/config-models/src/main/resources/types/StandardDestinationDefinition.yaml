@@ -34,7 +34,11 @@ properties:
     description: whether this is a custom connector definition
     type: boolean
     default: false
+  enterprise:
+    description: whether this is an enterprise connector
+    type: boolean
+    default: false
   resourceRequirements:
-    "$ref": ActorDefinitionResourceRequirements.yaml
+    "$ref": ScopedResourceRequirements.yaml
   metrics:
     "$ref": ConnectorRegistryEntryMetrics.yaml

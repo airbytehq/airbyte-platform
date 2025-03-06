@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
@@ -24,9 +28,7 @@ class StreamStatusStateStore {
 
   fun getLatestGlobalStateId(): Int = latestGlobalStateId
 
-  fun entries(): Set<Map.Entry<StreamStatusKey, StreamStatusValue>> {
-    return store.entries
-  }
+  fun entries(): Set<Map.Entry<StreamStatusKey, StreamStatusValue>> = store.entries
 
   fun set(
     key: StreamStatusKey,
@@ -146,8 +148,8 @@ class StreamStatusStateStore {
   private fun resolveRunState(
     current: ApiEnum,
     incoming: ApiEnum,
-  ): ApiEnum {
-    return when (current to incoming) {
+  ): ApiEnum =
+    when (current to incoming) {
       RUNNING to COMPLETE,
       RUNNING to INCOMPLETE,
       RUNNING to RATE_LIMITED,
@@ -161,5 +163,4 @@ class StreamStatusStateStore {
         current
       }
     }
-  }
 }

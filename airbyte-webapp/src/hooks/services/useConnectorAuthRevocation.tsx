@@ -5,16 +5,16 @@ import { useRevokeSourceOAuthToken } from "core/api";
 
 import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";
-import { ConnectorDefinitionSpecification, ConnectorSpecification } from "../../core/domain/connector";
+import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "../../core/domain/connector";
 
 export function useConnectorAuthRevocation(sourceId: string): {
-  revokeAuthTokens: (connector: ConnectorDefinitionSpecification) => Promise<void>;
+  revokeAuthTokens: (connector: ConnectorDefinitionSpecificationRead) => Promise<void>;
 } {
   const { workspaceId } = useCurrentWorkspace();
   const revokeSourceOAuthToken = useRevokeSourceOAuthToken();
 
   return {
-    revokeAuthTokens: async (connector: ConnectorDefinitionSpecification): Promise<void> => {
+    revokeAuthTokens: async (connector: ConnectorDefinitionSpecificationRead): Promise<void> => {
       return revokeSourceOAuthToken({
         sourceDefinitionId: ConnectorSpecification.id(connector),
         sourceId,
@@ -32,7 +32,7 @@ export function useRunOauthRevocation({
   onDone,
 }: {
   sourceId: string;
-  connector: ConnectorDefinitionSpecification;
+  connector: ConnectorDefinitionSpecificationRead;
   onDone?: () => void;
 }): {
   loading: boolean;

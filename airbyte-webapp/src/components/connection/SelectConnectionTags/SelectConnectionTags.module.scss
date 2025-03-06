@@ -1,0 +1,77 @@
+@use "scss/variables";
+@use "scss/z-indices";
+@use "scss/colors";
+
+.selectConnectionTags {
+  position: relative;
+  z-index: z-indices.$dropdownMenu;
+  width: variables.$width-extra-wide-menu;
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  box-shadow: variables.$box-shadow-raised;
+  overflow: auto;
+
+  // We should use a <Button> variant instead of this class, but the current component is not flexible enough
+  // https://github.com/airbytehq/airbyte-internal-issues/issues/11481
+  &__trigger {
+    cursor: pointer;
+    padding: 0;
+    font-size: variables.$font-size-xs;
+    height: variables.$tag-height;
+    width: variables.$tag-height;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: colors.$grey-400;
+    border: variables.$border-thin solid colors.$grey-200;
+    box-shadow: none;
+    border-radius: variables.$border-radius-sm;
+  }
+
+  ul,
+  li {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__input {
+    border: none;
+    border-radius: 0;
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+
+    &:focus-within {
+      border-bottom: variables.$border-thin solid colors.$grey-100;
+    }
+  }
+
+  &__tags {
+    overflow: auto;
+    max-height: variables.$height-long-listbox-options-list;
+  }
+
+  &__tagRow {
+    width: 100%;
+    border: none;
+    background: none;
+    padding: variables.$spacing-md variables.$spacing-md;
+
+    &:not(&--disabled):hover,
+    &:not(&--disabled):focus-within {
+      background-color: colors.$blue-50;
+    }
+
+    &--disabled {
+      background-color: colors.$grey-50;
+
+      p {
+        color: colors.$grey-400;
+      }
+    }
+  }
+
+  &__tagRowTooltip {
+    width: 100%;
+  }
+}

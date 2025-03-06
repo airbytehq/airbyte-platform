@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -40,12 +44,19 @@ class WebBackendMappersHandler(
         it.stream.name == validateMappersRequest.streamDescriptor.name &&
           it.stream.namespace == validateMappersRequest.streamDescriptor.namespace
       }
+
+    val primaryKeyFields = stream.primaryKey?.map { it.first() }
+    val cursorFields = stream.cursorField?.firstOrNull()
+
     val initialFields =
-      stream.fields!!.map {
-        FieldSpec()
-          .name(it.name)
-          .type(convertFieldType(it.type))
-      }.toList()
+      stream.fields!!
+        .map {
+          FieldSpec()
+            .name(it.name)
+            .type(convertFieldType(it.type))
+            .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
+            .isSelectedCursor(cursorFields == it.name)
+        }.toList()
 
     val partialMappers = mutableListOf<MapperConfig>()
     stream.mappers = partialMappers
@@ -56,6 +67,7 @@ class WebBackendMappersHandler(
     // Trim down the catalog so we only process mappers for the stream we're working with
     val slimCatalog = ConfiguredAirbyteCatalog(listOf(stream))
 
+    var lastFieldSet = initialFields
     for (mapper in newMappers) {
       partialMappers.add(mapper)
 
@@ -64,14 +76,23 @@ class WebBackendMappersHandler(
 
       val validateRes = MapperValidationResult()
       validateRes.id = mapper.id()
+      validateRes.inputFields = lastFieldSet
       validateRes.outputFields =
-        newStream.fields!!.map {
-          FieldSpec()
-            .name(it.name)
-            .type(convertFieldType(it.type))
-        }.toList()
+        newStream.fields!!
+          .map {
+            FieldSpec()
+              .name(it.name)
+              .type(convertFieldType(it.type))
+              .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
+              .isSelectedCursor(cursorFields == it.name)
+          }.toList()
 
-      val streamErrors = generationResult.errors.entries.firstOrNull()?.value
+      lastFieldSet = validateRes.outputFields
+
+      val streamErrors =
+        generationResult.errors.entries
+          .firstOrNull()
+          ?.value
       val mapperError = streamErrors?.get(mapper)
       if (mapperError != null) {
         validateRes.validationError =
@@ -85,20 +106,20 @@ class WebBackendMappersHandler(
 
     return WebBackendValidateMappersResponse()
       .initialFields(initialFields)
+      .outputFields(lastFieldSet)
       .mappers(mapperValidationResults)
   }
 
-  private fun convertMapperErrorType(mapperErrorType: DestinationCatalogGenerator.MapperErrorType): MapperValidationErrorType {
-    return when (mapperErrorType) {
+  private fun convertMapperErrorType(mapperErrorType: DestinationCatalogGenerator.MapperErrorType): MapperValidationErrorType =
+    when (mapperErrorType) {
       DestinationCatalogGenerator.MapperErrorType.MISSING_MAPPER -> MapperValidationErrorType.MISSING_MAPPER
       DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG -> MapperValidationErrorType.INVALID_MAPPER_CONFIG
       DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND -> MapperValidationErrorType.FIELD_NOT_FOUND
       DestinationCatalogGenerator.MapperErrorType.FIELD_ALREADY_EXISTS -> MapperValidationErrorType.FIELD_ALREADY_EXISTS
     }
-  }
 
-  private fun convertFieldType(fieldType: FieldType): FieldSpec.TypeEnum {
-    return when (fieldType) {
+  private fun convertFieldType(fieldType: FieldType): FieldSpec.TypeEnum =
+    when (fieldType) {
       FieldType.STRING -> FieldSpec.TypeEnum.STRING
       FieldType.BOOLEAN -> FieldSpec.TypeEnum.BOOLEAN
       FieldType.DATE -> FieldSpec.TypeEnum.DATE
@@ -113,5 +134,4 @@ class WebBackendMappersHandler(
       FieldType.MULTI -> FieldSpec.TypeEnum.MULTI
       FieldType.UNKNOWN -> FieldSpec.TypeEnum.UNKNOWN
     }
-  }
 }

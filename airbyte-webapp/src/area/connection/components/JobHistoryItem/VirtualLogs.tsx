@@ -176,7 +176,7 @@ const HighlightedSearchMatches = React.memo(({ text, searchTerm }: { text: strin
 });
 HighlightedSearchMatches.displayName = "HighlightedSearchMatches";
 
-const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
+export const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
   const rowIsHighlighted = context.highlightedRowIndex === index;
   const html = Anser.ansiToHtml(expandTabs(item.original), { use_classes: true });
 
@@ -191,6 +191,7 @@ const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, cont
         {context.showStructuredLogs && (
           <>
             <Highlighter
+              autoEscape
               className={styles.virtualLogs__timestamp}
               searchWords={[context.searchTerm || ""]}
               textToHighlight={item.timestamp || ""}

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.featureflag.FeatureFlagClient
@@ -15,6 +19,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Toleration
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -29,12 +34,13 @@ class PodFactoryBeanFactory {
     @Named("checkEnvVars") connectorEnvVars: List<EnvVar>,
     @Named("sideCarEnvVars") sideCarEnvVars: List<EnvVar>,
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
+    @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       CHECK_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -42,6 +48,7 @@ class PodFactoryBeanFactory {
       connectorEnvVars,
       sideCarEnvVars,
       sidecarContainerInfo,
+      serviceAccount,
       volumeFactory,
       initContainerFactory,
       mapOf(
@@ -50,7 +57,6 @@ class PodFactoryBeanFactory {
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("discoverPodFactory")
@@ -61,12 +67,13 @@ class PodFactoryBeanFactory {
     @Named("discoverEnvVars") connectorEnvVars: List<EnvVar>,
     @Named("sideCarEnvVars") sideCarEnvVars: List<EnvVar>,
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
+    @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -74,6 +81,7 @@ class PodFactoryBeanFactory {
       connectorEnvVars,
       sideCarEnvVars,
       sidecarContainerInfo,
+      serviceAccount,
       volumeFactory,
       initContainerFactory,
       mapOf(
@@ -82,7 +90,6 @@ class PodFactoryBeanFactory {
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("specPodFactory")
@@ -93,12 +100,13 @@ class PodFactoryBeanFactory {
     @Named("specEnvVars") connectorEnvVars: List<EnvVar>,
     @Named("sideCarEnvVars") sideCarEnvVars: List<EnvVar>,
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
+    @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       SPEC_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -106,11 +114,11 @@ class PodFactoryBeanFactory {
       connectorEnvVars,
       sideCarEnvVars,
       sidecarContainerInfo,
+      serviceAccount,
       volumeFactory,
       initContainerFactory,
       mapOf(),
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 }

@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.interceptors
 
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricAttribute
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.core.annotation.AnnotationValue
@@ -68,9 +72,9 @@ abstract class InstrumentInterceptorBase : MethodInterceptor<Any, Any> {
     }
   }
 
-  private fun readTags(annotationValue: AnnotationValue<Instrument>): Array<MetricAttribute> {
-    return annotationValue.getAnnotations<Tag>(TAGS)
+  private fun readTags(annotationValue: AnnotationValue<Instrument>): Array<MetricAttribute> =
+    annotationValue
+      .getAnnotations<Tag>(TAGS)
       .map { MetricAttribute(it.stringValue("key").orElse(""), it.stringValue("value").orElse("")) }
       .toTypedArray()
-  }
 }

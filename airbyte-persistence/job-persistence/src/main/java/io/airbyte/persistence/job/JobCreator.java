@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -53,7 +53,8 @@ public interface JobCreator {
                                StandardDestinationDefinition destinationDefinition,
                                ActorDefinitionVersion sourceDefinitionVersion,
                                ActorDefinitionVersion destinationDefinitionVersion,
-                               UUID workspaceId)
+                               UUID workspaceId,
+                               boolean isScheduled)
       throws IOException;
 
   /**
@@ -78,7 +79,9 @@ public interface JobCreator {
                                           UUID workspaceId)
       throws IOException;
 
-  Optional<Long> createRefreshConnection(final StandardSync standardSync,
+  Optional<Long> createRefreshConnection(final SourceConnection source,
+                                         final DestinationConnection destination,
+                                         final StandardSync standardSync,
                                          final String sourceDockerImageName,
                                          final Version sourceProtocolVersion,
                                          final String destinationDockerImageName,

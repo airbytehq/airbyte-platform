@@ -18,7 +18,7 @@ export const MappingsUpsellEmptyState = () => {
   const cloudForTeamsUpsell = useFeature(FeatureItem.CloudForTeamsUpsell);
 
   return (
-    <HighlightCard>
+    <HighlightCard data-testid="mappings-upsell-empty-state">
       <FlexContainer direction="row" justifyContent="space-between">
         <FlexContainer direction="column" gap="lg">
           {enterpriseUpsell && <BrandingBadge product="enterprise" />}

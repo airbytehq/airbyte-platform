@@ -1,13 +1,19 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage.activities
 
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.ATTEMPT_NUMBER
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.CONNECTION_ID
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.JOB_ID
 import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.TEST_PAYLOAD_NAME
+import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,13 +31,16 @@ class OutputStorageClientTest {
 
   private lateinit var client: OutputStorageClient<TestClass>
 
-  class TestClass(value1: String, value2: Long)
+  class TestClass(
+    value1: String,
+    value2: Long,
+  )
 
   @BeforeEach
   fun setup() {
     client = OutputStorageClient(storageClient, metricClient, TEST_PAYLOAD_NAME, TestClass::class.java)
 
-    every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
   }
 
   @Test

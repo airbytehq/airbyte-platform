@@ -1,0 +1,49 @@
+micronaut:
+  application:
+    name: airbyte-async-profiler
+  server:
+    enable: false
+  metrics:
+    enabled: false
+    export:
+      statsd:
+        enabled: false
+  security:
+    enabled: false
+
+airbyte:
+  workload-id: ${WORKLOAD_ID:}
+  connection-id: ${CONNECTION_ID:}
+  job-id: ${JOB_ID:}
+  attempt-id: ${ATTEMPT_ID:}
+  source-keyword: ${SOURCE_KEYWORD:source}
+  destination-keyword: ${DESTINATION_KEYWORD:destination}
+  orchestrator-keyword: ${ORCHESTRATOR_KEYWORD:orchestrator}
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
+        profiler-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+#logger:
+#  levels:
+#    com.zaxxer.hikari: ERROR
+#    com.zaxxer.hikari.pool: ERROR
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG

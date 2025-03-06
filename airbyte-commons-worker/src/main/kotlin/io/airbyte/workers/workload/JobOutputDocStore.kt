@@ -1,13 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.workload
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationOutput
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.workload.exception.DocStoreAccessException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -42,11 +46,11 @@ class JobOutputDocStore(
   fun readSyncOutput(workloadId: String): Optional<ReplicationOutput> {
     val output: String? =
       try {
-        storageClient.read(workloadId).also {
-          metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
+        storageClient.read(workloadId).also { _ ->
+          metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_READ, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "success")))
         }
       } catch (e: Exception) {
-        metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error"))
+        metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_READ, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "error")))
         throw DocStoreAccessException("Unable to read output for $workloadId", e)
       }
     return Optional.ofNullable(output?.let { Jsons.deserialize(it, ReplicationOutput::class.java) })
@@ -66,9 +70,9 @@ class JobOutputDocStore(
   ) {
     try {
       storageClient.write(workloadId, Jsons.serialize(output))
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
+      metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_WRITE, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "success")))
     } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
+      metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_WRITE, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "error")))
       throw DocStoreAccessException("Unable to write output for $workloadId", e)
     }
   }

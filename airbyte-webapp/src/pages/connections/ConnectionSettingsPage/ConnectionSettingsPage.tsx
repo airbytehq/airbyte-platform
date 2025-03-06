@@ -23,7 +23,6 @@ import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
-import { useIntent } from "core/utils/rbac";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -47,9 +46,6 @@ export const ConnectionSettingsPage: React.FC = () => {
 
   const { mode } = useConnectionFormService();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
-
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditConnection = useIntent("EditConnection", { workspaceId });
 
   const validationSchema = useConnectionValidationSchema();
 
@@ -89,10 +85,11 @@ export const ConnectionSettingsPage: React.FC = () => {
       <FlexContainer direction="column">
         <Form<FormConnectionFormValues>
           trackDirtyChanges
-          disabled={!canEditConnection}
+          disabled={mode === "readonly"}
           onSubmit={(values: FormConnectionFormValues) => {
             const connectionUpdates: WebBackendConnectionUpdate = {
               connectionId: connection.connectionId,
+              skipReset: true,
               ...values,
             };
 

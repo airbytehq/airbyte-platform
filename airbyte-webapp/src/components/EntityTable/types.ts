@@ -5,6 +5,7 @@ import {
   ConnectionScheduleType,
   SchemaChange,
   SupportState,
+  Tag,
   WebBackendConnectionListItem,
 } from "../../core/api/types/AirbyteClient";
 
@@ -45,6 +46,7 @@ interface ConnectionTableDataItem {
   connectorIcon?: string;
   entityIcon?: string;
   connection: WebBackendConnectionListItem;
+  tags?: Tag[];
 }
 
 const enum Status {

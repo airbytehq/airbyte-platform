@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.converters
 
 import io.airbyte.commons.enums.Enums
@@ -16,8 +20,7 @@ class ApiConverters {
         .jsonSchema(jsonSchema)
         .supportedSyncModes(
           Enums.convertListTo(supportedSyncModes, ApiSyncMode::class.java),
-        )
-        .sourceDefinedCursor(if (sourceDefinedCursor != null) sourceDefinedCursor else false)
+        ).sourceDefinedCursor(if (sourceDefinedCursor != null) sourceDefinedCursor else false)
         .defaultCursorField(defaultCursorField)
         .sourceDefinedPrimaryKey(sourceDefinedPrimaryKey)
         .namespace(namespace)

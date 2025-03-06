@@ -11,6 +11,7 @@ import { Text } from "components/ui/Text";
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
+import { ConnectionTagsFormField } from "./ConnectionTagsFormField";
 import { SimplfiedSchemaChangesFormField } from "./SimplfiedSchemaChangesFormField";
 import { SimplifiedBackfillFormField } from "./SimplifiedBackfillFormField";
 import { SimplfiedConnectionDataResidencyFormField } from "./SimplifiedConnectionDataResidencyFormField";
@@ -42,9 +43,11 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   return (
-    <Card title={title} className={styles.hideOverflow}>
+    <Card title={title}>
       <FlexContainer direction="column" gap="xl">
         <SimplifiedConnectionNameFormField />
+
+        <ConnectionTagsFormField />
         <SimplifiedConnectionScheduleFormField disabled={isDeprecated} />
         {isCreating && (
           <SimplifiedDestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />

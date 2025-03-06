@@ -6,7 +6,7 @@
 {{/* ensure the registry has a trailing slash, if set */}}
 {{- $reg = (ternary $reg (printf "%s/" (trimSuffix "/" $reg)) (empty $reg)) -}}
 
-{{/* some images are defined as a string instead of an object (busybox, curl, connector sidecar, etc) */}}
+{{/* some images are defined as a string instead of an object (connector sidecar, etc) */}}
 {{- if (eq (typeOf $img) "string") -}}
 {{- printf "%s%s" $reg (tpl $img $root) | quote -}}
 {{- else -}}

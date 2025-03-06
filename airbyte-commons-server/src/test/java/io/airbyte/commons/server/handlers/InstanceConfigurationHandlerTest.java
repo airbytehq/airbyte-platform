@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
+import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
@@ -37,13 +39,18 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.fabric8.kubernetes.api.model.Node;
+import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +67,7 @@ class InstanceConfigurationHandlerTest {
 
   private static final String AIRBYTE_URL = "http://localhost:8000";
   private static final String AIRBYTE_REALM = "airbyte";
+  private static final String AUTHORIZATION_SERVER_URL = "http://localhost:8000/auth/realms/airbyte";
   private static final String WEB_CLIENT_ID = "airbyte-webapp";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID USER_ID = UUID.randomUUID();
@@ -70,6 +78,7 @@ class InstanceConfigurationHandlerTest {
   private static final String DEFAULT_USER_EMAIL = ""; // matches what we do in production code
   private static final Integer MAX_NODES = 12;
   private static final Integer MAX_EDITORS = 50;
+  private static final Set<UUID> ENTERPRISE_CONNECTOR_IDS = Set.of();
   private static final Date EXPIRATION_DATE = new Date(2025, 12, 3);
 
   @Mock
@@ -86,6 +95,10 @@ class InstanceConfigurationHandlerTest {
   private PermissionService permissionService;
   @Mock
   private Optional<KubernetesClient> mKubernetesClient;
+  @Mock
+  private Optional<KubernetesClientPermissionHelper> mKubernetesClientHelper;
+  @Mock
+  private KubernetesClientPermissionHelper kubernetesClientPermissionHelperMock;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -99,7 +112,7 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense
-        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS));
+        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS));
   }
 
   @ParameterizedTest
@@ -122,13 +135,14 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(isEnterprise);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(isEnterprise ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .edition(isEnterprise ? EditionEnum.ENTERPRISE : EditionEnum.COMMUNITY)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(isEnterprise ? LicenseStatus.EXCEEDED.PRO : null)
         .auth(isEnterprise ? new AuthConfiguration()
             .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
+            .authorizationServerUrl(AUTHORIZATION_SERVER_URL)
             .defaultRealm(AIRBYTE_REALM) : new AuthConfiguration().mode(ModeEnum.NONE))
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
@@ -171,7 +185,8 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        Optional.empty(),
+        mKubernetesClientHelper);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -228,14 +243,15 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(EditionEnum.PRO)
+        .edition(EditionEnum.ENTERPRISE)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(LicenseStatus.PRO)
         .auth(new AuthConfiguration()
             .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM))
+            .defaultRealm(AIRBYTE_REALM)
+            .authorizationServerUrl(AUTHORIZATION_SERVER_URL))
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
@@ -302,6 +318,40 @@ class InstanceConfigurationHandlerTest {
     assertEquals(licenseInfoResponse.getExpirationDate(), EXPIRATION_DATE.toInstant().getEpochSecond());
     assertEquals(licenseInfoResponse.getMaxEditors(), MAX_EDITORS);
     assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
+    assertEquals(licenseInfoResponse.getUsedNodes(), null);
+  }
+
+  @Test
+  void testLicenseInfoWithUsedNodes() {
+    var mockNodesOperation = mock(NonNamespaceOperation.class);
+    var nodeList = new NodeList();
+    nodeList.setItems(Arrays.asList(new Node(), new Node(), new Node(), new Node(), new Node()));
+
+    when(kubernetesClientPermissionHelperMock.listNodes()).thenReturn(mockNodesOperation);
+    when(mockNodesOperation.list()).thenReturn(nodeList);
+
+    final var handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        AirbyteEdition.ENTERPRISE,
+        new AirbyteVersion("0.50.1"),
+        Optional.of(activeAirbyteLicense),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs,
+        permissionService,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(kubernetesClientPermissionHelperMock));
+
+    final var licenseInfoResponse = handler.licenseInfo();
+
+    assertEquals(licenseInfoResponse.getExpirationDate(), EXPIRATION_DATE.toInstant().getEpochSecond());
+    assertEquals(licenseInfoResponse.getMaxEditors(), MAX_EDITORS);
+    assertEquals(licenseInfoResponse.getMaxNodes(), MAX_NODES);
+    assertEquals(licenseInfoResponse.getUsedNodes(), nodeList.getItems().size());
   }
 
   @Test
@@ -311,7 +361,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(license),
         mWorkspacePersistence,
@@ -321,7 +371,8 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        Optional.empty(),
+        mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.INVALID);
   }
 
@@ -330,7 +381,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -340,7 +391,8 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
-        mKubernetesClient);
+        Optional.empty(),
+        mKubernetesClientHelper);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED);
   }
 
@@ -350,7 +402,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -360,7 +412,8 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        Optional.empty(),
+        mKubernetesClientHelper);
     when(permissionService.listPermissions()).thenReturn(
         Stream.generate(UUID::randomUUID)
             .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
@@ -398,7 +451,7 @@ class InstanceConfigurationHandlerTest {
     return new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        isEnterprise ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        isEnterprise ? AirbyteEdition.ENTERPRISE : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
         isEnterprise ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,
@@ -408,7 +461,8 @@ class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionService,
         Optional.empty(),
-        mKubernetesClient);
+        Optional.empty(),
+        mKubernetesClientHelper);
   }
 
 }

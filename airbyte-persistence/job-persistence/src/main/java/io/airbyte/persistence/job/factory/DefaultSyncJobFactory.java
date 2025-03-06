@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.factory;
@@ -75,7 +75,7 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
   }
 
   @Override
-  public Long createSync(final UUID connectionId) {
+  public Long createSync(final UUID connectionId, final boolean isScheduled) {
     try {
       final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
 
@@ -95,7 +95,8 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           jobCreatorInput.getDestinationDefinition(),
           jobCreatorInput.getSourceDefinitionVersion(),
           jobCreatorInput.getDestinationDefinitionVersion(),
-          jobCreatorInput.getWorkspaceId())
+          jobCreatorInput.getWorkspaceId(),
+          isScheduled)
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
     } catch (final IOException | JsonValidationException | ConfigNotFoundException | io.airbyte.data.exceptions.ConfigNotFoundException e) {
@@ -109,6 +110,8 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
       final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
 
       return jobCreator.createRefreshConnection(
+          jobCreatorInput.getSource(),
+          jobCreatorInput.getDestination(),
           jobCreatorInput.getStandardSync(),
           jobCreatorInput.getSourceDockerImageName(),
           jobCreatorInput.getSourceProtocolVersion(),

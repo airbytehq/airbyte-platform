@@ -13,7 +13,8 @@
 
   font-size: variables.$font-size-sm;
   line-height: initial;
-  padding: variables.$spacing-md;
+  padding-block: variables.$spacing-sm;
+  padding-inline: variables.$spacing-md;
   border-radius: variables.$border-radius-sm;
   max-width: 400px;
   max-height: 50vh; // Make sure the tooltip doesn't overflow the viewport

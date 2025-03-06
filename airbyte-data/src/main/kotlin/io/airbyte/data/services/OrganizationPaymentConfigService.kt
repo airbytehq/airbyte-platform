@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.OrganizationPaymentConfig
@@ -10,5 +14,12 @@ interface OrganizationPaymentConfigService {
 
   fun savePaymentConfig(organizationPaymentConfig: OrganizationPaymentConfig)
 
-  fun deletePaymentConfig(organizationId: UUID)
+  fun saveDefaultPaymentConfig(organizationId: UUID) {
+    val paymentConfig =
+      OrganizationPaymentConfig()
+        .withOrganizationId(organizationId)
+        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
+        .withSubscriptionStatus(OrganizationPaymentConfig.SubscriptionStatus.PRE_SUBSCRIPTION)
+    savePaymentConfig(paymentConfig)
+  }
 }

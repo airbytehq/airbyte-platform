@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -32,6 +32,11 @@ public interface Configs {
    * Distinguishes internal Airbyte deployments. Internal-use only.
    */
   String getAirbyteRole();
+
+  /**
+   * Defines the deployed edition of Airbyte.
+   */
+  String getAirbyteEdition();
 
   /**
    * Defines the Airbyte deployment version.
@@ -112,14 +117,6 @@ public interface Configs {
   List<String> getJobKubeMainContainerImagePullSecrets();
 
   /**
-   * Deployment type.
-   */
-  enum DeploymentMode {
-    OSS,
-    CLOUD
-  }
-
-  /**
    * Secret persistence type.
    */
   enum SecretPersistenceType {
@@ -144,8 +141,9 @@ public interface Configs {
    * activate additional features if valid.
    */
   enum AirbyteEdition {
+    CLOUD,
     COMMUNITY,
-    PRO
+    ENTERPRISE
   }
 
 }

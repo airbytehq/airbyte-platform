@@ -924,4 +924,5 @@ export const mockConnection: WebBackendConnectionRead = {
   nonBreakingChangesPreference: "ignore",
   sourceActorDefinitionVersion: mockSourceDefinitionVersion,
   destinationActorDefinitionVersion: mockDestinationDefinitionVersion,
+  tags: [],
 };

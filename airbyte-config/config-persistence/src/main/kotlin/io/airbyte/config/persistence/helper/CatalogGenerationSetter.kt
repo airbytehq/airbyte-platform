@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence.helper
 
 import io.airbyte.commons.json.Jsons
@@ -23,12 +27,12 @@ class CatalogGenerationSetter {
     val catalogCopy = Jsons.clone(catalog)
     val refreshTypeByStream = streamRefreshes.associate { it.streamDescriptor to it.refreshType }
 
-    catalogCopy.streams.forEach {
-        configuredAirbyteStream ->
+    catalogCopy.streams.forEach { configuredAirbyteStream ->
       val streamDescriptor =
-        StreamDescriptor().withName(
-          configuredAirbyteStream.stream.name,
-        ).withNamespace(configuredAirbyteStream.stream.namespace)
+        StreamDescriptor()
+          .withName(
+            configuredAirbyteStream.stream.name,
+          ).withNamespace(configuredAirbyteStream.stream.namespace)
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
       val shouldTruncate: Boolean =
         refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE ||
@@ -56,12 +60,12 @@ class CatalogGenerationSetter {
 
     val catalogCopy = Jsons.clone(catalog)
 
-    catalogCopy.streams.forEach {
-        configuredAirbyteStream ->
+    catalogCopy.streams.forEach { configuredAirbyteStream ->
       val streamDescriptor =
-        StreamDescriptor().withName(
-          configuredAirbyteStream.stream.name,
-        ).withNamespace(configuredAirbyteStream.stream.namespace)
+        StreamDescriptor()
+          .withName(
+            configuredAirbyteStream.stream.name,
+          ).withNamespace(configuredAirbyteStream.stream.namespace)
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
 
       if (clearedStream.contains(streamDescriptor)) {
@@ -85,7 +89,8 @@ class CatalogGenerationSetter {
     configuredAirbyteStream.minimumGenerationId = minimumGenerationId
   }
 
-  private fun getCurrentGenerationByStreamDescriptor(generations: List<Generation>): Map<StreamDescriptor, Long> {
-    return generations.associate { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId }
-  }
+  private fun getCurrentGenerationByStreamDescriptor(generations: List<Generation>): Map<StreamDescriptor, Long> =
+    generations.associate {
+      StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId
+    }
 }

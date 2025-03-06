@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ConnectionContextRead;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionSchedule;
@@ -23,16 +24,23 @@ import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.AddSchedulingJitter;
+import io.airbyte.featureflag.LoadShedSchedulerBackoffMinutes;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.UseNewCronScheduleCalculation;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.CronSchedulingHelper;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
+import io.airbyte.workers.input.InputFeatureFlagContextMapper;
+import io.airbyte.workers.temporal.activities.GetConnectionContextInput;
+import io.airbyte.workers.temporal.activities.GetConnectionContextOutput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
@@ -79,18 +87,21 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   private final Supplier<Long> currentSecondsSupplier;
   private final FeatureFlagClient featureFlagClient;
   private final ScheduleJitterHelper scheduleJitterHelper;
+  private final InputFeatureFlagContextMapper ffContextMapper;
 
   @VisibleForTesting
   protected ConfigFetchActivityImpl(final AirbyteApiClient airbyteApiClient,
                                     @Value("${airbyte.worker.sync.max-attempts}") final Integer syncJobMaxAttempts,
                                     @Named("currentSecondsSupplier") final Supplier<Long> currentSecondsSupplier,
                                     final FeatureFlagClient featureFlagClient,
-                                    final ScheduleJitterHelper scheduleJitterHelper) {
+                                    final ScheduleJitterHelper scheduleJitterHelper,
+                                    final InputFeatureFlagContextMapper ffContextMapper) {
     this.airbyteApiClient = airbyteApiClient;
     this.syncJobMaxAttempts = syncJobMaxAttempts;
     this.currentSecondsSupplier = currentSecondsSupplier;
     this.featureFlagClient = featureFlagClient;
     this.scheduleJitterHelper = scheduleJitterHelper;
+    this.ffContextMapper = ffContextMapper;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -115,6 +126,41 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     } catch (final IOException e) {
       throw new RetryableException(e);
     }
+  }
+
+  @SuppressWarnings({"PMD.LooseCoupling", "PMD.AvoidLiteralsInIfCondition"})
+  @Override
+  public GetConnectionContextOutput getConnectionContext(final GetConnectionContextInput input) {
+    final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody(input.getConnectionId());
+    final ConnectionContextRead apiContext;
+    try {
+      apiContext = airbyteApiClient.getConnectionApi().getConnectionContext(connectionIdRequestBody);
+    } catch (final Exception e) {
+      throw new RetryableException(e);
+    }
+    final var domainContext = CommonConvertersKt.toInternal(apiContext);
+
+    return new GetConnectionContextOutput(domainContext);
+  }
+
+  @SuppressWarnings({"PMD.LooseCoupling", "PMD.AvoidLiteralsInIfCondition"})
+  @Override
+  public GetLoadShedBackoffOutput getLoadShedBackoff(final GetLoadShedBackoffInput input) {
+    final var ffContext = ffContextMapper.map(input.getConnectionContext());
+    final var backoffMins = featureFlagClient.intVariation(LoadShedSchedulerBackoffMinutes.INSTANCE, ffContext);
+
+    // Ensure no negative backoff.
+    if (backoffMins < 0) {
+      return new GetLoadShedBackoffOutput(Duration.ZERO);
+    }
+
+    // Ensure we don't wait longer than an hour so we can minimize manual restarting of workflows and
+    // risk of overshedding.
+    if (backoffMins > 60) {
+      return new GetLoadShedBackoffOutput(Duration.ofMinutes(60));
+    }
+
+    return new GetLoadShedBackoffOutput(Duration.ofMinutes(backoffMins));
   }
 
   private Duration applyJitterRules(final Duration timeToWait,
@@ -147,7 +193,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJobWithCancel(new ConnectionIdRequestBody(connectionId));
 
     if (connectionRead.getScheduleType() == ConnectionScheduleType.BASIC) {
       if (previousJobOptional.getJob() == null) {
@@ -226,7 +272,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJobWithCancel(new ConnectionIdRequestBody(connectionId));
 
     if (previousJobOptional.getJob() == null && connectionRead.getSchedule() != null) {
       // Non-manual syncs don't wait for their first run

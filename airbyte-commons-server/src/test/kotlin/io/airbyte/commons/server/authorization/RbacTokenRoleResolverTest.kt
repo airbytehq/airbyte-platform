@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.commons.auth.AuthRole
@@ -39,5 +43,14 @@ class RbacTokenRoleResolverTest {
 
     val roles = rbacTokenRoleResolver.resolveRoles(authUserId, HttpRequest.GET<Any>("/"))
     assertEquals(setOf(AuthRole.AUTHENTICATED_USER.name).plus(expectedRoles), roles)
+  }
+
+  @Test
+  fun `test resolveRoles with exception`() {
+    val authUserId = "test-user"
+    every { rbacRoleHelper.getRbacRoles(authUserId, any(HttpRequest::class)) } throws RuntimeException("Failed to resolve roles")
+
+    val roles = rbacTokenRoleResolver.resolveRoles(authUserId, HttpRequest.GET<Any>("/"))
+    assertEquals(setOf(AuthRole.AUTHENTICATED_USER.name), roles)
   }
 }

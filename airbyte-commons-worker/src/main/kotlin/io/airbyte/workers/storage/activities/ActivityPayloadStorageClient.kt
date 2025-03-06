@@ -1,12 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
@@ -26,9 +30,7 @@ class ActivityPayloadStorageClient(
    *
    * @return the unmarshalled object on a hit and null on a miss.
    */
-  inline fun <reified T : Any> readJSON(uri: ActivityPayloadURI): T? {
-    return readJSON(uri, T::class.java)
-  }
+  inline fun <reified T : Any> readJSON(uri: ActivityPayloadURI): T? = readJSON(uri, T::class.java)
 
   /**
    * It reads the object from the location described by the given [uri] and unmarshals it from JSON to [target] class.
@@ -40,9 +42,10 @@ class ActivityPayloadStorageClient(
     uri: ActivityPayloadURI,
     target: Class<T>,
   ): T? {
-    metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE, 1)
+    metricClient.count(metric = OssMetricsRegistry.ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE)
 
-    return storageClientRaw.read(uri.id)
+    return storageClientRaw
+      .read(uri.id)
       ?.let { jsonSerde.deserialize(it, target) }
   }
 
@@ -56,7 +59,7 @@ class ActivityPayloadStorageClient(
     uri: ActivityPayloadURI,
     payload: T,
   ) {
-    metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE, 1)
+    metricClient.count(metric = OssMetricsRegistry.ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE)
 
     return storageClientRaw.write(uri.id, jsonSerde.serialize(payload))
   }
@@ -78,7 +81,7 @@ class ActivityPayloadStorageClient(
   ): T {
     if (uri == null) {
       val baseAttrs = attrs + MetricAttribute(MetricTags.URI_NULL, true.toString())
-      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *baseAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.PAYLOAD_FAILURE_READ, attributes = baseAttrs.toTypedArray())
 
       return expected
     }
@@ -104,7 +107,7 @@ class ActivityPayloadStorageClient(
       val attrsWithException =
         baseAttrs + MetricAttribute(MetricTags.FAILURE_CAUSE, e.javaClass.simpleName)
 
-      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *attrsWithException.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.PAYLOAD_FAILURE_READ, attributes = attrsWithException.toTypedArray())
 
       return expected
     }
@@ -117,7 +120,7 @@ class ActivityPayloadStorageClient(
         MetricAttribute(MetricTags.IS_MATCH, match.toString()) +
         MetricAttribute(MetricTags.IS_MISS, miss.toString())
 
-    metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *attrsWithMatch.toTypedArray())
+    metricClient.count(metric = OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, attributes = attrsWithMatch.toTypedArray())
 
     return expected
   }

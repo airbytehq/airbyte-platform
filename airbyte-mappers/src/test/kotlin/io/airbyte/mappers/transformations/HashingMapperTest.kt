@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -109,11 +113,36 @@ class HashingMapperTest {
     @Test
     fun specReturnsCorrectSpecification() {
       val spec = hashingMapper.spec().jsonSchema()
-      assertEquals(hashingMapper.name, spec.get("properties").get("name").get("const").asText()!!)
+      assertEquals(
+        hashingMapper.name,
+        spec
+          .get("properties")
+          .get("name")
+          .get("const")
+          .asText()!!,
+      )
       assertTrue(spec.get("properties").contains("documentationUrl"))
-      assertTrue(spec.get("properties").get("config").get("properties").contains(HashingMapper.TARGET_FIELD_CONFIG_KEY))
-      assertTrue(spec.get("properties").get("config").get("properties").contains(HashingMapper.METHOD_CONFIG_KEY))
-      assertTrue(spec.get("properties").get("config").get("properties").contains(HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY))
+      assertTrue(
+        spec
+          .get("properties")
+          .get("config")
+          .get("properties")
+          .contains(HashingMapper.TARGET_FIELD_CONFIG_KEY),
+      )
+      assertTrue(
+        spec
+          .get("properties")
+          .get("config")
+          .get("properties")
+          .contains(HashingMapper.METHOD_CONFIG_KEY),
+      )
+      assertTrue(
+        spec
+          .get("properties")
+          .get("config")
+          .get("properties")
+          .contains(HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY),
+      )
     }
 
     // If making changes to the mapper spec, ensure this test passes without modifying the examples to guarantee backward compatibility.

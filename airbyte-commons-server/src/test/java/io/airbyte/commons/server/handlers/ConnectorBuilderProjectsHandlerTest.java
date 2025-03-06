@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -90,6 +90,7 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
 import io.airbyte.protocol.models.AdvancedAuth;
@@ -110,7 +111,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
 class ConnectorBuilderProjectsHandlerTest {
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
@@ -133,6 +134,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
   private static final String A_PULL_REQUEST_URL = "https://github.com/airbytehq/airbyte/pull/44579";
   private static final UUID A_CONTRIBUTION_ACTOR_DEFINITION_ID = UUID.randomUUID();
+  private static final String A_CUSTOM_COMPONENTS_FILE_CONTENT = "custom components file content";
 
   private static final UUID forkedSourceDefinitionId = UUID.randomUUID();
   private static final ActorDefinitionVersion FORKED_ADV = new ActorDefinitionVersion()
@@ -173,6 +175,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private ConnectorSpecification adaptedConnectorSpecification;
   private OAuthImplementationFactory oauthImplementationFactory;
+  private MetricClient metricClient;
   private UUID workspaceId;
   private final String specString =
       """
@@ -230,6 +233,7 @@ class ConnectorBuilderProjectsHandlerTest {
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     oauthImplementationFactory = mock(OAuthImplementationFactory.class);
+    metricClient = mock(MetricClient.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
@@ -238,7 +242,7 @@ class ConnectorBuilderProjectsHandlerTest {
             manifestInjector,
             workspaceService, featureFlagClient,
             secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, sourceService, secretsProcessor,
-            connectorBuilderServerApiClient, actorDefinitionService, remoteDefinitionsProvider, oauthImplementationFactory);
+            connectorBuilderServerApiClient, actorDefinitionService, remoteDefinitionsProvider, oauthImplementationFactory, metricClient);
 
     when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
     when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
@@ -270,7 +274,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(),
+            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft(), null,
             project.getBaseActorDefinitionVersionId(), project.getContributionPullRequestUrl(), project.getContributionActorDefinitionId());
   }
 
@@ -333,6 +337,7 @@ class ConnectorBuilderProjectsHandlerTest {
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.updateConnectorBuilderProject(update));
 
     verify(connectorBuilderService, never()).writeBuilderProjectDraft(any(UUID.class), any(UUID.class), any(String.class), any(JsonNode.class),
+        any(String.class),
         any(UUID.class), any(String.class), any(UUID.class));
   }
 
@@ -637,7 +642,7 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(A_CONFIG_INJECTION));
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
@@ -667,7 +672,7 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withProtocolVersion("0.2.0")),
         eq(workspaceId),
         eq(ScopeType.WORKSPACE));
-    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
+    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionsForPath(eq(List.of(A_CONFIG_INJECTION)));
   }
 
   @Test
@@ -821,7 +826,8 @@ class ConnectorBuilderProjectsHandlerTest {
     final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null);
     final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
     final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
-        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),
+        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null,
+            List.of())),
         false, null, null, null, null);
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
@@ -1008,7 +1014,39 @@ class ConnectorBuilderProjectsHandlerTest {
     connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody);
 
     verify(connectorBuilderService, times(1))
+        .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest), eq(null),
+            eq(baseActorDefinitionVersionId), eq(null), eq(null));
+  }
+
+  @Test
+  void testCreateForkedConnectorBuilderProjectWithComponents() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID baseActorDefinitionId = UUID.randomUUID();
+    final ConnectorBuilderProjectForkRequestBody requestBody =
+        new ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId);
+
+    final String connectorName = "Test Connector";
+    final UUID baseActorDefinitionVersionId = UUID.randomUUID();
+    final String dockerRepository = "airbyte/source-test";
+    final String dockerImageTag = "1.2.3";
+    final ActorDefinitionVersion defaultADV = new ActorDefinitionVersion().withVersionId(baseActorDefinitionVersionId)
+        .withActorDefinitionId(baseActorDefinitionId).withDockerRepository(dockerRepository).withDockerImageTag(dockerImageTag);
+    final UUID connectorBuilderProjectId = UUID.randomUUID();
+
+    when(sourceService.getStandardSourceDefinition(baseActorDefinitionId)).thenReturn(
+        new StandardSourceDefinition().withSourceDefinitionId(baseActorDefinitionId).withDefaultVersionId(baseActorDefinitionVersionId)
+            .withName(connectorName));
+    when(actorDefinitionService.getActorDefinitionVersion(baseActorDefinitionVersionId)).thenReturn(defaultADV);
+    when(remoteDefinitionsProvider.getConnectorManifest(dockerRepository, dockerImageTag)).thenReturn(Optional.of(draftManifest));
+    when(remoteDefinitionsProvider.getConnectorCustomComponents(dockerRepository, dockerImageTag))
+        .thenReturn(Optional.of(A_CUSTOM_COMPONENTS_FILE_CONTENT));
+    when(uuidSupplier.get()).thenReturn(connectorBuilderProjectId);
+
+    connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody);
+
+    verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(eq(connectorBuilderProjectId), eq(workspaceId), eq(connectorName), eq(draftManifest),
+            eq(A_CUSTOM_COMPONENTS_FILE_CONTENT),
             eq(baseActorDefinitionVersionId), eq(null), eq(null));
   }
 

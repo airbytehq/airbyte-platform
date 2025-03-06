@@ -25,8 +25,8 @@ interface ConnectorButtonProps<T extends ConnectorDefinitionOrEnterpriseStub> {
 
 const EnterpriseBadge = () => {
   return (
-    <span className={styles.supportLevel}>
-      <SupportLevelBadge supportLevel="enterprise" custom={false} className={styles.enterpriseBadge} />
+    <span>
+      <SupportLevelBadge supportLevel="enterprise" custom={false} />
     </span>
   );
 };
@@ -61,10 +61,8 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
           </FlexContainer>
         )
       }
-      {
-        // Conditionally render the support level badge only if it is an EnterpriseSourceStub
-        "isEnterprise" in definition ? <EnterpriseBadge /> : null
-      }
+      {(("isEnterprise" in definition && definition.isEnterprise === true) ||
+        ("enterprise" in definition && definition.enterprise === true)) && <EnterpriseBadge />}
     </button>
   );
 };

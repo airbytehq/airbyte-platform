@@ -1,13 +1,13 @@
 import { Row } from "@tanstack/react-table";
 import get from "lodash/get";
-import React, { useState } from "react";
+import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
-import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
+import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
@@ -34,7 +34,6 @@ interface NextPKCellProps {
 export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField }) => {
   const { mode } = useConnectionFormService();
   const { errors } = useFormState<FormConnectionFormValues>();
-  const [optionsMenuOpened, setOptionsMenuOpened] = useState(false);
 
   if (!row.original.streamNode || !row.original.streamNode.config || !row.original.streamNode.stream) {
     return null;
@@ -82,51 +81,47 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
     }
   };
 
-  const pkButton =
-    config?.selected && pkType ? (
-      <MultiCatalogComboBox
-        options={pkOptions}
-        disabled={!shouldDefinePk || mode === "readonly"}
-        value={config?.primaryKey?.map(getFieldPathDisplayName)}
-        onChange={onChange}
-        maxSelectedLabels={1}
-        error={pkConfigValidationError}
-        buttonErrorText={<FormattedMessage id="form.error.pk.missing" />}
-        buttonAddText={<FormattedMessage id="form.error.pk.addMissing" />}
-        buttonEditText={<FormattedMessage id="form.error.pk.edit" />}
-        controlClassName={styles.control}
-        controlBtnIcon="keyCircle"
-        onOptionsMenuToggle={(open) => setOptionsMenuOpened(open)}
-      />
-    ) : null;
-
   const isSourceDefined = config?.selected && !shouldDefinePk;
   const isMultiplePKs = config?.selected && config?.primaryKey && config?.primaryKey?.length > 1;
 
+  const tooltipContent =
+    isSourceDefined || isMultiplePKs ? (
+      <FlexContainer gap="lg" direction="column">
+        {isSourceDefined && (
+          <div>
+            <FormattedMessage id="form.field.sourceDefinedPK" />
+            <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
+          </div>
+        )}
+        {isMultiplePKs && (
+          <ul className={styles.pkList}>
+            {config?.primaryKey
+              ?.map((pk) => getFieldPathDisplayName(pk))
+              .sort((a, b) => a.localeCompare(b))
+              .map((pk) => <li key={pk}>{pk}</li>)}
+          </ul>
+        )}
+      </FlexContainer>
+    ) : null;
+
   return (
     <div data-testid="primary-key-cell">
-      {isSourceDefined || isMultiplePKs ? (
-        <Tooltip placement="bottom" control={pkButton} disabled={optionsMenuOpened}>
-          <FlexContainer gap="lg" direction="column">
-            {isSourceDefined && (
-              <div>
-                <FormattedMessage id="form.field.sourceDefinedPK" />
-                <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />
-              </div>
-            )}
-            {isMultiplePKs && (
-              <ul className={styles.pkList}>
-                {config?.primaryKey
-                  ?.map((pk) => getFieldPathDisplayName(pk))
-                  .sort((a, b) => a.localeCompare(b))
-                  .map((pk) => <li>{pk}</li>)}
-              </ul>
-            )}
-          </FlexContainer>
-        </Tooltip>
-      ) : (
-        pkButton
-      )}
+      {config?.selected && pkType ? (
+        <MultiCatalogComboBox
+          options={pkOptions}
+          disabled={!shouldDefinePk || mode === "readonly"}
+          value={config?.primaryKey?.map(getFieldPathDisplayName)}
+          onChange={onChange}
+          maxSelectedLabels={1}
+          error={pkConfigValidationError}
+          buttonErrorText={<FormattedMessage id="form.error.pk.missing" />}
+          buttonAddText={<FormattedMessage id="form.error.pk.addMissing" />}
+          buttonEditText={<FormattedMessage id="form.error.pk.edit" />}
+          controlClassName={styles.control}
+          controlBtnIcon="keyCircle"
+          controlBtnTooltipContent={tooltipContent}
+        />
+      ) : null}
     </div>
   );
 };

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.config
 
 import com.google.auth.oauth2.GoogleCredentials
@@ -28,7 +32,8 @@ class OrganizationCustomerAttributesServiceConfig {
     }
     val credentials = GoogleCredentials.fromStream(Files.newInputStream(Paths.get(gcsApplicationCredentials)))
     val storage =
-      StorageOptions.newBuilder()
+      StorageOptions
+        .newBuilder()
         .setCredentials(credentials)
         .setProjectId(gcsProjectId)
         .build()

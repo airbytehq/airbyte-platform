@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.model
 
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
@@ -6,17 +10,16 @@ typealias OpenApiWorkload = io.airbyte.workload.api.client.model.generated.Workl
 typealias OpenApiWorkloadType = io.airbyte.workload.api.client.model.generated.WorkloadType
 typealias InternalApiWorkloadType = io.airbyte.config.WorkloadType
 
-fun OpenApiWorkloadType.toInternalApi(): io.airbyte.config.WorkloadType {
-  return when (this) {
+fun OpenApiWorkloadType.toInternalApi(): io.airbyte.config.WorkloadType =
+  when (this) {
     OpenApiWorkloadType.CHECK -> InternalApiWorkloadType.CHECK
     OpenApiWorkloadType.DISCOVER -> InternalApiWorkloadType.DISCOVER
     OpenApiWorkloadType.SPEC -> InternalApiWorkloadType.SPEC
     OpenApiWorkloadType.SYNC -> InternalApiWorkloadType.SYNC
   }
-}
 
-fun OpenApiWorkload.toLauncherInput(): LauncherInput {
-  return LauncherInput(
+fun OpenApiWorkload.toLauncherInput(): LauncherInput =
+  LauncherInput(
     workloadId = this.id,
     workloadInput = this.inputPayload,
     labels = this.labels.associate { it.key to it.value },
@@ -25,4 +28,3 @@ fun OpenApiWorkload.toLauncherInput(): LauncherInput {
     workloadType = this.type.toInternalApi(),
     autoId = this.autoId,
   )
-}

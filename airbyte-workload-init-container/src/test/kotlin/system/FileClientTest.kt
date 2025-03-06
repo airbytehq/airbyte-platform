@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.initContainer.system
 
 import io.airbyte.initContainer.system.FileClient.Companion.pipePermissions
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDIN_PIPE_FILE
 import io.airbyte.workers.pod.FileConstants.STDOUT_PIPE_FILE

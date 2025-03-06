@@ -1,7 +1,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
 import { useCallback, useMemo, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 
 import { BaseConnectorInfo } from "components/connectorBuilder/BaseConnectorInfo";
 import { ConnectorIcon } from "components/ConnectorIcon";
@@ -222,11 +222,25 @@ export const ConnectorBuilderProjectTable = ({
         },
       }),
       columnHelper.accessor("version", {
+        enableSorting: false,
+        meta: {
+          thClassName: styles.versionHeader,
+        },
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
         cell: (props) => {
           return (
             <BuilderCell>
               <VersionChanger canUpdateConnector={canUpdateConnector} project={props.row.original} />
+            </BuilderCell>
+          );
+        },
+      }),
+      columnHelper.accessor("updatedAt", {
+        header: () => <FormattedMessage id="connectorBuilder.listPage.updatedAt" />,
+        cell: (props) => {
+          return (
+            <BuilderCell className={styles.updatedAtCell}>
+              <FormattedDate value={props.getValue() * 1000} timeStyle="short" dateStyle="medium" />
             </BuilderCell>
           );
         },
@@ -326,16 +340,16 @@ export const ConnectorBuilderProjectTable = ({
       columns={columns}
       data={projects}
       className={styles.table}
-      sorting={false}
+      sorting
       stickyHeaders={false}
       initialSortBy={[{ id: "name", desc: false }]}
     />
   );
 };
 
-const BuilderCell: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+const BuilderCell: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ children, className }) => {
   return (
-    <FlexContainer className={styles.cell} alignItems="center">
+    <FlexContainer className={classNames(styles.cell, className)} alignItems="center">
       {children}
     </FlexContainer>
   );

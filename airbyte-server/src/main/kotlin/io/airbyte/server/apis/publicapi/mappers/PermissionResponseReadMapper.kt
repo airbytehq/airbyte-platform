@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -19,8 +19,8 @@ object PermissionResponseReadMapper {
    * @param permissionRead Output of a permission create from config api
    * @return PermissionResponseRead Response object with permission details
    */
-  fun from(permissionRead: PermissionRead): PermissionResponseRead {
-    return PermissionResponseRead(
+  fun from(permissionRead: PermissionRead): PermissionResponseRead =
+    PermissionResponseRead(
       permissionId = permissionRead.permissionId,
       permissionType = enumValueOf(permissionRead.permissionType.name),
       userId = permissionRead.userId,
@@ -41,5 +41,4 @@ object PermissionResponseReadMapper {
           UUID.fromString("00000000-0000-0000-0000-000000000000")
         },
     )
-  }
 }

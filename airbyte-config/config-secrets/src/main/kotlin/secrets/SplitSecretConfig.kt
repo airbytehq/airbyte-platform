@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -19,7 +19,5 @@ class SplitSecretConfig(
   val partialConfig: JsonNode,
   private val coordinateToPayload: Map<SecretCoordinate, String>,
 ) {
-  fun getCoordinateToPayload(): Map<SecretCoordinate, String> {
-    return coordinateToPayload
-  }
+  fun getCoordinateToPayload(): Map<SecretCoordinate, String> = coordinateToPayload
 }

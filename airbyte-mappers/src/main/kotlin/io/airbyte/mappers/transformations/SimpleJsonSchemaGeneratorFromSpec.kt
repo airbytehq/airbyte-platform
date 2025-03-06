@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -35,13 +39,14 @@ class SimpleJsonSchemaGeneratorFromSpec {
         OptionPreset.PLAIN_JSON,
       )
 
-    configBuilder.forFields()
+    configBuilder
+      .forFields()
       .withRequiredCheck { field ->
         field.getAnnotation(NotNull::class.java) != null
-      }
-      .withCustomDefinitionProvider(SimplePropertyDefProvider())
+      }.withCustomDefinitionProvider(SimplePropertyDefProvider())
 
-    configBuilder.forTypesInGeneral()
+    configBuilder
+      .forTypesInGeneral()
       .withTypeAttributeOverride(JsonSubTypesOverride())
 
     val generator = SchemaGenerator(configBuilder.build())
@@ -69,7 +74,12 @@ class JsonSubTypesOverride : TypeAttributeOverrideV2 {
       val subTypeSchemas = jsonSubTypesAnnotation.value.map { generator.generateSchema(it.value.java) }
       node.apply {
         removeAll()
-        set<JsonNode>(JsonsSchemaConstants.TYPE_ONE_OF, schemaGenerationContext.generatorConfig.objectMapper.createArrayNode().addAll(subTypeSchemas))
+        set<JsonNode>(
+          JsonsSchemaConstants.TYPE_ONE_OF,
+          schemaGenerationContext.generatorConfig.objectMapper
+            .createArrayNode()
+            .addAll(subTypeSchemas),
+        )
       }
     }
   }

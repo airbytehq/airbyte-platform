@@ -67,10 +67,6 @@
     height: calc(100vh - #{variables.$spacing-xl} * 2);
   }
 
-  &__header {
-    border-bottom: variables.$border-thin solid colors.$grey-100;
-  }
-
   &__closeButton {
     background-color: transparent;
     border: none;

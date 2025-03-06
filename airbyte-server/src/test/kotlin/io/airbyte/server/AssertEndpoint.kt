@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
 
 @file:JvmName("AssertEndpoint")
 

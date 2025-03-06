@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.mapper.configs
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -28,9 +32,7 @@ data class EncryptionMapperConfig(
 
   override fun documentationUrl(): String? = documentationUrl
 
-  override fun id(): UUID? {
-    return id
-  }
+  override fun id(): UUID? = id
 
   override fun config(): Any = config
 }

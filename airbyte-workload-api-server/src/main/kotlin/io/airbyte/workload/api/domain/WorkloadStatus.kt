@@ -1,10 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api.domain
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 
-enum class WorkloadStatus(private val value: String) {
+enum class WorkloadStatus(
+  private val value: String,
+) {
   @JsonProperty("pending")
   PENDING("pending"),
 
@@ -28,9 +34,7 @@ enum class WorkloadStatus(private val value: String) {
   ;
 
   @JsonValue
-  override fun toString(): String {
-    return value
-  }
+  override fun toString(): String = value
 
   companion object {
     @JvmStatic

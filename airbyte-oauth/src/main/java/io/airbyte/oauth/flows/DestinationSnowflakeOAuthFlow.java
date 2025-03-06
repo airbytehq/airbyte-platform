@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows;
@@ -19,7 +19,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -137,13 +136,13 @@ public class DestinationSnowflakeOAuthFlow extends BaseOAuth2Flow {
 
   private String extractAuthorizeUrl(final JsonNode inputOAuthConfiguration) {
     final var url = inputOAuthConfiguration.get("host");
-    return url == null ? StringUtils.EMPTY : url.asText();
+    return url == null ? "" : url.asText();
   }
 
   private String extractTokenUrl(final JsonNode inputOAuthConfiguration) {
     final var url = inputOAuthConfiguration.get("host");
     // var url = inputOAuthConfiguration.get("token_url");
-    return url == null ? StringUtils.EMPTY : url.asText();
+    return url == null ? "" : url.asText();
   }
 
 }

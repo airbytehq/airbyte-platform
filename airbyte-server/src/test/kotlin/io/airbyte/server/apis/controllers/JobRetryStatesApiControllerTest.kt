@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.JobIdRequestBody
@@ -10,17 +11,18 @@ import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.RetryStatesHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import org.junit.jupiter.api.Test
-import java.util.Optional
 import java.util.UUID
 
 private const val PATH_BASE: String = "/api/v1/jobs/retry_states"
@@ -40,6 +42,13 @@ private val jobRetryStateRequestBody =
 
 @MicronautTest
 internal class JobRetryStatesApiControllerTest {
+  @Factory
+  class TestFactory {
+    @Singleton
+    @Replaces(RetryStatesHandler::class)
+    fun retryStatesHandler(): RetryStatesHandler = mockk()
+  }
+
   @Inject
   lateinit var retryStatesHandler: RetryStatesHandler
 
@@ -47,18 +56,15 @@ internal class JobRetryStatesApiControllerTest {
   @Client("/")
   lateinit var client: HttpClient
 
-  @MockBean(RetryStatesHandler::class)
-  fun retryStatesHandler(): RetryStatesHandler = mockk()
-
   @Test
   fun forJobFound() {
-    every { retryStatesHandler.getByJobId(any()) } returns Optional.of(RetryStateRead())
+    every { retryStatesHandler.getByJobId(any()) } returns RetryStateRead()
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(PATH_GET, jobIdRequestBody)))
   }
 
   @Test
   fun forJobNotFound() {
-    every { retryStatesHandler.getByJobId(any()) } returns Optional.empty()
+    every { retryStatesHandler.getByJobId(any()) } returns null
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(PATH_GET, jobIdRequestBody)))
   }
 

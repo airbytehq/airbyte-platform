@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.validation
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -18,7 +22,8 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
+import io.micrometer.core.instrument.DistributionSummary
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -46,7 +51,7 @@ internal class CatalogValidatorTest {
   @BeforeEach
   internal fun setup() {
     every { featureFlagClient.intVariation(ConnectionFieldLimitOverride, any()) } returns -1
-    every { metricClient.distribution(any(), any(), *anyVararg()) } returns Unit
+    every { metricClient.distribution(metric = any(), any(), *anyVararg()) } returns mockk<DistributionSummary>()
 
     validator = CatalogValidator(MAX_FIELD_LIMIT, metricClient, featureFlagClient)
   }
@@ -128,8 +133,8 @@ internal class CatalogValidatorTest {
 
   companion object {
     @JvmStatic
-    fun validSizeCatalogMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun validSizeCatalogMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT, 1)),
         Arguments.of(buildCatalog(10, 1000)),
@@ -141,11 +146,10 @@ internal class CatalogValidatorTest {
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT, true)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT, 1, true)),
       )
-    }
 
     @JvmStatic
-    fun tooLargeCatalogMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun tooLargeCatalogMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT + 1)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT + 1, 1)),
         Arguments.of(buildCatalog(10, 1001)),
@@ -155,7 +159,6 @@ internal class CatalogValidatorTest {
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT + 1, true)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT + 1, 1, true)),
       )
-    }
   }
 
   object Fixtures {

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.helper
 
 import io.airbyte.commons.enums.Enums
@@ -26,18 +30,16 @@ object CatalogDiffConverter {
       .withTransforms(streamTransforms)
   }
 
-  private fun toDomain(streamTransform: ApiStreamTransform): DomainStreamTransform {
-    return DomainStreamTransform()
+  private fun toDomain(streamTransform: ApiStreamTransform): DomainStreamTransform =
+    DomainStreamTransform()
       .withTransformType(Enums.convertTo(streamTransform.transformType, DomainStreamTransform.TransformType::class.java))
       .withStreamDescriptor(
         DomainStreamDescriptor()
           .withName(streamTransform.streamDescriptor.name)
           .withNamespace(streamTransform.streamDescriptor.namespace),
-      )
-      .withUpdateStream(
+      ).withUpdateStream(
         toDomain(streamTransform.updateStream),
       )
-  }
 
   private fun toDomain(streamTransformUpdateStream: ApiStreamTransformUpdateStream?): DomainUpdateStream {
     if (streamTransformUpdateStream == null) {
@@ -47,8 +49,7 @@ object CatalogDiffConverter {
     return DomainUpdateStream()
       .withFieldTransforms(streamTransformUpdateStream.fieldTransforms.map { fieldTransform -> toDomain(fieldTransform) })
       .withStreamAttributeTransforms(
-        streamTransformUpdateStream.streamAttributeTransforms.map {
-            streamAttributeTransform ->
+        streamTransformUpdateStream.streamAttributeTransforms.map { streamAttributeTransform ->
           toDomain(streamAttributeTransform)
         },
       )
@@ -79,8 +80,8 @@ object CatalogDiffConverter {
     return result
   }
 
-  private fun toDomain(streamAttributeTransform: ApiStreamAttributeTransform): DomainStreamAttributeTransform {
-    return DomainStreamAttributeTransform()
+  private fun toDomain(streamAttributeTransform: ApiStreamAttributeTransform): DomainStreamAttributeTransform =
+    DomainStreamAttributeTransform()
       .withTransformType(Enums.convertTo(streamAttributeTransform.transformType, DomainStreamAttributeTransform.TransformType::class.java))
       .withBreaking(streamAttributeTransform.breaking)
       .withUpdatePrimaryKey(
@@ -88,5 +89,4 @@ object CatalogDiffConverter {
           .withOldPrimaryKey(streamAttributeTransform.updatePrimaryKey?.oldPrimaryKey)
           .withNewPrimaryKey(streamAttributeTransform.updatePrimaryKey?.newPrimaryKey),
       )
-  }
 }

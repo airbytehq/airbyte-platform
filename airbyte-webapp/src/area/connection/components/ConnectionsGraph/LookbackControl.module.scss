@@ -1,0 +1,39 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+
+.lookbackControl {
+  all: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: variables.$border-thin solid colors.$grey-400;
+  border-radius: variables.$border-radius-2xs;
+
+  &:has(.lookbackControl__input:focus-visible) {
+    outline: auto;
+  }
+
+  &__input {
+    @include mixins.visually-hidden;
+  }
+
+  &__option {
+    border-right: variables.$border-thin solid colors.$grey-400;
+    cursor: pointer;
+    padding: 0 4px;
+
+    &--selected {
+      background: colors.$blue-100;
+    }
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  &__label {
+    line-height: 1;
+    user-select: none;
+  }
+}

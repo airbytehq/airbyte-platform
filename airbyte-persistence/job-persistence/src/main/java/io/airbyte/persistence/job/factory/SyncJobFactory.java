@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.factory;
@@ -19,7 +19,7 @@ public interface SyncJobFactory {
    * @param connectionId connection id
    * @return job id
    */
-  Long createSync(UUID connectionId);
+  Long createSync(UUID connectionId, boolean isScheduled);
 
   /**
    * Create refresh job for given connection id.

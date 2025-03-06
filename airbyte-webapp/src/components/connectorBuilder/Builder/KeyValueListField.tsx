@@ -10,8 +10,8 @@ import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { BuilderField } from "./BuilderField";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useBuilderWatchArrayWithPreview } from "../preview";
 import { BuilderState, concatPath } from "../types";
+import { useBuilderWatchArrayWithPreview } from "../useBuilderWatch";
 
 interface KeyValueInputProps {
   path: string;
@@ -52,7 +52,7 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
   manifestPath,
   optional,
 }) => {
-  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path, false);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, false);
   const { fieldValue: fields, append, remove } = useBuilderWatchArrayWithPreview(path);
 
   return (

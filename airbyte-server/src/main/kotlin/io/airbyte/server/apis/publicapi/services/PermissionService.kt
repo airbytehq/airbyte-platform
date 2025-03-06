@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -63,7 +63,8 @@ open class PermissionServiceImpl(
     permissionCreateOss.workspaceId = permissionCreateRequest.workspaceId
 
     val result =
-      kotlin.runCatching { permissionHandler.createPermission(permissionCreateOss) }
+      kotlin
+        .runCatching { permissionHandler.createPermission(permissionCreateOss) }
         .onFailure {
           log.error("Error for createPermission", it)
           ConfigClientErrorHandler.handleError(it)
@@ -77,7 +78,8 @@ open class PermissionServiceImpl(
    */
   override fun getPermissionsByUserId(userId: UUID): PermissionsResponse {
     val result =
-      kotlin.runCatching { permissionHandler.listPermissionsByUser(userId) }
+      kotlin
+        .runCatching { permissionHandler.listPermissionsByUser(userId) }
         .onFailure {
           log.error("Error for getPermissionsByUserId", it)
           ConfigClientErrorHandler.handleError(it)
@@ -97,7 +99,8 @@ open class PermissionServiceImpl(
     organizationId: UUID,
   ): PermissionsResponse {
     val result =
-      kotlin.runCatching { permissionHandler.listPermissionsByUserInAnOrganization(userId, organizationId) }
+      kotlin
+        .runCatching { permissionHandler.listPermissionsByUserInAnOrganization(userId, organizationId) }
         .onFailure {
           log.error("Error for getPermissionsByUserInAnOrganization", it)
           ConfigClientErrorHandler.handleError(it)
@@ -114,7 +117,8 @@ open class PermissionServiceImpl(
     val permissionIdRequestBody = PermissionIdRequestBody()
     permissionIdRequestBody.permissionId = permissionId
     val result =
-      kotlin.runCatching { permissionHandler.getPermission(permissionIdRequestBody) }
+      kotlin
+        .runCatching { permissionHandler.getPermission(permissionIdRequestBody) }
         .onFailure {
           log.error("Error for getPermission", it)
           ConfigClientErrorHandler.handleError(it)
@@ -134,12 +138,12 @@ open class PermissionServiceImpl(
     permissionUpdate.permissionId = permissionId
     permissionUpdate.permissionType = enumValueOf(permissionUpdateRequest.permissionType.name)
     val updatedPermission =
-      kotlin.runCatching {
-        permissionHandler.updatePermission(permissionUpdate)
-        val updatedPermission = permissionHandler.getPermission(PermissionIdRequestBody().permissionId(permissionId))
-        updatedPermission
-      }
-        .onFailure {
+      kotlin
+        .runCatching {
+          permissionHandler.updatePermission(permissionUpdate)
+          val updatedPermission = permissionHandler.getPermission(PermissionIdRequestBody().permissionId(permissionId))
+          updatedPermission
+        }.onFailure {
           log.error("Error for updatePermission", it)
           ConfigClientErrorHandler.handleError(it)
         }
@@ -154,7 +158,8 @@ open class PermissionServiceImpl(
     val permissionIdRequestBody = PermissionIdRequestBody()
     permissionIdRequestBody.permissionId = permissionId
     val result =
-      kotlin.runCatching { permissionHandler.deletePermission(permissionIdRequestBody) }
+      kotlin
+        .runCatching { permissionHandler.deletePermission(permissionIdRequestBody) }
         .onFailure {
           log.error("Error for deletePermission", it)
           ConfigClientErrorHandler.handleError(it)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client.auth
@@ -20,13 +20,9 @@ internal class AirbyteAuthHeaderInterceptorTest {
     val headerValue = "header-value"
     val authHeader =
       object : AirbyteAuthHeader {
-        override fun getHeaderName(): String {
-          return headerName
-        }
+        override fun getHeaderName(): String = headerName
 
-        override fun getHeaderValue(): String {
-          return headerValue
-        }
+        override fun getHeaderValue(): String = headerValue
       }
     val interceptor = AirbyteAuthHeaderInterceptor(authHeaders = Optional.of(authHeader))
     val chain: Interceptor.Chain = mockk()

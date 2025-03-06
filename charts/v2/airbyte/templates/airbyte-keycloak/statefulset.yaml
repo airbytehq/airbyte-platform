@@ -1,5 +1,6 @@
 # if Cloud or Pro/Enterprise, render the keycloak StatefulSet template.
-{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if .Values.keycloak.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -9,6 +10,8 @@ metadata:
       {{- if .Values.keycloak.extraLabels }}
       {{ toYaml (mergeOverwrite .Values.keycloak.extraLabels .Values.global.extraLabels) | nindent 4 }}
       {{- end }}
+  annotations:
+    {{ toYaml .Values.keycloak.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.keycloak.replicaCount }}
   serviceName: {{.Release.Name }}-airbyte-keycloak-headless-svc
@@ -29,22 +32,22 @@ spec:
           {{ toYaml (mergeOverwrite .Values.keycloak.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
           {{- end }}
           {{- if .Values.keycloak.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.podLabels "context" $) | nindent 8 }}
           {{- end }}
       {{- if .Values.keycloak.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- if .Values.keycloak.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.keycloak.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.keycloak.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.keycloak.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -53,7 +56,7 @@ spec:
         {{- end }}
       {{- end }}
       initContainers:
-        {{- if and (eq .Values.global.deploymentMode "oss") (ne .Values.keycloak.bypassInit true)}}
+        {{- if (ne .Values.keycloak.bypassInit true) }}
         # This init container will only executed if the deployment mode is "oss" and the bypassInit is not true.
         - name: init-db
           image: {{ include "imageUrl" (list .Values.keycloak.initContainers.initDb.image $) }}
@@ -170,4 +173,5 @@ spec:
       resources:
         requests:
           storage: 1Gi
+{{- end }}
 {{- end }}

@@ -4,7 +4,7 @@ import { useDebounce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { MultiListBox } from "components/ui/ListBox/MultiListBox";
+import { MultiSelect } from "components/ui/MultiSelect";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -188,7 +188,7 @@ export const AttemptLogs: React.FC<AttemptLogsProps> = ({ attempt }) => {
           {showStructuredLogs && (
             <>
               <FlexItem>
-                <MultiListBox
+                <MultiSelect
                   selectedValues={selectedLogSources ?? sources}
                   options={logSourceOptions}
                   onSelectValues={(newSources) => setSelectedLogSources(newSources ?? sources)}
@@ -196,7 +196,7 @@ export const AttemptLogs: React.FC<AttemptLogsProps> = ({ attempt }) => {
                 />
               </FlexItem>
               <FlexItem>
-                <MultiListBox
+                <MultiSelect
                   selectedValues={selectedLogLevels ?? levels}
                   options={logLevelOptions}
                   onSelectValues={(newLevels) => setSelectedLogLevels(newLevels ?? levels)}

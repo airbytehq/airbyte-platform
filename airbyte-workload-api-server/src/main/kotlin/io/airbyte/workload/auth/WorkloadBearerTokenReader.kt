@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.auth
@@ -13,13 +13,9 @@ import jakarta.inject.Singleton
  */
 @Singleton
 class WorkloadBearerTokenReader : HttpHeaderTokenReader() {
-  override fun getPrefix(): String {
-    return BEARER_PREFIX
-  }
+  override fun getPrefix(): String = BEARER_PREFIX
 
-  override fun getHeaderName(): String {
-    return HttpHeaders.AUTHORIZATION
-  }
+  override fun getHeaderName(): String = HttpHeaders.AUTHORIZATION
 
   companion object {
     const val BEARER_PREFIX: String = "Bearer"

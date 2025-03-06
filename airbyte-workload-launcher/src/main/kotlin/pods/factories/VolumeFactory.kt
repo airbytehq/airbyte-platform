@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
@@ -43,6 +47,23 @@ data class VolumeFactory(
     return VolumeMountPair(volume, mount)
   }
 
+  private fun sharedTmp(): VolumeMountPair {
+    val volume =
+      VolumeBuilder()
+        .withName(SHARED_TMP)
+        .withNewEmptyDir()
+        .endEmptyDir()
+        .build()
+
+    val mount =
+      VolumeMountBuilder()
+        .withName(SHARED_TMP)
+        .withMountPath(FileConstants.TMP)
+        .build()
+
+    return VolumeMountPair(volume, mount)
+  }
+
   private fun secret(): VolumeMountPair? {
     val hasSecrets =
       StringUtils.isNotEmpty(secretName) &&
@@ -60,8 +81,7 @@ data class VolumeFactory(
             .withSecretName(secretName)
             .withDefaultMode(420)
             .build(),
-        )
-        .build()
+        ).build()
 
     val mount =
       VolumeMountBuilder()
@@ -88,8 +108,7 @@ data class VolumeFactory(
             .withSecretName(dataPlaneCredsSecretName)
             .withDefaultMode(420)
             .build(),
-        )
-        .build()
+        ).build()
 
     val mount =
       VolumeMountBuilder()
@@ -234,11 +253,15 @@ data class VolumeFactory(
     )
   }
 
-  fun replication(useStaging: Boolean): ReplicationVolumes {
+  fun replication(
+    useStaging: Boolean,
+    enableAsyncProfiler: Boolean,
+  ): ReplicationVolumes {
     val volumes = mutableListOf<Volume>()
     val orchVolumeMounts = mutableListOf<VolumeMount>()
     val sourceVolumeMounts = mutableListOf<VolumeMount>()
     val destVolumeMounts = mutableListOf<VolumeMount>()
+    val profilerVolumeMounts = mutableListOf<VolumeMount>()
 
     val config = config()
     volumes.add(config.volume)
@@ -258,6 +281,9 @@ data class VolumeFactory(
     if (secrets != null) {
       volumes.add(secrets.volume)
       orchVolumeMounts.add(secrets.mount)
+      if (enableAsyncProfiler) {
+        profilerVolumeMounts.add(secrets.mount)
+      }
     }
 
     val dataPlaneCreds = dataplaneCreds()
@@ -289,11 +315,22 @@ data class VolumeFactory(
       }
     }
 
+    if (enableAsyncProfiler) {
+      sharedTmp().also {
+        volumes.add(it.volume)
+        orchVolumeMounts.add(it.mount)
+        sourceVolumeMounts.add(it.mount)
+        destVolumeMounts.add(it.mount)
+        profilerVolumeMounts.add(it.mount)
+      }
+    }
+
     return ReplicationVolumes(
       volumes,
       orchVolumeMounts,
       sourceVolumeMounts,
       destVolumeMounts,
+      profilerVolumeMounts,
     )
   }
 
@@ -304,6 +341,7 @@ data class VolumeFactory(
     const val SECRET_VOLUME_NAME = "airbyte-secret"
     const val SOURCE_VOLUME_NAME = "airbyte-source"
     const val STAGING_VOLUME_NAME = "airbyte-file-staging"
+    const val SHARED_TMP = "shared-tmp"
 
     // "local" means that the connector has local file access to this volume.
     const val LOCAL_VOLUME_MOUNT = "/local"
@@ -322,6 +360,7 @@ data class ReplicationVolumes(
   val orchVolumeMounts: List<VolumeMount>,
   val sourceVolumeMounts: List<VolumeMount>,
   val destVolumeMounts: List<VolumeMount>,
+  val profilerVolumeMounts: List<VolumeMount>,
 )
 
 data class ConnectorVolumes(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general.performance;
@@ -24,8 +24,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.NotImplementedMetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.Field;
@@ -129,7 +128,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final var analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     final var syncPersistence = mock(SyncPersistence.class);
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
-    final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
+    final var metricReporter = new WorkerMetricReporter(metricClient, "test-image:0.01");
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
     final var validator = new RecordSchemaValidator(Map.of(
         new AirbyteStreamNameNamespacePair("s1", null),
@@ -144,7 +143,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final ConfiguredAirbyteCatalogMigrator catalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
     catalogMigrator.initialize();
 
-    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(metricClient);
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     // TODO: This needs to be fixed to pass a NOOP tracker and a proper container IO handle
     final var versionedAbSource = new LocalContainerAirbyteSource(heartbeatMonitor, versionFac, null, null);
@@ -156,13 +155,13 @@ public abstract class ReplicationWorkerPerformanceTest {
         workspaceID,
         UUID.randomUUID(),
         "docker image",
-        new NotImplementedMetricClient());
+        metricClient);
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
         new AirbyteControlMessageEventListener(connectorConfigUpdater));
     final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
         workspaceID,
         UUID.randomUUID(),
-        new NotImplementedMetricClient(),
+        metricClient,
         Duration.ofMinutes(120),
         false);
     final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
@@ -189,7 +188,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, analyticsMessageTracker,
             "workload-id", airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
-            recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class));
+            recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class), metricClient);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

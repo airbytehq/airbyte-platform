@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.mocks
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -21,12 +25,12 @@ open class TestMapper : FilteredRecordsMapper<TestMapperConfig>() {
   override fun schema(
     config: TestMapperConfig,
     slimStream: SlimStream,
-  ): SlimStream {
-    return slimStream.deepCopy()
+  ): SlimStream =
+    slimStream
+      .deepCopy()
       .apply {
         fields.forEach { field -> redefineField(field.name, "${field.name}_test", FieldType.STRING) }
       }
-  }
 
   override fun mapForNonDiscardedRecords(
     config: TestMapperConfig,
@@ -39,23 +43,16 @@ open class TestMapper : FilteredRecordsMapper<TestMapperConfig>() {
   override val name: String
     get() = TEST_MAPPER_NAME
 
-  override fun spec(): MapperSpec<TestMapperConfig> {
-    return TestMapperSpec()
-  }
+  override fun spec(): MapperSpec<TestMapperConfig> = TestMapperSpec()
 }
 
 class TestMapperSpec : ConfigValidatingSpec<TestMapperConfig>() {
   private val simpleJsonSchemaGeneratorFromSpec: SimpleJsonSchemaGeneratorFromSpec = SimpleJsonSchemaGeneratorFromSpec()
 
-  override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): TestMapperConfig {
-    return Jsons.convertValue(configuredMapper, TestMapperConfig::class.java)
-  }
+  override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): TestMapperConfig =
+    Jsons.convertValue(configuredMapper, TestMapperConfig::class.java)
 
-  override fun jsonSchema(): JsonNode {
-    return simpleJsonSchemaGeneratorFromSpec.generateJsonSchema(specType())
-  }
+  override fun jsonSchema(): JsonNode = simpleJsonSchemaGeneratorFromSpec.generateJsonSchema(specType())
 
-  override fun specType(): Class<*> {
-    return TestMapperConfig::class.java
-  }
+  override fun specType(): Class<*> = TestMapperConfig::class.java
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.UserInvitation
@@ -38,9 +42,11 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
     @JvmStatic
     fun setup() {
       // so we don't have to deal with making users as well
-      jooqDslContext.alterTable(
-        Tables.USER_INVITATION,
-      ).dropForeignKey(Keys.USER_INVITATION__USER_INVITATION_INVITER_USER_ID_FKEY.constraint()).execute()
+      jooqDslContext
+        .alterTable(
+          Tables.USER_INVITATION,
+        ).dropForeignKey(Keys.USER_INVITATION__USER_INVITATION_INVITER_USER_ID_FKEY.constraint())
+        .execute()
     }
   }
 

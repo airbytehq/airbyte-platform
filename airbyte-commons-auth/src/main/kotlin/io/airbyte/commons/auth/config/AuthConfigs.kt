@@ -1,7 +1,11 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.auth.config
 
 import io.airbyte.config.Configs
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Requires
@@ -32,7 +36,6 @@ enum class AuthMode {
 
 @Factory
 class AuthModeFactory(
-  private val deploymentMode: DeploymentMode,
   private val airbyteEdition: Configs.AirbyteEdition,
 ) {
   /**
@@ -50,11 +53,11 @@ class AuthModeFactory(
    */
   @Singleton
   fun defaultAuthMode(): AuthMode =
-    when {
-      deploymentMode == DeploymentMode.CLOUD -> AuthMode.OIDC
-      airbyteEdition == Configs.AirbyteEdition.PRO -> AuthMode.OIDC
-      deploymentMode == DeploymentMode.OSS -> AuthMode.NONE
-      else -> throw IllegalStateException("Unknown or unspecified deployment mode: $deploymentMode")
+    when (airbyteEdition) {
+      AirbyteEdition.CLOUD -> AuthMode.OIDC
+      AirbyteEdition.ENTERPRISE -> AuthMode.OIDC
+      AirbyteEdition.COMMUNITY -> AuthMode.NONE
+      else -> throw IllegalStateException("Unknown or unspecified Airbyte edition: $airbyteEdition")
     }
 }
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.config.ConfigOriginType
@@ -28,6 +32,12 @@ interface ScopedConfigurationService {
     scopeType: ConfigScopeType,
     scopeId: UUID,
   ): Optional<ScopedConfiguration>
+
+  fun getScopedConfiguration(
+    key: String,
+    scopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): List<ScopedConfiguration>
 
   /**
    * Get a scoped configuration by key, resource and scope.

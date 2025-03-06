@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -17,6 +17,7 @@ import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
@@ -30,6 +31,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -65,6 +67,9 @@ public class DeclarativeSourceDefinitionsHandler {
 
     final Collection<Long> existingVersions = fetchAvailableManifestVersions(requestBody.getSourceDefinitionId());
     final long version = requestBody.getDeclarativeManifest().getVersion();
+    final JsonNode manifest = requestBody.getDeclarativeManifest().getManifest();
+    final String componentFileContent = requestBody.getComponentsFileContent();
+
     if (existingVersions.isEmpty()) {
       throw new SourceIsNotDeclarativeException(
           String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
@@ -78,12 +83,21 @@ public class DeclarativeSourceDefinitionsHandler {
         .withActorDefinitionId(requestBody.getSourceDefinitionId())
         .withVersion(version)
         .withDescription(requestBody.getDeclarativeManifest().getDescription())
-        .withManifest(requestBody.getDeclarativeManifest().getManifest())
-        .withSpec(spec);
+        .withManifest(manifest)
+        .withSpec(spec)
+        .withComponentsFileContent(componentFileContent);
+
     if (requestBody.getSetAsActiveManifest()) {
-      connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
-          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest).getImageVersion());
+      final List<ActorDefinitionConfigInjection> configInjectionsToCreate = manifestInjector.getManifestConnectorInjections(
+          requestBody.getSourceDefinitionId(),
+          manifest,
+          componentFileContent);
+
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+          declarativeManifest,
+          configInjectionsToCreate,
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec),
+          getImageVersionForManifest(declarativeManifest).getImageVersion());
     } else {
       connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
@@ -91,17 +105,24 @@ public class DeclarativeSourceDefinitionsHandler {
   }
 
   public void updateDeclarativeManifestVersion(final UpdateActiveManifestRequestBody requestBody) throws IOException, ConfigNotFoundException {
-    validateAccessToSource(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
-    final Collection<Long> existingVersions = fetchAvailableManifestVersions(requestBody.getSourceDefinitionId());
+    final UUID sourceDefinitionId = requestBody.getSourceDefinitionId();
+    final UUID workspaceId = requestBody.getWorkspaceId();
+    final long version = requestBody.getVersion();
+
+    validateAccessToSource(sourceDefinitionId, workspaceId);
+    final Collection<Long> existingVersions = fetchAvailableManifestVersions(sourceDefinitionId);
     if (existingVersions.isEmpty()) {
       throw new SourceIsNotDeclarativeException(
-          String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
+          String.format("Source %s is does not have a declarative manifest associated to it", sourceDefinitionId));
     }
+
     final DeclarativeManifest declarativeManifest = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
-        requestBody.getSourceDefinitionId(), requestBody.getVersion());
+        sourceDefinitionId, version);
+
     final String imageVersionForManifest = getImageVersionForManifest(declarativeManifest).getImageVersion();
     final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
         airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(imageVersionForManifest);
+
     if (!isNewConnectorVersionSupported.isValid()) {
       final String message = isNewConnectorVersionSupported.getMessage() != null ? isNewConnectorVersionSupported.getMessage()
           : String.format("Declarative manifest can't be updated to version %s because the version "
@@ -109,9 +130,15 @@ public class DeclarativeSourceDefinitionsHandler {
               imageVersionForManifest);
       throw new BadRequestProblem(message, new ProblemMessageData().message(message));
     }
-    connectorBuilderService.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
+
+    final List<ActorDefinitionConfigInjection> configInjectionsToCreate = manifestInjector.getManifestConnectorInjections(
+        sourceDefinitionId,
+        declarativeManifest.getManifest(),
+        declarativeManifest.getComponentsFileContent());
+
+    connectorBuilderService.setDeclarativeSourceActiveVersion(sourceDefinitionId,
         declarativeManifest.getVersion(),
-        manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
+        configInjectionsToCreate,
         manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()),
         imageVersionForManifest);
   }

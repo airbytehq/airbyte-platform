@@ -1,6 +1,6 @@
 import { useCurrentConnection } from "core/api";
 
-import { useMappingContext } from "./MappingContext";
+import { getKeyForStream, useMappingContext } from "./MappingContext";
 
 export const useGetStreamsForNewMapping = () => {
   const connection = useCurrentConnection();
@@ -11,7 +11,10 @@ export const useGetStreamsForNewMapping = () => {
       return false;
     }
 
-    if (streamsWithMappings[stream.stream?.name]) {
+    if (
+      streamsWithMappings[getKeyForStream(stream.stream)] &&
+      streamsWithMappings[getKeyForStream(stream.stream)].length > 0
+    ) {
       return false;
     }
 

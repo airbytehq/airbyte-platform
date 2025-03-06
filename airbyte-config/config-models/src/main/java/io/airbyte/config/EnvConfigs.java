@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -37,7 +37,7 @@ public class EnvConfigs implements Configs {
   public static final Map<String, Function<EnvConfigs, String>> JOB_SHARED_ENVS = Map.of(
       EnvVar.AIRBYTE_VERSION.name(), (instance) -> instance.getAirbyteVersion().serialize(),
       EnvVar.AIRBYTE_ROLE.name(), EnvConfigs::getAirbyteRole,
-      EnvVar.DEPLOYMENT_MODE.name(), (instance) -> instance.getDeploymentMode().name());
+      EnvVar.AIRBYTE_EDITION.name(), EnvConfigs::getAirbyteEdition);
 
   private final Function<String, String> getEnv;
   private final Supplier<Set<String>> getAllEnvKeys;
@@ -63,6 +63,11 @@ public class EnvConfigs implements Configs {
   @Override
   public String getAirbyteRole() {
     return getEnv(EnvVar.AIRBYTE_ROLE);
+  }
+
+  @Override
+  public String getAirbyteEdition() {
+    return getEnv(EnvVar.AIRBYTE_EDITION);
   }
 
   @Override
@@ -193,10 +198,6 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(key, defaultValue, Boolean::parseBoolean);
   }
 
-  private <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
-    return getEnvOrDefault(key, defaultValue, parser, false);
-  }
-
   private <T> T getEnvOrDefault(final EnvVar envVar, final T defaultValue, final Function<String, T> parser) {
     return getEnvOrDefault(envVar.name(), defaultValue, parser, false);
   }
@@ -262,17 +263,6 @@ public class EnvConfigs implements Configs {
 
   private Path getPath(final EnvVar envVar) {
     return getPath(envVar.name());
-  }
-
-  private DeploymentMode getDeploymentMode() {
-    return getEnvOrDefault(EnvVar.DEPLOYMENT_MODE.name(), DeploymentMode.OSS, s -> {
-      try {
-        return DeploymentMode.valueOf(s);
-      } catch (final IllegalArgumentException e) {
-        LOGGER.info(s + " not recognized, defaulting to " + DeploymentMode.OSS);
-        return DeploymentMode.OSS;
-      }
-    });
   }
 
 }

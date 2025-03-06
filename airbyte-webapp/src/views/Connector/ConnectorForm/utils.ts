@@ -1,10 +1,10 @@
 import toLower from "lodash/toLower";
 
-import { AdvancedAuth } from "core/api/types/AirbyteClient";
+import { AdvancedAuth, OAuthConfigSpecification } from "core/api/types/AirbyteClient";
 import { FormBlock } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
-import { ConnectorDefinitionSpecification } from "../../../core/domain/connector";
+import { ConnectorDefinitionSpecificationRead } from "../../../core/domain/connector";
 
 export function makeConnectionConfigurationPath(path: string[] = []): string {
   return ["connectionConfiguration", ...path].join(".");
@@ -25,15 +25,37 @@ export function authPredicateMatchesPath(path: string, spec?: { advancedAuth?: A
 
 type OAuthOutputSpec = { properties: Record<string, { type: string; path_in_connector_config: string[] }> } | undefined;
 
-export function serverProvidedOauthPaths(
-  connector?: ConnectorDefinitionSpecification
+export function getOAuthPaths(
+  path: keyof OAuthConfigSpecification,
+  connector?: ConnectorDefinitionSpecificationRead
 ): Record<string, { path_in_connector_config: string[] }> {
   return {
-    ...((connector?.advancedAuth?.oauthConfigSpecification?.completeOAuthOutputSpecification as OAuthOutputSpec)
-      ?.properties ?? {}),
-    ...((connector?.advancedAuth?.oauthConfigSpecification?.completeOAuthServerOutputSpecification as OAuthOutputSpec)
-      ?.properties ?? {}),
+    ...((connector?.advancedAuth?.oauthConfigSpecification?.[path] as OAuthOutputSpec)?.properties ?? {}),
   };
+}
+
+export function serverProvidedOauthPaths(
+  connector?: ConnectorDefinitionSpecificationRead
+): Record<string, { path_in_connector_config: string[] }> {
+  if (connector?.advancedAuthGlobalCredentialsAvailable === false) {
+    return getOAuthPaths("completeOAuthOutputSpecification", connector);
+  }
+  return {
+    ...getOAuthPaths("completeOAuthServerOutputSpecification", connector),
+    ...getOAuthPaths("completeOAuthOutputSpecification", connector),
+  };
+}
+
+export function userProvidedOauthInputPaths(
+  connector?: ConnectorDefinitionSpecificationRead
+): Record<string, { path_in_connector_config: string[] }> {
+  if (connector?.advancedAuthGlobalCredentialsAvailable === false) {
+    return {
+      ...getOAuthPaths("completeOAuthServerOutputSpecification", connector),
+      ...getOAuthPaths("oauthUserInputFromConnectorConfigSpecification", connector),
+    };
+  }
+  return getOAuthPaths("oauthUserInputFromConnectorConfigSpecification", connector);
 }
 
 export function OrderComparator(a: FormBlock, b: FormBlock): number {

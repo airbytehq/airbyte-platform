@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.config
 
 import com.google.api.gax.batching.BatchingSettings
@@ -27,7 +31,8 @@ class StateCheckSumEventPubSubPublisherFactory {
     @Value("\${airbyte.cloud.pubsub.publish-delay-threshold-ms}") publishDelayThreshold: Int,
   ): Supplier<Publisher> {
     val batchingSettings =
-      BatchingSettings.newBuilder()
+      BatchingSettings
+        .newBuilder()
         .setElementCountThreshold(messageCountBatchSize.toLong().coerceAtMost(MAX_BATCH_SIZE))
         .setRequestByteThreshold(requestBytesThreshold.toLong().coerceAtMost(MAX_BYTES_THRESHOLD))
         .setDelayThreshold(Duration.ofMillis(publishDelayThreshold.toLong().coerceAtMost(MAX_DELAY_THRESHOLD)))

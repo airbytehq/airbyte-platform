@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client.config
@@ -7,7 +7,7 @@ package io.airbyte.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.auth.AirbyteApiInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
-import io.micrometer.core.instrument.MeterRegistry
+import io.airbyte.metrics.MetricClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -41,17 +41,16 @@ class ApiClientSupportFactory {
     @Value("\${airbyte.internal-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.internal-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.internal-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: MeterRegistry?,
-  ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(
+    metricClient: MetricClient,
+  ): RetryPolicy<Response> =
+    generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
-      meterRegistry = meterRegistry,
-      metricPrefix = "api-client",
+      metricClient = metricClient,
+      clientApiType = ClientApiType.SERVER,
       clientRetryExceptions = clientRetryExceptions,
     )
-  }
 
   @Singleton
   @Named("airbyteApiOkHttpClient")

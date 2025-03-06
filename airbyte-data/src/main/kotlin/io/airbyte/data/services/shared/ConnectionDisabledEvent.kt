@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -6,11 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 class ConnectionDisabledEvent(
   private val disabledReason: String? = null,
 ) : ConnectionEvent {
-  fun getDisabledReason(): String? {
-    return disabledReason
-  }
+  fun getDisabledReason(): String? = disabledReason
 
-  override fun getEventType(): ConnectionEvent.Type {
-    return ConnectionEvent.Type.CONNECTION_DISABLED
-  }
+  override fun getEventType(): ConnectionEvent.Type = ConnectionEvent.Type.CONNECTION_DISABLED
 }

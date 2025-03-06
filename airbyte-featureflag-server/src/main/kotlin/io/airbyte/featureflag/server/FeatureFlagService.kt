@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.featureflag.server
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -62,9 +66,7 @@ open class FeatureFlagService(
     return flag.default
   }
 
-  open fun get(key: String): FeatureFlag? {
-    return flags[key]?.toFeatureFlag()
-  }
+  open fun get(key: String): FeatureFlag? = flags[key]?.toFeatureFlag()
 
   open fun addRule(
     key: String,
@@ -131,11 +133,20 @@ open class FeatureFlagService(
 
   private fun Rule.toMutableRule(): MutableRule = MutableRule(context = context, value = value)
 
-  private data class MutableFeatureFlag(val key: String, val default: String, val rules: MutableList<MutableRule>)
+  private data class MutableFeatureFlag(
+    val key: String,
+    val default: String,
+    val rules: MutableList<MutableRule>,
+  )
 
-  private data class MutableRule(val context: Context, var value: String)
+  private data class MutableRule(
+    val context: Context,
+    var value: String,
+  )
 
-  private data class ConfigFileFlags(val flags: List<ConfigFileFlag>)
+  private data class ConfigFileFlags(
+    val flags: List<ConfigFileFlag>,
+  )
 
   private data class ConfigFileFlag(
     val name: String,

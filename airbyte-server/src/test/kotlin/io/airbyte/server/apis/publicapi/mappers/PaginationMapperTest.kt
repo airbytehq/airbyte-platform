@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.publicApi.server.generated.models.SourceDefinitionRead.SourceType

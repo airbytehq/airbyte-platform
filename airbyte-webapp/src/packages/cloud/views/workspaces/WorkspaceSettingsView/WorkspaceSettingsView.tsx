@@ -7,35 +7,25 @@ import { Separator } from "components/ui/Separator";
 
 import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import {
-  DeleteCloudWorkspace,
-  UpdateCloudWorkspaceName,
-} from "pages/SettingsPage/pages/AccessManagementPage/components";
-import WorkspaceAccessManagementSection from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementSection";
+import { DeleteWorkspace } from "pages/SettingsPage/components/DeleteWorkspace";
+import { TagsTable } from "pages/SettingsPage/Workspace/components/TagsTable";
+
+import { UpdateWorkspaceSettingsForm } from "./components/UpdateWorkspaceSettingsForm";
 
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);
 
   const { workspaceId } = useCurrentWorkspace();
   const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
-  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   return (
     <FlexContainer direction="column" gap="xl">
       <Heading as="h1" size="md">
         <FormattedMessage id="settings.workspace.general.title" />
       </Heading>
-      <UpdateCloudWorkspaceName />
-
-      {isAccessManagementEnabled && (
-        <>
-          <Separator />
-          <FlexContainer direction="column" gap="xl">
-            <WorkspaceAccessManagementSection />
-          </FlexContainer>
-        </>
-      )}
+      <UpdateWorkspaceSettingsForm />
+      <Separator />
+      <TagsTable />
       {canDeleteWorkspace && (
         <>
           <Separator />
@@ -44,7 +34,7 @@ export const WorkspaceSettingsView: React.FC = () => {
               <FormattedMessage id="settings.general.danger" />
             </Heading>
             <FlexContainer>
-              <DeleteCloudWorkspace />
+              <DeleteWorkspace />
             </FlexContainer>
           </FlexContainer>
         </>

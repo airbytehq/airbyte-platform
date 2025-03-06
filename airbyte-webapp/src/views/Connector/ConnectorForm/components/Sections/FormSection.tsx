@@ -7,6 +7,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { ArrayOfObjectsSection } from "area/connector/components/ArrayOfObjectsSection";
+import { ResourceAllocationMenu } from "area/connector/components/ResourceAllocationMenu";
 import { FormBlock, GroupDetails } from "core/form/types";
 
 import { AuthSection } from "./auth/AuthSection";
@@ -94,6 +95,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
                 where the formField._type is formCondition, which will be the "outside rendering".
                */}
               {shouldShowAuthButton(sectionPath) && formField._type !== "formCondition" && <AuthSection />}
+              {sectionPath === "resourceAllocation" && <ResourceAllocationMenu />}
               <FormNode sectionPath={sectionPath} formField={formField} disabled={disabled} />
             </React.Fragment>
           );

@@ -5,7 +5,8 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
+import { BuilderRequestBody, concatPath } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 type RequestOptionSectionProps =
   | {
@@ -20,7 +21,8 @@ type RequestOptionSectionProps =
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
-  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
+
+  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody")) as BuilderRequestBody;
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
     {
@@ -79,6 +81,21 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
           path={concatPath(props.basePath, "requestBody.value")}
           label={formatMessage({ id: "connectorBuilder.requestOptions.stringFreeform.value" })}
           manifestPath="HttpRequester.properties.request_body_data"
+        />
+      ),
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery" }),
+      default: {
+        type: "graphql",
+        value: "query {\n  resource {\n    field \n  }\n}",
+      },
+      children: (
+        <BuilderField
+          type="graphql"
+          path={concatPath(props.basePath, "requestBody.value")}
+          label={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.value" })}
+          tooltip={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.tooltip" })}
         />
       ),
     },

@@ -5,19 +5,48 @@ import { Box } from "components/ui/Box";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspace, useGetOrganizationSubscriptionInfo } from "core/api";
+import { links } from "core/utils/links";
+
+import { CancelSubscription } from "./CancelSubscription";
+import styles from "./Subscription.module.scss";
 
 export const Subscription: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
   const { data: subscription, isLoading, isError } = useGetOrganizationSubscriptionInfo(organizationId);
+
   return (
     <BorderedTile>
-      <Heading as="h2" size="sm">
-        <FormattedMessage id="settings.organization.billing.plan" />
-      </Heading>
+      <FlexContainer justifyContent="space-between" className={styles.subscription__header}>
+        <Heading as="h2" size="sm">
+          <FormattedMessage id="settings.organization.billing.subscription" />
+        </Heading>
+        {subscription && (
+          <div className={styles.subscription__changePlan}>
+            {subscription.selfServeSubscription ? (
+              <CancelSubscription subscription={subscription} disabled={false} />
+            ) : (
+              <Tooltip control={<CancelSubscription subscription={subscription} disabled />}>
+                <FormattedMessage
+                  id="settings.organization.billing.noSelfServePlan"
+                  values={{
+                    lnk: (node: React.ReactNode) => (
+                      <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
+                        {node}
+                      </ExternalLink>
+                    ),
+                  }}
+                />
+              </Tooltip>
+            )}
+          </div>
+        )}
+      </FlexContainer>
       <Box pt="xl">
         {isLoading && <LoadingSkeleton />}
         {subscription && (
@@ -32,7 +61,7 @@ export const Subscription: React.FC = () => {
                 </FlexContainer>
 
                 <Text size="lg">
-                  <FormattedDate value={subscription.cancellationDate} />
+                  <FormattedDate value={subscription.cancellationDate} dateStyle="medium" />
                 </Text>
               </FlexItem>
             )}
@@ -40,7 +69,7 @@ export const Subscription: React.FC = () => {
         )}
         {isError && (
           <DataLoadingError>
-            <FormattedMessage id="settings.organization.billing.planError" />
+            <FormattedMessage id="settings.organization.billing.subscriptionError" />
           </DataLoadingError>
         )}
       </Box>

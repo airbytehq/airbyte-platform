@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.discover.catalog;
@@ -8,10 +8,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogRequestBody;
 import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.PostprocessCatalogInput;
 import io.airbyte.workers.models.PostprocessCatalogOutput;
@@ -29,18 +26,6 @@ public class DiscoverCatalogHelperActivityImpl implements DiscoverCatalogHelperA
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
-  }
-
-  @Override
-  public void reportSuccess() {
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
-        new MetricAttribute(MetricTags.STATUS, "success"));
-  }
-
-  @Override
-  public void reportFailure() {
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
-        new MetricAttribute(MetricTags.STATUS, "failed"));
   }
 
   @Override

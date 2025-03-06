@@ -958,9 +958,6 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
-        enrolledInFreeConnectorProgram:
-          description: Whether the workspace is enrolled in the Free Connector Program
-          type: boolean
         tombstone:
           description:
             If not set or false, the configuration is active. If true, then this

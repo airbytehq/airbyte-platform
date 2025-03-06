@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
@@ -60,17 +64,16 @@ class StreamRefreshesHandler(
 
     // Store connection timeline event (start a refresh).
     val manualSyncResult = eventRunner.startNewManualSync(connectionId)
-    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it.get()) }
+    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it) }
     job?.let {
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =
         ManuallyStartedEvent(
-          jobId = job.id,
-          startTimeEpochSeconds = job.createdAtInSecond,
+          jobId = it.id,
+          startTimeEpochSeconds = it.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            job.config.refresh.streamsToRefresh.map {
-                refreshStream ->
+            it.config.refresh.streamsToRefresh.map { refreshStream ->
               refreshStream.streamDescriptor
             },
         )
@@ -80,9 +83,7 @@ class StreamRefreshesHandler(
     return if (job == null) null else JobConverter.getJobRead(job)
   }
 
-  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
-    return streamRefreshesRepository.findByConnectionId(connectionId)
-  }
+  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> = streamRefreshesRepository.findByConnectionId(connectionId)
 
   private fun createRefreshesForStreams(
     connectionId: UUID,
@@ -93,13 +94,12 @@ class StreamRefreshesHandler(
   }
 
   companion object {
-    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> {
-      return connectionStreams.map { connectionStream ->
+    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> =
+      connectionStreams.map { connectionStream ->
         StreamDescriptor()
           .withName(connectionStream.streamName)
           .withNamespace(connectionStream.streamNamespace)
       }
-    }
 
     private fun RefreshMode.toConfigObject(): RefreshStream.RefreshType =
       when (this) {

@@ -5,7 +5,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { StreamReadAuxiliaryRequestsItem } from "core/api/types/ConnectorBuilderClient";
+import { AuxiliaryRequest } from "core/api/types/ConnectorBuilderClient";
 
 import styles from "./GlobalRequestsDisplay.module.scss";
 import { InnerListBox } from "./InnerListBox";
@@ -13,7 +13,7 @@ import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { formatForDisplay } from "../utils";
 
 interface GlobalRequestsDisplayProps {
-  requests: StreamReadAuxiliaryRequestsItem[];
+  requests: AuxiliaryRequest[];
 }
 
 export const GlobalRequestsDisplay: React.FC<GlobalRequestsDisplayProps> = ({ requests }) => {

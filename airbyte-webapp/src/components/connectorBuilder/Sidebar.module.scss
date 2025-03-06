@@ -4,8 +4,6 @@
 @use "./builderVariables.scss";
 
 .container {
-  @include mixins.shadow;
-
   padding: variables.$spacing-lg;
   position: relative;
   display: flex;
@@ -14,7 +12,7 @@
   width: builderVariables.$sideBarWidth;
   flex: 0 0 auto;
   background-color: colors.$foreground;
-  border-left: 1px solid colors.$grey-100;
+  border-right: variables.$border-thin solid colors.$border-color;
 }
 
 .contained {

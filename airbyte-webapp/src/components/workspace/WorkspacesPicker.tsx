@@ -10,12 +10,12 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace } from "core/api";
 
 import styles from "./WorkspacesPicker.module.scss";
-import { WorkspaceFetcher, WorkspacesPickerList } from "./WorkspacesPickerList";
+import { WorkspacesPickerList } from "./WorkspacesPickerList";
 
 const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonHTMLAttributes<HTMLButtonElement>>(
   ({ children, ...props }, ref) => {
     return (
-      <button ref={ref} className={styles.workspacesPicker__button} {...props}>
+      <button ref={ref} className={styles.workspacesPicker__button} {...props} data-testid="workspaces-picker">
         {children}
       </button>
     );
@@ -24,7 +24,7 @@ const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonH
 
 WorkspaceButton.displayName = "WorkspaceButton";
 
-export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }> = ({ useFetchWorkspaces }) => {
+export const WorkspacesPicker: React.FC = () => {
   const currentWorkspace = useCurrentWorkspace();
 
   const { x, y, reference, floating, strategy } = useFloating({
@@ -64,7 +64,7 @@ export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }
                   {currentWorkspace.name}
                 </Text>
               </Box>
-              <WorkspacesPickerList useFetchWorkspaces={useFetchWorkspaces} closePicker={close} />
+              <WorkspacesPickerList closePicker={close} />
             </div>
           </PopoverPanel>
         </>

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.OrganizationEmailDomain
@@ -16,9 +20,11 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
     @JvmStatic
     fun setup() {
       // so we don't have to deal with making orgs as well
-      jooqDslContext.alterTable(
-        Tables.ORGANIZATION_EMAIL_DOMAIN,
-      ).dropForeignKey(Keys.ORGANIZATION_EMAIL_DOMAIN__ORGANIZATION_EMAIL_DOMAIN_ORGANIZATION_ID_FKEY.constraint()).execute()
+      jooqDslContext
+        .alterTable(
+          Tables.ORGANIZATION_EMAIL_DOMAIN,
+        ).dropForeignKey(Keys.ORGANIZATION_EMAIL_DOMAIN__ORGANIZATION_EMAIL_DOMAIN_ORGANIZATION_ID_FKEY.constraint())
+        .execute()
     }
   }
 

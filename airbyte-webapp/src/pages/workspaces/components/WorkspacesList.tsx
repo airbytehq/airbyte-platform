@@ -9,13 +9,12 @@ import { Heading } from "components/ui/Heading";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { WorkspaceRead } from "core/api/types/AirbyteClient";
-import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { trackTiming } from "core/utils/datadog";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 
 interface WorkspacesListProps {
-  workspaces: WorkspaceRead[] | CloudWorkspaceRead[];
+  workspaces: WorkspaceRead[];
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isLoading?: boolean;
@@ -27,7 +26,7 @@ export const WorkspacesList: React.FC<WorkspacesListProps> = ({
   isLoading,
 }) => {
   useEffectOnce(() => {
-    trackTiming("CloudWorkspacesList");
+    trackTiming("WorkspacesList");
   });
   const { ref, inView } = useInView();
 

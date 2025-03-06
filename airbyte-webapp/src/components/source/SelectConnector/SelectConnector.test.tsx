@@ -24,7 +24,7 @@ jest.mock("core/api", () => ({
   useFilters: (defaultFilters: unknown) => {
     return [defaultFilters, () => null];
   },
-  useEnterpriseSourceStubsList: () => ({ enterpriseSourceDefinitions: [] }),
+  useListEnterpriseStubsForWorkspace: () => ({ enterpriseSourceDefinitions: [] }),
 }));
 
 describe(`${SelectConnector.name}`, () => {

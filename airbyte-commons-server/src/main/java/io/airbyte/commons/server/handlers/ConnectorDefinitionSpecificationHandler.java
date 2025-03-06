@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -166,7 +166,7 @@ public class ConnectorDefinitionSpecificationHandler {
     if (advancedAuth.isPresent()) {
       final Optional<SourceOAuthParameter> sourceOAuthParameter =
           oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinition.getSourceDefinitionId());
-      specRead.setAdvancedAuthCredentialsAvailable(sourceOAuthParameter.isPresent());
+      specRead.setAdvancedAuthGlobalCredentialsAvailable(sourceOAuthParameter.isPresent());
     }
 
     return specRead;
@@ -190,7 +190,7 @@ public class ConnectorDefinitionSpecificationHandler {
     if (advancedAuth.isPresent()) {
       final Optional<DestinationOAuthParameter> destinationOAuthParameter =
           oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinition.getDestinationDefinitionId());
-      specRead.setAdvancedAuthCredentialsAvailable(destinationOAuthParameter.isPresent());
+      specRead.setAdvancedAuthGlobalCredentialsAvailable(destinationOAuthParameter.isPresent());
     }
 
     return specRead;

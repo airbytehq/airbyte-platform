@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config
 
 import io.airbyte.config.JsonsSchemaConstants.AIRBYTE_TYPE
@@ -19,7 +23,11 @@ import io.airbyte.config.JsonsSchemaConstants.TYPE_ONE_OF
 import io.airbyte.config.JsonsSchemaConstants.TYPE_STRING
 import io.airbyte.config.JsonsSchemaConstants.TYPE_UNKNOWN
 
-enum class FieldType(val type: String, val format: String? = null, val airbyteType: String? = null) {
+enum class FieldType(
+  val type: String,
+  val format: String? = null,
+  val airbyteType: String? = null,
+) {
   STRING(TYPE_STRING),
   BOOLEAN(TYPE_BOOLEAN),
   DATE(TYPE_STRING, format = FORMAT_DATE),

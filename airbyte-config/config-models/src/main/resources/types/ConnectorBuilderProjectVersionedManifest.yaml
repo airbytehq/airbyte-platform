@@ -39,3 +39,6 @@ properties:
     description: Integration specific blob. Must be a valid JSON string.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  componentsFileContent:
+    description: Source code of components.py
+    type: string

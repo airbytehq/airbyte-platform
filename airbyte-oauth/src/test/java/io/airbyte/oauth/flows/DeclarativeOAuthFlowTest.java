@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows;
@@ -67,7 +67,7 @@ class DeclarativeOAuthFlowTest extends BaseOAuthFlowTest {
         // these are the part of the spec,
         // not all spec properties are provided, since they provide an override to the default values.
         Map.entry("consent_url",
-            "https://some.domain.com/oauth2/authorize?{client_id_key}={{client_id_key}}&{redirect_uri_key}={urlEncoder:{{redirect_uri_key}}}&{scope_key}={urlEncoder:{{scope_key}}}&{state_key}={{state_key}}&subdomain={subdomain}&code_challenge={codeChallengeS256:{{state_key}}}"),
+            "https://some.domain.com/oauth2/authorize?{{ client_id_key }}={{ client_id_value }}&{{ redirect_uri_key }}={{ redirect_uri_value | urlencode }}&{{ scope_param }}&{{ state_key }}={{ state_value }}&subdomain={{ subdomain }}&code_challenge={{ state_value | codechallengeS256 }}"),
         Map.entry("scope", "test_scope_1 test_scope_2 test_scope_3"),
         Map.entry("access_token_url", "https://some.domain.com/oauth2/token/"),
         Map.entry("access_token_headers", Jsons.jsonNode(Map.of("test_header", "test_value"))),

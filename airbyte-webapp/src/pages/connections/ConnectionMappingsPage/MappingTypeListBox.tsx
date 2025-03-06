@@ -5,20 +5,26 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { MapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { useMappingContext } from "./MappingContext";
-import { SupportedMappingTypes } from "./MappingRow";
 import styles from "./MappingRow.module.scss";
-import { OperationType } from "./RowFilterRow";
+import { OperationType } from "./RowFilteringMapperForm";
+import { StreamMapperWithId } from "./types";
 
 interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;
-  streamName: string;
+  streamDescriptorKey: string;
   mappingId: string;
+  disabled: boolean;
 }
 
-export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selectedValue, streamName, mappingId }) => {
+export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
+  selectedValue,
+  streamDescriptorKey,
+  mappingId,
+  disabled,
+}) => {
   const { updateLocalMapping } = useMappingContext();
 
   const mappingTypeLabels = {
@@ -37,7 +43,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
     },
   };
 
-  const supportedMappingsOptions = Object.values(SupportedMappingTypes).map((type) => ({
+  const supportedMappingsOptions = Object.values(StreamMapperType).map((type) => ({
     label: (
       <FlexContainer direction="column" gap="xs" as="span">
         <Text as="span">
@@ -51,7 +57,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
     value: type,
   }));
 
-  const ControlButton: React.FC<ListBoxControlButtonProps<StreamMapperType>> = ({ selectedOption }) => {
+  const ControlButton: React.FC<ListBoxControlButtonProps<StreamMapperType>> = ({ selectedOption, isDisabled }) => {
     if (!selectedOption) {
       return (
         <Text color="grey" as="span">
@@ -62,7 +68,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
 
     return (
       <FlexContainer alignItems="center" gap="none" as="span">
-        <Text as="span">
+        <Text as="span" color={isDisabled ? "grey300" : "darkBlue"}>
           <FormattedMessage id={mappingTypeLabels[selectedOption.value].title} />
         </Text>
         <Icon type="caretDown" color="disabled" />
@@ -76,16 +82,58 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({ selected
       selectedValue={selectedValue}
       controlButton={ControlButton}
       buttonClassName={styles.controlButton}
+      isDisabled={disabled}
       onSelect={(value) => {
         if (value !== selectedValue) {
-          if (value === StreamMapperType["row-filtering"]) {
-            updateLocalMapping(streamName, {
-              type: value,
-              mapperConfiguration: { id: mappingId, conditions: { type: OperationType.equal } },
-            });
-          } else {
-            updateLocalMapping(streamName, { type: value, mapperConfiguration: { id: mappingId } });
+          let validConfiguration: StreamMapperWithId<MapperConfiguration>;
+          switch (value) {
+            case StreamMapperType["row-filtering"]:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: {
+                  conditions: { type: OperationType.equal, fieldName: "", comparisonValue: "" },
+                },
+              };
+              break;
+            case StreamMapperType.hashing:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: {
+                  targetField: "",
+                  method: "MD5",
+                  fieldNameSuffix: "_hashed",
+                },
+              };
+              break;
+            case StreamMapperType["field-renaming"]:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: { originalFieldName: "", newFieldName: "" },
+              };
+              break;
+            case StreamMapperType.encryption:
+              validConfiguration = {
+                type: value,
+                id: mappingId,
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: {
+                  algorithm: "RSA",
+                  publicKey: "",
+                  fieldNameSuffix: "_encrypted",
+                  targetField: "",
+                },
+              };
+              break;
+            default:
+              throw new Error(`Unsupported StreamMapperType: ${value}`);
           }
+          updateLocalMapping(streamDescriptorKey, validConfiguration.id, validConfiguration);
         }
       }}
     />

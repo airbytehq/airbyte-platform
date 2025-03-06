@@ -76,9 +76,20 @@
   width: 100%;
 }
 
+$rowHeight: 38px; // hardcode height to keep cells aligned with first line of 'name' column
+
 .cell {
-  // hardcode height to keep cells aligned with first line of 'name' column
-  height: 38px;
+  height: $rowHeight;
+}
+
+.versionHeader {
+  display: flex;
+  height: $rowHeight;
+  align-items: center;
+}
+
+.updatedAtCell {
+  white-space: nowrap;
 }
 
 .baseConnectorInfo {

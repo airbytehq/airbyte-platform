@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
@@ -7,7 +11,7 @@ import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
-import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult
+import io.airbyte.commons.temporal.ManualOperationResult
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.RefreshConfig
@@ -30,7 +34,6 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.Optional
 import java.util.UUID
 
 internal class StreamRefreshesHandlerTest {
@@ -88,8 +91,7 @@ internal class StreamRefreshesHandlerTest {
     mockSupportRefresh(true)
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
-    every { eventRunner.startNewManualSync(connectionId) } returns
-      ManualOperationResult.builder().jobId(Optional.of(0L)).build()
+    every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(jobId = 0L)
     every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
     every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
       ConnectionTimelineEvent(
@@ -98,9 +100,16 @@ internal class StreamRefreshesHandlerTest {
       )
     every { jobPersistence.getJob(any()) } returns
       Job(
-        0L, JobConfig.ConfigType.REFRESH, "scope_id",
+        0L,
+        JobConfig.ConfigType.REFRESH,
+        "scope_id",
         JobConfig().withRefresh(RefreshConfig()),
-        listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        listOf(),
+        io.airbyte.config.JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+        true,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
@@ -117,8 +126,7 @@ internal class StreamRefreshesHandlerTest {
     mockSupportRefresh(true)
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
-    every { eventRunner.startNewManualSync(connectionId) } returns
-      ManualOperationResult.builder().jobId(Optional.of(0L)).build()
+    every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(jobId = 0L)
     every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
     every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
       ConnectionTimelineEvent(
@@ -128,9 +136,16 @@ internal class StreamRefreshesHandlerTest {
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
     every { jobPersistence.getJob(any()) } returns
       Job(
-        0L, JobConfig.ConfigType.REFRESH, "scope_id",
+        0L,
+        JobConfig.ConfigType.REFRESH,
+        "scope_id",
         JobConfig().withRefresh(RefreshConfig()),
-        listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        listOf(),
+        io.airbyte.config.JobStatus.SUCCEEDED,
+        0L,
+        0L,
+        0L,
+        true,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 

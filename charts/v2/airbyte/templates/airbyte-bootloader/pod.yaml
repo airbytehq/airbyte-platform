@@ -1,3 +1,4 @@
+{{- if .Values.airbyteBootloader.enabled }}
 ---
 apiVersion: v1
 kind: Pod
@@ -9,13 +10,13 @@ metadata:
     {{ toYaml (mergeOverwrite .Values.airbyteBootloader.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
     {{- if .Values.airbyteBootloader.podLabels}}
-      {{- include "common.tplvalues.render" (dict "value" .Values.airbyteBootloader.podLabels "context" $) | nindent 4 }}
+      {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.podLabels "context" $) | nindent 4 }}
     {{- end }}
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "0"
     {{- if .Values.airbyteBootloader.podAnnotations }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.airbyteBootloader.podAnnotations "context" $) | nindent 4 }}
+      {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.podAnnotations "context" $) | nindent 4 }}
     {{- end }}
 spec:
   serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -27,13 +28,13 @@ spec:
   {{- end }}
   restartPolicy: Never
   {{- if .Values.airbyteBootloader.nodeSelector }}
-  nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.airbyteBootloader.nodeSelector "context" $) | nindent 4 }}
+  nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.nodeSelector "context" $) | nindent 4 }}
   {{- end }}
   {{- if .Values.airbyteBootloader.tolerations }}
-  tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.airbyteBootloader.tolerations "context" $) | nindent 4 }}
+  tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.tolerations "context" $) | nindent 4 }}
   {{- end }}
   {{- if .Values.airbyteBootloader.affinity }}
-  affinity: {{- include "common.tplvalues.render" (dict "value" .Values.airbyteBootloader.affinity "context" $) | nindent 4 }}
+  affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.affinity "context" $) | nindent 4 }}
   {{- end }}
   {{- if .Values.airbyteBootloader.extraInitContainers }}
   initContainers:
@@ -45,11 +46,20 @@ spec:
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
       env:
         {{- include "airbyte.common.version.env" . | nindent 8 }}
+        {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.runAtStartup.env" . | nindent 8 }}
+        {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
 
-        {{- if (eq .Values.global.edition "community") }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
+        {{- end }}
+
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.cloudDatabase.envs" . | nindent 8 }}
+        {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret
@@ -97,3 +107,4 @@ spec:
   volumes:
     {{- toYaml .Values.airbyteBootloader.extraVolumes | nindent 4 }}
   {{- end }}
+{{- end }}

@@ -55,7 +55,12 @@ export const ConnectionHeaderControls: React.FC = () => {
   const onChangeStatus = async (checked: boolean) =>
     await updateConnectionStatus(checked ? ConnectionStatus.active : ConnectionStatus.inactive);
 
-  const isActionDisabled = !isSyncConnectionAvailable || schemaRefreshing || connectionUpdating;
+  const isActionDisabled =
+    !isSyncConnectionAvailable ||
+    schemaRefreshing ||
+    connectionUpdating ||
+    connection.source.isEntitled === false ||
+    connection.destination.isEntitled === false;
 
   const isSyncActionsDisabled = connection.status !== ConnectionStatus.active || !canSyncConnection || isActionDisabled;
 

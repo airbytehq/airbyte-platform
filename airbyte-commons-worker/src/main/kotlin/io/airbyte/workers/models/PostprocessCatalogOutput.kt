@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.models
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -10,11 +14,20 @@ import io.airbyte.config.CatalogDiff
  * extraneous exception wrapping / propagation. Written naively to allow interop with Java.
  */
 @JsonDeserialize(builder = PostprocessCatalogOutput.Builder::class)
-data class PostprocessCatalogOutput private constructor(val diff: CatalogDiff?, val message: String?, val stackTrace: String?) {
+@ConsistentCopyVisibility
+data class PostprocessCatalogOutput private constructor(
+  val diff: CatalogDiff?,
+  val message: String?,
+  val stackTrace: String?,
+) {
   @JsonIgnoreProperties(ignoreUnknown = true)
   class Builder
     @JvmOverloads
-    constructor(var diff: CatalogDiff? = null, var message: String? = null, var stackTrace: String? = null) {
+    constructor(
+      var diff: CatalogDiff? = null,
+      var message: String? = null,
+      var stackTrace: String? = null,
+    ) {
       fun diff(diff: CatalogDiff) = apply { this.diff = diff }
 
       fun message(message: String) = apply { this.message = message }

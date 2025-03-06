@@ -1,6 +1,11 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
+import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Query
@@ -32,6 +37,23 @@ interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimel
     pageSize: Int,
     rowOffset: Int,
   ): List<ConnectionTimelineEvent>
+
+  @Query(
+    """
+      SELECT id, connection_id, event_type, created_at
+      FROM connection_timeline_event
+      WHERE connection_id IN (:connectionIds)
+      AND event_type IN (:eventTypes)
+      AND (created_at >= :createdAtStart)
+      AND (created_at <= :createdAtEnd)
+    """,
+  )
+  fun findByConnectionIdsMinimal(
+    connectionIds: List<UUID>,
+    eventTypes: List<ConnectionEvent.Type>,
+    createdAtStart: OffsetDateTime,
+    createdAtEnd: OffsetDateTime,
+  ): List<ConnectionTimelineEventMinimal>
 
   @Query(
     """

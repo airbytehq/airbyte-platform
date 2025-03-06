@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -19,18 +19,21 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
@@ -81,6 +84,7 @@ public class DestinationDefinitionsHandler {
 
   private final DestinationService destinationService;
   private final WorkspaceService workspaceService;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final ApiPojoConverters apiPojoConverters;
 
   @VisibleForTesting
@@ -95,6 +99,7 @@ public class DestinationDefinitionsHandler {
                                        final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator,
                                        final DestinationService destinationService,
                                        final WorkspaceService workspaceService,
+                                       final LicenseEntitlementChecker licenseEntitlementChecker,
                                        final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
@@ -108,6 +113,7 @@ public class DestinationDefinitionsHandler {
     this.destinationService = destinationService;
     this.workspaceService = workspaceService;
     this.apiPojoConverters = apiPojoConverters;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
   }
 
   public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
@@ -137,7 +143,8 @@ public class DestinationDefinitionsHandler {
           .cdkVersion(destinationVersion.getCdkVersion())
           .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
-          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
+          .enterprise(standardDestinationDefinition.getEnterprise())
+          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
           .language(destinationVersion.getLanguage());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
@@ -189,9 +196,21 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+
+    final List<StandardDestinationDefinition> publicDestinationDefs = destinationService.listPublicDestinationDefinitions(false);
+
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), true);
+    final Map<UUID, Boolean> publicDestinationEntitlements = licenseEntitlementChecker.checkEntitlements(
+        workspace.getOrganizationId(),
+        Entitlement.DESTINATION_CONNECTOR,
+        publicDestinationDefs.stream().map(StandardDestinationDefinition::getDestinationDefinitionId).toList());
+
+    final Stream<StandardDestinationDefinition> entitledPublicDestinationDefs = publicDestinationDefs.stream()
+        .filter(d -> publicDestinationEntitlements.get(d.getDestinationDefinitionId()));
+
     final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
-        destinationService.listPublicDestinationDefinitions(false).stream(),
+        entitledPublicDestinationDefs,
         destinationService.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
 
     // Hide destination definitions from the list via feature flag
@@ -278,7 +297,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
@@ -328,8 +347,8 @@ public class DestinationDefinitionsHandler {
   @VisibleForTesting
   StandardDestinationDefinition buildDestinationDefinitionUpdate(final StandardDestinationDefinition currentDestination,
                                                                  final DestinationDefinitionUpdate destinationDefinitionUpdate) {
-    final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
-        ? apiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
+    final ScopedResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
+        ? apiPojoConverters.scopedResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
 
     final StandardDestinationDefinition newDestination = new StandardDestinationDefinition()

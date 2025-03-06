@@ -33,6 +33,7 @@ export const simpleAuthLogout = (options: Parameters<typeof apiCall>[1]) => {
     {
       url: `/logout`,
       method: "post",
+      headers: { "Content-Type": "application/json" },
     },
     options
   );

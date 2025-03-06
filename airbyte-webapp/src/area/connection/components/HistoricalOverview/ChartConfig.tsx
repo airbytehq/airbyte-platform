@@ -47,7 +47,7 @@ export const tooltipConfig: TooltipProps<number, string> = {
   animationDuration: 300,
   animationEasing: "ease-out",
   allowEscapeViewBox: { x: false, y: true },
-  offset: 0,
+  isAnimationActive: false,
 };
 
 interface ChartTick {

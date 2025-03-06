@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -17,11 +17,10 @@ object OrganizationReadMapper {
    * @param organizationRead Output of an organization get from config api
    * @return organizationResponse Response object with organization details
    */
-  fun from(organizationRead: OrganizationRead): OrganizationResponse {
-    return OrganizationResponse(
+  fun from(organizationRead: OrganizationRead): OrganizationResponse =
+    OrganizationResponse(
       email = organizationRead.email,
       organizationId = organizationRead.organizationId,
       organizationName = organizationRead.organizationName,
     )
-  }
 }

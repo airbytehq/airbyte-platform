@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.DeclarativeManifestImageVersionRepository
@@ -18,13 +22,10 @@ class DeclarativeManifestImageVersionServiceDataImpl(
     return repository.save(declarativeManifestImageVersion)
   }
 
-  override fun getDeclarativeManifestImageVersionByMajorVersion(majorVersion: Int): DeclarativeManifestImageVersion {
-    return repository.findById(majorVersion).orElseThrow {
+  override fun getDeclarativeManifestImageVersionByMajorVersion(majorVersion: Int): DeclarativeManifestImageVersion =
+    repository.findById(majorVersion).orElseThrow {
       IllegalStateException("No declarative manifest image version found in database for major version $majorVersion")
     }
-  }
 
-  override fun listDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {
-    return repository.findAll()
-  }
+  override fun listDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> = repository.findAll()
 }

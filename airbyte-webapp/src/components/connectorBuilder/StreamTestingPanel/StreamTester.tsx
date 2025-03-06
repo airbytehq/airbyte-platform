@@ -23,7 +23,7 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 export const StreamTester: React.FC<{
@@ -65,8 +65,12 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const { getStreamTestWarnings, getStreamTestMetadataStatus } = useStreamTestMetadata();
   const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+  const streamTestMetadataStatus = useMemo(
+    () => getStreamTestMetadataStatus(streamName),
+    [getStreamTestMetadataStatus, streamName]
+  );
 
   const logNumByType = useMemo(
     () =>
@@ -143,6 +147,7 @@ export const StreamTester: React.FC<{
         hasResolveErrors={Boolean(resolveErrorMessage)}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
+        className={!streamTestMetadataStatus || streamTestMetadataStatus.isStale ? styles.pulsateButton : undefined}
       />
 
       {resolveErrorMessage !== undefined && (

@@ -1,10 +1,14 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.interceptors
 
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.micronaut.aop.InterceptorBean
 import jakarta.inject.Singleton
 import kotlin.time.Duration
@@ -12,12 +16,14 @@ import kotlin.time.DurationUnit
 
 @Singleton
 @InterceptorBean(Instrument::class)
-class MetricClientInstrumentInterceptor(private val metricClient: MetricClient) : InstrumentInterceptorBase() {
+class MetricClientInstrumentInterceptor(
+  private val metricClient: MetricClient,
+) : InstrumentInterceptorBase() {
   override fun emitStartMetric(
     startMetricName: String,
     tags: Array<MetricAttribute>,
   ) {
-    metricClient.count(OssMetricsRegistry.valueOf(startMetricName), 1, *tags)
+    metricClient.count(metric = OssMetricsRegistry.valueOf(startMetricName), attributes = tags)
   }
 
   override fun emitEndMetric(
@@ -26,10 +32,11 @@ class MetricClientInstrumentInterceptor(private val metricClient: MetricClient) 
     tags: Array<MetricAttribute>,
   ) {
     metricClient.count(
-      OssMetricsRegistry.valueOf(endMetricName),
-      1,
-      MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
-      *tags,
+      metric = OssMetricsRegistry.valueOf(endMetricName),
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
+        ) + tags,
     )
   }
 
@@ -40,10 +47,12 @@ class MetricClientInstrumentInterceptor(private val metricClient: MetricClient) 
     tags: Array<MetricAttribute>,
   ) {
     metricClient.distribution(
-      OssMetricsRegistry.valueOf(durationMetricName),
-      duration.toDouble(DurationUnit.MILLISECONDS),
-      MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
-      *tags,
+      metric = OssMetricsRegistry.valueOf(durationMetricName),
+      value = duration.toDouble(DurationUnit.MILLISECONDS),
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
+        ) + tags,
     )
   }
 }

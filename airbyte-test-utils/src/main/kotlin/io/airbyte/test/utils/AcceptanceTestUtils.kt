@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.test.utils
 
 import dev.failsafe.RetryPolicy
@@ -50,9 +51,7 @@ object AcceptanceTestUtils {
    * This is a flag that can be used to enable/disable enterprise-only features in acceptance tests.
    */
   @JvmStatic
-  fun isEnterprise(): Boolean {
-    return System.getenv().getOrDefault(IS_ENTERPRISE, "false") == "true"
-  }
+  fun isEnterprise(): Boolean = System.getenv().getOrDefault(IS_ENTERPRISE, "false") == "true"
 
   @JvmStatic
   @JvmOverloads
@@ -80,7 +79,8 @@ object AcceptanceTestUtils {
     headers: Map<String, String> = mapOf(),
   ): OkHttpClient {
     val okHttpClient: OkHttpClient =
-      OkHttpClient.Builder()
+      OkHttpClient
+        .Builder()
         .addInterceptor(
           Interceptor { chain ->
             val request = chain.request()
@@ -93,8 +93,7 @@ object AcceptanceTestUtils {
             }
             chain.proceed(builder.build())
           },
-        )
-        .addInterceptor(LoggingInterceptor)
+        ).addInterceptor(LoggingInterceptor)
         .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
         .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
         .build()
@@ -102,8 +101,9 @@ object AcceptanceTestUtils {
   }
 
   @JvmStatic
-  fun createRetryPolicy(): RetryPolicy<Response> {
-    return RetryPolicy.builder<Response>()
+  fun createRetryPolicy(): RetryPolicy<Response> =
+    RetryPolicy
+      .builder<Response>()
       .handle(
         listOf<Class<out Throwable>>(
           IllegalStateException::class.java,
@@ -112,17 +112,13 @@ object AcceptanceTestUtils {
           ClientException::class.java,
           ServerException::class.java,
         ),
-      )
-      .onRetry { l: ExecutionAttemptedEvent<Response> ->
+      ).onRetry { l: ExecutionAttemptedEvent<Response> ->
         logger.warn(l.lastException) { "Retry attempt ${l.attemptCount} of $MAX_TRIES. Last response: ${l.lastResult}" }
-      }
-      .onRetriesExceeded { l: ExecutionCompletedEvent<Response> ->
+      }.onRetriesExceeded { l: ExecutionCompletedEvent<Response> ->
         logger.error(l.exception) { "Retry attempts exceeded." }
-      }
-      .withDelay(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS.toLong()))
+      }.withDelay(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS.toLong()))
       .withMaxRetries(MAX_TRIES)
       .build()
-  }
 
   @JvmStatic
   fun modifyCatalog(
@@ -141,27 +137,31 @@ object AcceptanceTestUtils {
     streamFilter: Optional<Predicate<AirbyteStreamAndConfiguration>> = Optional.empty(),
   ): AirbyteCatalog {
     val updatedStreams: List<AirbyteStreamAndConfiguration> =
-      originalCatalog?.streams?.stream()?.map { s: AirbyteStreamAndConfiguration ->
-        val config = s.config
-        val newConfig =
-          AirbyteStreamConfiguration(
-            replacementSourceSyncMode.orElse(config!!.syncMode),
-            replacementDestinationSyncMode.orElse(config.destinationSyncMode),
-            replacementCursorFields.orElse(config.cursorField),
-            replacementPrimaryKeys.orElse(config.primaryKey),
-            config.aliasName,
-            replacementSelected.orElse(config.selected),
-            config.suggested,
-            replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
-            replacementSelectedFields.orElse(config.selectedFields),
-            config.hashedFields,
-            config.mappers,
-            replacementMinimumGenerationId.orElse(config.minimumGenerationId),
-            replacementGenerationId.orElse(config.generationId),
-            replacementSyncId.orElse(config.syncId),
-          )
-        AirbyteStreamAndConfiguration(s.stream, newConfig)
-      }?.filter(streamFilter.orElse { true })?.toList() ?: emptyList()
+      originalCatalog
+        ?.streams
+        ?.stream()
+        ?.map { s: AirbyteStreamAndConfiguration ->
+          val config = s.config
+          val newConfig =
+            AirbyteStreamConfiguration(
+              replacementSourceSyncMode.orElse(config!!.syncMode),
+              replacementDestinationSyncMode.orElse(config.destinationSyncMode),
+              replacementCursorFields.orElse(config.cursorField),
+              replacementPrimaryKeys.orElse(config.primaryKey),
+              config.aliasName,
+              replacementSelected.orElse(config.selected),
+              config.suggested,
+              replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
+              replacementSelectedFields.orElse(config.selectedFields),
+              config.hashedFields,
+              config.mappers,
+              replacementMinimumGenerationId.orElse(config.minimumGenerationId),
+              replacementGenerationId.orElse(config.generationId),
+              replacementSyncId.orElse(config.syncId),
+            )
+          AirbyteStreamAndConfiguration(s.stream, newConfig)
+        }?.filter(streamFilter.orElse { _ -> true })
+        ?.toList() ?: emptyList()
     return AirbyteCatalog(updatedStreams)
   }
 

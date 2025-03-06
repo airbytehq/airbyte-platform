@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging.logback
@@ -70,7 +70,7 @@ class AirbytePlatformLogbackMessageLayout : LayoutBase<ILoggingEvent>() {
       append("$ESC_START${getHighlightColor(loggingEvent = loggingEvent)}$ESC_END${loggingEvent.level}$DEFAULT_COLOR$TAB")
       if (loggingEvent.mdcPropertyMap.containsKey(CALLER_QUALIFIED_CLASS_NAME_PATTERN)) {
         append(
-          "${formatClassName(loggingEvent.mdcPropertyMap[CALLER_QUALIFIED_CLASS_NAME_PATTERN])}" +
+          formatClassName(loggingEvent.mdcPropertyMap[CALLER_QUALIFIED_CLASS_NAME_PATTERN]) +
             "(${loggingEvent.mdcPropertyMap[CALLER_METHOD_NAME_PATTERN]}):" +
             "${loggingEvent.mdcPropertyMap[CALLER_LINE_NUMBER_PATTERN]} $DASH_CHAR ",
         )
@@ -103,8 +103,8 @@ private val UTC_ZONE_ID = ZoneId.of("UTC")
  * @returns The formatted fully qualified class name.
  */
 internal fun formatClassName(className: String?): String? {
-  return className?.let {
-    val parts = className.split('.')
+  return className?.let { cn ->
+    val parts = cn.split('.')
     return "${parts.subList(0, parts.size - 1).joinToString(".") { s -> s.substring(0, 1) }}.${parts.last()}"
   }
 }

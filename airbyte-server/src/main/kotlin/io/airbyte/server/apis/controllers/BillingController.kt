@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.BillingApi
+import io.airbyte.api.model.generated.CancelSubscriptionRead
 import io.airbyte.api.model.generated.CustomerPortalRead
 import io.airbyte.api.model.generated.CustomerPortalRequestBody
 import io.airbyte.api.model.generated.ListInvoicesRead
@@ -60,4 +65,18 @@ open class BillingController : BillingApi {
   override fun getOrganizationTrialStatus(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationTrialStatusRead = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/cancel_subscription")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun cancelSubscription(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): CancelSubscriptionRead = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/unschedule_cancel_subscription")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun unscheduleCancelSubscription(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): Unit = throw ApiNotImplementedInOssProblem()
 }

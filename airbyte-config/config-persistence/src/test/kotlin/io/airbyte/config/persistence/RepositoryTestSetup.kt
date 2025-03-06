@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence
 
 import io.airbyte.config.ActorDefinitionVersion
@@ -81,6 +85,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
+          mockk(),
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(
@@ -107,6 +112,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           actorDefinitionUpdate,
+          mockk(),
         )
 
       val sourceDefinitionId = UUID.randomUUID()
@@ -151,6 +157,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           actorDefinitionUpdate,
+          mockk(),
         )
 
       val destinationDefinitionId = UUID.randomUUID()
@@ -210,7 +217,5 @@ open class RepositoryTestSetup {
     }
   }
 
-  fun <T> getRepository(clazz: Class<T>): T {
-    return context.getBean(clazz)
-  }
+  fun <T> getRepository(clazz: Class<T>): T = context.getBean(clazz)
 }

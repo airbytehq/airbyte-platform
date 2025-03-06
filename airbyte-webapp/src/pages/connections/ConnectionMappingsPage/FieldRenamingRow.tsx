@@ -1,108 +1,103 @@
-import React, { useMemo } from "react";
-import { FormProvider, get, useForm, useFormContext, useFormState } from "react-hook-form";
+import React, { useEffect, useMemo } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { v4 as uuidv4 } from "uuid";
 import * as yup from "yup";
 
-import { FormControlFooterError } from "components/forms/FormControl";
-import { FlexContainer } from "components/ui/Flex";
-import { Input } from "components/ui/Input";
+import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Text } from "components/ui/Text";
 
-import { StreamMapperType } from "core/api/types/AirbyteClient";
+import { FieldRenamingMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
-import styles from "./MappingRow.module.scss";
+import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./MappingRow";
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
-import { useGetFieldsInStream } from "./useGetFieldsInStream";
+import { StreamMapperWithId } from "./types";
 
 export const fieldRenamingConfigSchema = yup.object().shape({
-  id: yup.string().required("id required"),
-  newFieldName: yup.string().required("New field name is required"),
-  originalFieldName: yup.string().required("Old field name is required"),
-});
-
-export const fieldRenamingMapperSchema: yup.SchemaOf<FieldRenamingMapperFormValues> = yup.object().shape({
-  type: yup.mixed<StreamMapperType>().oneOf(["field-renaming"]).required(),
-  mapperConfiguration: fieldRenamingConfigSchema.required(),
+  newFieldName: yup.string().required("form.empty.error"),
+  originalFieldName: yup.string().required("form.empty.error"),
 });
 
 interface FieldRenamingRowProps {
-  mappingId: number;
-  streamName: string;
-}
-interface FieldRenamingMapperFormValues {
-  type: StreamMapperType;
-  mapperConfiguration: {
-    id: string;
-    originalFieldName: string;
-    newFieldName: string;
-  };
+  mapping: StreamMapperWithId<FieldRenamingMapperConfiguration>;
+  streamDescriptorKey: string;
 }
 
-export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mappingId, streamName }) => {
-  const { updateLocalMapping, streamsWithMappings, validateMappings } = useMappingContext();
-  const mapping = streamsWithMappings[streamName].find((m) => m.mapperConfiguration.id === mappingId);
-  const fieldsInStream = useGetFieldsInStream(streamName);
+export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamDescriptorKey }) => {
+  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+
+  const { formatMessage } = useIntl();
 
   const defaultValues = useMemo(() => {
     return {
-      type: StreamMapperType["field-renaming"],
-      mapperConfiguration: {
-        id: mapping?.mapperConfiguration.id ?? uuidv4(),
-        originalFieldName: mapping?.mapperConfiguration?.originalFieldName ?? "",
-        newFieldName: mapping?.mapperConfiguration?.newFieldName ?? "",
-      },
+      originalFieldName: mapping?.mapperConfiguration?.originalFieldName ?? "",
+      newFieldName: mapping?.mapperConfiguration?.newFieldName ?? "",
     };
   }, [mapping]);
 
-  const methods = useForm<FieldRenamingMapperFormValues>({
+  const methods = useForm<FieldRenamingMapperConfiguration>({
     defaultValues,
-    resolver: autoSubmitResolver<FieldRenamingMapperFormValues>(fieldRenamingMapperSchema, (data) => {
-      updateLocalMapping(streamName, data);
-      validateMappings();
+    resolver: autoSubmitResolver<FieldRenamingMapperConfiguration>(fieldRenamingConfigSchema, (formValues) => {
+      updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
     }),
     mode: "onBlur",
   });
 
+  useEffect(() => {
+    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
+      methods.setError("originalFieldName", { message: mapping.validationError.message });
+    } else {
+      methods.clearErrors("originalFieldName");
+    }
+  }, [mapping.validationError, methods]);
+
+  useEffect(() => {
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
+  }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
+
   return (
     <FormProvider {...methods}>
       <form>
-        <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.rowContent}>
-          <MappingTypeListBox
-            selectedValue={StreamMapperType["field-renaming"]}
-            streamName={streamName}
-            mappingId={mapping?.mapperConfiguration.id}
-          />
-          <SelectTargetField<FieldRenamingMapperFormValues>
-            targetFieldOptions={fieldsInStream}
-            name="mapperConfiguration.originalFieldName"
-          />
-          <Text>
-            <FormattedMessage id="connections.mappings.to" />
+        <MappingRowContent>
+          <MappingRowItem>
+            <MappingTypeListBox
+              disabled={isStreamValidating}
+              selectedValue={StreamMapperType["field-renaming"]}
+              streamDescriptorKey={streamDescriptorKey}
+              mappingId={mapping.id}
+            />
+          </MappingRowItem>
+          <MappingRowItem>
+            <SelectTargetField<FieldRenamingMapperConfiguration>
+              disabled={isStreamValidating}
+              mappingId={mapping.id}
+              streamDescriptorKey={streamDescriptorKey}
+              name="originalFieldName"
+            />
+          </MappingRowItem>
+          <MappingRowItem>
+            <Text>
+              <FormattedMessage id="connections.mappings.to" />
+            </Text>
+          </MappingRowItem>
+          <MappingRowItem>
+            <MappingFormTextInput<FieldRenamingMapperConfiguration>
+              placeholder={formatMessage({ id: "connections.mappings.value" })}
+              disabled={isStreamValidating}
+              name="newFieldName"
+            />
+            <FormControlErrorMessage<FieldRenamingMapperConfiguration> name="newFieldName" />
+          </MappingRowItem>
+        </MappingRowContent>
+        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
+          <Text italicized color="red">
+            {mapping.validationError.message}
           </Text>
-          <NewFieldNameInput />
-        </FlexContainer>
+        )}
       </form>
     </FormProvider>
-  );
-};
-
-const NewFieldNameInput = () => {
-  const { formatMessage } = useIntl();
-  const { register } = useFormContext();
-  const { errors } = useFormState<FieldRenamingMapperFormValues>({ name: "mapperConfiguration.newFieldName" });
-  const error = get(errors, "mapperConfiguration.newFieldName");
-  return (
-    <div>
-      <Input
-        containerClassName={styles.input}
-        placeholder={formatMessage({ id: "connections.mappings.newFieldName" })}
-        {...register("mapperConfiguration.newFieldName")}
-      />
-      {error && <FormControlFooterError>{error.message}</FormControlFooterError>}
-    </div>
   );
 };

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.repository.domain
 
 import com.google.common.annotations.VisibleForTesting
@@ -13,7 +17,6 @@ import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import jakarta.inject.Singleton
-import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -41,7 +44,6 @@ data class Workload(
   var workloadLabels: List<WorkloadLabel>?,
   var inputPayload: String,
   var logPath: String,
-  var geography: String,
   @Nullable
   var mutexKey: String?,
   @field:TypeDef(type = DataType.OBJECT)
@@ -56,6 +58,10 @@ data class Workload(
   var autoId: UUID? = null,
   @Nullable
   var signalInput: String? = null,
+  @Nullable
+  var dataplaneGroup: String? = null,
+  @Nullable
+  var priority: Int? = null,
 ) {
   @VisibleForTesting
   constructor(
@@ -65,7 +71,6 @@ data class Workload(
     workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
     logPath: String,
-    geography: String,
     mutexKey: String,
     type: WorkloadType,
     signalInput: String,
@@ -76,7 +81,6 @@ data class Workload(
     workloadLabels = workloadLabels,
     inputPayload = inputPayload,
     logPath = logPath,
-    geography = geography,
     mutexKey = mutexKey,
     type = type,
     lastHeartbeatAt = null,
@@ -100,17 +104,20 @@ enum class WorkloadStatus {
   CANCELLED,
   ;
 
-  override fun toString(): String {
-    return lowerCase(this.name)
-  }
+  override fun toString(): String = name.lowercase()
 }
 
 @Factory
 class WorkloadStatusTypeConverters {
   @Singleton
-  fun workloadStatusToStringTypeConverter(): TypeConverter<WorkloadStatus, String> {
-    return TypeConverter { workloadStatus, _: Class<String>, _: ConversionContext -> Optional.of(workloadStatus.toString()) }
-  }
+  fun workloadStatusToStringTypeConverter(): TypeConverter<WorkloadStatus, String> =
+    TypeConverter {
+      workloadStatus,
+      _: Class<String>,
+      _: ConversionContext,
+      ->
+      Optional.of(workloadStatus.toString())
+    }
 }
 
 @TypeDef(type = DataType.STRING)
@@ -121,15 +128,18 @@ enum class WorkloadType {
   SPEC,
   ;
 
-  override fun toString(): String {
-    return lowerCase(this.name)
-  }
+  override fun toString(): String = name.lowercase()
 
   @Factory
   class WorkloadTypeTypeConverters {
     @Singleton
-    fun workloadTypeToStringTypeConverter(): TypeConverter<WorkloadType, String> {
-      return TypeConverter { workloadType, _: Class<String>, _: ConversionContext -> Optional.of(workloadType.toString()) }
-    }
+    fun workloadTypeToStringTypeConverter(): TypeConverter<WorkloadType, String> =
+      TypeConverter {
+        workloadType,
+        _: Class<String>,
+        _: ConversionContext,
+        ->
+        Optional.of(workloadType.toString())
+      }
   }
 }

@@ -28,11 +28,6 @@ version: 0.1.0
 appVersion: "dev"
 
 dependencies:
-  - name: common
-    repository: https://charts.bitnami.com/bitnami
-    tags:
-      - bitnami-common
-    version: 1.x.x
   - condition: airbyte-bootloader.enabled
     name: airbyte-bootloader
     repository: "file://../airbyte-bootloader"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -303,11 +303,11 @@ class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void getDestinationSpecificationReadAdvancedAuth(final boolean advancedAuthCredentialsAvailable) throws IOException {
+  void getDestinationSpecificationReadAdvancedAuth(final boolean advancedAuthGlobalCredentialsAvailable) throws IOException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
     when(oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId))
-        .thenReturn(advancedAuthCredentialsAvailable ? Optional.of(new DestinationOAuthParameter()) : Optional.empty());
+        .thenReturn(advancedAuthGlobalCredentialsAvailable ? Optional.of(new DestinationOAuthParameter()) : Optional.empty());
 
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
@@ -325,16 +325,16 @@ class ConnectorDefinitionSpecificationHandlerTest {
         connectorDefinitionSpecificationHandler.getDestinationSpecificationRead(destinationDefinition, connectorSpecification, true, workspaceId);
 
     verify(oAuthService).getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId);
-    assertEquals(advancedAuthCredentialsAvailable, response.getAdvancedAuthCredentialsAvailable());
+    assertEquals(advancedAuthGlobalCredentialsAvailable, response.getAdvancedAuthGlobalCredentialsAvailable());
   }
 
   @ValueSource(booleans = {true, false})
   @ParameterizedTest
-  void getSourceSpecificationReadAdvancedAuth(final boolean advancedAuthCredentialsAvailable) throws IOException {
+  void getSourceSpecificationReadAdvancedAuth(final boolean advancedAuthGlobalCredentialsAvailable) throws IOException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();
     when(oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId))
-        .thenReturn(advancedAuthCredentialsAvailable ? Optional.of(new SourceOAuthParameter()) : Optional.empty());
+        .thenReturn(advancedAuthGlobalCredentialsAvailable ? Optional.of(new SourceOAuthParameter()) : Optional.empty());
 
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
         new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
@@ -352,7 +352,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
         connectorDefinitionSpecificationHandler.getSourceSpecificationRead(sourceDefinition, connectorSpecification, workspaceId);
 
     verify(oAuthService).getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
-    assertEquals(advancedAuthCredentialsAvailable, response.getAdvancedAuthCredentialsAvailable());
+    assertEquals(advancedAuthGlobalCredentialsAvailable, response.getAdvancedAuthGlobalCredentialsAvailable());
   }
 
 }

@@ -6,6 +6,60 @@
 */}}
 
 {{/*
+Renders the podSweeper.timeToDeletePods.running value
+*/}}
+{{- define "airbyte.workloadLauncher.running" }}
+    {{- .Values.podSweeper.timeToDeletePods.running }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.running environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.running.env" }}
+- name: RUNNING_TTL_MINUTES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: RUNNING_TTL_MINUTES
+{{- end }}
+
+{{/*
+Renders the podSweeper.timeToDeletePods.succeeded value
+*/}}
+{{- define "airbyte.workloadLauncher.succeeded" }}
+    {{- .Values.podSweeper.timeToDeletePods.succeeded | default 10 }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.succeeded environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.succeeded.env" }}
+- name: SUCCEEDED_TTL_MINUTES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: SUCCEEDED_TTL_MINUTES
+{{- end }}
+
+{{/*
+Renders the podSweeper.timeToDeletePods.unsuccessful value
+*/}}
+{{- define "airbyte.workloadLauncher.unsuccessful" }}
+    {{- .Values.podSweeper.timeToDeletePods.unsuccessful | default 120 }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.unsuccessful environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.unsuccessful.env" }}
+- name: UNSUCCESSFUL_TTL_MINUTES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: UNSUCCESSFUL_TTL_MINUTES
+{{- end }}
+
+{{/*
 Renders the workloadLauncher.enabled value
 */}}
 {{- define "airbyte.workloadLauncher.enabled" }}
@@ -45,6 +99,9 @@ Renders the workloadLauncher.parallelism environment variable
 Renders the set of all workloadLauncher environment variables
 */}}
 {{- define "airbyte.workloadLauncher.envs" }}
+{{- include "airbyte.workloadLauncher.running.env" . }}
+{{- include "airbyte.workloadLauncher.succeeded.env" . }}
+{{- include "airbyte.workloadLauncher.unsuccessful.env" . }}
 {{- include "airbyte.workloadLauncher.enabled.env" . }}
 {{- include "airbyte.workloadLauncher.parallelism.env" . }}
 {{- end }}
@@ -53,19 +110,11 @@ Renders the set of all workloadLauncher environment variables
 Renders the set of all workloadLauncher config map variables
 */}}
 {{- define "airbyte.workloadLauncher.configVars" }}
+RUNNING_TTL_MINUTES: {{ include "airbyte.workloadLauncher.running" . | quote }}
+SUCCEEDED_TTL_MINUTES: {{ include "airbyte.workloadLauncher.succeeded" . | quote }}
+UNSUCCESSFUL_TTL_MINUTES: {{ include "airbyte.workloadLauncher.unsuccessful" . | quote }}
 WORKLOAD_LAUNCHER_ENABLED: {{ include "airbyte.workloadLauncher.enabled" . | quote }}
 WORKLOAD_LAUNCHER_PARALLELISM: {{ include "airbyte.workloadLauncher.parallelism" . | quote }}
-{{- end }}
-
-{{/*
-Renders the workloadLauncher.images secret name
-*/}}
-{{- define "airbyte.workloadLauncher.images.secretName" }}
-{{- if .Values.workloadLauncher.secretName }}
-    {{- .Values.workloadLauncher.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
 {{- end }}
 
 {{/*
@@ -141,6 +190,23 @@ Renders the workloadLauncher.images.workloadInit.image environment variable
 {{- end }}
 
 {{/*
+Renders the workloadLauncher.connectorProfiler.image value
+*/}}
+{{- define "airbyte.workloadLauncher.images.connectorProfiler.image" }}
+    {{- include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $) }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.images.connectorProfiler.image environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.images.connectorProfiler.image.env" }}
+- name: CONNECTOR_PROFILER_IMAGE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONNECTOR_PROFILER_IMAGE
+{{- end }}
+{{/*
 Renders the set of all workloadLauncher.images environment variables
 */}}
 {{- define "airbyte.workloadLauncher.images.envs" }}
@@ -148,14 +214,16 @@ Renders the set of all workloadLauncher.images environment variables
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.enabled.env" . }}
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.workloadInit.image.env" . }}
+{{- include "airbyte.workloadLauncher.images.connectorProfiler.image.env" . }}
 {{- end }}
 
 {{/*
 Renders the set of all workloadLauncher.images config map variables
 */}}
 {{- define "airbyte.workloadLauncher.images.configVars" }}
-CONNECTOR_SIDECAR_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.connectorSidecar.image $) | quote }}
+CONNECTOR_SIDECAR_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorSidecar.image" . | quote }}
 CONTAINER_ORCHESTRATOR_ENABLED: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.enabled" . | quote }}
-CONTAINER_ORCHESTRATOR_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.containerOrchestrator.image $) | quote }}
-WORKLOAD_INIT_IMAGE: {{ include "imageUrl" (list .Values.workloadLauncher.workloadInit.image $) | quote }}
+CONTAINER_ORCHESTRATOR_IMAGE: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.image" . | quote }}
+WORKLOAD_INIT_IMAGE: {{ include "airbyte.workloadLauncher.images.workloadInit.image" . | quote }}
+CONNECTOR_PROFILER_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorProfiler.image" . | quote }}
 {{- end }}

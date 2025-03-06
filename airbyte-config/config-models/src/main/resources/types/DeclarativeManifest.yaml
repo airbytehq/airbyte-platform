@@ -25,3 +25,5 @@ properties:
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   version:
     type: integer
+  componentsFileContent:
+    type: string

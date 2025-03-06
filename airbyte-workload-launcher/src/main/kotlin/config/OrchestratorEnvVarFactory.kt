@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.storage.StorageConfig
@@ -63,7 +67,8 @@ class OrchestratorEnvVarFactory(
     // TODO: Don't do this. Be explicit about what env vars we pass.
     // Copy over all local values
     val localEnvMap =
-      System.getenv()
+      System
+        .getenv()
         .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
     envMap.putAll(localEnvMap)
 
@@ -77,8 +82,7 @@ class OrchestratorEnvVarFactory(
       envMap
         .filterNot { env ->
           secretsEnvMap.containsKey(env.key)
-        }
-        .toEnvVarList()
+        }.toEnvVarList()
 
     return envVars + secretEnvVars
   }

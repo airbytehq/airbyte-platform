@@ -1,3 +1,4 @@
+import { parse } from "graphql";
 import { load } from "js-yaml";
 import isObject from "lodash/isObject";
 import { useCallback, useMemo } from "react";
@@ -16,9 +17,11 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 
 import {
   API_KEY_AUTHENTICATOR,
+  BuilderFormInput,
   BuilderStream,
   CURSOR_PAGINATION,
   CUSTOM_PARTITION_ROUTER,
+  DeclarativeOAuthAuthenticatorType,
   LIST_PARTITION_ROUTER,
   OAUTH_AUTHENTICATOR,
   PAGE_INCREMENT,
@@ -26,6 +29,7 @@ import {
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
   SUBSTREAM_PARTITION_ROUTER,
   isYamlString,
+  JWT_AUTHENTICATOR,
 } from "./types";
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
@@ -99,13 +103,15 @@ export const useBuilderValidationSchema = () => {
     [formatMessage]
   );
 
+  const authenticatorSchema = useAuthenticatorSchema();
+
   const globalSchema = useMemo(
     () =>
       yup.object().shape({
         urlBase: yup.string().required(REQUIRED_ERROR),
         authenticator: maybeYamlSchema(authenticatorSchema),
       }),
-    []
+    [authenticatorSchema]
   );
 
   const streamSchema = useMemo(
@@ -207,6 +213,52 @@ export const useBuilderValidationSchema = () => {
     [globalSchema, streamSchema]
   );
 
+  const testingValuesSchema = useMemo(
+    () =>
+      yup
+        .object()
+        .shape({})
+        .when("formValues.inputs", (inputs: BuilderFormInput[], schema) => {
+          if (!inputs) {
+            return schema; // If inputs are not available, return the existing schema
+          }
+
+          // Build the dynamic schema for `testingValues`
+          const fields: Record<string, yup.AnySchema> = {};
+
+          inputs.forEach((input: BuilderFormInput) => {
+            let fieldSchema: yup.AnySchema;
+
+            switch (input.definition.type) {
+              case "string":
+                fieldSchema = yup.string();
+                break;
+              case "number":
+              case "integer":
+                fieldSchema = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+                break;
+              case "boolean":
+                fieldSchema = yup.boolean();
+                break;
+              case "array":
+                fieldSchema = yup.array().of(yup.string());
+                break;
+              default:
+                fieldSchema = yup.mixed().test("invalid-type", `Invalid type: ${input.definition.type}`, () => false);
+            }
+
+            if (input.required) {
+              fieldSchema = fieldSchema.required(REQUIRED_ERROR);
+            }
+
+            fields[input.key] = fieldSchema;
+          });
+
+          return yup.object().shape(fields);
+        }),
+    []
+  );
+
   const builderStateValidationSchema = useMemo(
     () =>
       yup.object().shape({
@@ -218,12 +270,13 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs"
+            'Must be "global", "inputs", "components", or a number',
+            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
           ),
         testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
+        testingValues: testingValuesSchema,
       }),
-    [builderFormValidationSchema]
+    [builderFormValidationSchema, testingValuesSchema]
   );
 
   return {
@@ -231,6 +284,7 @@ export const useBuilderValidationSchema = () => {
     streamSchema,
     builderFormValidationSchema,
     builderStateValidationSchema,
+    testingValuesSchema,
   };
 };
 
@@ -280,12 +334,21 @@ const nonPathRequestOptionSchema = yup
   .object()
   .shape({
     inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required(REQUIRED_ERROR),
+    field_name: yup.mixed().when("inject_into", {
+      is: (val: string) => val !== "body_json",
+      then: yup.string().required(REQUIRED_ERROR),
+      otherwise: strip,
+    }),
+    field_path: yup.mixed().when("inject_into", {
+      is: (val: string) => val === "body_json",
+      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+      otherwise: strip,
+    }),
   })
   .notRequired()
   .default(undefined);
 
-const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required(REQUIRED_ERROR)));
+const keyValueListSchema = yup.array().of(yup.array().of(yup.string().min(1, REQUIRED_ERROR)).min(2).max(2));
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
@@ -346,6 +409,22 @@ const requestOptionsSchema = yup.object().shape({
       .when("type", {
         is: (val: string) => val === "string_freeform",
         then: yup.string(),
+      })
+      .when("type", {
+        is: (val: string) => val === "graphql",
+        then: yup
+          .string()
+          .test("is-valid-graphql", "connectorBuilder.requestOptions.graphqlQuery.invalidSyntax", (value) => {
+            if (!value) {
+              return true;
+            }
+            try {
+              parse(value);
+              return true;
+            } catch {
+              return false;
+            }
+          }),
       }),
   }),
 });
@@ -408,64 +487,177 @@ const errorHandlerSchema = yup
   .notRequired()
   .default(undefined);
 
-const authenticatorSchema = yup.object({
-  type: yup.string().required(REQUIRED_ERROR),
-  inject_into: apiKeyInjectIntoSchema,
-  token_refresh_endpoint: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup.string().required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  refresh_token_updater: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: yup
-      .object()
-      .shape({
-        refresh_token_name: yup.string(),
-      })
-      .default(undefined),
-    otherwise: strip,
-  }),
-  refresh_request_body: yup.mixed().when("type", {
-    is: OAUTH_AUTHENTICATOR,
-    then: keyValueListSchema,
-    otherwise: strip,
-  }),
-  login_requester: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      url: yup.string().required(REQUIRED_ERROR),
-      authenticator: yup.object({
+const useAuthenticatorSchema = () => {
+  const { formatMessage } = useIntl();
+
+  return useMemo(
+    () =>
+      yup.object({
+        type: yup.string().required(REQUIRED_ERROR),
         inject_into: apiKeyInjectIntoSchema,
+        token_refresh_endpoint: yup.mixed().when(["type", "refresh_token_updater"], {
+          is: (type: string, refreshTokenUpdater: unknown) => {
+            if (type === OAUTH_AUTHENTICATOR) {
+              return true;
+            } else if (type === DeclarativeOAuthAuthenticatorType && !!refreshTokenUpdater) {
+              return true;
+            }
+            return false;
+          },
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        refresh_token_updater: yup.mixed().when("type", {
+          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+          then: yup
+            .object()
+            .shape({
+              refresh_token_name: yup.string(),
+            })
+            .default(undefined),
+          otherwise: strip,
+        }),
+        refresh_request_body: yup.mixed().when("type", {
+          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        declarative: yup.mixed().when("type", {
+          is: DeclarativeOAuthAuthenticatorType,
+          then: yup.object().shape({
+            consent_url: yup.string().required(REQUIRED_ERROR),
+            access_token_url: yup.string().required(REQUIRED_ERROR),
+            access_token_key: yup.string().required(REQUIRED_ERROR),
+            access_token_headers: keyValueListSchema,
+            access_token_params: keyValueListSchema,
+            access_token_value: yup.string(),
+            auth_code_key: yup.string(),
+            client_id_key: yup.string(),
+            client_secret_key: yup.string(),
+            redirect_uri_key: yup.string(),
+            scope: yup.string(),
+            scope_key: yup.string(),
+            state: yup
+              .string()
+              .test("state-valid-json", "connectorBuilder.invalidJSON", (stateString, { createError }) => {
+                if (stateString === undefined || stateString === "") {
+                  return true;
+                }
+                try {
+                  const stateObject = JSON.parse(stateString);
+                  if (typeof stateObject.min !== "number") {
+                    return createError({
+                      message: formatMessage({ id: "connectorBuilder.oauth.state.invalidShape" }, { key: "min" }),
+                    });
+                  } else if (typeof stateObject.max !== "number") {
+                    return createError({
+                      message: formatMessage({ id: "connectorBuilder.oauth.state.invalidShape" }, { key: "max" }),
+                    });
+                  }
+                } catch (e) {
+                  return false; // renders this test's "connectorBuilder.invalidJSON" message
+                }
+                return true;
+              }),
+            state_key: yup.string(),
+          }),
+          otherwise: strip,
+        }),
+        login_requester: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            authenticator: yup.object({
+              inject_into: apiKeyInjectIntoSchema,
+            }),
+            errorHandler: errorHandlerSchema,
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+          }),
+          otherwise: strip,
+        }),
+        session_token_path: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        expiration_duration: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.string(),
+          otherwise: strip,
+        }),
+        request_authentication: yup.mixed().when("type", {
+          is: SESSION_TOKEN_AUTHENTICATOR,
+          then: yup.object().shape({
+            inject_into: yup.mixed().when("type", {
+              is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+              then: nonPathRequestOptionSchema,
+              otherwise: strip,
+            }),
+          }),
+          otherwise: strip,
+        }),
+        secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        algorithm: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        token_duration: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup
+            .number()
+            .integer()
+            .min(0, "connectorBuilder.authentication.jwt.tokenDuration")
+            .max(172_800, "connectorBuilder.authentication.jwt.tokenDuration"),
+          otherwise: strip,
+        }),
+        base64_encode_secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.boolean(),
+          otherwise: strip,
+        }),
+        additional_jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        additional_jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            kid: yup.string().optional(),
+            typ: yup.string().optional(),
+            cty: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            iss: yup.string().optional(),
+            sub: yup.string().optional(),
+            aud: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        header_prefix: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().optional(),
+          otherwise: strip,
+        }),
       }),
-      errorHandler: errorHandlerSchema,
-      httpMethod: httpMethodSchema,
-      requestOptions: requestOptionsSchema,
-    }),
-    otherwise: strip,
-  }),
-  session_token_path: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-    otherwise: strip,
-  }),
-  expiration_duration: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.string(),
-    otherwise: strip,
-  }),
-  request_authentication: yup.mixed().when("type", {
-    is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.object().shape({
-      inject_into: yup.mixed().when("type", {
-        is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
-        then: nonPathRequestOptionSchema,
-        otherwise: strip,
-      }),
-    }),
-    otherwise: strip,
-  }),
-});
+    [formatMessage]
+  );
+};
 
 const recordSelectorSchema = yup.object().shape({
   fieldPath: yup.array().of(yup.string()),
@@ -486,9 +678,14 @@ const paginatorSchema = yup
       .shape({
         inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
         field_name: yup.mixed().when("inject_into", {
-          is: "path",
-          then: strip,
-          otherwise: yup.string().required(REQUIRED_ERROR),
+          is: (val: string) => val !== "body_json" && val !== "path",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        field_path: yup.mixed().when("inject_into", {
+          is: "body_json",
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+          otherwise: strip,
         }),
       })
       .notRequired()

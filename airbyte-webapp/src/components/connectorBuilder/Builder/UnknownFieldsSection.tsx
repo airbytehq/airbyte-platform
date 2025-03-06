@@ -7,7 +7,8 @@ import { Collapsible } from "components/ui/Collapsible";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderYamlField } from "./BuilderYamlField";
 import styles from "./UnknownFieldsSection.module.scss";
-import { StreamPathFn, useBuilderWatch } from "../types";
+import { StreamPathFn } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface UnknownFieldsSectionProps {
   streamFieldPath: StreamPathFn;

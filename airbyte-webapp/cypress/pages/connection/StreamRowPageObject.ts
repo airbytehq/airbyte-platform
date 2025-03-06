@@ -9,6 +9,7 @@ const getFieldRowTestId = (fieldName: string) => getTestId(`row-depth-2-field-${
 const streamSyncCheckbox = getTestId("sync-stream-checkbox", "input");
 const streamExpandCollapseButton = getTestId("expand-collapse-stream-btn", "button");
 const streamSyncModeSelectButton = getTestId("sync-mode-select-listbox-button", "button");
+const streamSyncModeOptionsMenu = getTestId("sync-mode-select-listbox-options", "ul");
 const streamPKCell = getTestId("primary-key-cell", "div");
 const streamCursorCell = getTestId("cursor-field-cell", "div");
 
@@ -100,13 +101,20 @@ export class StreamRowPageObject {
     const syncMode = `${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`;
 
     this.withinStream(() => {
+      // Need 1 second delay to fix flaky test where sync mode dropdown closes before the option is selected
+      // eslint-disable-next-line cypress/no-unnecessary-waiting
+      cy.wait(1000);
       cy.get(streamSyncModeSelectButton).click();
-      cy.get('li[role="option"]')
-        // It's possible that there are multiple options with the same text, so we need to filter by exact text content
-        // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
-        .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
-        .should("have.length", 1)
-        .click({ force: true });
+      cy.get(streamSyncModeOptionsMenu).should("exist");
+
+      cy.get(streamSyncModeOptionsMenu).within(() => {
+        cy.get('li[role="option"]')
+          // It's possible that there are multiple options with the same text, so we need to filter by exact text content
+          // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
+          .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
+          .should("have.length", 1)
+          .click({ force: true });
+      });
     });
   }
 
@@ -127,9 +135,16 @@ export class StreamRowPageObject {
   selectPKs(pks: string[]) {
     this.withinStream(() => {
       cy.get(streamPKCell).within(() => {
+        // Need 1 second delay to fix flaky test where PK dropdown closes before the option is selected
+        // eslint-disable-next-line cypress/no-unnecessary-waiting
+        cy.wait(1000);
         cy.get("button").click();
+        cy.get('div[role="listbox"]').should("exist");
         pks.forEach((pk) => {
-          cy.contains(pk).click();
+          cy.get('div[role="option"]')
+            .filter((_, element) => Cypress.$(element).text().trim() === pk)
+            .should("have.length", 1)
+            .click();
         });
       });
       // Press ESC key to close the dropdown
@@ -171,7 +186,11 @@ export class StreamRowPageObject {
   selectCursor(cursor: string) {
     this.withinStream(() => {
       cy.get(streamCursorCell).within(() => {
+        // Need 1 second delay to fix flaky test where cursor dropdown closes before the option is selected
+        // eslint-disable-next-line cypress/no-unnecessary-waiting
+        cy.wait(1000);
         cy.get("button").click();
+        cy.get('div[role="listbox"]').should("exist");
         cy.contains(cursor).click();
       });
     });

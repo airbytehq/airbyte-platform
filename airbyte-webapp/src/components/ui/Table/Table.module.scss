@@ -2,7 +2,7 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-$border-radius: variables.$border-radius-lg;
+$border-radius: variables.$border-radius-sm;
 
 // ------- <table/> --------
 .table {
@@ -15,7 +15,7 @@ $border-radius: variables.$border-radius-lg;
   will-change: opacity;
 
   &--default {
-    box-shadow: variables.$box-shadow;
+    border: variables.$border-thin solid colors.$border-color;
   }
 
   &--empty {

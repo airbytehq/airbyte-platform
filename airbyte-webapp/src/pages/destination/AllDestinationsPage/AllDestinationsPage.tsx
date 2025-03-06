@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ImplementationTable } from "components/EntityTable";
@@ -17,10 +17,13 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useCurrentWorkspace, useDestinationList, useFilters } from "core/api";
+import { DestinationLimitReachedModal } from "area/workspace/components/DestinationLimitReachedModal";
+import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
+import { useConnectionList, useDestinationList, useFilters } from "core/api";
 import { DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllDestinationsPage.module.scss";
 import { DestinationPaths } from "../../routePaths";
@@ -28,10 +31,10 @@ import { DestinationPaths } from "../../routePaths";
 const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = ({ destinations }) => {
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.DESTINATION_LIST);
-
-  const onCreateDestination = () => navigate(`${DestinationPaths.SelectDestinationNew}`);
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateDestination = useIntent("CreateDestination", { workspaceId });
+  const { limits, destinationLimitReached } = useCurrentWorkspaceLimits();
+  const { formatMessage } = useIntl();
+  const { openModal } = useModalService();
+  const canCreateDestination = useGeneratedIntent(Intent.CreateOrEditConnector);
 
   const connectionList = useConnectionList({ destinationId: destinations.map(({ destinationId }) => destinationId) });
   const connections = connectionList?.connections ?? [];
@@ -47,6 +50,17 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
     () => filterBySearchEntityTableData(debouncedSearchFilter, status, data),
     [data, debouncedSearchFilter, status]
   );
+
+  const onCreateDestination = () => {
+    if (destinationLimitReached && limits) {
+      openModal({
+        title: formatMessage({ id: "workspaces.destinationLimitReached.title" }),
+        content: () => <DestinationLimitReachedModal destinationCount={limits.destinations.current} />,
+      });
+    } else {
+      navigate(`${DestinationPaths.SelectDestinationNew}`);
+    }
+  };
 
   return destinations.length ? (
     <>

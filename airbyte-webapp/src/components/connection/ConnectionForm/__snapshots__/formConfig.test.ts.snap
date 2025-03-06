@@ -1558,6 +1558,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
       },
     ],
   },
+  "tags": [],
 }
 `;
 
@@ -3119,6 +3120,7 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
       },
     ],
   },
+  "tags": [],
 }
 `;
 
@@ -4680,5 +4682,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: readonly 
       },
     ],
   },
+  "tags": [],
 }
 `;

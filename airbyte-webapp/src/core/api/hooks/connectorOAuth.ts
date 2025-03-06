@@ -6,6 +6,8 @@ import {
   getDestinationOAuthConsent,
   getSourceOAuthConsent,
   revokeSourceOAuthTokens,
+  getConnectorBuilderProjectOAuthConsent,
+  completeConnectorBuilderProjectOauth,
 } from "../generated/AirbyteClient";
 import {
   CompleteDestinationOAuthRequest,
@@ -13,6 +15,8 @@ import {
   DestinationOauthConsentRequest,
   RevokeSourceOauthTokensRequest,
   SourceOauthConsentRequest,
+  BuilderProjectOauthConsentRequest,
+  CompleteConnectorBuilderProjectOauthRequest,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 
@@ -32,6 +36,19 @@ export function useConsentUrls() {
   );
 }
 
+export function useConsentUrlsBuilder() {
+  const requestOptions = useRequestOptions();
+
+  return useMemo(
+    () => ({
+      getConsentUrl(request: BuilderProjectOauthConsentRequest) {
+        return getConnectorBuilderProjectOAuthConsent(request, requestOptions);
+      },
+    }),
+    [requestOptions]
+  );
+}
+
 export function useCompleteOAuth() {
   const requestOptions = useRequestOptions();
   return useMemo(
@@ -41,6 +58,18 @@ export function useCompleteOAuth() {
       },
       completeDestinationOAuth(request: CompleteDestinationOAuthRequest) {
         return completeDestinationOAuth(request, requestOptions);
+      },
+    }),
+    [requestOptions]
+  );
+}
+
+export function useCompleteOAuthBuilder() {
+  const requestOptions = useRequestOptions();
+  return useMemo(
+    () => ({
+      completeOAuth(request: CompleteConnectorBuilderProjectOauthRequest) {
+        return completeConnectorBuilderProjectOauth(request, requestOptions);
       },
     }),
     [requestOptions]

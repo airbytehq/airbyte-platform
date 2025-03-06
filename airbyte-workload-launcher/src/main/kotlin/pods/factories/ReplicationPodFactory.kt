@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.ANONYMOUS
@@ -10,7 +14,7 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.fabric8.kubernetes.api.model.Toleration
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -20,10 +24,12 @@ data class ReplicationPodFactory(
   private val featureFlagClient: FeatureFlagClient,
   private val initContainerFactory: InitContainerFactory,
   private val replContainerFactory: ReplicationContainerFactory,
+  private val profilerContainerFactory: ProfilerContainerFactory,
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
+  @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
+  private val nodeSelectionFactory: NodeSelectionFactory,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
-  @Named("replicationPodTolerations") private val tolerations: List<Toleration>,
 ) {
   fun create(
     podName: String,
@@ -42,11 +48,12 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
+    enableAsyncProfiler: Boolean,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
@@ -73,6 +80,13 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
+
+    val containers = mutableListOf(orchContainer, sourceContainer, destContainer)
+    if (enableAsyncProfiler) {
+      containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
+    }
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -82,17 +96,25 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
-      .withContainers(orchContainer, sourceContainer, destContainer)
+      .withShareProcessNamespace(enableAsyncProfiler)
+      .withContainers(containers)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
-      .withNodeSelector<Any, Any>(nodeSelectors)
-      .withTolerations(tolerations)
+      .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
+      .withTolerations(nodeSelection.tolerations)
+      .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
-      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
-      .endSpec()
+      .withSecurityContext(
+        if (enableAsyncProfiler) {
+          workloadSecurityContextProvider.rootSecurityContext()
+        } else {
+          workloadSecurityContextProvider.defaultPodSecurityContext()
+        },
+      ).endSpec()
       .build()
   }
 
@@ -114,7 +136,7 @@ data class ReplicationPodFactory(
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, false)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
@@ -133,6 +155,8 @@ data class ReplicationPodFactory(
         destImage,
       )
 
+    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors, allLabels)
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -142,14 +166,16 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
+      .withServiceAccount(serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
       .withContainers(orchContainer, destContainer)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
-      .withNodeSelector<Any, Any>(nodeSelectors)
-      .withTolerations(tolerations)
+      .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
+      .withTolerations(nodeSelection.tolerations)
+      .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()

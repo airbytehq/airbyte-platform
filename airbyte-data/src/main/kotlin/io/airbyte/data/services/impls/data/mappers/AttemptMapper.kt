@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.commons.json.Jsons
@@ -14,8 +18,8 @@ typealias ModelAttempt = io.airbyte.config.Attempt
 typealias EntityAttemptStatus = AttemptStatus
 typealias ModelAttemptStatus = io.airbyte.config.AttemptStatus
 
-fun EntityAttempt.toConfigModel(): ModelAttempt {
-  return ModelAttempt(
+fun EntityAttempt.toConfigModel(): ModelAttempt =
+  ModelAttempt(
     this.attemptNumber?.toInt() ?: 0,
     this.jobId!!,
     this.logPath?.let { Path.of(it) },
@@ -28,20 +32,17 @@ fun EntityAttempt.toConfigModel(): ModelAttempt {
     this.updatedAt?.toEpochSecond() ?: 0,
     this.endedAt?.toEpochSecond() ?: 0,
   )
-}
 
-fun EntityAttemptStatus.toConfig(): ModelAttemptStatus {
-  return when (this) {
+fun EntityAttemptStatus.toConfig(): ModelAttemptStatus =
+  when (this) {
     AttemptStatus.running -> ModelAttemptStatus.RUNNING
     AttemptStatus.succeeded -> ModelAttemptStatus.SUCCEEDED
     AttemptStatus.failed -> ModelAttemptStatus.FAILED
   }
-}
 
-fun ModelAttemptStatus.toEntity(): EntityAttemptStatus {
-  return when (this) {
+fun ModelAttemptStatus.toEntity(): EntityAttemptStatus =
+  when (this) {
     ModelAttemptStatus.RUNNING -> AttemptStatus.running
     ModelAttemptStatus.SUCCEEDED -> AttemptStatus.succeeded
     ModelAttemptStatus.FAILED -> AttemptStatus.failed
   }
-}

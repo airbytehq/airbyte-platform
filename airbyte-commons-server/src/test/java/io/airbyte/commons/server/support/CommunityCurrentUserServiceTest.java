@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -21,6 +21,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -62,6 +63,36 @@ class CommunityCurrentUserServiceTest {
 
         // Verify that getDefaultUser is called only once
         verify(userPersistence, times(1)).getDefaultUser();
+      } catch (final IOException e) {
+        fail(e);
+      }
+    });
+  }
+
+  @Test
+  void testCommunityGetCurrentUserIdIfExists() {
+    ServerRequestContext.with(HttpRequest.GET("/"), () -> {
+      try {
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(UserPersistence.DEFAULT_USER_ID);
+        when(userPersistence.getDefaultUser()).thenReturn(Optional.of(expectedUser));
+
+        final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
+        Assertions.assertTrue(userId.isPresent());
+        Assertions.assertEquals(UserPersistence.DEFAULT_USER_ID, userId.get());
+      } catch (final IOException e) {
+        fail(e);
+      }
+    });
+  }
+
+  @Test
+  void testCommunityGetCurrentUserIdIfExistsWhenUserNotFound() {
+    ServerRequestContext.with(HttpRequest.GET("/"), () -> {
+      try {
+        when(userPersistence.getDefaultUser()).thenReturn(Optional.empty());
+
+        final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
+        Assertions.assertTrue(userId.isEmpty());
       } catch (final IOException e) {
         fail(e);
       }

@@ -48,7 +48,7 @@ export const StreamsList: React.FC = () => {
         cell: StatusCell,
         meta: { thClassName: styles.statusHeader },
       }),
-      columnHelper.accessor("streamName", {
+      columnHelper.accessor("streamNameWithPrefix", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => (
           <div data-testid="streams-list-name-cell-content" className={styles.nameContent}>
@@ -197,7 +197,7 @@ export const StreamsList: React.FC = () => {
             })
           }
           sorting={false}
-          columnFilters={[{ id: "streamName", value: filtering }]}
+          columnFilters={[{ id: "streamNameWithPrefix", value: filtering }]}
           virtualized
           virtualizedProps={{ customScrollParent: customScrollParent ?? undefined, useWindowScroll: true }}
         />

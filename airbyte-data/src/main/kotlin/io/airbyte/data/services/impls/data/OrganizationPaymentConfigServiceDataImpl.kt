@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.OrganizationPaymentConfig
@@ -26,9 +30,5 @@ class OrganizationPaymentConfigServiceDataImpl(
     } else {
       organizationPaymentConfigRepository.save(organizationPaymentConfig.toEntity())
     }
-  }
-
-  override fun deletePaymentConfig(organizationId: UUID) {
-    organizationPaymentConfigRepository.deleteById(organizationId)
   }
 }

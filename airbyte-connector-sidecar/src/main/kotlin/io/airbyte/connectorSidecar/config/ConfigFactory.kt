@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar.config
 
 import io.airbyte.workers.pod.FileConstants
@@ -31,7 +35,5 @@ class ConfigFactory {
    */
   @Singleton
   @Named("output")
-  fun output(): Path {
-    return Path.of(FileConstants.JOB_OUTPUT_FILE)
-  }
+  fun output(): Path = Path.of(FileConstants.JOB_OUTPUT_FILE)
 }

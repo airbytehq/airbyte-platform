@@ -33,6 +33,14 @@
   right: -1 * variables.$spacing-md;
 }
 
-.container {
+.button {
   position: relative;
+}
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: variables.$spacing-md;
 }

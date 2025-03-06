@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -92,18 +96,16 @@ class ConnectorMessageProcessor(
     }
   }
 
-  private fun createBaseOutput(operation: OperationType): ConnectorJobOutput {
-    return ConnectorJobOutput()
+  private fun createBaseOutput(operation: OperationType): ConnectorJobOutput =
+    ConnectorJobOutput()
       .withOutputType(operation.toConnectorOutputType())
-  }
 
-  private fun OperationType.toConnectorOutputType(): ConnectorJobOutput.OutputType {
-    return when (this) {
+  private fun OperationType.toConnectorOutputType(): ConnectorJobOutput.OutputType =
+    when (this) {
       OperationType.CHECK -> ConnectorJobOutput.OutputType.CHECK_CONNECTION
       OperationType.DISCOVER -> ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID
       OperationType.SPEC -> ConnectorJobOutput.OutputType.SPEC
     }
-  }
 
   private fun updateConfigFromControlMessagePerMessageType(
     operationType: OperationType,
@@ -201,25 +203,23 @@ class ConnectorMessageProcessor(
     operationType: OperationType,
     exitCode: Int,
     failureOrigin: FailureReason.FailureOrigin,
-  ): FailureReason {
-    return FailureReason()
+  ): FailureReason =
+    FailureReason()
       .withExternalMessage("The $operationType operation returned an exit code $exitCode")
       .withExternalMessage("The main container of the $operationType operation returned an exit code $exitCode")
       .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
       .withFailureOrigin(failureOrigin)
-  }
 
   private fun buildSourceDiscoverSchemaWriteRequestBody(
     discoverSchemaInput: StandardDiscoverCatalogInput,
     catalog: AirbyteCatalog,
-  ): SourceDiscoverSchemaWriteRequestBody {
-    return SourceDiscoverSchemaWriteRequestBody(
+  ): SourceDiscoverSchemaWriteRequestBody =
+    SourceDiscoverSchemaWriteRequestBody(
       catalog = catalogClientConverters.toAirbyteCatalogClientApi(catalog),
       sourceId = if (discoverSchemaInput.sourceId == null) null else UUID.fromString(discoverSchemaInput.sourceId),
       connectorVersion = if (discoverSchemaInput.connectorVersion == null) "" else discoverSchemaInput.connectorVersion,
       configurationHash = discoverSchemaInput.configHash,
     )
-  }
 
   @VisibleForTesting
   fun updateConfigFromControlMessage(
@@ -256,38 +256,38 @@ class ConnectorMessageProcessor(
   }
 
   companion object {
-    fun getConnectionStatus(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult {
-      return OperationResult(
+    fun getConnectionStatus(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult =
+      OperationResult(
         connectionStatus =
           messagesByType
-            .getOrDefault(AirbyteMessage.Type.CONNECTION_STATUS, ArrayList()).stream()
+            .getOrDefault(AirbyteMessage.Type.CONNECTION_STATUS, ArrayList())
+            .stream()
             .map { obj: AirbyteMessage -> obj.connectionStatus }
             .findFirst()
             .orElse(null),
       )
-    }
 
-    fun getDiscoveryResult(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult {
-      return OperationResult(
+    fun getDiscoveryResult(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult =
+      OperationResult(
         catalog =
           messagesByType
-            .getOrDefault(AirbyteMessage.Type.CATALOG, ArrayList()).stream()
+            .getOrDefault(AirbyteMessage.Type.CATALOG, ArrayList())
+            .stream()
             .map { obj: AirbyteMessage -> obj.catalog }
             .findFirst()
             .orElse(null),
       )
-    }
 
-    fun getSpecResult(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult {
-      return OperationResult(
+    fun getSpecResult(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult =
+      OperationResult(
         spec =
           messagesByType
-            .getOrDefault(AirbyteMessage.Type.SPEC, ArrayList()).stream()
+            .getOrDefault(AirbyteMessage.Type.SPEC, ArrayList())
+            .stream()
             .map { obj: AirbyteMessage -> obj.spec }
             .findFirst()
             .orElse(null),
       )
-    }
 
     fun getJobFailureReasonFromMessages(
       outputType: ConnectorJobOutput.OutputType,
@@ -302,27 +302,27 @@ class ConnectorMessageProcessor(
       }
     }
 
-    fun getTraceMessageFromMessagesByType(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): Optional<AirbyteTraceMessage> {
-      return messagesByType.getOrDefault(AirbyteMessage.Type.TRACE, java.util.ArrayList()).stream()
+    fun getTraceMessageFromMessagesByType(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): Optional<AirbyteTraceMessage> =
+      messagesByType
+        .getOrDefault(AirbyteMessage.Type.TRACE, java.util.ArrayList())
+        .stream()
         .map { obj: AirbyteMessage -> obj.trace }
         .filter { trace: AirbyteTraceMessage -> trace.type == AirbyteTraceMessage.Type.ERROR }
         .findFirst()
-    }
 
-    private fun getConnectorCommandFromOutputType(outputType: ConnectorJobOutput.OutputType): ConnectorCommand {
-      return when (outputType) {
+    private fun getConnectorCommandFromOutputType(outputType: ConnectorJobOutput.OutputType): ConnectorCommand =
+      when (outputType) {
         ConnectorJobOutput.OutputType.SPEC -> ConnectorCommand.SPEC
         ConnectorJobOutput.OutputType.CHECK_CONNECTION -> ConnectorCommand.CHECK
         ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID -> ConnectorCommand.DISCOVER
       }
-    }
 
     fun getMessagesByType(
       inputStream: InputStream,
       streamFactory: AirbyteStreamFactory,
-    ): Map<AirbyteMessage.Type, List<AirbyteMessage>> {
-      return streamFactory.create(IOs.newBufferedReader(inputStream))
+    ): Map<AirbyteMessage.Type, List<AirbyteMessage>> =
+      streamFactory
+        .create(IOs.newBufferedReader(inputStream))
         .collect(Collectors.groupingBy { it.type })
-    }
   }
 }

@@ -31,6 +31,7 @@ interface JinjaInputProps {
   readOnly?: boolean;
   error?: boolean;
   manifestPath?: string;
+  bubbleUpUndoRedo?: boolean;
 }
 
 type SuggestableValue =
@@ -55,6 +56,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
   readOnly,
   error,
   manifestPath,
+  bubbleUpUndoRedo = true,
 }) => {
   const { formatMessage } = useIntl();
   const { getValues } = useFormContext();
@@ -403,7 +405,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
         fixedOverflowWidgets: true,
       }}
       language="jinja"
-      bubbleUpUndoRedo
+      bubbleUpUndoRedo={bubbleUpUndoRedo}
       tabFocusMode
     />
   );

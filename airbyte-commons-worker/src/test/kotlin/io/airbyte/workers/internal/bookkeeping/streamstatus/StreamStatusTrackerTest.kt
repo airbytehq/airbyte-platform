@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
@@ -387,8 +391,8 @@ class StreamStatusTrackerTest {
 
   companion object {
     @JvmStatic
-    fun runStateTransitionMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateTransitionMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null, ApiEnum.RUNNING),
         Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
@@ -400,18 +404,16 @@ class StreamStatusTrackerTest {
         Arguments.of(ApiEnum.RUNNING, ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.RUNNING, ApiEnum.INCOMPLETE),
       )
-    }
 
     @JvmStatic
-    fun runStateValues(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateValues(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null),
         Arguments.of(ApiEnum.RUNNING),
         Arguments.of(ApiEnum.RATE_LIMITED),
         Arguments.of(ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.INCOMPLETE),
       )
-    }
   }
 
   object Fixtures {
@@ -509,8 +511,7 @@ class StreamStatusTrackerTest {
                 .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
                 .withStreamDescriptor(
                   streamDescriptor1,
-                )
-                .withReasons(
+                ).withReasons(
                   listOf(
                     AirbyteStreamStatusReason()
                       .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)

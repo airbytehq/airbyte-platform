@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the topology secret name
-*/}}
-{{- define "airbyte.topology.secretName" }}
-{{- if .Values.global.topology.secretName }}
-    {{- .Values.global.topology.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.topology.nodeSelectorLabel value
 */}}
 {{- define "airbyte.topology.nodeSelectorLabel" }}

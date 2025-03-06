@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.sync
 
 import io.airbyte.commons.temporal.HeartbeatUtils
@@ -26,7 +30,10 @@ private val logger = KotlinLogging.logger { }
  * This client should be preferred over direct usage of the WorkloadApiClient.
  */
 @Singleton
-class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private val jobOutputDocStore: JobOutputDocStore) {
+class WorkloadClient(
+  private val workloadApiClient: WorkloadApiClient,
+  private val jobOutputDocStore: JobOutputDocStore,
+) {
   companion object {
     const val CANCELLATION_SOURCE_STR = "Cancellation callback."
     val TERMINAL_STATUSES = setOf(WorkloadStatus.SUCCESS, WorkloadStatus.FAILURE, WorkloadStatus.CANCELLED)
@@ -74,14 +81,14 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
   fun getConnectorJobOutput(
     workloadId: String,
     onFailure: (FailureReason) -> ConnectorJobOutput,
-  ): ConnectorJobOutput {
-    return Result.runCatching {
-      jobOutputDocStore.read(workloadId).orElseThrow()
-    }.fold(
-      onFailure = { t -> onFailure(handleMissingConnectorJobOutput(workloadId, t)) },
-      onSuccess = { x -> x },
-    )
-  }
+  ): ConnectorJobOutput =
+    Result
+      .runCatching {
+        jobOutputDocStore.read(workloadId).orElseThrow()
+      }.fold(
+        onFailure = { t -> onFailure(handleMissingConnectorJobOutput(workloadId, t)) },
+        onSuccess = { x -> x },
+      )
 
   /**
    * Attempts to cancel the workload and swallows errors if it fails.
@@ -127,51 +134,50 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     workloadId: String,
     t: Throwable?,
   ): FailureReason {
-    return Result.runCatching {
-      val workload = workloadApiClient.workloadApi.workloadGet(workloadId)
+    return Result
+      .runCatching {
+        val workload = workloadApiClient.workloadApi.workloadGet(workloadId)
 
-      return when (workload.status) {
-        // This is pretty bad, the workload succeeded, but we failed to read the output
-        WorkloadStatus.SUCCESS ->
-          FailureReason()
-            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
-            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
-            .withExternalMessage("Failed to read the output")
-            .withInternalMessage("Failed to read the output of a successful workload $workloadId")
-            .withStacktrace(t?.stackTraceToString())
+        return when (workload.status) {
+          // This is pretty bad, the workload succeeded, but we failed to read the output
+          WorkloadStatus.SUCCESS ->
+            FailureReason()
+              .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+              .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+              .withExternalMessage("Failed to read the output")
+              .withInternalMessage("Failed to read the output of a successful workload $workloadId")
+              .withStacktrace(t?.stackTraceToString())
 
-        // do some classification from workload.terminationSource
-        WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
-          FailureReason()
-            .withFailureOrigin(
-              when (workload.terminationSource) {
-                "source" -> FailureReason.FailureOrigin.SOURCE
-                "destination" -> FailureReason.FailureOrigin.DESTINATION
-                else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
-              },
-            )
-            .withExternalMessage(
-              "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
-            )
-            .withInternalMessage(workload.terminationReason)
+          // do some classification from workload.terminationSource
+          WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
+            FailureReason()
+              .withFailureOrigin(
+                when (workload.terminationSource) {
+                  "source" -> FailureReason.FailureOrigin.SOURCE
+                  "destination" -> FailureReason.FailureOrigin.DESTINATION
+                  else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+                },
+              ).withExternalMessage(
+                "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
+              ).withInternalMessage(workload.terminationReason)
 
-        // We should never be in this situation, workload is still running not having an output is expected,
-        // we should not be trying to read the output of a non-terminal workload.
-        else ->
-          FailureReason()
-            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
-            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
-            .withExternalMessage("Expected error in the platform")
-            .withInternalMessage("$workloadId isn't in a terminal state, no output available")
+          // We should never be in this situation, workload is still running not having an output is expected,
+          // we should not be trying to read the output of a non-terminal workload.
+          else ->
+            FailureReason()
+              .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+              .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+              .withExternalMessage("Expected error in the platform")
+              .withInternalMessage("$workloadId isn't in a terminal state, no output available")
+        }
+      }.getOrElse {
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withFailureType(FailureReason.FailureType.TRANSIENT_ERROR)
+          .withExternalMessage("Platform failure")
+          .withInternalMessage("Unable to reach the workload-api")
+          .withStacktrace(it.stackTraceToString())
       }
-    }.getOrElse {
-      FailureReason()
-        .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
-        .withFailureType(FailureReason.FailureType.TRANSIENT_ERROR)
-        .withExternalMessage("Platform failure")
-        .withInternalMessage("Unable to reach the workload-api")
-        .withStacktrace(it.stackTraceToString())
-    }
   }
 
   private fun isWorkloadTerminal(workload: Workload): Boolean = workload.status in TERMINAL_STATUSES

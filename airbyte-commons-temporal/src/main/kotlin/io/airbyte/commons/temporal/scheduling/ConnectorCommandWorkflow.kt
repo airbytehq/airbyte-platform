@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.scheduling
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -33,7 +37,9 @@ sealed interface ConnectorCommandInput {
 }
 
 @JsonDeserialize(builder = CheckCommandInput.Builder::class)
-data class CheckCommandInput(val input: CheckConnectionInput) : ConnectorCommandInput {
+data class CheckCommandInput(
+  val input: CheckConnectionInput,
+) : ConnectorCommandInput {
   override val type: String = ConnectorCommandInput.CHECK
 
   // This is duplicated of io.airbyte.workers.model.CheckConnectionInput to avoid dependency hell
@@ -70,7 +76,9 @@ data class CheckCommandInput(val input: CheckConnectionInput) : ConnectorCommand
 
   class Builder
     @JvmOverloads
-    constructor(var input: CheckConnectionInput? = null) {
+    constructor(
+      var input: CheckConnectionInput? = null,
+    ) {
       fun input(input: CheckConnectionInput) = apply { this.input = input }
 
       fun build() = CheckCommandInput(input = input ?: throw IllegalArgumentException("input must be specified"))
@@ -78,7 +86,9 @@ data class CheckCommandInput(val input: CheckConnectionInput) : ConnectorCommand
 }
 
 @JsonDeserialize(builder = DiscoverCommandInput.Builder::class)
-data class DiscoverCommandInput(val input: DiscoverCatalogInput) : ConnectorCommandInput {
+data class DiscoverCommandInput(
+  val input: DiscoverCatalogInput,
+) : ConnectorCommandInput {
   override val type: String = ConnectorCommandInput.DISCOVER
 
   // This is duplicated of io.airbyte.workers.model.DiscoverCatalogInput to avoid dependency hell
@@ -115,7 +125,9 @@ data class DiscoverCommandInput(val input: DiscoverCatalogInput) : ConnectorComm
 
   class Builder
     @JvmOverloads
-    constructor(var input: DiscoverCatalogInput? = null) {
+    constructor(
+      var input: DiscoverCatalogInput? = null,
+    ) {
       fun input(input: DiscoverCatalogInput) = apply { this.input = input }
 
       fun build() =
@@ -126,7 +138,9 @@ data class DiscoverCommandInput(val input: DiscoverCatalogInput) : ConnectorComm
 }
 
 @JsonDeserialize(builder = SpecCommandInput.Builder::class)
-data class SpecCommandInput(val input: SpecInput) : ConnectorCommandInput {
+data class SpecCommandInput(
+  val input: SpecInput,
+) : ConnectorCommandInput {
   override val type: String = ConnectorCommandInput.SPEC
 
   // This is duplicated of io.airbyte.workers.model.SpecInput to avoid dependency hell
@@ -158,7 +172,9 @@ data class SpecCommandInput(val input: SpecInput) : ConnectorCommandInput {
 
   class Builder
     @JvmOverloads
-    constructor(var input: SpecInput? = null) {
+    constructor(
+      var input: SpecInput? = null,
+    ) {
       fun input(input: SpecInput) = apply { this.input = input }
 
       fun build() =

@@ -24,7 +24,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const inputSelectionStartRef = useRef<number | null>(null);
 
     // Necessary to bind a ref passed from the parent in to our internal inputRef
-    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement, []);
 
     const [isContentVisible, toggleIsContentVisible] = useToggle(false);
     const [focused, setFocused] = useState(false);
@@ -34,22 +34,22 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const type = isPassword ? (isContentVisible ? "text" : "password") : props.type;
 
     const focusOnInputElement = useCallback(() => {
-      if (!inputRef.current) {
+      if (!inputRef) {
         return;
       }
 
-      const { current: element } = inputRef;
+      const element = inputRef.current;
       const selectionStart = inputSelectionStartRef.current ?? inputRef.current?.value.length;
 
-      element.focus();
+      element?.focus();
 
       if (selectionStart) {
         // Update input cursor position to where it was before
         window.setTimeout(() => {
-          element.setSelectionRange(selectionStart, selectionStart);
+          element?.setSelectionRange(selectionStart, selectionStart);
         }, 0);
       }
-    }, []);
+    }, [inputRef]);
 
     const onContainerFocus: React.FocusEventHandler<HTMLDivElement> = () => {
       setFocused(true);
@@ -58,7 +58,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const onContainerBlur: React.FocusEventHandler<HTMLDivElement> = (event) => {
       if (isVisibilityButtonVisible && event.target === inputRef.current) {
         // Save the previous selection
-        inputSelectionStartRef.current = inputRef.current.selectionStart;
+        inputSelectionStartRef.current = inputRef.current?.selectionStart;
       }
 
       setFocused(false);

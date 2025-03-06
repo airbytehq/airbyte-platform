@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the tracking secret name
-*/}}
-{{- define "airbyte.tracking.secretName" }}
-{{- if .Values.global.tracking.secretName }}
-    {{- .Values.global.tracking.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.tracking.enabled value
 */}}
 {{- define "airbyte.tracking.enabled" }}

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.config
 
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
@@ -17,14 +21,10 @@ class StateCheckSumErrorReportingClientBeanFactory {
   @Named("stateCheckSumErrorReportingClient")
   fun sentryJobErrorReportingClient(
     @Value("\${airbyte.cloud.pubsub.error-reporting.sentry.dsn}") sentryDsn: String?,
-  ): JobErrorReportingClient {
-    return SentryJobErrorReportingClient(sentryDsn, SentryExceptionHelper())
-  }
+  ): JobErrorReportingClient = SentryJobErrorReportingClient(sentryDsn, SentryExceptionHelper())
 
   @Singleton
   @Requires(property = "airbyte.cloud.pubsub.error-reporting.strategy", pattern = "(?i)^logging$")
   @Named("stateCheckSumErrorReportingClient")
-  fun loggingJobErrorReportingClient(): JobErrorReportingClient {
-    return LoggingJobErrorReportingClient()
-  }
+  fun loggingJobErrorReportingClient(): JobErrorReportingClient = LoggingJobErrorReportingClient()
 }

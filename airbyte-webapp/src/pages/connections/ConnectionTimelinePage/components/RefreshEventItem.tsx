@@ -1,10 +1,13 @@
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { InferType } from "yup";
 
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
+import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 
 import { JobStats } from "./JobStats";
 import { UserCancelledDescription } from "./TimelineEventUser";
@@ -22,6 +25,10 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
   const titleId = titleIdMap[event.eventType];
   const jobStatus = getStatusByEventType(event.eventType);
   const streamsToList = event.summary.streams.map((stream) => stream.name);
+  const { formatMessage } = useIntl();
+  const failureUiDetails = !!event.summary.failureReason
+    ? failureUiDetailsFromReason(event.summary.failureReason, formatMessage)
+    : undefined;
 
   return (
     <ConnectionTimelineEventItem>
@@ -36,8 +43,14 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
             {jobStatus === "cancelled" && !!event.user && (
               <UserCancelledDescription user={event.user} jobType="refresh" />
             )}
+
             <JobStats {...event.summary} />
           </FlexContainer>
+          {failureUiDetails && (
+            <Box pt="xs">
+              <JobFailureDetails failureUiDetails={failureUiDetails} />
+            </Box>
+          )}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
         </FlexContainer>
       </ConnectionTimelineEventSummary>

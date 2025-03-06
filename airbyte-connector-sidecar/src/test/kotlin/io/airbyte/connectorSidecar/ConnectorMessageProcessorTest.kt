@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -60,7 +64,7 @@ class ConnectorMessageProcessorTest {
 
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
-  private val catalogClientConverters = CatalogClientConverters(FieldGenerator(), emptyList())
+  private val catalogClientConverters = CatalogClientConverters(FieldGenerator())
 
   @BeforeEach
   fun init() {

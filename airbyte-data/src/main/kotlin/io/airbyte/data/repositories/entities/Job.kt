@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories.entities
@@ -48,6 +48,7 @@ open class Job(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
+  var isScheduled: Boolean? = null,
 )
 
 @MappedEntity("jobs")
@@ -60,6 +61,7 @@ class JobWithAttempts(
   startedAt: java.time.OffsetDateTime? = null,
   createdAt: java.time.OffsetDateTime? = null,
   updatedAt: java.time.OffsetDateTime? = null,
+  isScheduled: Boolean? = null,
   @Relation(
     value = Relation.Kind.ONE_TO_MANY,
     mappedBy = "job",
@@ -74,4 +76,5 @@ class JobWithAttempts(
     startedAt = startedAt,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isScheduled = isScheduled,
   )

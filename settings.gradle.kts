@@ -3,14 +3,36 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 pluginManagement {
   repositories {
-    // uncomment for local dev
-    // maven {
-    // name = "localPluginRepo"
-    // url = uri("../.gradle-plugins-local")
-    // }
+    maven {
+      name = "localPluginRepo"
+      url = uri("../.gradle-plugins-local")
+    }
     maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
     gradlePluginPortal()
     maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+  }
+}
+
+buildscript {
+  dependencies {
+    classpath("com.bmuschko:gradle-docker-plugin:8.0.0")
+    // Plugin `com.bmuschko:gradle-docker-plugin:8.0.0` transitively depends on jackson 2.10.3,
+    // which is not binary compatible with jackson 2.14 that is used elsewhere.
+    // This causes `NoSuchMethodError` exceptions while building.
+    //
+    // Dependency chain:
+    // `com.bmuschko:gradle-docker-plugin:8.0.0` ->
+    // `com.github.docker-java:docker-java-core:3.2.14` ->
+    // `com.fasterxml.jackson.core:jackson-databind:2.10.3`
+    //
+    // As this is a third-party dependency, we cannot (without forking) update it to use a newer jackson version.
+    // There is however a PR that was created to update this version to the latest jackson version:
+    // https://github.com/docker-java/docker-java/pull/2056
+    //
+    // TODO: once oss has been inlined, revisit where the version of jackson is defined.
+    classpath("com.fasterxml.jackson.core:jackson-core:2.14.2")
+
+    classpath("org.codehaus.groovy:groovy-yaml:3.0.3")
   }
 }
 
@@ -40,6 +62,9 @@ gradleEnterprise {
 }
 
 buildCache {
+  local {
+    isEnabled = !isCiServer
+  }
   remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
     region = "us-west-2"
     bucket = "ab-ci-cache"
@@ -110,6 +135,7 @@ include(":oss:airbyte-worker-models")
 
 include(":oss:airbyte-bootloader")
 include(":oss:airbyte-commons-auth")
+include(":oss:airbyte-commons-entitlements")
 include(":oss:airbyte-commons-license")
 include(":oss:airbyte-commons-storage")
 include(":oss:airbyte-commons-micronaut")
@@ -127,6 +153,7 @@ include(":oss:airbyte-keycloak")
 include(":oss:airbyte-keycloak-setup")
 include(":oss:airbyte-mappers")
 include(":oss:airbyte-metrics:reporter")
+include(":oss:airbyte-pod-sweeper")
 include(":oss:airbyte-server")
 include(":oss:airbyte-temporal")
 include(":oss:airbyte-tests")
@@ -135,6 +162,7 @@ include(":oss:airbyte-workers")
 include(":oss:airbyte-workload-launcher")
 include(":oss:airbyte-connector-sidecar")
 include(":oss:airbyte-workload-init-container")
+include(":oss:airbyte-async-profiler")
 include(":oss:airbyte-pmd-rules")
 
 project(":oss:airbyte-commons").projectDir = file("airbyte-commons")
@@ -174,6 +202,7 @@ project(":oss:airbyte-persistence:job-persistence").projectDir = file("airbyte-p
 project(":oss:airbyte-worker-models").projectDir = file("airbyte-worker-models")
 project(":oss:airbyte-bootloader").projectDir = file("airbyte-bootloader")
 project(":oss:airbyte-commons-auth").projectDir = file("airbyte-commons-auth")
+project(":oss:airbyte-commons-entitlements").projectDir = file("airbyte-commons-entitlements")
 project(":oss:airbyte-commons-license").projectDir = file("airbyte-commons-license")
 project(":oss:airbyte-commons-storage").projectDir = file("airbyte-commons-storage")
 project(":oss:airbyte-commons-micronaut").projectDir = file("airbyte-commons-micronaut")
@@ -190,6 +219,7 @@ project(":oss:airbyte-keycloak").projectDir = file("airbyte-keycloak")
 project(":oss:airbyte-keycloak-setup").projectDir = file("airbyte-keycloak-setup")
 project(":oss:airbyte-mappers").projectDir = file("airbyte-mappers")
 project(":oss:airbyte-metrics:reporter").projectDir = file("airbyte-metrics/reporter")
+project(":oss:airbyte-pod-sweeper").projectDir = file("airbyte-pod-sweeper")
 project(":oss:airbyte-server").projectDir = file("airbyte-server")
 project(":oss:airbyte-temporal").projectDir = file("airbyte-temporal")
 project(":oss:airbyte-tests").projectDir = file("airbyte-tests")
@@ -198,4 +228,5 @@ project(":oss:airbyte-workers").projectDir = file("airbyte-workers")
 project(":oss:airbyte-workload-launcher").projectDir = file("airbyte-workload-launcher")
 project(":oss:airbyte-connector-sidecar").projectDir = file("airbyte-connector-sidecar")
 project(":oss:airbyte-workload-init-container").projectDir = file("airbyte-workload-init-container")
+project(":oss:airbyte-async-profiler").projectDir = file("airbyte-async-profiler")
 project(":oss:airbyte-pmd-rules").projectDir = file("airbyte-pmd-rules")

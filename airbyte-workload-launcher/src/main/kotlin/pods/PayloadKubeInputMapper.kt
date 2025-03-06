@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
@@ -12,6 +16,7 @@ import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrganizationId
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -21,10 +26,6 @@ import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.ResourceConversionUtils
-import io.airbyte.workload.launcher.model.getAttemptId
-import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrganizationId
-import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -222,7 +223,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
 
-    val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(workloadId)
+    val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(input.launcherConfig, workloadId)
     val connectorReqs = resourceRequirementsFactory.specConnector()
     val initReqs = resourceRequirementsFactory.specInit()
 
@@ -242,13 +243,12 @@ class PayloadKubeInputMapper(
     usesCustomConnector: Boolean,
     workerConfigs: WorkerConfigs,
     connectionId: UUID? = null,
-  ): Map<String, String> {
-    return if (usesCustomConnector) {
+  ): Map<String, String> =
+    if (usesCustomConnector) {
       workerConfigs.workerIsolatedKubeNodeSelectors.orElse(workerConfigs.getworkerKubeNodeSelectors())
     } else {
       getNodeSelectorsOverride(connectionId) ?: workerConfigs.getworkerKubeNodeSelectors()
     }
-  }
 
   private fun getNodeSelectorsOverride(connectionId: UUID?): Map<String, String>? {
     if (contexts.isEmpty() && connectionId == null) {

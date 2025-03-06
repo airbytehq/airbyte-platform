@@ -1,0 +1,38 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$color-picker-circle-size: 20px;
+
+.previewContainer {
+  min-height: variables.$tag-height;
+}
+
+.hexColorInputContainer {
+  position: relative;
+
+  .colorPickerCircle {
+    &::after {
+      cursor: pointer;
+      content: "";
+      position: absolute;
+      z-index: 1;
+      top: 32px;
+      right: 10px;
+      width: $color-picker-circle-size;
+      height: $color-picker-circle-size;
+      border-radius: 50%;
+      background-color: var(--preview-color);
+    }
+  }
+
+  .hexColorInput {
+    text-transform: uppercase;
+  }
+
+  .colorInput {
+    position: absolute;
+    right: 0;
+    top: 20%;
+    visibility: hidden;
+  }
+}

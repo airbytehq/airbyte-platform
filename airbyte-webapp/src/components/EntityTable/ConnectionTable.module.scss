@@ -1,19 +1,27 @@
 @use "scss/variables";
 
-th.width30 {
-  width: 30%;
+.connectionName {
+  width: 25%;
 }
 
-th.width20 {
+.width25 {
+  width: 25%;
+}
+
+.lastSync {
+  width: 10%;
+}
+
+.enabled {
+  width: 1%;
+}
+
+.connectionSettings {
+  width: 1%;
+}
+
+.tags {
   width: 20%;
-}
-
-.thEnabled {
-  width: 1%;
-}
-
-.thConnectionSettings {
-  width: 1%;
 }
 
 .connectionsTable {

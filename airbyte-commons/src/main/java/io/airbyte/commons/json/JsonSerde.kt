@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.json
 
 /**
@@ -6,14 +10,10 @@ package io.airbyte.commons.json
  * Singleton wrapper around Jsons for use with DI and allow testability via mocking. Add methods here as prudent.
  */
 class JsonSerde {
-  fun <T> serialize(obj: T): String {
-    return Jsons.serialize(obj)
-  }
+  fun <T> serialize(obj: T): String = Jsons.serialize(obj)
 
   fun <T> deserialize(
     json: String,
     target: Class<T>,
-  ): T? {
-    return Jsons.deserialize(json, target)
-  }
+  ): T? = Jsons.deserialize(json, target)
 }

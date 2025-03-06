@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.temporal.TemporalConstants
@@ -31,20 +35,19 @@ import java.time.Duration
 class TemporalBeanFactory {
   @Singleton
   @Named("queueActivityOptions")
-  fun specActivityOptions(
+  fun queueActivityOptions(
     @Property(name = "airbyte.workload-launcher.workload-start-timeout") workloadStartTimeout: Duration,
-  ): ActivityOptions {
-    return ActivityOptions.newBuilder()
+  ): ActivityOptions =
+    ActivityOptions
+      .newBuilder()
       .setScheduleToCloseTimeout(workloadStartTimeout)
       .setRetryOptions(TemporalConstants.NO_RETRY)
       .build()
-  }
 
   @Singleton
   @Named("starterActivities")
-  fun workloadStarterActivities(launcherMessageConsumer: LauncherMessageConsumer): QueueActivity<LauncherInputMessage> {
-    return QueueActivityImpl(launcherMessageConsumer)
-  }
+  fun workloadStarterActivities(launcherMessageConsumer: LauncherMessageConsumer): QueueActivity<LauncherInputMessage> =
+    QueueActivityImpl(launcherMessageConsumer)
 
   @Named("workerFactory")
   @Singleton
@@ -114,7 +117,8 @@ class TemporalBeanFactory {
 
   private fun baseWorkerFactory(workflowClient: WorkflowClient): WorkerFactory {
     val workerFactoryOptions =
-      WorkerFactoryOptions.newBuilder()
+      WorkerFactoryOptions
+        .newBuilder()
         .setWorkerInterceptors(OpenTracingWorkerInterceptor())
         .build()
     return WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
@@ -127,7 +131,8 @@ class TemporalBeanFactory {
     queueName: String,
   ): Worker {
     val workerOptions =
-      WorkerOptions.newBuilder()
+      WorkerOptions
+        .newBuilder()
         .setMaxConcurrentActivityExecutionSize(paralellism)
         .setMaxConcurrentWorkflowTaskExecutionSize(workflowParalellism)
         .build()

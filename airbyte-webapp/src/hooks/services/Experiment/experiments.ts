@@ -10,6 +10,7 @@ export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
   "connection.columnSelection": boolean;
+  "connection.connectionsGraph": boolean;
   "connection.hashingUI": boolean;
   "connection.mappingsUI": boolean;
   "connection.onboarding.destinations": string;
@@ -19,20 +20,24 @@ export interface Experiments {
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "connectorBuilder.aiAssist.enabled": boolean;
+  "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
+  "connectorBuilder.declarativeOauth": boolean;
+  "platform.use-runtime-secret-persistence": boolean;
+  productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
-  "upcomingFeaturesPage.url": string;
 }
 
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
   "connection.columnSelection": true,
+  "connection.connectionsGraph": false,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
-  "connection.mappingsUI": false,
+  "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,
@@ -42,9 +47,12 @@ export const defaultExperimentValues: Experiments = {
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
+  "connectorBuilder.customComponents": false,
+  "connectorBuilder.declarativeOauth": true,
+  "platform.use-runtime-secret-persistence": false,
+  productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": false,
   "settings.showAdvancedSettings": false,
-  "upcomingFeaturesPage.url": "",
 };

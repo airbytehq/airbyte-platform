@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.auth
@@ -29,8 +29,8 @@ class WorkloadTokenValidator(
   override fun validateToken(
     token: String,
     request: HttpRequest<*>?,
-  ): Publisher<Authentication> {
-    return Flux.create<Authentication> { emitter: FluxSink<Authentication?> ->
+  ): Publisher<Authentication> =
+    Flux.create<Authentication> { emitter: FluxSink<Authentication?> ->
       if (authenticateRequest(token)) {
         LOGGER.debug { "Request authorized." }
         emitter.next(Authentication.build(WORKLOAD_API_USER))
@@ -40,11 +40,13 @@ class WorkloadTokenValidator(
         emitter.error(AuthenticationResponse.exception(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH))
       }
     }
-  }
 
-  private fun authenticateRequest(token: String): Boolean {
-    return Base64.getUrlDecoder().decode(token).decodeToString().trim() == bearerSecret
-  }
+  private fun authenticateRequest(token: String): Boolean =
+    Base64
+      .getUrlDecoder()
+      .decode(token)
+      .decodeToString()
+      .trim() == bearerSecret
 
   companion object {
     const val WORKLOAD_API_USER: String = "WORKLOAD_API_USER"

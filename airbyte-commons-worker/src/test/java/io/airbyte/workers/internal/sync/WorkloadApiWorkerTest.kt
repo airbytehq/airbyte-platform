@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.sync
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -92,7 +96,6 @@ internal class WorkloadApiWorkerTest {
     workloadApiWorker =
       WorkloadApiWorker(
         jobOutputDocStore,
-        apiClient,
         workloadApiClient,
         WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,

@@ -20,8 +20,8 @@ If the `SEGMENT` tracking strategy type is enabled, the write key must also be p
 environment variable. In addition to the type of analytics tracker, the following environment variables must also be set:
 
 * `AIRBYTE_ROLE`
+* `AIRBYTE_EDITION`
 * `AIRBYTE_VERSION`
-* `DEPLOYMENT_MODE`
 
 ## Development
 
@@ -40,7 +40,7 @@ micronaut:
       expire-after-access: 10m
       
 airbyte:
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}

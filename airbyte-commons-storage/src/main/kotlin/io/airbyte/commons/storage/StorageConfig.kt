@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -32,6 +32,7 @@ data class StorageBucketConfig(
   @Value("\${$STORAGE_BUCKET_WORKLOAD_OUTPUT}") val workloadOutput: String,
   @Value("\${$STORAGE_BUCKET_ACTIVITY_PAYLOAD}") val activityPayload: String,
   @Value("\${$STORAGE_BUCKET_AUDIT_LOGGING:}") val auditLogging: String?,
+  @Value("\${$STORAGE_BUCKET_PROFILER_OUTPUT:}") val profilerOutput: String?,
 )
 
 /**
@@ -114,10 +115,10 @@ data class S3StorageConfig(
       }
       put(EnvVar.STORAGE_TYPE, StorageType.S3.name)
       accessKey?.let {
-        put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
+        put(EnvVar.AWS_ACCESS_KEY_ID, it)
       }
       secretAccessKey?.let {
-        put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
+        put(EnvVar.AWS_SECRET_ACCESS_KEY, it)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
     }.mapKeys { it.key.name }
@@ -187,4 +188,4 @@ class LocalStorageConfig(
  *
  * Any non-null [String] that calls [mask] will return `"*******"`. Any null [String] will return `"null"`.
  */
-private fun String?.mask(): String = this?.let { "*******" } ?: "null"
+private fun String?.mask(): String = this?.let { _ -> "*******" } ?: "null"

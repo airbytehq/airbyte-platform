@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging
@@ -44,12 +44,11 @@ class LogClientManager(
    * @param logPath log path
    * @return The structured log events associated with the given log path (may be empty).
    */
-  fun getLogs(logPath: Path?): LogEvents {
-    return when {
+  fun getLogs(logPath: Path?): LogEvents =
+    when {
       logPath == null || logPath == EMPTY_PATH -> LogEvents(events = emptyList())
       else -> logClient.getLogs(logPath = logPath.toString(), numLines = logTailSize)
     }
-  }
 
   /**
    * Primarily to clean up logs after testing. Only valid for Kube logs.

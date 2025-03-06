@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -24,25 +28,21 @@ class AuditLoggingHelper(
     )
   }
 
-  fun getPermission(permissionId: UUID): Permission {
-    return permissionService.getPermission(permissionId = permissionId)
-  }
+  fun getPermission(permissionId: UUID): Permission = permissionService.getPermission(permissionId = permissionId)
 
-  fun getPermissionScope(permissionRead: PermissionRead): String {
-    return when {
+  fun getPermissionScope(permissionRead: PermissionRead): String =
+    when {
       permissionRead.organizationId != null -> "organization"
       permissionRead.workspaceId != null -> "workspace"
       else -> "instance"
     }
-  }
 
-  fun getPermissionScope(permission: Permission): String {
-    return when {
+  fun getPermissionScope(permission: Permission): String =
+    when {
       permission.organizationId != null -> "organization"
       permission.workspaceId != null -> "workspace"
       else -> "instance"
     }
-  }
 
   fun generateSummary(
     requestSummary: String,

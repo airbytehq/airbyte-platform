@@ -1,28 +1,44 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.mapper.configs
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaDescription(val description: String)
+annotation class SchemaDescription(
+  val description: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaTitle(val title: String)
+annotation class SchemaTitle(
+  val title: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaDefault(val defaultValue: String)
+annotation class SchemaDefault(
+  val defaultValue: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaExamples(vararg val examples: String)
+annotation class SchemaExamples(
+  vararg val examples: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaFormat(val format: String)
+annotation class SchemaFormat(
+  val format: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SchemaConstant(val constant: String)
+annotation class SchemaConstant(
+  val constant: String,
+)
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)

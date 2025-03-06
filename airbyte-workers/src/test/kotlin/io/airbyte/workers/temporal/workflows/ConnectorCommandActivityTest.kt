@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.workflows
 
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
@@ -6,9 +10,9 @@ import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.commands.CheckCommand

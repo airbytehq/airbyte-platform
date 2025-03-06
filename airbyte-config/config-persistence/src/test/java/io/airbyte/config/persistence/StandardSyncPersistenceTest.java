@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
@@ -29,6 +28,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -45,6 +45,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
@@ -66,6 +67,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -112,12 +114,15 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final var metricClient = mock(MetricClient.class);
     connectionService = new ConnectionServiceJooqImpl(database);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         new ActorDefinitionServiceJooqImpl(database),
-        mock(ScopedConfigurationService.class));
+        mock(ScopedConfigurationService.class),
+        connectionTimelineEventService);
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
@@ -125,7 +130,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
@@ -133,13 +139,15 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
     operationService = new OperationServiceJooqImpl(database);
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -300,6 +308,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         List.of(workspaceId),
         null,
         null,
+        null,
         true,
         1000,
         0
@@ -368,7 +377,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var expectedSync = createStandardSync(source1, destination1);
     final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
-        ActorType.DESTINATION.value(), false);
+        ActorType.DESTINATION.value(), false, false);
     assertThat(actualSyncs.size()).isEqualTo(1);
     assertThat(actualSyncs.get(0)).isEqualTo(expectedSync);
   }
@@ -474,7 +483,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(sourceDefId)
         .withDockerImageTag("tag-1")
@@ -499,7 +508,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(destDefId)
         .withDockerImageTag("tag-3")

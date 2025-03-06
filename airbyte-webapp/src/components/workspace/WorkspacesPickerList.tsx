@@ -1,4 +1,3 @@
-import { UseInfiniteQueryResult } from "@tanstack/react-query";
 import { HTMLAttributes, useRef, forwardRef, Ref, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useDebounce, useLocation, useUpdateEffect } from "react-use";
@@ -11,32 +10,24 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { WorkspaceRead, WorkspaceReadList } from "core/api/types/AirbyteClient";
-import { CloudWorkspaceRead, CloudWorkspaceReadList } from "core/api/types/CloudApi";
+import { useListWorkspacesInfinite } from "core/api";
+import { WorkspaceRead } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 
 import styles from "./WorkspacesPickerList.module.scss";
 
-export type WorkspaceFetcher = (
-  pageSize: number,
-  nameContains: string
-) => UseInfiniteQueryResult<
-  {
-    data: CloudWorkspaceReadList | WorkspaceReadList;
-    pageParam: number;
-  },
-  unknown
->;
-
 interface WorkspacePickerListProps {
   closePicker: () => void;
-  useFetchWorkspaces: WorkspaceFetcher;
 }
 
-const ListRow: ItemContent<CloudWorkspaceRead | WorkspaceRead, null> = (_index, workspace) => {
+const ListRow: ItemContent<WorkspaceRead, null> = (_index, workspace) => {
   return (
-    <Link variant="primary" to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}>
+    <Link
+      variant="primary"
+      to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}
+      data-testid={`workspace-picker-item-${workspace.workspaceId}`}
+    >
       <Box py="md" px="md" className={styles.workspacesPickerList__item}>
         <FlexContainer direction="column" justifyContent="center" gap="sm">
           <Text align="left" color="blue" bold size="md">
@@ -48,8 +39,7 @@ const ListRow: ItemContent<CloudWorkspaceRead | WorkspaceRead, null> = (_index, 
   );
 };
 
-const computeItemKey: ComputeItemKey<CloudWorkspaceRead | WorkspaceRead, null> = (_index, { workspaceId }) =>
-  workspaceId;
+const computeItemKey: ComputeItemKey<WorkspaceRead, null> = (_index, { workspaceId }) => workspaceId;
 
 // Virtuoso's `List` ref is an HTMLDivElement so we're coercing some types here
 const UlList = forwardRef<HTMLDivElement>((props, ref) => (
@@ -61,7 +51,7 @@ const UlList = forwardRef<HTMLDivElement>((props, ref) => (
 ));
 UlList.displayName = "UlList";
 
-export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ closePicker, useFetchWorkspaces }) => {
+export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ closePicker }) => {
   const location = useLocation();
 
   const [searchValue, setSearchValue] = useState("");
@@ -73,10 +63,9 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
     fetchNextPage,
     isLoading,
     isFetchingNextPage,
-  } = useFetchWorkspaces(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
+  } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
-  const workspaces =
-    workspacesData?.pages.flatMap<CloudWorkspaceRead | WorkspaceRead>((page) => page.data.workspaces) ?? [];
+  const workspaces = workspacesData?.pages.flatMap<WorkspaceRead>((page) => page.data.workspaces) ?? [];
 
   const handleEndReached = () => {
     if (hasNextPage) {
@@ -101,7 +90,12 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
 
   return (
     <>
-      <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} inline />
+      <SearchInput
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
+        inline
+        data-testid="workspaces-picker-input"
+      />
 
       {isLoading ? (
         <Box p="lg">
@@ -147,7 +141,7 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
             </Box>
           )}
           <Box py="lg">
-            <Link variant="primary" to={`/${RoutePaths.Workspaces}`}>
+            <Link variant="primary" to={`/${RoutePaths.Workspaces}`} data-testid="workspaces-picker-see-all">
               <Text color="blue" size="md" bold align="center">
                 <FormattedMessage id="workspaces.seeAll" />
               </Text>

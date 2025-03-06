@@ -8,7 +8,8 @@ import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { jobHasFormattedLogs } from "area/connection/utils/jobs";
+import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { jobHasFormattedLogs, jobHasStructuredLogs } from "area/connection/utils/jobs";
 import { JobConfigType, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { downloadFile } from "core/utils/file";
 
@@ -158,6 +159,23 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
                 icon={<DownloadButton configType={job.configType} id={job.id} logLines={job.logs.logLines} />}
               />
               {isLogsExpanded && <Logs follow logsArray={job.logs.logLines} />}
+            </FlexItem>
+          )}
+          {jobHasStructuredLogs(job) && job.logs.events && job.logs.events.length > 0 && (
+            <FlexItem>
+              <DisclosureHeader
+                toggle={toggleLogs}
+                expanded={isLogsExpanded}
+                messageId="jobs.failure.expandLogs"
+                icon={
+                  <DownloadButton
+                    configType={job.configType}
+                    id={job.id}
+                    logLines={job.logs.events.map(formatLogEvent)}
+                  />
+                }
+              />
+              {isLogsExpanded && <Logs follow logsArray={job.logs.events.map(formatLogEvent)} />}
             </FlexItem>
           )}
         </FlexContainer>

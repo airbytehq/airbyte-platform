@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the java secret name
-*/}}
-{{- define "airbyte.java.secretName" }}
-{{- if .Values.global.java.secretName }}
-    {{- .Values.global.java.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.java.opts value
 */}}
 {{- define "airbyte.java.opts" }}
@@ -45,5 +34,5 @@ Renders the set of all java environment variables
 Renders the set of all java config map variables
 */}}
 {{- define "airbyte.java.configVars" }}
-JAVA_TOOL_OPTIONS: {{ join " " .Values.global.java.opts | quote }}
+JAVA_TOOL_OPTIONS: {{ include "airbyte.java.opts" . | quote }}
 {{- end }}

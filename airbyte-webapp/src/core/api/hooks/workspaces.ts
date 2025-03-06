@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect } from "react";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
+import { useListPermissions } from "./permissions";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -37,6 +38,7 @@ export const workspaceKeys = {
   usage: (workspaceId: string, timeWindow: ConsumptionTimeWindow) =>
     [...workspaceKeys.all, "usage", workspaceId, timeWindow] as const,
 };
+type WorkspacesCount = { count: "zero" } | { count: "one"; workspace: WorkspaceRead } | { count: "multiple" };
 
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
@@ -138,6 +140,27 @@ export const useListWorkspacesInfinite = (pageSize: number, nameContains: string
   );
 };
 
+export const useWorkspaceCount = () => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(
+    workspaceKeys.list({ pageSize: "2", nameContains: "", rowOffset: "0" }),
+    async (): Promise<WorkspacesCount> =>
+      listWorkspacesByUser(
+        { userId, nameContains: "", pagination: { pageSize: 2, rowOffset: 0 } },
+        requestOptions
+      ).then((workspaces) => {
+        if (workspaces.workspaces.length === 0) {
+          return { count: "zero" };
+        } else if (workspaces.workspaces.length === 1) {
+          return { count: "one", workspace: workspaces.workspaces[0] };
+        }
+        return { count: "multiple" };
+      })
+  );
+};
+
 export const useUpdateWorkspace = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
@@ -207,4 +230,18 @@ export const useListWorkspaceAccessUsers = (workspaceId: string) => {
   const queryKey = workspaceKeys.listAccessUsers(workspaceId);
 
   return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
+};
+
+/**
+ * Checks whether a user is in a foreign workspace. A foreign workspace is any workspace the user doesn't
+ * have explicit permissions to via workspace permissions or being part of the organization the workspace is in.
+ */
+export const useIsForeignWorkspace = () => {
+  const { userId } = useCurrentUser();
+  const { permissions } = useListPermissions(userId);
+  const { workspaceId, organizationId } = useCurrentWorkspace();
+
+  return !permissions.some(
+    (permission) => permission.workspaceId === workspaceId || permission.organizationId === organizationId
+  );
 };

@@ -14,8 +14,8 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./DownloadYamlButton.module.scss";
-import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface DownloadYamlButtonProps {
   className?: string;

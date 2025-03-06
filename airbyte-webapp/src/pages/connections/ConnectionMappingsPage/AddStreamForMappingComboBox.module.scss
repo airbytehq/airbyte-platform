@@ -1,9 +1,28 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/z-indices";
 
 .addStreamForMappingComboBox {
   min-width: variables.$width-extra-wide-menu;
   border-radius: variables.$border-radius-md;
+
+  .caretButton {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: colors.$dark-blue-900;
+    padding-inline: 8px;
+  }
+
+  &:not(:focus-within) {
+    .caretButton {
+      color: colors.$foreground;
+    }
+  }
 
   &--secondary {
     border: variables.$border-thin solid colors.$grey-100;
@@ -11,27 +30,28 @@
 
     input {
       color: colors.$grey-400;
+      border-radius: variables.$border-radius-md;
+      background-color: colors.$foreground;
+      cursor: pointer;
 
-      &:hover {
-        color: colors.$grey-400;
+      &.disabled {
+        cursor: default;
       }
 
-      &::placeholder {
-        color: colors.$grey-300;
+      &:not(:focus-within) {
+        font-weight: 600;
+        background-color: colors.$foreground;
+        color: colors.$grey-400;
+
+        &::placeholder {
+          color: colors.$grey-400;
+          text-align: center;
+        }
       }
     }
 
-    &:not(:focus-within) {
-      background-color: colors.$white;
+    &.addStreamForMappingComboBox--secondary:hover input::placeholder {
       color: colors.$grey-400;
-
-      input {
-        cursor: pointer;
-      }
-
-      button svg {
-        color: colors.$white;
-      }
     }
 
     &:not(.disabled):hover {
@@ -39,17 +59,9 @@
       color: colors.$grey-600;
     }
 
-    input:not(:focus-within) {
-      font-weight: 600;
-      color: colors.$grey-400;
-
-      &::placeholder {
-        color: colors.$grey-400;
-        text-align: center;
-      }
-    }
-
     &.disabled {
+      cursor: default;
+
       input:not(:focus-within) {
         font-weight: 600;
         color: colors.$grey-100;
@@ -85,5 +97,31 @@
   .disabled {
     background-color: colors.$grey-300;
     color: colors.$white;
+  }
+}
+
+.comboboxOptions {
+  z-index: z-indices.$listBox;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: variables.$box-shadow-raised;
+  padding: 0;
+  width: variables.$width-extra-wide-menu;
+  max-height: variables.$height-long-listbox-options-list;
+  list-style-type: none;
+  overflow-y: auto;
+}
+
+.comboboxOption {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  cursor: pointer;
+  word-break: break-all;
+
+  &:not(.disabled):hover,
+  &:not(.disabled):focus-within,
+  &[data-active] {
+    background-color: colors.$grey-50;
+    height: 100%;
+    width: 100%;
   }
 }

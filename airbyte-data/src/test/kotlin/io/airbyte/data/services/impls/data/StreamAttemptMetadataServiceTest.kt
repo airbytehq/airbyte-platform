@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.AbstractConfigRepositoryTest
@@ -90,7 +94,8 @@ internal class StreamAttemptMetadataServiceTest : AbstractConfigRepositoryTest()
     attemptNumber: Long,
     attemptId: Long,
   ): Long =
-    attemptsRepository.save(
-      Attempt(id = attemptId, jobId = jobId, attemptNumber = attemptNumber),
-    ).id ?: throw Exception("failed to create attempt for jobId:$jobId with attemptNumber:$attemptNumber")
+    attemptsRepository
+      .save(
+        Attempt(id = attemptId, jobId = jobId, attemptNumber = attemptNumber),
+      ).id ?: throw Exception("failed to create attempt for jobId:$jobId with attemptNumber:$attemptNumber")
 }

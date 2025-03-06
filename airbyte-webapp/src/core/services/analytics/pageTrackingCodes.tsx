@@ -23,6 +23,7 @@ export enum PageTrackingCodes {
   CONNECTIONS_ITEM_TIMELINE = "Connections.Item.Timeline",
   SETTINGS_ACCOUNT = "Settings.Account",
   SETTINGS_WORKSPACE = "Settings.Workspace",
+  SETTINGS_WORKSPACEMEMBERS = "Settings.WorkspaceMembers",
   SETTINGS_WORKSPACE_USAGE = "Settings.WorkspaceUsage",
   SETTINGS_ORGANIZATION = "Settings.Organization",
   SETTINGS_ORGANIZATIONMEMBERS = "Settings.OrganizationMembers",

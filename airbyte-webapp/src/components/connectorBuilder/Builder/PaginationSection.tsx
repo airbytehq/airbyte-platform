@@ -21,9 +21,9 @@ import {
   OFFSET_INCREMENT,
   PAGE_INCREMENT,
   StreamPathFn,
-  useBuilderWatch,
   builderPaginatorToManifest,
 } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface PaginationSectionProps {
   streamFieldPath: StreamPathFn;

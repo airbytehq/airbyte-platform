@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.commons.json.Jsons
@@ -50,7 +54,11 @@ class DestinationCatalogGeneratorTest {
 
     val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
-    assertEquals(catalog.streams[0].stream.jsonSchema, catalogCopy.catalog.streams[0].stream.jsonSchema)
+    assertEquals(
+      catalog.streams[0].stream.jsonSchema,
+      catalogCopy.catalog.streams[0]
+        .stream.jsonSchema,
+    )
   }
 
   @Test
@@ -346,7 +354,11 @@ class DestinationCatalogGeneratorTest {
 
     val result = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
 
-    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    assertTrue(
+      result.catalog.streams[0]
+        .mappers
+        .isEmpty(),
+    )
     val streamDescriptor = StreamDescriptor().withName("users")
     assertEquals(DestinationCatalogGenerator.MapperErrorType.MISSING_MAPPER, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
@@ -380,7 +392,11 @@ class DestinationCatalogGeneratorTest {
 
     val result = destinationCatalogGeneratorWithFailingMapper.generateDestinationCatalog(catalog)
 
-    assertTrue(result.catalog.streams[0].mappers.isEmpty())
+    assertTrue(
+      result.catalog.streams[0]
+        .mappers
+        .isEmpty(),
+    )
     val streamDescriptor = StreamDescriptor().withName("users")
     assertEquals(DestinationCatalogGenerator.MapperErrorType.INVALID_MAPPER_CONFIG, result.errors[streamDescriptor]?.get(mapperConfig)?.type)
   }
@@ -511,7 +527,8 @@ class DestinationCatalogGeneratorTest {
           "additionalProperties" to true,
         ),
       ),
-      catalogCopy.catalog.streams[0].stream.jsonSchema,
+      catalogCopy.catalog.streams[0]
+        .stream.jsonSchema,
     )
     assertEquals(
       Jsons.jsonNode(
@@ -525,7 +542,8 @@ class DestinationCatalogGeneratorTest {
           "additionalProperties" to true,
         ),
       ),
-      catalogCopy.catalog.streams[1].stream.jsonSchema,
+      catalogCopy.catalog.streams[1]
+        .stream.jsonSchema,
     )
   }
 

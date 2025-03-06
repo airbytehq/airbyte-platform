@@ -17,7 +17,6 @@ var allApps = []string{
 	"airbyte-bootloader",
 	"metrics",
 	"temporal",
-	"pod-sweeper",
 	"workload-api-server",
 	"workload-launcher",
 }

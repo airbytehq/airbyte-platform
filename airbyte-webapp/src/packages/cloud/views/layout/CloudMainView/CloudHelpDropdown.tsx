@@ -3,9 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Icon } from "components/ui/Icon";
 
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { links } from "core/utils/links";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useZendesk } from "packages/cloud/services/thirdParty/zendesk";
 import { HelpDropdownProps } from "views/layout/SideBar/components/HelpDropdown";
 import { NavDropdown } from "views/layout/SideBar/components/NavDropdown";
@@ -14,7 +12,6 @@ export const CloudHelpDropdown: React.FC<HelpDropdownProps> = ({ className, hide
   const { formatMessage } = useIntl();
   const { openZendesk } = useZendesk();
   const handleChatUs = (data: DropdownMenuOptionType) => data.value === "inApp" && openZendesk();
-  const createLink = useCurrentWorkspaceLink();
 
   return (
     <NavDropdown
@@ -46,13 +43,6 @@ export const CloudHelpDropdown: React.FC<HelpDropdownProps> = ({ className, hide
           href: links.statusLink,
           icon: <Icon type="pulse" />,
           displayName: formatMessage({ id: "sidebar.status" }),
-        },
-        {
-          as: "a",
-          internal: true,
-          href: createLink(`/${CloudRoutes.UpcomingFeatures}`),
-          icon: <Icon type="calendarCheck" />,
-          displayName: formatMessage({ id: "sidebar.upcomingFeatures" }),
         },
       ]}
       onChange={handleChatUs}

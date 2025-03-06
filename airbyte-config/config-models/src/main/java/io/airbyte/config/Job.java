@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -32,6 +32,7 @@ public class Job {
   private final long createdAtInSecond;
   private final long updatedAtInSecond;
   private final List<Attempt> attempts;
+  private final boolean isScheduled;
 
   public Job(final long id,
              final ConfigType configType,
@@ -41,7 +42,8 @@ public class Job {
              final JobStatus status,
              final @Nullable Long startedAtInSecond,
              final long createdAtInSecond,
-             final long updatedAtInSecond) {
+             final long updatedAtInSecond,
+             final boolean isScheduled) {
     this.id = id;
     this.configType = configType;
     this.scope = scope;
@@ -51,6 +53,7 @@ public class Job {
     this.startedAtInSecond = startedAtInSecond;
     this.createdAtInSecond = createdAtInSecond;
     this.updatedAtInSecond = updatedAtInSecond;
+    this.isScheduled = isScheduled;
   }
 
   /**
@@ -141,6 +144,15 @@ public class Job {
    */
   public long getUpdatedAtInSecond() {
     return updatedAtInSecond;
+  }
+
+  /**
+   * Get if the job is scheduled.
+   *
+   * @return true if scheduled, false otherwise.
+   */
+  public boolean isScheduled() {
+    return isScheduled;
   }
 
   /**
@@ -250,42 +262,37 @@ public class Job {
   }
 
   @Override
-  public boolean equals(final Object o) {
+  public boolean equals(Object o) {
     if (this == o) {
       return true;
     }
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final Job job = (Job) o;
-    return id == job.id
-        && createdAtInSecond == job.createdAtInSecond
-        && updatedAtInSecond == job.updatedAtInSecond
-        && Objects.equals(scope, job.scope)
-        && Objects.equals(config, job.config)
-        && Objects.equals(configType, job.configType)
-        && status == job.status
-        && Objects.equals(startedAtInSecond, job.startedAtInSecond)
-        && Objects.equals(attempts, job.attempts);
+    Job job = (Job) o;
+    return id == job.id && createdAtInSecond == job.createdAtInSecond && updatedAtInSecond == job.updatedAtInSecond && isScheduled == job.isScheduled
+        && configType == job.configType && Objects.equals(scope, job.scope) && Objects.equals(config, job.config) && status == job.status
+        && Objects.equals(startedAtInSecond, job.startedAtInSecond) && Objects.equals(attempts, job.attempts);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, scope, config, configType, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts);
+    return Objects.hash(id, configType, scope, config, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts, isScheduled);
   }
 
   @Override
   public String toString() {
     return "Job{"
         + "id=" + id
+        + ", configType=" + configType
         + ", scope='" + scope + '\''
         + ", config=" + config
-        + ", config_type=" + configType
         + ", status=" + status
         + ", startedAtInSecond=" + startedAtInSecond
         + ", createdAtInSecond=" + createdAtInSecond
         + ", updatedAtInSecond=" + updatedAtInSecond
         + ", attempts=" + attempts
+        + ", isScheduled=" + isScheduled
         + '}';
   }
 

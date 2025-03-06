@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -33,12 +33,15 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AuthenticationHeaderResolverTest {
 
@@ -154,11 +157,16 @@ class AuthenticationHeaderResolverTest {
     assertNull(workspaceId);
   }
 
-  @Test
-  void testResolvingWithException() throws JsonValidationException, ConfigNotFoundException {
+  @ParameterizedTest
+  @ValueSource(classes = {JsonValidationException.class, NumberFormatException.class, ConfigNotFoundException.class})
+  void testResolvingWithException(final Class<Throwable> exceptionType)
+      throws JsonValidationException, ConfigNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
+      IllegalAccessException {
     final UUID connectionId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(CONNECTION_ID_HEADER, connectionId.toString());
-    when(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenThrow(new JsonValidationException("test"));
+    final Throwable exception = exceptionType.equals(ConfigNotFoundException.class) ? new ConfigNotFoundException("type", "id")
+        : exceptionType.getDeclaredConstructor(String.class).newInstance("test");
+    when(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenThrow(exception);
 
     final List<UUID> workspaceId = resolver.resolveWorkspace(properties);
     assertNull(workspaceId);

@@ -42,12 +42,11 @@ export function getLabelAndTooltip(
   label: string | undefined,
   tooltip: React.ReactNode | undefined,
   manifestPath: string | undefined,
-  path: string,
   omitExamples = false,
   manifestOptionPaths?: string[]
-): { label: string; tooltip: React.ReactNode | undefined } {
+): { label: string | undefined; tooltip: React.ReactNode | undefined } {
   const manifestDescriptor = manifestPath ? getDescriptor(manifestPath) : undefined;
-  const finalLabel = label || manifestDescriptor?.title || path;
+  const finalLabel = (label || manifestDescriptor?.title) ?? undefined;
   const finalDescription: ReactNode = manifestDescriptor?.description ? (
     <ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>
   ) : undefined;

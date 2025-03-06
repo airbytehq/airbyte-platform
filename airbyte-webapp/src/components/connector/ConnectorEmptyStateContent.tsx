@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { createSearchParams, useNavigate } from "react-router-dom";
 
 import { useConnectorSpecificationMap } from "components/connection/ConnectionOnboarding/ConnectionOnboarding";
@@ -11,7 +11,10 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
+import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useCurrentWorkspace } from "core/api";
+import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectorEmptyStateContent.module.scss";
@@ -40,19 +43,29 @@ export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProp
   connectorType,
   connectorName,
 }) => {
+  const { activeConnectionLimitReached, limits } = useCurrentWorkspaceLimits();
+  const { openModal } = useModalService();
   const { sourceDefinitions, destinationDefinitions } = useConnectorSpecificationMap();
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
+  const { formatMessage } = useIntl();
 
   const onButtonClick = () => {
-    const basePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+    if (activeConnectionLimitReached && limits) {
+      openModal({
+        title: formatMessage({ id: "workspaces.activeConnectionLimitReached.title" }),
+        content: () => <ActiveConnectionLimitReachedModal connectionCount={limits.activeConnections.current} />,
+      });
+    } else {
+      const basePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
 
-    const searchParams =
-      connectorType === "source"
-        ? createSearchParams({ sourceId: connectorId })
-        : createSearchParams({ destinationId: connectorId });
+      const searchParams =
+        connectorType === "source"
+          ? createSearchParams({ sourceId: connectorId })
+          : createSearchParams({ destinationId: connectorId });
 
-    navigate({ pathname: basePath, search: `?${searchParams}` });
+      navigate({ pathname: basePath, search: `?${searchParams}` });
+    }
   };
 
   const roundConnectorCount = (): number => {

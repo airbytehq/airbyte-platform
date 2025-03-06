@@ -18,7 +18,8 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
-import { isEmptyOrDefault, useBuilderWatch } from "../types";
+import { isEmptyOrDefault } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { formatJson } from "../utils";
 
 interface SchemaDiffViewProps {

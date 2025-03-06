@@ -3,7 +3,7 @@ micronaut:
     port: -1
 
 airbyte:
-  deployment-mode: OSS
+  edition: COMMUNITY
   role: ${AIRBYTE_ROLE:}
   version: 0.4128173.0
   acceptance:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth;
@@ -139,6 +139,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-zendesk-talk", new ZendeskTalkOAuthFlow(httpClient));
     builder.put("airbyte/destination-snowflake", new DestinationSnowflakeOAuthFlow(httpClient));
     builder.put("airbyte/destination-google-sheets", new DestinationGoogleSheetsOAuthFlow(httpClient));
+    builder.put("airbyte/destination-cobra", new SalesforceOAuthFlow(httpClient));
     oauthFlowMapping = builder.build();
   }
 

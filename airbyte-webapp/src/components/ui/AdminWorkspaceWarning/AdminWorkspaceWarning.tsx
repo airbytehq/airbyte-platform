@@ -4,7 +4,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useIsForeignWorkspace } from "core/api/cloud";
+import { useIsForeignWorkspace } from "core/api";
 
 import styles from "./AdminWorkspaceWarning.module.scss";
 

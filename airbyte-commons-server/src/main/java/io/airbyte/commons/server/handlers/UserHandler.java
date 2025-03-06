@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -522,9 +522,6 @@ public class UserHandler {
   private AuthenticatedUser resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
     final AuthenticatedUser incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
-    if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
-      throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
-    }
     return incomingJwtUser;
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -42,8 +42,7 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivit
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivityImpl;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.workflows.MockConnectorCommandWorkflow;
-import io.airbyte.workers.temporal.workflows.MockDiscoverCatalogAndAutoPropagateWorkflow;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityCancellationType;
@@ -61,7 +60,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,12 +79,9 @@ class SyncWorkflowTest {
   private AsyncReplicationActivity asyncReplicationActivity;
   private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
   private WorkloadStatusCheckActivity workloadStatusCheckActivity;
-  private ReplicationActivityImpl replicationActivity;
   private InvokeOperationsActivity invokeOperationsActivity;
-  private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
   private ReportRunTimeActivity reportRunTimeActivity;
-  private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
 
   // AIRBYTE CONFIGURATION
   private static final long JOB_ID = 11L;
@@ -121,7 +116,6 @@ class SyncWorkflowTest {
   private SyncStats syncStats;
   private ActivityOptions longActivityOptions;
   private ActivityOptions shortActivityOptions;
-  private ActivityOptions discoveryActivityOptions;
   private ActivityOptions refreshSchemaActivityOptions;
   private ActivityOptions asyncReplicationActivityOptions;
   private ActivityOptions workloadStatusCheckActivityOptions;
@@ -131,38 +125,31 @@ class SyncWorkflowTest {
   void setUp() {
     testEnv = TestWorkflowEnvironment.newInstance();
 
-    final Worker discoverWorker = testEnv.newWorker(TemporalJobType.DISCOVER_SCHEMA.name());
-    discoverWorker.registerWorkflowImplementationTypes(MockDiscoverCatalogAndAutoPropagateWorkflow.class);
-
     final Worker connectorCommandWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
     connectorCommandWorker.registerWorkflowImplementationTypes(MockConnectorCommandWorkflow.class);
 
     syncWorker = testEnv.newWorker(SYNC_QUEUE);
     client = testEnv.getWorkflowClient();
 
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
-    sync = syncPair.getKey();
-    syncInput = syncPair.getValue().withSourceId(SOURCE_ID);
+    final var syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
+    sync = syncPair.getFirst();
+    syncInput = syncPair.getSecond().withSourceId(SOURCE_ID);
 
     syncStats = new SyncStats().withRecordsCommitted(10L);
     standardSyncSummary = new StandardSyncSummary().withTotalStats(syncStats);
     failedSyncSummary = new StandardSyncSummary().withStatus(ReplicationStatus.FAILED).withTotalStats(new SyncStats().withRecordsEmitted(0L));
     replicationSuccessOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
     replicationFailOutput = new StandardSyncOutput().withStandardSyncSummary(failedSyncSummary);
-    replicationActivity = mock(ReplicationActivityImpl.class);
     asyncReplicationActivity = mock(AsyncReplicationActivityImpl.class);
     discoverCatalogHelperActivity = mock(DiscoverCatalogHelperActivityImpl.class);
     workloadStatusCheckActivity = mock(WorkloadStatusCheckActivityImpl.class);
     invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
-    refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
-    syncFeatureFlagFetcherActivity = mock(SyncFeatureFlagFetcherActivityImpl.class);
 
     when(discoverCatalogHelperActivity.postprocess(any())).thenReturn(PostprocessCatalogOutput.Companion.success(null));
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
-    when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
     when(configFetchActivity.getStatus(sync.getConnectionId())).thenReturn(Optional.of(ConnectionStatus.ACTIVE));
     when(configFetchActivity.getSourceConfig(SOURCE_ID)).thenReturn(Jsons.emptyObject());
 
@@ -181,10 +168,6 @@ class SyncWorkflowTest {
             .setInitialInterval(Duration.ofSeconds(30))
             .setMaximumInterval(Duration.ofSeconds(600))
             .build())
-        .build();
-    discoveryActivityOptions = ActivityOptions.newBuilder()
-        .setStartToCloseTimeout(Duration.ofSeconds(360))
-        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
     refreshSchemaActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(360))
@@ -211,11 +194,6 @@ class SyncWorkflowTest {
     when(shortActivitiesBeanIdentifier.getName()).thenReturn("shortActivityOptions");
     when(shortActivityOptionsBeanRegistration.getIdentifier()).thenReturn(shortActivitiesBeanIdentifier);
     when(shortActivityOptionsBeanRegistration.getBean()).thenReturn(shortActivityOptions);
-    final BeanIdentifier discoveryActivityBeanIdentifier = mock(BeanIdentifier.class);
-    final BeanRegistration discoveryActivityOptionsBeanRegistration = mock(BeanRegistration.class);
-    when(discoveryActivityBeanIdentifier.getName()).thenReturn("discoveryActivityOptions");
-    when(discoveryActivityOptionsBeanRegistration.getIdentifier()).thenReturn(discoveryActivityBeanIdentifier);
-    when(discoveryActivityOptionsBeanRegistration.getBean()).thenReturn(discoveryActivityOptions);
     final BeanIdentifier refreshSchemaActivityBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration refreshSchemaActivityOptionsBeanRegistration = mock(BeanRegistration.class);
     when(refreshSchemaActivityBeanIdentifier.getName()).thenReturn("refreshSchemaActivityOptions");
@@ -232,7 +210,7 @@ class SyncWorkflowTest {
     when(workloadStatusCheckActivityOptionsBeanRegistration.getIdentifier()).thenReturn(workloadStatusCheckActivitiesBeanIdentifier);
     when(workloadStatusCheckActivityOptionsBeanRegistration.getBean()).thenReturn(workloadStatusCheckActivityOptions);
     temporalProxyHelper = new TemporalProxyHelper(
-        List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration, discoveryActivityOptionsBeanRegistration,
+        List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration,
             refreshSchemaActivityOptionsBeanRegistration, asyncActivityOptionsBeanRegistration, workloadStatusCheckActivityOptionsBeanRegistration));
 
     syncWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
@@ -249,15 +227,13 @@ class SyncWorkflowTest {
 
   // bundle up all the temporal worker setup / execution into one method.
   private StandardSyncOutput execute(final boolean isReset) {
-    syncWorker.registerActivitiesImplementations(replicationActivity,
+    syncWorker.registerActivitiesImplementations(
         asyncReplicationActivity,
         discoverCatalogHelperActivity,
         workloadStatusCheckActivity,
         invokeOperationsActivity,
-        refreshSchemaActivity,
         configFetchActivity,
-        reportRunTimeActivity,
-        syncFeatureFlagFetcherActivity);
+        reportRunTimeActivity);
     testEnv.start();
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());
@@ -351,7 +327,6 @@ class SyncWorkflowTest {
 
   @Test
   void testGetProperFailureIfRefreshFails() throws Exception {
-    when(refreshSchemaActivity.shouldRefreshSchema(any())).thenReturn(true);
     doThrow(new RuntimeException())
         .when(discoverCatalogHelperActivity).postprocess(any());
     final StandardSyncOutput output = execute();

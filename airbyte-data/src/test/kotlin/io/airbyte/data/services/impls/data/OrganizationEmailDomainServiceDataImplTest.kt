@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.OrganizationEmailDomainRepository
@@ -37,7 +41,8 @@ internal class OrganizationEmailDomainServiceDataImplTest {
     assert(result.size == 1)
 
     val expectedOrgEmailDomain =
-      io.airbyte.config.OrganizationEmailDomain()
+      io.airbyte.config
+        .OrganizationEmailDomain()
         .withId(id)
         .withEmailDomain("airbyte.io")
         .withOrganizationId(orgId)

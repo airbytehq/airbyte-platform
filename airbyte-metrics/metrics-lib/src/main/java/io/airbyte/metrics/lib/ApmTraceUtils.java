@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -12,6 +12,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 
 import datadog.trace.api.DDTags;
 import datadog.trace.api.interceptor.MutableSpan;
+import io.airbyte.metrics.MetricAttribute;
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
@@ -49,7 +50,7 @@ public class ApmTraceUtils {
    */
   public static void addTagsToTrace(final List<MetricAttribute> attrs) {
     final Map<String, Object> tags = attrs.stream()
-        .collect(Collectors.toMap(MetricAttribute::key, MetricAttribute::value));
+        .collect(Collectors.toMap(MetricAttribute::getKey, MetricAttribute::getValue));
 
     addTagsToTrace(tags, TAG_PREFIX);
   }
@@ -144,9 +145,7 @@ public class ApmTraceUtils {
     final Span activeSpan = GlobalTracer.get().activeSpan();
     if (activeSpan instanceof MutableSpan) {
       final MutableSpan localRootSpan = ((MutableSpan) activeSpan).getLocalRootSpan();
-      tags.entrySet().forEach(entry -> {
-        localRootSpan.setTag(formatTag(entry.getKey(), TAG_PREFIX), entry.getValue().toString());
-      });
+      tags.forEach((key, value) -> localRootSpan.setTag(formatTag(key, TAG_PREFIX), value.toString()));
     }
   }
 

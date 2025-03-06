@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -17,13 +17,12 @@ object PermissionReadMapper {
    * @param permissionRead Output of a permission create from config api
    * @return PermissionResponse Response object with permission details
    */
-  fun from(permissionRead: PermissionRead): PermissionResponse {
-    return PermissionResponse(
+  fun from(permissionRead: PermissionRead): PermissionResponse =
+    PermissionResponse(
       permissionId = permissionRead.permissionId,
       permissionType = enumValueOf(permissionRead.permissionType.name),
       userId = permissionRead.userId,
       workspaceId = permissionRead.workspaceId,
       organizationId = permissionRead.organizationId,
     )
-  }
 }

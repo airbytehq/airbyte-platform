@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -57,11 +57,12 @@ class JwtTokenParserTest {
 
   @Test
   void testResolveSsoRealm_firebase() throws Exception {
-    JsonNode jsonNode = new ObjectMapper().readTree("{\"iss\": \"https://securetoken.google.com/test-firebase\"}");
+    var issuer = "https://securetoken.google.com/test-firebase";
+    JsonNode jsonNode = new ObjectMapper().readTree("{\"iss\": \"" + issuer + "\"}");
 
     final Map<String, Object> resolvedJwtMap = JwtTokenParser.convertJwtPayloadToUserAttributes(jsonNode);
 
-    assertNull(resolvedJwtMap.get(JwtTokenParser.JWT_SSO_REALM));
+    assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_SSO_REALM), issuer);
   }
 
   @Test

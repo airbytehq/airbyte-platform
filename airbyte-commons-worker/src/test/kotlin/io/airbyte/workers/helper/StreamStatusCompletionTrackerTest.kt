@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper
@@ -188,8 +188,8 @@ internal class StreamStatusCompletionTrackerTest {
   private fun getStreamStatusCompletedMessage(
     name: String,
     namespace: String? = null,
-  ): AirbyteMessage {
-    return AirbyteMessage()
+  ): AirbyteMessage =
+    AirbyteMessage()
       .withType(AirbyteMessage.Type.TRACE)
       .withTrace(
         AirbyteTraceMessage()
@@ -199,11 +199,11 @@ internal class StreamStatusCompletionTrackerTest {
             AirbyteStreamStatusTraceMessage()
               .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
               .withStreamDescriptor(
-                io.airbyte.protocol.models.StreamDescriptor()
+                io.airbyte.protocol.models
+                  .StreamDescriptor()
                   .withName(name)
                   .withNamespace(namespace),
               ),
           ),
       )
-  }
 }

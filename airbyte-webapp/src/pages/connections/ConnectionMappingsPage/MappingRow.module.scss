@@ -19,24 +19,29 @@
       font-size: variables.$font-size-md;
     }
   }
-}
 
-.input {
-  width: variables.$width-extra-wide-menu;
+  &__content {
+    flex: 1;
+  }
+
+  &__contentItem {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: variables.$spacing-xs;
+    align-items: flex-start;
+    min-height: variables.$form-input-height;
+
+    &--input {
+      width: variables.$width-extra-wide-menu;
+    }
+  }
 }
 
 .controlButton {
   padding: 7px 8px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-.rowContent {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
 }
 
 .form {
@@ -48,4 +53,10 @@
   p {
     white-space: nowrap;
   }
+}
+
+// will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
+// for now setting this as a one off
+.disabled.disabled {
+  cursor: default;
 }

@@ -1,0 +1,29 @@
+@use "scss/variables";
+@use "scss/colors";
+
+%value {
+  display: inline;
+  padding: 0 variables.$spacing-sm;
+  border-radius: variables.$border-radius-xs;
+}
+
+.value {
+  @extend %value;
+
+  color: colors.$grey-500;
+}
+
+.prevValue {
+  @extend %value;
+
+  text-decoration: line-through;
+  background-color: colors.$grey-100;
+  color: colors.$grey-400;
+}
+
+.currentValue {
+  @extend %value;
+
+  background-color: colors.$green-50;
+  color: colors.$grey-500;
+}

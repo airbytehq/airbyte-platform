@@ -6,8 +6,9 @@ import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
-import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
+import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
@@ -80,40 +81,38 @@ export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStr
     }
   };
 
-  const cursorButton =
-    config?.selected && cursorType ? (
-      <CatalogComboBox
-        disabled={!shouldDefineCursor || mode === "readonly"}
-        options={cursorOptions}
-        value={cursorValue}
-        onChange={onChange}
-        error={cursorConfigValidationError}
-        // in case we have a source defined cursor, but the value is not in the list of options show a placeholder
-        buttonPlaceholder={
-          cursorType === "sourceDefined" && (
-            <Text italicized size="sm">
-              <FormattedMessage id="connection.catalogTree.sourceDefined" />
-            </Text>
-          )
-        }
-        buttonErrorText={<FormattedMessage id="form.error.cursor.missing" />}
-        buttonAddText={<FormattedMessage id="form.error.cursor.addMissing" />}
-        buttonEditText={<FormattedMessage id="form.error.cursor.edit" />}
-        controlClassName={styles.control}
-        controlBtnIcon="cursor"
-      />
-    ) : null;
+  const tooltipContent = !shouldDefineCursor ? (
+    <FlexContainer gap="lg" direction="column">
+      <FormattedMessage id="form.field.sourceDefinedCursor" />
+      <TooltipLearnMoreLink url={links.sourceDefinedCursorLink} />
+    </FlexContainer>
+  ) : null;
 
   return (
     <div data-testid="cursor-field-cell">
-      {config?.selected && !shouldDefineCursor ? (
-        <Tooltip placement="bottom" control={cursorButton}>
-          <FormattedMessage id="form.field.sourceDefinedCursor" />
-          <TooltipLearnMoreLink url={links.sourceDefinedCursorLink} />
-        </Tooltip>
-      ) : (
-        cursorButton
-      )}
+      {config?.selected && cursorType ? (
+        <CatalogComboBox
+          disabled={!shouldDefineCursor || mode === "readonly"}
+          options={cursorOptions}
+          value={cursorValue}
+          onChange={onChange}
+          error={cursorConfigValidationError}
+          // in case we have a source defined cursor, but the value is not in the list of options show a placeholder
+          buttonPlaceholder={
+            cursorType === "sourceDefined" && (
+              <Text italicized size="sm">
+                <FormattedMessage id="connection.catalogTree.sourceDefined" />
+              </Text>
+            )
+          }
+          buttonErrorText={<FormattedMessage id="form.error.cursor.missing" />}
+          buttonAddText={<FormattedMessage id="form.error.cursor.addMissing" />}
+          buttonEditText={<FormattedMessage id="form.error.cursor.edit" />}
+          controlClassName={styles.control}
+          controlBtnIcon="cursor"
+          controlBtnTooltipContent={tooltipContent}
+        />
+      ) : null}
     </div>
   );
 };

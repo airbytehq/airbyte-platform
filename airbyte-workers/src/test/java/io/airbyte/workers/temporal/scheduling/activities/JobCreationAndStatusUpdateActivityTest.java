@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -120,10 +120,10 @@ class JobCreationAndStatusUpdateActivityTest {
     @DisplayName("Test job creation")
     void createJob() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
-      when(jobsApi.createJob(new JobCreate(CONNECTION_ID)))
+      when(jobsApi.createJob(new JobCreate(CONNECTION_ID, true)))
           .thenReturn(new JobInfoRead(new JobRead(JOB_ID, JobConfigType.SYNC, CONNECTION_ID.toString(), System.currentTimeMillis(),
               System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null, null), List.of()));
-      final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
+      final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID, true));
 
       assertEquals(JOB_ID, newJob.getJobId());
     }
@@ -133,7 +133,7 @@ class JobCreationAndStatusUpdateActivityTest {
     void createJobThrows() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.createJob(Mockito.any())).thenThrow(new IOException());
-      assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID)));
+      assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID, true)));
     }
 
     @ParameterizedTest
@@ -222,6 +222,13 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
+    void setJobSuccessNullJobId() {
+      final var request =
+          new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(null, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
+      assertDoesNotThrow(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request));
+    }
+
+    @Test
     void setJobSuccessWrapException() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       final IOException exception = new IOException(TEST_EXCEPTION_MESSAGE);
@@ -243,6 +250,14 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
+    void setJobFailureNullJobId() {
+      assertDoesNotThrow(
+          () -> {
+            jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(null, 1, CONNECTION_ID, REASON));
+          });
+    }
+
+    @Test
     void setJobFailureWithNullJobSyncConfig() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.jobFailure(any())).thenThrow(new IOException());
@@ -259,6 +274,19 @@ class JobCreationAndStatusUpdateActivityTest {
       when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
       final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
           JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          standardSyncOutput,
+          failureSummary);
+
+      assertDoesNotThrow(
+          () -> jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input));
+    }
+
+    @Test
+    void attemptFailureWithAttemptNumberNullJobId() {
+      final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
+          null,
           ATTEMPT_NUMBER,
           CONNECTION_ID,
           standardSyncOutput,

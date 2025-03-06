@@ -101,6 +101,7 @@ ValueAsObject.args = {
     {
       label: "Manual",
       value: { scheduleType: "manual" },
+      disabled: true,
     },
     {
       label: "Cron",

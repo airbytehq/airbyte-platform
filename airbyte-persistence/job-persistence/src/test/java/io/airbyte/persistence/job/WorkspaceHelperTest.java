@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -185,7 +185,8 @@ class WorkspaceHelperTest {
         JobStatus.PENDING,
         System.currentTimeMillis(),
         System.currentTimeMillis(),
-        System.currentTimeMillis());
+        System.currentTimeMillis(),
+        true);
     when(jobPersistence.getJob(jobId)).thenReturn(job);
 
     final UUID jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);

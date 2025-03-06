@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -304,8 +308,8 @@ class FieldGeneratorTest {
 
   companion object {
     @JvmStatic
-    private fun getNodeAndExpectedType(): List<Arguments> {
-      return listOf(
+    private fun getNodeAndExpectedType(): List<Arguments> =
+      listOf(
         Arguments.of(
           Jsons.deserialize(
             """{
@@ -411,6 +415,5 @@ class FieldGeneratorTest {
           FieldType.ARRAY,
         ),
       )
-    }
   }
 }

@@ -11,20 +11,20 @@ export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
   FeatureItem.ConnectionHistoryGraphs,
+  FeatureItem.ConnectorResourceAllocation,
   FeatureItem.DiagnosticsExport,
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,
   FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
-  FeatureItem.MappingsUI, // Also governed by connection.mappingsUI experiment.  This flag indicates whether the user has the right level of product.  The experiment indicates whether the UI is "on" overall.
+  FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
 ];
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.CloudForTeamsUpsell,

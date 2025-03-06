@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ConfigSchema
@@ -26,22 +30,23 @@ open class UserInvitationServiceDataImpl(
   private val userInvitationRepository: UserInvitationRepository,
   private val permissionRepository: PermissionRepository,
 ) : UserInvitationService {
-  override fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation {
-    return userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
-      ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
-    }.toConfigModel()
-  }
+  override fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation =
+    userInvitationRepository
+      .findByInviteCode(inviteCode)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+      }.toConfigModel()
 
   override fun getPendingInvitations(
     scopeType: ScopeType,
     scopeId: UUID,
-  ): List<UserInvitation> {
-    return userInvitationRepository.findByStatusAndScopeTypeAndScopeId(
-      EntityInvitationStatus.pending,
-      scopeType.toEntity(),
-      scopeId,
-    ).map { it.toConfigModel() }
-  }
+  ): List<UserInvitation> =
+    userInvitationRepository
+      .findByStatusAndScopeTypeAndScopeId(
+        EntityInvitationStatus.pending,
+        scopeType.toEntity(),
+        scopeId,
+      ).map { it.toConfigModel() }
 
   override fun createUserInvitation(invitation: UserInvitation): UserInvitation {
     // throw an exception if a pending invitation already exists for the same email and scope

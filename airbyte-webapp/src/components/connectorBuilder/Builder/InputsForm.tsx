@@ -13,27 +13,13 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import {
-  ConnectorBuilderMainRHFContext,
-  useConnectorBuilderFormState,
-  TestingValuesUpdate,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput, BuilderFormValues, BuilderState, builderInputsToSpec } from "../types";
+import { BuilderFormInput, BuilderFormValues, BuilderState } from "../types";
 
-const supportedTypes = [
-  "string",
-  "integer",
-  "number",
-  "array",
-  "boolean",
-  "enum",
-  "unknown",
-  "date",
-  "date-time",
-] as const;
+export const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "date", "date-time"] as const;
 
 export interface InputInEditing {
   key: string;
@@ -44,7 +30,7 @@ export interface InputInEditing {
   isLocked?: boolean;
   isNew?: boolean;
   showDefaultValueField: boolean;
-  type: (typeof supportedTypes)[number];
+  type?: (typeof supportedTypes)[number];
 }
 
 function sluggify(str: string) {
@@ -75,12 +61,7 @@ function inputInEditingToFormInput({
     ...values,
     definition: {
       ...values.definition,
-      type:
-        type === "enum" || type === "date" || type === "date-time"
-          ? "string"
-          : type === "unknown"
-          ? values.definition.type
-          : type,
+      type: type === "enum" || type === "date" || type === "date-time" ? "string" : type,
       // only respect the enum values if the user explicitly selected enum as type
       enum: type === "enum" && values.definition.enum?.length ? values.definition.enum : undefined,
       default: showDefaultValueField ? values.definition.default : undefined,
@@ -103,7 +84,6 @@ export const InputForm = ({
   if (!setValue || !watch) {
     throw new Error("rhf context not available");
   }
-  const { updateTestingValues } = useConnectorBuilderFormState();
   const formValues = watch("formValues");
   const testingValues = watch("testingValues");
   const usedKeys = useMemo(() => formValues.inputs.map((input) => input.key), [formValues.inputs]);
@@ -122,6 +102,10 @@ export const InputForm = ({
         definition: yup.object().shape({
           title: yup.string().required("form.empty.error"),
         }),
+        type: yup
+          .mixed()
+          .oneOf([...supportedTypes])
+          .required("form.empty.error"),
       }) as unknown as yup.SchemaOf<InputInEditing, never>,
     [inputInEditing?.isNew, inputInEditing?.key, usedKeys]
   );
@@ -132,24 +116,10 @@ export const InputForm = ({
     mode: "onChange",
   });
   const onSubmit = async (inputInEditing: InputInEditing) => {
+    const previousInput = formValues.inputs.find((input) => input.key === inputInEditing.previousKey);
     const newInput = inputInEditingToFormInput(inputInEditing);
-    if (inputInEditing.isNew) {
-      setValue("formValues.inputs", [...formValues.inputs, newInput]);
-    } else if (inputInEditing.key === inputInEditing.previousKey) {
-      setValue(
-        "formValues.inputs",
-        formValues.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
-      );
-    } else {
-      await updateInputKeyAndReferences(
-        inputInEditing.previousKey!,
-        newInput,
-        formValues,
-        testingValues,
-        setValue,
-        updateTestingValues
-      );
-    }
+    await adjustBuilderInputs(inputInEditing, setValue, formValues, newInput);
+    adjustTestingValues(newInput, previousInput, setValue, testingValues);
 
     onClose(newInput);
     analyticsService.track(
@@ -180,6 +150,18 @@ export const InputForm = ({
             "formValues.inputs",
             formValues.inputs.filter((input) => input.key !== inputInEditing.key)
           );
+          setValue(
+            "testingValues",
+            {
+              ...testingValues,
+              [inputInEditing.key]: undefined,
+            },
+            {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            }
+          );
           onClose();
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUT_DELETE, {
             actionDescription: "User input deleted",
@@ -195,13 +177,63 @@ export const InputForm = ({
   );
 };
 
+function adjustTestingValues(
+  newInput: BuilderFormInput,
+  previousInput: BuilderFormInput | undefined,
+  setValue: UseFormSetValue<BuilderState>,
+  testingValues: ConnectorBuilderProjectTestingValues | undefined
+) {
+  const defaultValue = newInput.definition.default ?? (newInput.definition.type === "boolean" ? false : undefined);
+  const newTestingValue =
+    previousInput && previousInput.definition.type === newInput.definition.type
+      ? testingValues?.[previousInput.key]
+      : defaultValue;
+
+  if (previousInput) {
+    setValue(
+      "testingValues",
+      {
+        ...testingValues,
+        [previousInput?.key]: undefined,
+        [newInput.key]: newTestingValue,
+      },
+      {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      }
+    );
+  } else {
+    setValue("testingValues", {
+      ...testingValues,
+      [newInput.key]: newTestingValue,
+    });
+  }
+}
+
+async function adjustBuilderInputs(
+  inputInEditing: InputInEditing,
+  setValue: UseFormSetValue<BuilderState>,
+  formValues: BuilderFormValues,
+  newInput: BuilderFormInput
+) {
+  if (inputInEditing.isNew) {
+    setValue("formValues.inputs", [...formValues.inputs, newInput]);
+  } else if (inputInEditing.key === inputInEditing.previousKey) {
+    setValue(
+      "formValues.inputs",
+      formValues.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
+    );
+  } else {
+    await updateInputKeyAndReferences(inputInEditing.previousKey!, newInput, formValues, setValue);
+  }
+}
+
 async function updateInputKeyAndReferences(
   previousKey: string,
   newInput: BuilderFormInput,
   formValues: BuilderFormValues,
-  testingValues: ConnectorBuilderProjectTestingValues | undefined,
-  setValue: UseFormSetValue<BuilderState>,
-  updateTestingValues: TestingValuesUpdate
+  setValue: UseFormSetValue<BuilderState>
 ) {
   const newInputs = formValues.inputs.map((input) => (input.key === previousKey ? newInput : input));
 
@@ -233,30 +265,6 @@ async function updateInputKeyAndReferences(
     ...parsedUpdatedFormValues,
     inputs: newInputs,
   });
-
-  // update key in testing values if present
-  const previousTestingValue = testingValues?.[previousKey];
-  if (previousTestingValue) {
-    try {
-      const spec = builderInputsToSpec(newInputs);
-      await updateTestingValues({
-        spec: spec?.connection_specification ?? {},
-        testingValues: {
-          ...testingValues,
-          [previousKey]: undefined,
-          [newInput.key]: previousTestingValue,
-        },
-      });
-    } catch (e) {
-      // Could not update persisted testing values, likely because another required field does not have a value.
-      // Instead, just update the testing values in the form state so that the testing values menu uses the new key next time it is opened.
-      setValue("testingValues", {
-        ...testingValues,
-        [previousKey]: undefined,
-        [newInput.key]: previousTestingValue,
-      });
-    }
-  }
 }
 
 const InputModal = ({
@@ -271,7 +279,7 @@ const InputModal = ({
   onSubmit: (inputInEditing: InputInEditing) => void;
 }) => {
   const {
-    formState: { isValid, isSubmitting },
+    formState: { isSubmitting },
     setValue,
     handleSubmit,
   } = useFormContext<InputInEditing>();
@@ -333,7 +341,7 @@ const InputModal = ({
             label={formatMessage({ id: "connectorBuilder.inputModal.description" })}
             tooltip={formatMessage({ id: "connectorBuilder.inputModal.descriptionTooltip" })}
           />
-          {values.type !== "unknown" && !values.isLocked ? (
+          {!values.isLocked ? (
             <>
               <BuilderField
                 path="type"
@@ -389,18 +397,7 @@ const InputModal = ({
               )}
             </>
           ) : (
-            <Message
-              type="info"
-              text={
-                <FormattedMessage
-                  id={
-                    values.type === "unknown"
-                      ? "connectorBuilder.inputModal.unsupportedInput"
-                      : "connectorBuilder.inputModal.lockedInput"
-                  }
-                />
-              }
-            />
+            <Message type="info" text={<FormattedMessage id="connectorBuilder.inputModal.lockedInput" />} />
           )}
         </ModalBody>
         <ModalFooter>
@@ -414,7 +411,7 @@ const InputModal = ({
           <Button variant="secondary" type="reset" onClick={onClose}>
             <FormattedMessage id="form.cancel" />
           </Button>
-          <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
+          <Button type="submit" isLoading={isSubmitting}>
             <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
           </Button>
         </ModalFooter>

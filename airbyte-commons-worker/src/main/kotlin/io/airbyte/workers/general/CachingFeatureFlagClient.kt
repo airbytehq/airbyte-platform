@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.github.benmanes.caffeine.cache.Caffeine
@@ -26,7 +30,5 @@ class CachingFeatureFlagClient(
   fun boolVariation(
     flag: Flag<Boolean>,
     ctx: Context,
-  ): Boolean {
-    return cache.get(Pair(flag, ctx))
-  }
+  ): Boolean = cache.get(Pair(flag, ctx))
 }

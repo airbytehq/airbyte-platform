@@ -14,7 +14,8 @@ import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestSubstreamPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
-import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest, useBuilderWatch } from "../types";
+import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface ParentStreamsSectionProps {
   streamFieldPath: StreamPathFn;

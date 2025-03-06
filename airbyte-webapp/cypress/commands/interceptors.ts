@@ -22,3 +22,7 @@ export const waitForGetSourcesListRequest = () => cy.wait("@getSourcesList");
 export const interceptGetSourceDefinitionsRequest = () =>
   cy.intercept("/api/v1/source_definitions/list_for_workspace").as("getSourceDefinitions");
 export const waitForGetSourceDefinitionsRequest = () => cy.wait("@getSourceDefinitions");
+
+export const interceptValidateMappersRequest = () =>
+  cy.intercept("/api/v1/web_backend/mappers/validate").as("validateMappers");
+export const waitForValidateMappers = () => cy.wait("@validateMappers");

@@ -1,14 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.MUTEX_KEY_TAG
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
-import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
@@ -29,18 +32,16 @@ private val logger = KotlinLogging.logger {}
 @Named("mutex")
 open class EnforceMutexStage(
   private val launcher: KubePodClient,
-  metricPublisher: CustomMetricPublisher,
+  metricClient: MetricClient,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricPublisher, dataplaneId) {
+) : LaunchStage(metricClient, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "mutex")],
+    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "mutex")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
-    return super.apply(input)
-  }
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val workloadId = input.msg.workloadId
@@ -56,10 +57,13 @@ open class EnforceMutexStage(
     val deleted = launcher.deleteMutexPods(key)
     if (deleted) {
       logger.info { "Existing pods for mutex key: $key deleted." }
-      metricPublisher.count(
-        WorkloadLauncherMetricMetadata.PODS_DELETED_FOR_MUTEX_KEY,
-        MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
-        MetricAttribute(MUTEX_KEY_TAG, key),
+      metricClient.count(
+        metric = OssMetricsRegistry.PODS_DELETED_FOR_MUTEX_KEY,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+            MetricAttribute(MetricTags.MUTEX_KEY_TAG, key),
+          ),
       )
     } else {
       logger.info { "Mutex key: $key specified for workload: $workloadId found no existing pods. Continuing..." }
@@ -68,7 +72,5 @@ open class EnforceMutexStage(
     return input
   }
 
-  override fun getStageName(): StageName {
-    return StageName.MUTEX
-  }
+  override fun getStageName(): StageName = StageName.MUTEX
 }

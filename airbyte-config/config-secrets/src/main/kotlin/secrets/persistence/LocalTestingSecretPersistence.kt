@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -52,13 +52,14 @@ open class LocalTestingSecretPersistence(
     payload: String,
   ) {
     initialize()
-    dslContext.query(
-      "INSERT INTO secrets(coordinate,payload) VALUES(?, ?) ON CONFLICT (coordinate) DO UPDATE SET payload = ?;",
-      coordinate.fullCoordinate,
-      payload,
-      payload,
-      coordinate.fullCoordinate,
-    ).execute()
+    dslContext
+      .query(
+        "INSERT INTO secrets(coordinate,payload) VALUES(?, ?) ON CONFLICT (coordinate) DO UPDATE SET payload = ?;",
+        coordinate.fullCoordinate,
+        payload,
+        payload,
+        coordinate.fullCoordinate,
+      ).execute()
   }
 
   @Transactional

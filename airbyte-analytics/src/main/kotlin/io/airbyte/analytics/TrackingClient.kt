@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -249,7 +249,7 @@ class BlockingShutdownAnalyticsPlugin(
   private val inflightMessageCount = AtomicLong(0L)
 
   override fun configure(builder: Analytics.Builder) {
-    builder.messageTransformer {
+    builder.messageTransformer { _ ->
       inflightMessageCount.incrementAndGet()
       true
     }
@@ -366,7 +366,7 @@ open class TrackingIdentityFetcher(
     when (scopeType) {
       ScopeType.WORKSPACE -> {
         val workspaceRead = workspaceFetcher.apply(scopeId)
-        val email: String? = workspaceRead.anonymousDataCollection.takeIf { it == false }?.let { workspaceRead.email }
+        val email: String? = workspaceRead.anonymousDataCollection.takeIf { it == false }?.let { _ -> workspaceRead.email }
 
         return TrackingIdentity(
           workspaceRead.customerId,

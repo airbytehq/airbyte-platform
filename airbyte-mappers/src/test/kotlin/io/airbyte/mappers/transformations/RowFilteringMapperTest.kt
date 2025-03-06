@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -29,8 +33,8 @@ class RowFilteringMapperTest {
     private const val STREAM = "STREAM"
   }
 
-  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord {
-    return AirbyteJsonRecordAdapter(
+  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord =
+    AirbyteJsonRecordAdapter(
       AirbyteMessage()
         .withType(AirbyteMessage.Type.RECORD)
         .withRecord(
@@ -41,7 +45,6 @@ class RowFilteringMapperTest {
             .withData(Jsons.jsonNode(recordData)),
         ),
     )
-  }
 
   private fun assertNoChangesMadeToRecord(
     record: AirbyteRecord,
@@ -74,7 +77,8 @@ class RowFilteringMapperTest {
             """
     val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
-      mapper.spec()
+      mapper
+        .spec()
         .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
@@ -119,7 +123,8 @@ class RowFilteringMapperTest {
             """
     val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
-      mapper.spec()
+      mapper
+        .spec()
         .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
@@ -180,7 +185,8 @@ class RowFilteringMapperTest {
             """
     val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
-      mapper.spec()
+      mapper
+        .spec()
         .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
@@ -257,7 +263,8 @@ class RowFilteringMapperTest {
         RowFilteringMapperConfig::class.java,
       )
     val rowFilteringMapperConfigDeserializedFromSpec =
-      mapper.spec()
+      mapper
+        .spec()
         .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
 
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)

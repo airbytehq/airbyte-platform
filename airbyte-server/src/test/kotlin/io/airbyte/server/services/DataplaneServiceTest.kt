@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.services
 
 import io.airbyte.api.model.generated.ActorType
@@ -28,6 +32,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
+
+typealias FeatureFlagGeography = io.airbyte.featureflag.Geography
 
 class DataplaneServiceTest {
   private lateinit var connectionService: ConnectionService
@@ -72,10 +78,10 @@ class DataplaneServiceTest {
 
     val expectedContext =
       listOf(
-        io.airbyte.featureflag.Geography(Geography.EU.toString()),
+        FeatureFlagGeography(Geography.EU.toString()),
         Workspace(workspaceId),
-        Priority(HIGH_PRIORITY),
         Connection(connectionId.toString()),
+        Priority(HIGH_PRIORITY),
       )
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
@@ -90,7 +96,7 @@ class DataplaneServiceTest {
     verify(exactly = 1) { sourceService.getSourceConnection(sourceId) }
     verify(exactly = 1) { workspaceService.getGeographyForWorkspace(workspaceId) }
 
-    val expectedContext = listOf(io.airbyte.featureflag.Geography(Geography.US.toString()), Workspace(workspaceId), Priority(HIGH_PRIORITY))
+    val expectedContext = listOf(FeatureFlagGeography(Geography.US.toString()), Workspace(workspaceId), Priority(HIGH_PRIORITY))
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
 
@@ -104,7 +110,7 @@ class DataplaneServiceTest {
     verify(exactly = 1) { destinationService.getDestinationConnection(destinationId) }
     verify(exactly = 1) { workspaceService.getGeographyForWorkspace(workspaceId) }
 
-    val expectedContext = listOf(io.airbyte.featureflag.Geography(Geography.US.toString()), Workspace(workspaceId))
+    val expectedContext = listOf(FeatureFlagGeography(Geography.US.toString()), Workspace(workspaceId))
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
 
@@ -122,10 +128,10 @@ class DataplaneServiceTest {
 
     val expectedContext =
       listOf(
-        CloudProvider(CloudProvider.AWS),
         GeographicRegion(GeographicRegion.US),
-        Workspace(workspaceId),
+        CloudProvider(CloudProvider.AWS),
         CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
+        Workspace(workspaceId),
       )
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
@@ -144,11 +150,34 @@ class DataplaneServiceTest {
 
     val expectedWithConnection =
       listOf(
-        CloudProvider(CloudProvider.AWS),
         GeographicRegion(GeographicRegion.EU),
-        Workspace(workspaceId),
+        CloudProvider(CloudProvider.AWS),
         CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
+        Workspace(workspaceId),
         Connection(connectionId),
+      )
+    verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedWithConnection)) }
+  }
+
+  // This is the spec case
+  @Test
+  fun testGetQueueNameWithNothing() {
+    val workloadPriority: WorkloadPriority = WorkloadPriority.HIGH
+    val localScopedConfigurationService: ScopedConfigurationService = mockk()
+    every { localScopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf()
+    val dataplaneService =
+      DataplaneService(connectionService, workspaceService, sourceService, destinationService, featureFlagClient, localScopedConfigurationService)
+
+    dataplaneService.getQueueName(null, null, null, null, workloadPriority)
+    verify(exactly = 0) { connectionService.getStandardSync(connectionId) }
+    verify(exactly = 0) { sourceService.getSourceConnection(sourceId) }
+    verify(exactly = 0) { destinationService.getDestinationConnection(destinationId) }
+    verify(exactly = 0) { workspaceService.getGeographyForWorkspace(workspaceId) }
+
+    val expectedWithConnection =
+      listOf(
+        FeatureFlagGeography(Geography.AUTO.toString()),
+        Priority(HIGH_PRIORITY),
       )
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedWithConnection)) }
   }

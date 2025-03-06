@@ -1,12 +1,14 @@
 import get from "lodash/get";
 import isEqual from "lodash/isEqual";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
+import { useConnectorResourceAllocation } from "area/connector/components/ResourceAllocationMenu";
 import { FormBlock, GroupDetails } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
+import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID } from "../../useBuildForm";
 import { OrderComparator } from "../../utils";
 
 export interface Section {
@@ -62,10 +64,18 @@ export function useGroupsAndSections(
 ) {
   const { formState } = useFormContext();
   const { isHiddenAuthField } = useAuthentication();
+  const { isHiddenResourceAllocationField } = useConnectorResourceAllocation();
+
+  const isHiddenField = useCallback(
+    (fieldPath: string) => {
+      return isHiddenAuthField(fieldPath) || isHiddenResourceAllocationField(fieldPath);
+    },
+    [isHiddenAuthField, isHiddenResourceAllocationField]
+  );
 
   const sectionGroups = useMemo(
-    () => generateGroupsAndSections(blocks, groupStructure, rootLevel, isHiddenAuthField),
-    [blocks, groupStructure, rootLevel, isHiddenAuthField]
+    () => generateGroupsAndSections(blocks, groupStructure, rootLevel, isHiddenField),
+    [blocks, groupStructure, rootLevel, isHiddenField]
   );
 
   const sectionGroupsWithMetadata = useMemo(() => {
@@ -102,14 +112,14 @@ export function generateGroupsAndSections(
   blocks: FormBlock | FormBlock[],
   groupStructure: GroupDetails[],
   rootLevel: boolean,
-  isHiddenAuthField: (fieldPath: string) => boolean
+  isHiddenField: (fieldPath: string) => boolean
 ): SectionGroup[] {
   const blocksArray = [blocks].flat();
 
   const shouldSplitGroups = rootLevel && blocksArray.length > 0;
   const blockGroups = shouldSplitGroups ? splitGroups(blocksArray, groupStructure) : [{ blocks: blocksArray }];
 
-  return blockGroups.map(splitSections(isHiddenAuthField, rootLevel));
+  return blockGroups.map(splitSections(isHiddenField, rootLevel));
 }
 
 function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): BlockGroup[] {
@@ -117,10 +127,11 @@ function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): Block
   blocks
     .filter((block) => !block.airbyte_hidden)
     .forEach((block) => {
-      if (!groupMap.has(block.group)) {
-        groupMap.set(block.group, []);
+      const groupId = block.group || DEFAULT_GROUP_ID;
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, []);
       }
-      groupMap.get(block.group)?.push(block);
+      groupMap.get(groupId)?.push(block);
     });
   const groups = [...groupMap.entries()];
 
@@ -129,11 +140,14 @@ function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): Block
   );
 
   groups.sort(([a], [b]) => {
-    if (a === undefined) {
+    if (a === ADVANCED_GROUP_ID) {
       return 1;
     }
-    if (b === undefined) {
+    if (b === ADVANCED_GROUP_ID) {
       return -1;
+    }
+    if (a === undefined || b === undefined) {
+      return a === undefined ? 1 : -1;
     }
     if (groupIdToStructure[a] && groupIdToStructure[b]) {
       return groupIdToStructure[a].index - groupIdToStructure[b].index;
@@ -147,24 +161,24 @@ function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): Block
     return naturalComparator(a, b);
   });
 
-  return groups.map(([groupId, blocks]) => {
+  const blockGroups = groups.map(([groupId, blocks]) => {
     return {
       blocks,
       title: groupId ? groupIdToStructure[groupId]?.title : undefined,
     };
   });
+
+  return blockGroups;
 }
 
 function splitSections(
-  isHiddenAuthField: (fieldPath: string) => boolean,
+  isHiddenField: (fieldPath: string) => boolean,
   rootLevel: boolean
 ): (value: BlockGroup) => SectionGroup {
   return ({ blocks, title }) => {
     const sortedBlocks: FormBlock[] = blocks
       .sort(OrderComparator)
-      .filter(
-        (formField) => !formField.airbyte_hidden && (!isHiddenAuthField(formField.path) || formField.always_show)
-      );
+      .filter((formField) => !formField.airbyte_hidden && (!isHiddenField(formField.path) || formField.always_show));
 
     const sections: Section[] = [];
     let currentSection: Section | undefined = undefined;
@@ -211,7 +225,12 @@ function splitSections(
 }
 
 const getDisplayType = (block: FormBlock, rootLevel: boolean) => {
-  if (block.isRequired || block.always_show || block._type === "formCondition" || block._type === "formGroup") {
+  if (
+    block.isRequired ||
+    block.always_show ||
+    block._type === "formCondition" ||
+    (block._type === "formGroup" && block.fieldKey !== "resourceAllocation")
+  ) {
     return "expanded";
   }
   if (block.order !== undefined || !rootLevel) {

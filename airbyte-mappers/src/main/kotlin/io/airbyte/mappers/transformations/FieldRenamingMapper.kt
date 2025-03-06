@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.MapperOperationName
@@ -19,18 +23,15 @@ class FieldRenamingMapper : FilteredRecordsMapper<FieldRenamingMapperConfig>() {
   override val name: String
     get() = MapperOperationName.FIELD_RENAMING
 
-  override fun spec(): MapperSpec<FieldRenamingMapperConfig> {
-    return fieldRenamingMapperSpec
-  }
+  override fun spec(): MapperSpec<FieldRenamingMapperConfig> = fieldRenamingMapperSpec
 
   override fun schema(
     config: FieldRenamingMapperConfig,
     slimStream: SlimStream,
-  ): SlimStream {
-    return slimStream
+  ): SlimStream =
+    slimStream
       .deepCopy()
       .apply { redefineField(config.config.originalFieldName, config.config.newFieldName) }
-  }
 
   override fun mapForNonDiscardedRecords(
     config: FieldRenamingMapperConfig,

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage.activities
 
 import java.util.UUID
@@ -18,9 +22,7 @@ class ActivityPayloadURI(
       jobId: Long,
       attemptNumber: Int,
       payloadName: String,
-    ): ActivityPayloadURI {
-      return ActivityPayloadURI("${connectionId}_${jobId}_${attemptNumber}_$payloadName", ActivityPayloadURIVersion.V1.name)
-    }
+    ): ActivityPayloadURI = ActivityPayloadURI("${connectionId}_${jobId}_${attemptNumber}_$payloadName", ActivityPayloadURIVersion.V1.name)
 
     @JvmStatic
     fun fromOpenApi(dto: OpenApi?): ActivityPayloadURI? {
@@ -35,9 +37,8 @@ class ActivityPayloadURI(
     }
   }
 
-  fun toOpenApi(): OpenApi {
-    return OpenApi()
+  fun toOpenApi(): OpenApi =
+    OpenApi()
       .withId(id)
       .withVersion(version)
-  }
 }

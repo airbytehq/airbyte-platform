@@ -1,10 +1,15 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.featureflag
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -61,6 +66,48 @@ class MultiTest {
     assertFailsWith<IllegalArgumentException> {
       Multi(listOf())
     }
+  }
+
+  @Test
+  fun `dedupes child contexts`() {
+    val result =
+      Multi(
+        listOf(
+          Workspace("workspace"),
+          Workspace("workspace"),
+          Workspace("workspace"),
+          Connection("connection"),
+          Connection("connection"),
+          Source("source"),
+          Destination("destination"),
+          Destination("destination"),
+        ),
+      )
+
+    val expected =
+      Multi(
+        listOf(
+          Workspace("workspace"),
+          Connection("connection"),
+          Source("source"),
+          Destination("destination"),
+        ),
+      )
+
+    assertEquals(expected, result)
+  }
+
+  @Test
+  fun `orEmpty factory method returns Empty if provided contexts empty`() {
+    val result = Multi.orEmpty(listOf())
+    assertEquals(Empty, result)
+  }
+
+  @Test
+  fun `orEmpty factory method returns Empty if provided contexts not empty`() {
+    val input = listOf(Connection("connection"))
+    val result = Multi.orEmpty(input)
+    assertEquals(Multi(input), result)
   }
 }
 
@@ -152,5 +199,68 @@ class DestinationDefinitionTest {
       assert(it.key == "destination definition key")
       assert(it.attrs.isEmpty())
     }
+  }
+}
+
+class MonoidTests {
+  @MethodSource("mergeMatrix")
+  @ParameterizedTest
+  fun `merge combines two Context (associative binary operation)`(
+    a: Context,
+    b: Context,
+    expected: Context,
+  ) {
+    val result = a.merge(b)
+    assertEquals(expected, result)
+  }
+
+  @MethodSource("identityMatrix")
+  @ParameterizedTest
+  fun `Merging Empty is a noop (identity) `(a: Context) {
+    val result1 = Empty.merge(a)
+    assertEquals(a, result1)
+
+    val result2 = a.merge(Empty)
+    assertEquals(a, result2)
+  }
+
+  companion object {
+    @JvmStatic
+    fun mergeMatrix(): Stream<Arguments> =
+      Stream.of(
+        Arguments.of(Workspace(""), Connection(""), Multi(listOf(Workspace(""), Connection("")))),
+        Arguments.of(Workspace(""), Organization(""), Multi(listOf(Workspace(""), Organization("")))),
+        Arguments.of(Destination(""), SourceDefinition(""), Multi(listOf(Destination(""), SourceDefinition("")))),
+        Arguments.of(Source(""), DestinationDefinition(""), Multi(listOf(Source(""), DestinationDefinition("")))),
+        Arguments.of(Source(""), Source(""), Source("")),
+        Arguments.of(Connection(""), Connection(""), Connection("")),
+        Arguments.of(Workspace(""), Workspace(""), Workspace("")),
+        Arguments.of(
+          Multi(listOf(Workspace(""), Connection(""))),
+          Multi(listOf(Organization(""), Source(""))),
+          Multi(listOf(Workspace(""), Connection(""), Organization(""), Source(""))),
+        ),
+        Arguments.of(
+          Multi(listOf(Organization(""))),
+          Multi(listOf(Workspace(""), Source(""))),
+          Multi(listOf(Organization(""), Workspace(""), Source(""))),
+        ),
+      )
+
+    @JvmStatic
+    fun identityMatrix(): Stream<Arguments> =
+      Stream.of(
+        Arguments.of(Empty),
+        Arguments.of(Workspace(UUID.randomUUID())),
+        Arguments.of(Connection(UUID.randomUUID())),
+        Arguments.of(Organization(UUID.randomUUID())),
+        Arguments.of(Source(UUID.randomUUID())),
+        Arguments.of(SourceDefinition(UUID.randomUUID())),
+        Arguments.of(Destination(UUID.randomUUID())),
+        Arguments.of(DestinationDefinition(UUID.randomUUID())),
+        Arguments.of(Multi(listOf(Workspace(UUID.randomUUID()), Connection(UUID.randomUUID()), Organization(UUID.randomUUID())))),
+        Arguments.of(Multi(listOf(Organization(UUID.randomUUID())))),
+        Arguments.of(Multi(listOf(Organization(UUID.randomUUID()), Source(UUID.randomUUID())))),
+      )
   }
 }

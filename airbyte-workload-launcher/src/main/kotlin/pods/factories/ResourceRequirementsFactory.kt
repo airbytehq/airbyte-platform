@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.config.helpers.ResourceRequirementsUtils
@@ -23,9 +27,7 @@ class ResourceRequirementsFactory(
   @Named("sidecarReqs") private val sidecarReqs: AirbyteResourceRequirements,
   @Named("fileTransferReqs") private val fileTransferReqs: AirbyteResourceRequirements,
 ) {
-  fun orchestrator(input: ReplicationInput): AirbyteResourceRequirements? {
-    return input.getOrchestratorResourceReqs()
-  }
+  fun orchestrator(input: ReplicationInput): AirbyteResourceRequirements? = input.getOrchestratorResourceReqs()
 
   fun replSource(input: ReplicationInput): AirbyteResourceRequirements? {
     val sourceReqs =
@@ -39,33 +41,23 @@ class ResourceRequirementsFactory(
     return sourceReqs
   }
 
-  fun replDestination(input: ReplicationInput): AirbyteResourceRequirements? {
-    return input.getDestinationResourceReqs()
-  }
+  fun replDestination(input: ReplicationInput): AirbyteResourceRequirements? = input.getDestinationResourceReqs()
 
-  fun sidecar(): AirbyteResourceRequirements {
-    return sidecarReqs
-  }
+  fun sidecar(): AirbyteResourceRequirements = sidecarReqs
 
-  fun checkConnector(input: CheckConnectionInput): AirbyteResourceRequirements {
-    return input.checkConnectionInput.resourceRequirements?.let {
+  fun checkConnector(input: CheckConnectionInput): AirbyteResourceRequirements =
+    input.checkConnectionInput.resourceRequirements?.let {
       ResourceRequirementsUtils.mergeResourceRequirements(it, checkConnectorReqs)
     } ?: checkConnectorReqs
-  }
 
-  fun discoverConnector(input: DiscoverCatalogInput): AirbyteResourceRequirements {
-    return input.discoverCatalogInput.resourceRequirements?.let {
+  fun discoverConnector(input: DiscoverCatalogInput): AirbyteResourceRequirements =
+    input.discoverCatalogInput.resourceRequirements?.let {
       ResourceRequirementsUtils.mergeResourceRequirements(it, discoverConnectorReqs)
     } ?: discoverConnectorReqs
-  }
 
-  fun specConnector(): AirbyteResourceRequirements {
-    return specConnectorReqs
-  }
+  fun specConnector(): AirbyteResourceRequirements = specConnectorReqs
 
-  fun replInit(input: ReplicationInput): AirbyteResourceRequirements? {
-    return input.getOrchestratorResourceReqs()
-  }
+  fun replInit(input: ReplicationInput): AirbyteResourceRequirements? = input.getOrchestratorResourceReqs()
 
   fun checkInit(input: CheckConnectionInput): AirbyteResourceRequirements {
     val connectorReqs = checkConnector(input)
@@ -77,7 +69,5 @@ class ResourceRequirementsFactory(
     return ResourceConversionUtils.sumResourceRequirements(connectorReqs, sidecarReqs)
   }
 
-  fun specInit(): AirbyteResourceRequirements {
-    return specConnectorReqs
-  }
+  fun specInit(): AirbyteResourceRequirements = specConnectorReqs
 }

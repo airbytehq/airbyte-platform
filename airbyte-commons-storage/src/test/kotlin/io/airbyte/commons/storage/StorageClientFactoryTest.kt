@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -36,6 +36,7 @@ private val bucket =
     workloadOutput = "workload",
     activityPayload = "payload",
     auditLogging = null,
+    profilerOutput = null,
   )
 
 @MicronautTest
@@ -60,6 +61,7 @@ class LocalStorageClientFactoryTest {
           workloadOutput = "wo",
           activityPayload = "ap",
           auditLogging = null,
+          profilerOutput = null,
         )
     }
 

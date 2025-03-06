@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.publicApi.server.generated.models.WorkspacesResponse
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
@@ -38,14 +37,18 @@ object WorkspacesResponseMapper {
     apiHost: String,
   ): WorkspacesResponse {
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(WORKSPACES_PATH))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(WORKSPACES_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
 
     return WorkspacesResponse(
       next = PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
-      data = workspaceReadList.workspaces.stream().map { obj: WorkspaceRead? -> from(obj!!) }.toList(),
+      data = workspaceReadList.workspaces.map { obj -> from(obj!!) },
     )
   }
 }

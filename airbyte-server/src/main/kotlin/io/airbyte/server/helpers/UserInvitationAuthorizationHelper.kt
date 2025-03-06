@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.helpers
 
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum
@@ -24,7 +28,6 @@ class UserInvitationAuthorizationHelper(
    *
    * @throws OperationNotAllowedException if authorization fails.
    */
-  @Throws(OperationNotAllowedException::class)
   fun authorizeInvitationAdmin(
     inviteCode: String,
     userId: UUID,

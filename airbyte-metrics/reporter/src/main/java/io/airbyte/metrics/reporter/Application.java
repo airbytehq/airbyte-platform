@@ -1,11 +1,9 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
 
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.micronaut.runtime.Micronaut;
 
 /**
@@ -16,8 +14,7 @@ import io.micronaut.runtime.Micronaut;
 public class Application {
 
   public static void main(final String[] args) {
-    MetricClientFactory.initialize(MetricEmittingApps.METRICS_REPORTER);
-    Micronaut.run(Application.class, args);
+    Micronaut.build(args).deduceCloudEnvironment(false).deduceEnvironment(false).mainClass(Application.class).start();
   }
 
 }

@@ -28,7 +28,6 @@ Helm chart to deploy airbyte-keycloak
 | extraVolumes | list | `[]` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
-| global.deploymentMode | string | `"oss"` | airbyte deployment mode |
 | global.edition | string | `"community"` |  |
 | global.env_vars | object | `{}` |  |
 | global.extraContainers | list | `[]` |  |

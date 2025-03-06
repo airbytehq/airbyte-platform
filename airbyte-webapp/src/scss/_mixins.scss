@@ -123,3 +123,38 @@ $stripes-width: 83px;
     $border-color border-box;
   border: $border-width solid transparent;
 }
+
+$animation-length: 3s;
+@mixin pulsate($animation-size, $border-radius) {
+  position: relative;
+
+  @keyframes pulsate {
+    0% {
+      box-shadow: 0 0 0 0 colors.$blue-300;
+      opacity: 1;
+    }
+
+    100% {
+      box-shadow: 0 0 0 $animation-size colors.$blue-300;
+      opacity: 0;
+    }
+  }
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: inherit;
+    border-radius: $border-radius;
+    opacity: 0.3;
+    animation: pulsate $animation-length infinite;
+  }
+
+  &::after {
+    animation-delay: calc($animation-length / 2);
+  }
+}

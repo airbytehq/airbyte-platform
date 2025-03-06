@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody;
@@ -19,6 +20,7 @@ import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.config.Organization;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,13 +41,15 @@ class OrganizationsHandlerTest {
   private OrganizationPersistence organizationPersistence;
   private Supplier<UUID> uuidSupplier;
   private OrganizationsHandler organizationsHandler;
+  private OrganizationPaymentConfigServiceDataImpl organizationPaymentConfigService;
 
   @BeforeEach
   void setup() {
     permissionService = mock(PermissionService.class);
     uuidSupplier = mock(Supplier.class);
     organizationPersistence = mock(OrganizationPersistence.class);
-    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionService, uuidSupplier);
+    organizationPaymentConfigService = mock(OrganizationPaymentConfigServiceDataImpl.class);
+    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionService, uuidSupplier, organizationPaymentConfigService);
   }
 
   @Test
@@ -61,6 +65,7 @@ class OrganizationsHandlerTest {
     assertEquals(ORGANIZATION_ID_1, result.getOrganizationId());
     assertEquals(ORGANIZATION_NAME, result.getOrganizationName());
     assertEquals(ORGANIZATION_EMAIL, result.getEmail());
+    verify(organizationPaymentConfigService).saveDefaultPaymentConfig(ORGANIZATION_ID_1);
   }
 
   @Test

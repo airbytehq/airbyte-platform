@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.hashing
 
 import io.micronaut.context.annotation.Primary
@@ -13,7 +17,7 @@ class Sha256Hasher : Hasher {
     val bytes = value.toByteArray()
     val md = java.security.MessageDigest.getInstance("SHA-256")
     salt?.let {
-      md.update(salt.toByteArray())
+      md.update(it.toByteArray())
     }
     val digest = md.digest(bytes)
     return digest.fold("") { str, it -> str + "%02x".format(it) }

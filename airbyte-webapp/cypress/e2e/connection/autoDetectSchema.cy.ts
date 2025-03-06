@@ -37,7 +37,9 @@ import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import * as settingsPage from "pages/connection/connectionSettingsPageObject";
 
-describe("Connection - Auto-detect schema changes", () => {
+// Note: this test is tagged as @sync-catalog to help even out the tests across four parallel github workflows, but it
+// is not really related to the sync catalog functionality.
+describe("Connection - Auto-detect schema changes", { tags: "@sync-catalog" }, () => {
   let source: SourceRead;
   let destination: DestinationRead;
   let connection: WebBackendConnectionRead;

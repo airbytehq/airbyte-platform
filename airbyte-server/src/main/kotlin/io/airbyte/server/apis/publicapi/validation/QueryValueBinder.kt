@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.validation
@@ -16,7 +16,9 @@ import java.util.Optional
  * https://github.com/micronaut-projects/micronaut-core/issues/5135. Should be replaced when
  * micronaut validation is improved. https://github.com/micronaut-projects/micronaut-core/pull/6808
  */
-class QueryValueBinder<T>(conversionService: ConversionService?) : QueryValueArgumentBinder<T>(conversionService) {
+class QueryValueBinder<T>(
+  conversionService: ConversionService?,
+) : QueryValueArgumentBinder<T>(conversionService) {
   override fun doConvert(
     value: Any?,
     context: ArgumentConversionContext<T>,
@@ -24,13 +26,9 @@ class QueryValueBinder<T>(conversionService: ConversionService?) : QueryValueArg
   ): BindingResult<T> {
     return if (value == null && context.hasErrors()) {
       object : BindingResult<T> {
-        override fun getValue(): Optional<T>? {
-          return null
-        }
+        override fun getValue(): Optional<T>? = null
 
-        override fun isSatisfied(): Boolean {
-          return false
-        }
+        override fun isSatisfied(): Boolean = false
 
         override fun getConversionErrors(): List<ConversionError> {
           val errors: MutableList<ConversionError> = ArrayList()

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
@@ -11,7 +15,9 @@ import io.airbyte.config.messages.LauncherInputMessage
  *
  * Class needs to be
  */
-open class LauncherWorkflowImpl : QueueWorkflowBase<LauncherInputMessage>(), QueueWorkflow<LauncherInputMessage> {
+open class LauncherWorkflowImpl :
+  QueueWorkflowBase<LauncherInputMessage>(),
+  QueueWorkflow<LauncherInputMessage> {
   @TemporalActivityStub(activityOptionsBeanName = "queueActivityOptions")
   override lateinit var activity: QueueActivity<LauncherInputMessage>
 }

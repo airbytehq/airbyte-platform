@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator;
@@ -32,7 +32,11 @@ public class Application {
   public static void main(final String[] args) {
     // To mimic previous behavior, assume an exit code of 1 unless Application.run returns otherwise.
     var exitCode = 1;
-    try (final var ctx = Micronaut.run(Application.class, args)) {
+    try (final var ctx = Micronaut.build(args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
+        .mainClass(Application.class)
+        .start()) {
       exitCode = ctx.getBean(Application.class).run();
     } catch (final Throwable t) {
       log.error("could not run {}", t.getMessage(), t);

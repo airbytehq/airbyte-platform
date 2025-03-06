@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal
@@ -8,6 +8,7 @@ package io.airbyte.commons.temporal
  * Singleton helper object that provides translation between a Temporal job type and
  * the Temporal queue name.
  */
+@Deprecated("Check and Discover queues are obsolete, SYNC should be migrated to TemporalQueueConfiguration")
 object TemporalTaskQueueUtils {
   val DEFAULT_SYNC_TASK_QUEUE = TemporalJobType.SYNC.name
   val DEFAULT_CHECK_TASK_QUEUE = TemporalJobType.CHECK_CONNECTION.name

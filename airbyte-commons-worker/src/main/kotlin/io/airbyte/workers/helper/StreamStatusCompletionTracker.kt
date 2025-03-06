@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper
@@ -59,8 +59,8 @@ class StreamStatusCompletionTracker(
   private fun streamDescriptorsToCompleteStatusMessage(
     streamDescriptors: Set<StreamDescriptor>,
     namespacingMapper: AirbyteMapper,
-  ): List<AirbyteMessage> {
-    return streamDescriptors.map {
+  ): List<AirbyteMessage> =
+    streamDescriptors.map {
       namespacingMapper.mapMessage(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.TRACE)
@@ -76,7 +76,6 @@ class StreamStatusCompletionTracker(
           ),
       )
     }
-  }
 }
 
 /**
@@ -89,11 +88,10 @@ class StreamStatusMap : HashMap<StreamDescriptor, Boolean>() {
    * Determines of the map contains an entry for the [StreamDescriptor].  It handles [StreamDescriptor] instances
    * with either a `null` or empty `namespace` value when checking for the value in the map.
    */
-  fun containsStream(descriptor: StreamDescriptor): Boolean {
-    return if (descriptor.namespace == null) {
+  fun containsStream(descriptor: StreamDescriptor): Boolean =
+    if (descriptor.namespace == null) {
       containsKey(descriptor) || containsKey(StreamDescriptor().withName(descriptor.name).withNamespace(""))
     } else {
       containsKey(descriptor)
     }
-  }
 }

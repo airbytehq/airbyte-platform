@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -29,7 +33,10 @@ class DestinationCatalogGenerator(
     FIELD_ALREADY_EXISTS,
   }
 
-  data class MapperError(val type: MapperErrorType, val message: String)
+  data class MapperError(
+    val type: MapperErrorType,
+    val message: String,
+  )
 
   data class CatalogGenerationResult(
     val catalog: ConfiguredAirbyteCatalog,
@@ -80,13 +87,13 @@ class DestinationCatalogGenerator(
 
   internal fun applyMapperToFields(stream: ConfiguredAirbyteStream): MapperToFieldAccumulator {
     val result =
-      stream.mappers.map {
-        Pair(
-          mappersByName[it.name()],
-          it,
-        )
-      }
-        .fold(
+      stream.mappers
+        .map {
+          Pair(
+            mappersByName[it.name()],
+            it,
+          )
+        }.fold(
           MapperToFieldAccumulator(
             SlimStream(
               fields = stream.fields ?: listOf(),
@@ -98,8 +105,7 @@ class DestinationCatalogGenerator(
             listOf(),
             mapOf(),
           ),
-        ) {
-            mapperAcc, (mapperInstance, mapperConfig) ->
+        ) { mapperAcc, (mapperInstance, mapperConfig) ->
           if (mapperInstance == null) {
             log.warn { "Trying to use a mapper named ${mapperConfig.name()} which doesn't have a known implementation. The mapper won't be apply" }
             mapperAcc.copy(
@@ -147,8 +153,8 @@ class DestinationCatalogGenerator(
   internal fun generateJsonSchemaFromFields(
     fields: List<Field>,
     jsonSchema: JsonNode,
-  ): String {
-    return Jsons.serialize(
+  ): String =
+    Jsons.serialize(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
           Pair(it.name, jsonSchema.get(PROPERTIES).get(it.name))
@@ -157,5 +163,4 @@ class DestinationCatalogGenerator(
         }
       },
     )
-  }
 }

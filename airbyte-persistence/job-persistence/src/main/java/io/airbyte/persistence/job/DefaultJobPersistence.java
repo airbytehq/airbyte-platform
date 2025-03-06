@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -70,8 +70,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.JSONB;
@@ -100,6 +98,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static final String WHERE = "WHERE ";
   private static final String AND = " AND ";
   private static final String SCOPE_CLAUSE = "scope = ? AND ";
+  private static final String SCOPE_WITHOUT_AND_CLAUSE = "scope = ? ";
   private static final String DEPLOYMENT_ID_KEY = "deployment_id";
   private static final String METADATA_KEY_COL = "key";
   private static final String METADATA_VAL_COL = "value";
@@ -163,6 +162,7 @@ public class DefaultJobPersistence implements JobPersistence {
         + "jobs.started_at AS job_started_at,\n"
         + "jobs.created_at AS job_created_at,\n"
         + "jobs.updated_at AS job_updated_at,\n"
+        + "jobs.is_scheduled AS is_scheduled,\n"
         + ATTEMPT_FIELDS
         + "FROM " + jobsSubquery + " LEFT OUTER JOIN attempts ON jobs.id = attempts.job_id ";
   }
@@ -425,7 +425,8 @@ public class DefaultJobPersistence implements JobPersistence {
         JobStatus.valueOf(record.get("job_status", String.class).toUpperCase()),
         Optional.ofNullable(record.get("job_started_at")).map(value -> getEpoch(record, "started_at")).orElse(null),
         getEpoch(record, "job_created_at"),
-        getEpoch(record, "job_updated_at"));
+        getEpoch(record, "job_updated_at"),
+        record.get("is_scheduled", Boolean.class));
   }
 
   private static JobConfig parseJobConfigFromString(final String jobConfigString) {
@@ -579,6 +580,11 @@ public class DefaultJobPersistence implements JobPersistence {
    */
   @Override
   public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig) throws IOException {
+    return enqueueJob(scope, jobConfig, true);
+  }
+
+  @Override
+  public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig, final boolean isScheduled) throws IOException {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -593,8 +599,8 @@ public class DefaultJobPersistence implements JobPersistence {
 
     return jobDatabase.query(
         ctx -> ctx.fetch(
-            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
-                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config, is_scheduled) "
+                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB), ? "
                 + queueingRequest
                 + "RETURNING id ",
             toSqlName(jobConfig.getConfigType()),
@@ -602,12 +608,14 @@ public class DefaultJobPersistence implements JobPersistence {
             now,
             now,
             toSqlName(JobStatus.PENDING),
-            Jsons.serialize(jobConfig)))
+            Jsons.serialize(jobConfig),
+            isScheduled))
         .stream()
         .findFirst()
         .map(r -> r.getValue("id", Long.class));
   }
 
+  // TODO: This is unused outside of test. Need to remove it.
   @Override
   public void resetJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
@@ -779,7 +787,7 @@ public class DefaultJobPersistence implements JobPersistence {
       }
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
-      if (CollectionUtils.isNotEmpty(streamSyncStats)) {
+      if (streamSyncStats != null && !streamSyncStats.isEmpty()) {
         saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
       return null;
@@ -862,7 +870,10 @@ public class DefaultJobPersistence implements JobPersistence {
       return Map.of();
     }
 
-    final var jobIdsStr = StringUtils.join(jobIds, ',');
+    final var jobIdsStr = jobIds.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining(","));
+
     return jobDatabase.query(ctx -> {
       // Instead of one massive join query, separate this query into two queries for better readability
       // for now.
@@ -1333,6 +1344,32 @@ public class DefaultJobPersistence implements JobPersistence {
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
+        .stream()
+        .findFirst()
+        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+  }
+
+  /**
+   * Get all the terminal jobs for a connection including the cancelled jobs. (The method above does
+   * not include the cancelled jobs
+   *
+   * @param connectionId the connection id for which we want to get the last job
+   * @return the last job for the connection including the cancelled jobs
+   */
+  @Override
+  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException {
+    final String startOfTheQuery = BASE_JOB_SELECT_AND_JOIN + WHERE
+        + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        + SCOPE_WITHOUT_AND_CLAUSE;
+
+    final String endOfTheQuery = withScheduledOnly ? AND + "is_scheduled = true "
+        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1
+        : ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
+
+    final String query = startOfTheQuery + endOfTheQuery;
+
+    return jobDatabase.query(ctx -> ctx
+        .fetch(query, connectionId.toString())
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));

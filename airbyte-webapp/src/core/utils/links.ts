@@ -34,7 +34,6 @@ export const links = {
   dataResidencySurvey: "https://forms.gle/Dr7MPTdt9k3xTinL8",
   connectionDataResidency: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-data-residency#choose-the-data-residency-for-a-connection`,
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
-  upcomingFeaturesPage: "https://embedded.airbyte.com/upcoming-releases",
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
   connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,

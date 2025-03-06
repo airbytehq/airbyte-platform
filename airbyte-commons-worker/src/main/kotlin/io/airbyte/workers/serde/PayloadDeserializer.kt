@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.serde
 
 import io.airbyte.commons.json.Jsons
@@ -9,19 +13,11 @@ import jakarta.inject.Singleton
 
 @Singleton
 class PayloadDeserializer {
-  fun toReplicationActivityInput(payload: String): ReplicationActivityInput {
-    return Jsons.deserialize(payload, ReplicationActivityInput::class.java)
-  }
+  fun toReplicationActivityInput(payload: String): ReplicationActivityInput = Jsons.deserialize(payload, ReplicationActivityInput::class.java)
 
-  fun toCheckConnectionInput(payload: String): CheckConnectionInput {
-    return Jsons.deserialize(payload, CheckConnectionInput::class.java)
-  }
+  fun toCheckConnectionInput(payload: String): CheckConnectionInput = Jsons.deserialize(payload, CheckConnectionInput::class.java)
 
-  fun toDiscoverCatalogInput(payload: String): DiscoverCatalogInput {
-    return Jsons.deserialize(payload, DiscoverCatalogInput::class.java)
-  }
+  fun toDiscoverCatalogInput(payload: String): DiscoverCatalogInput = Jsons.deserialize(payload, DiscoverCatalogInput::class.java)
 
-  fun toSpecInput(payload: String): SpecInput {
-    return Jsons.deserialize(payload, SpecInput::class.java)
-  }
+  fun toSpecInput(payload: String): SpecInput = Jsons.deserialize(payload, SpecInput::class.java)
 }

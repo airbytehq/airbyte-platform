@@ -108,6 +108,7 @@ export const getConnectionTableData = (
     connectorIcon: type === "destination" ? connection.source.icon : connection.destination.icon,
     entityIcon: type === "destination" ? connection.destination.icon : connection.source.icon,
     connection,
+    tags: connection.tags,
   }));
 };
 

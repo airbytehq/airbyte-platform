@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -21,6 +21,7 @@ import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -51,7 +52,8 @@ class WebhookOperationActivityTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     featureFlagClient = mock(TestClient.class);
-    webhookActivity = new WebhookOperationActivityImpl(httpClient, secretsRepositoryReader, airbyteApiClient, featureFlagClient);
+    webhookActivity =
+        new WebhookOperationActivityImpl(httpClient, secretsRepositoryReader, airbyteApiClient, featureFlagClient, mock(MetricClient.class));
   }
 
   @Test

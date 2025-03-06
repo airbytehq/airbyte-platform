@@ -23,9 +23,7 @@ dependencies {
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
   implementation(libs.micronaut.kotlin.extension.functions)
-  implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
-  implementation(libs.commons.io)
   implementation(libs.kotlin.logging)
 
   testImplementation(libs.bundles.junit)

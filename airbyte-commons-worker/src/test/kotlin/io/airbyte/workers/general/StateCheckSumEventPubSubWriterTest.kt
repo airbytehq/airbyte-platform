@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.google.api.core.ApiFuture
@@ -87,8 +91,8 @@ class StateCheckSumEventPubSubWriterTest {
     verify(exactly = 1) { publisher.shutdown() }
   }
 
-  private fun getDummyCheckSumEvent(): StateCheckSumCountEvent {
-    return StateCheckSumCountEvent(
+  private fun getDummyCheckSumEvent(): StateCheckSumCountEvent =
+    StateCheckSumCountEvent(
       UUID.randomUUID().toString(),
       Random().nextLong(),
       UUID.randomUUID().toString(),
@@ -107,5 +111,4 @@ class StateCheckSumEventPubSubWriterTest {
       Instant.now().toEpochMilli() * 1000L,
       Random().nextBoolean(),
     )
-  }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -7,11 +7,12 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +21,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,7 +235,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on accept call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;
@@ -254,7 +254,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on notifyEndOfInput call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;
@@ -283,10 +283,10 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
     public TimeoutException(final long thresholdMs, final long timeSinceLastActionMs) {
       super(String.format("Last action %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true),
-          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
-      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true);
+          DurationKt.formatMilli(timeSinceLastActionMs),
+          DurationKt.formatMilli(thresholdMs)));
+      this.humanReadableThreshold = DurationKt.formatMilli(thresholdMs);
+      this.humanReadableTimeSinceLastAction = DurationKt.formatMilli(timeSinceLastActionMs);
     }
 
   }

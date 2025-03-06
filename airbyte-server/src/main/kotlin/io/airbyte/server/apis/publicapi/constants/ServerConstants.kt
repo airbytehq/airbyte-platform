@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.constants
@@ -30,6 +30,7 @@ const val PERMISSIONS_PATH = "$ROOT_PATH/v1/permissions"
 const val PERMISSIONS_WITH_ID_PATH = "$PERMISSIONS_PATH/{permissionId}"
 const val USERS_PATH = "$ROOT_PATH/v1/users"
 const val ORGANIZATIONS_PATH = "$ROOT_PATH/v1/organizations"
+const val TAGS_PATH = "$ROOT_PATH/v1/tags"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name

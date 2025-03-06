@@ -1,6 +1,11 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.repository
 
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.data.annotation.Expandable
@@ -69,6 +74,30 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     createdBefore: OffsetDateTime?,
   ): List<Workload>
 
+  /**
+   * Claim transitions a workload into a claimed state and updates the deadline if the workload was pending.
+   * Claim returns the workload if it is in a valid claimed status by the dataplane (either from this call or if it was already claimed).
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       dataplane_id = :dataplaneId,
+       status = 'claimed',
+       deadline = case
+                    when status = 'pending' then :deadline
+                    else deadline
+                  end
+      WHERE id = :id AND (status = 'pending' OR (status = 'claimed' AND dataplane_id = :dataplaneId))
+      RETURNING *
+    """,
+  )
+  fun claim(
+    @Id id: String,
+    dataplaneId: String,
+    deadline: OffsetDateTime,
+  ): Workload?
+
   fun update(
     @Id id: String,
     status: WorkloadStatus,
@@ -96,4 +125,39 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     status: WorkloadStatus,
     deadline: OffsetDateTime,
   )
+
+  @Query(
+    """
+    SELECT * FROM workload WHERE status = 'pending'
+        AND (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
+        AND (:priority IS NULL OR priority = :priority)
+        ORDER BY created_at
+        LIMIT :quantity
+    """,
+  )
+  fun getPendingWorkloads(
+    dataplaneGroup: String?,
+    priority: Int?,
+    quantity: Int,
+  ): List<Workload>
+
+  @Query(
+    """
+    SELECT count(*) FROM workload WHERE status = 'pending'
+        AND (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
+        AND (:priority IS NULL OR priority = :priority)
+    """,
+  )
+  fun countPendingWorkloads(
+    dataplaneGroup: String?,
+    priority: Int?,
+  ): Long
+
+  @Query(
+    """
+    SELECT count(*) as enqueued_count, dataplane_group, priority  FROM workload WHERE status = 'pending'
+        GROUP BY dataplane_group, priority
+    """,
+  )
+  fun getPendingWorkloadQueueStats(): List<WorkloadQueueStats>
 }

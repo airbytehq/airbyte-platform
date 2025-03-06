@@ -10,7 +10,7 @@ import { ExternalLink } from "components/ui/Link";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader/PageHeaderWithNavigation";
 import { Text } from "components/ui/Text";
 
-import { useEnterpriseSourceStubsList } from "core/api";
+import { useListEnterpriseStubsForWorkspace } from "core/api";
 import { EnterpriseSourceStubType } from "core/domain/connector";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths } from "pages/routePaths";
@@ -29,7 +29,8 @@ const appendConnectorTracking = (name: string) => {
 export const EnterpriseSourcePage: React.FC = () => {
   const { theme } = useAirbyteTheme();
   const params = useParams<{ workspaceId: string; id: string }>();
-  const { enterpriseSourceDefinitionsMap } = useEnterpriseSourceStubsList();
+  const { enterpriseSourceDefinitionsMap } = useListEnterpriseStubsForWorkspace();
+
   const enterpriseSource = params.id
     ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseSourceStubType)
     : undefined;

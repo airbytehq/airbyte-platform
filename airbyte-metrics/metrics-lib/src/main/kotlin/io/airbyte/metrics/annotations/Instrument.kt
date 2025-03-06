@@ -1,14 +1,21 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.metrics.annotations
 
 import io.micronaut.aop.Around
 
-annotation class Tag(val key: String, val value: String)
+annotation class Tag(
+  val key: String,
+  val value: String,
+)
 
 /**
  * Set this annotation to a function to instrument metric emissions.
  *
- * As we are using [io.airbyte.metrics.lib.MetricsRegistry] to define the metrics, values provided for [start], [end] and [duration] need to be
- * valid values from a [io.airbyte.metrics.lib.MetricsRegistry].
+ * As we are using [io.airbyte.metrics.MetricsRegistry] to define the metrics, values provided for [start], [end] and [duration] need to be
+ * valid values from a [io.airbyte.metrics.MetricsRegistry].
  *
  * For the [end] and [duration] metric, a `status` tag with values `ok` or `error` will be automatically added. Status being `error` if an
  * exception is thrown, `ok` otherwise.

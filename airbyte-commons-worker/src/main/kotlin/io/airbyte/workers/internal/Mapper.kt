@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal
 
 import com.google.common.annotations.VisibleForTesting
@@ -142,14 +146,18 @@ class NamespacingMapper
   }
 
 @VisibleForTesting
-data class NamespaceStreamName(val namespace: String?, val streamName: String)
+data class NamespaceStreamName(
+  val namespace: String?,
+  val streamName: String,
+)
 
 private fun formatNamespace(
   sourceNamespace: String?,
   namespaceFormat: String?,
 ): String? {
   var result: String? = ""
-  namespaceFormat?.takeIf { it.isNotBlank() }
+  namespaceFormat
+    ?.takeIf { it.isNotBlank() }
     ?.let { format ->
       val replaceWith = sourceNamespace?.takeIf { it.isNotBlank() } ?: ""
       result = format.replace("\${SOURCE_NAMESPACE}", replaceWith)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -20,6 +20,7 @@ internal class GcsStorageConfigTest {
         activityPayload = "activity-payload",
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
+        profilerOutput = null,
       )
     val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
     val gcsStorageConfig =
@@ -46,6 +47,7 @@ internal class GcsStorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
     val gcsStorageConfig =
@@ -73,6 +75,7 @@ internal class GcsStorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
     val gcsStorageConfig =

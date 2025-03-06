@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init
@@ -30,14 +30,15 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 @CacheConfig("platform-compatibility-provider")
-@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^community|enterprise$")
 open class AirbyteCompatibleConnectorVersionsProvider(
   @Named("platformCompatibilityClient") val okHttpClient: OkHttpClient,
 ) {
   @Cacheable
   open fun getCompatibleConnectorsMatrix(): Map<String, ConnectorInfo> {
     val request: Request =
-      Request.Builder()
+      Request
+        .Builder()
         .url(REMOTE_URL)
         .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON)
         .build()
@@ -69,7 +70,8 @@ open class AirbyteCompatibleConnectorVersionsProvider(
 
     val failsafe: FailsafeExecutor<Response> =
       Failsafe.with(
-        RetryPolicy.builder<Response>()
+        RetryPolicy
+          .builder<Response>()
           .withBackoff(Duration.ofMillis(10), Duration.ofMillis(100))
           .withMaxRetries(5)
           .build(),

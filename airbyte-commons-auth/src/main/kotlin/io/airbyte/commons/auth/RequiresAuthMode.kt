@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.auth
 
 import io.airbyte.commons.auth.config.AuthConfigs
@@ -21,7 +25,9 @@ import io.micronaut.context.condition.ConditionContext
 @Requires(condition = AuthModeCondition::class)
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
-annotation class RequiresAuthMode(val value: AuthMode)
+annotation class RequiresAuthMode(
+  val value: AuthMode,
+)
 
 /**
  * Condition that powers the [RequiresAuthMode] annotation.
@@ -33,7 +39,8 @@ class AuthModeCondition : Condition {
         ?: throw IllegalStateException("AuthModeCondition can only be used with annotated beans.")
 
     val authModeFromAnnotation =
-      annotationMetadata.enumValue(RequiresAuthMode::class.java, AuthMode::class.java)
+      annotationMetadata
+        .enumValue(RequiresAuthMode::class.java, AuthMode::class.java)
         .orElseThrow { IllegalStateException("RequiresAuthMode annotation must have a value in order to be used with AuthModeCondition.") }
 
     val currentAuthMode = context.getBean(AuthConfigs::class.java).authMode

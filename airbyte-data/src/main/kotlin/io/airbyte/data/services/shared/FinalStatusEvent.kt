@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -18,33 +22,19 @@ open class FinalStatusEvent(
   private val statusType: String,
   private val streams: List<StreamDescriptor>? = null,
 ) : ConnectionEvent {
-  fun getJobId(): Long {
-    return jobId
-  }
+  fun getJobId(): Long = jobId
 
-  fun getStartTimeEpochSeconds(): Long {
-    return startTimeEpochSeconds
-  }
+  fun getStartTimeEpochSeconds(): Long = startTimeEpochSeconds
 
-  fun getEndTimeEpochSeconds(): Long {
-    return endTimeEpochSeconds
-  }
+  fun getEndTimeEpochSeconds(): Long = endTimeEpochSeconds
 
-  fun getBytesLoaded(): Long {
-    return bytesLoaded
-  }
+  fun getBytesLoaded(): Long = bytesLoaded
 
-  fun getRecordsLoaded(): Long {
-    return recordsLoaded
-  }
+  fun getRecordsLoaded(): Long = recordsLoaded
 
-  fun getAttemptsCount(): Int {
-    return attemptsCount
-  }
+  fun getAttemptsCount(): Int = attemptsCount
 
-  fun getStreams(): List<StreamDescriptor>? {
-    return streams
-  }
+  fun getStreams(): List<StreamDescriptor>? = streams
 
   @TypeDef(type = DataType.STRING)
   enum class FinalStatus {
@@ -54,8 +44,8 @@ open class FinalStatusEvent(
     CANCELLED,
   }
 
-  override fun getEventType(): ConnectionEvent.Type {
-    return when (statusType) {
+  override fun getEventType(): ConnectionEvent.Type =
+    when (statusType) {
       FinalStatus.SUCCEEDED.name -> {
         when (jobType) {
           JobConfig.ConfigType.SYNC.name -> ConnectionEvent.Type.SYNC_SUCCEEDED
@@ -90,5 +80,4 @@ open class FinalStatusEvent(
       }
       else -> ConnectionEvent.Type.UNKNOWN
     }
-  }
 }

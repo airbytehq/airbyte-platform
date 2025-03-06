@@ -7,7 +7,7 @@ import {
 
 import {
   ConnectorDefinition,
-  ConnectorDefinitionSpecification,
+  ConnectorDefinitionSpecificationRead,
   ConnectorT,
   SourceDefinitionSpecificationDraft,
 } from "./types";
@@ -21,13 +21,13 @@ export function isSourceDefinition(connector: ConnectorDefinition): connector is
 }
 
 export function isSourceDefinitionSpecification(
-  connector: ConnectorDefinitionSpecification
+  connector: ConnectorDefinitionSpecificationRead
 ): connector is SourceDefinitionSpecificationRead {
   return (connector as SourceDefinitionSpecificationRead).sourceDefinitionId !== undefined;
 }
 
 export function isSourceDefinitionSpecificationDraft(
-  connector: ConnectorDefinitionSpecification | SourceDefinitionSpecificationDraft
+  connector: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft
 ): connector is SourceDefinitionSpecificationDraft {
   return (
     (connector as SourceDefinitionSpecificationRead).sourceDefinitionId === undefined &&

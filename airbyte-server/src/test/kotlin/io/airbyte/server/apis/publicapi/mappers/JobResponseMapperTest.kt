@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.JobAggregatedStats
@@ -45,8 +49,8 @@ class JobResponseMapperTest {
     assertThrows<IllegalArgumentException> { JobResponseMapper.from(jobInfoRead) }
   }
 
-  private fun getJobRead(jobConfigType: JobConfigType): JobRead {
-    return JobRead().apply {
+  private fun getJobRead(jobConfigType: JobConfigType): JobRead =
+    JobRead().apply {
       this.id = 1L
       this.status = JobStatus.FAILED
       this.configId = UUID.randomUUID().toString()
@@ -59,5 +63,4 @@ class JobResponseMapperTest {
           this.recordsCommitted = 67890
         }
     }
-  }
 }

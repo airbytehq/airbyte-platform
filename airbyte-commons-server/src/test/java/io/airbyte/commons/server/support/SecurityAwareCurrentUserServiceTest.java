@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -22,6 +22,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -77,6 +78,36 @@ class SecurityAwareCurrentUserServiceTest {
       } catch (final IOException e) {
         fail(e);
       }
+    });
+  }
+
+  @Test
+  void testGetCurrentUserIdIfExistsReturnsCorrectId() {
+    ServerRequestContext.with(HttpRequest.GET("/"), () -> {
+      try {
+        final String authUserId = "123e4567-e89b-12d3-a456-426614174000";
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withAuthUserId(authUserId);
+
+        when(securityService.username()).thenReturn(Optional.of(authUserId));
+        when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(expectedUser));
+
+        final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
+        Assertions.assertTrue(userId.isPresent());
+        Assertions.assertEquals(UUID.fromString(authUserId), userId.get());
+      } catch (final IOException e) {
+        fail(e);
+      }
+    });
+  }
+
+  @Test
+  void testGetCurrentUserIdIfExistsDoesNotThrowWhenNoUser() {
+    ServerRequestContext.with(HttpRequest.GET("/"), () -> {
+      Assertions.assertDoesNotThrow(() -> {
+        when(securityService.username()).thenReturn(Optional.empty());
+        final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
+        Assertions.assertTrue(userId.isEmpty());
+      });
     });
   }
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.model
 
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -35,17 +39,16 @@ class MapEnvVarExtensionsTest {
 
   companion object {
     @JvmStatic
-    private fun envVarMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun envVarMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(mapOf("cat" to "dog", "asdf" to "ghjk")),
         Arguments.of(mapOf("asdf" to "ghjk")),
         Arguments.of(mapOf<String, String>()),
       )
-    }
 
     @JvmStatic
-    private fun refEnvVarMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun refEnvVarMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(
           mapOf(
             "cat" to
@@ -80,6 +83,5 @@ class MapEnvVarExtensionsTest {
         ),
         Arguments.of(mapOf<String, EnvVarSource>()),
       )
-    }
   }
 }

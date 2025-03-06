@@ -35,7 +35,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.commons.io)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)

@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PermissionIdRequestBody
+import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -9,7 +14,7 @@ import jakarta.inject.Singleton
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-@Named("deletePermission")
+@Named(AuditLoggingProvider.DELETE_PERMISSION)
 class DeletePermissionAuditProvider(
   private val helper: AuditLoggingHelper,
 ) : AuditProvider {

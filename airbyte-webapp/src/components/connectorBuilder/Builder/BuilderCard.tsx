@@ -23,12 +23,12 @@ import {
 import styles from "./BuilderCard.module.scss";
 import { BuilderYamlField } from "./BuilderYamlField";
 import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
-import { useBuilderWatchWithPreview } from "../preview";
-import { BuilderState, BuilderStream, isYamlString, useBuilderWatch } from "../types";
+import { BuilderState, BuilderStream, isYamlString } from "../types";
 import { UiYamlToggleButton } from "../UiYamlToggleButton";
+import { useBuilderWatch, useBuilderWatchWithPreview } from "../useBuilderWatch";
 import { useCopyValueIncludingArrays } from "../utils";
 
-interface BuilderCardProps {
+export interface BuilderCardProps {
   className?: string;
   label?: string;
   tooltip?: string;

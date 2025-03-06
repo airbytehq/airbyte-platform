@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
@@ -31,7 +35,7 @@ class CommunityAuthRefreshTokenPersistence(
         .refreshToken
         ?: throw UnprocessableEntityProblem(ProblemMessageData().message("Refresh token not found"))
 
-    event.let {
+    event.let { _ ->
       authRefreshTokenService.saveAuthRefreshToken(
         sessionId = sessionId,
         tokenValue = refreshToken,

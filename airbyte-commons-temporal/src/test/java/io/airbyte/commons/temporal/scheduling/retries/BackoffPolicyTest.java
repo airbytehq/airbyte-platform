@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.scheduling.retries;
@@ -13,11 +13,7 @@ class BackoffPolicyTest {
 
   @Test
   void getBackoffLowBase() {
-    final var policy = BackoffPolicy.builder()
-        .base(2)
-        .minInterval(Duration.ofSeconds(10))
-        .maxInterval(Duration.ofHours(1))
-        .build();
+    final var policy = new BackoffPolicy(Duration.ofSeconds(10), Duration.ofHours(1), 2);
 
     assertEquals(0, policy.getBackoff(0).toSeconds());
     assertEquals(10, policy.getBackoff(1).toSeconds());
@@ -36,11 +32,7 @@ class BackoffPolicyTest {
 
   @Test
   void getBackoffHighBase() {
-    final var policy = BackoffPolicy.builder()
-        .base(6)
-        .minInterval(Duration.ofSeconds(30))
-        .maxInterval(Duration.ofMinutes(30))
-        .build();
+    final var policy = new BackoffPolicy(Duration.ofSeconds(30), Duration.ofMinutes(30), 6);
 
     assertEquals(0, policy.getBackoff(0).toSeconds());
     assertEquals(30, policy.getBackoff(1).toSeconds());

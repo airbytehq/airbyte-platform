@@ -84,3 +84,6 @@ properties:
   failed_reason:
     type: string
     description: Failure reason, for rollouts that failed
+  paused_reason:
+    type: string
+    description: Reason the rollout was paused
