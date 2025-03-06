@@ -11,12 +11,14 @@ import io.airbyte.api.model.generated.DataplaneGroupListRequestBody
 import io.airbyte.api.model.generated.DataplaneGroupListResponse
 import io.airbyte.api.model.generated.DataplaneGroupRead
 import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
+import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -28,13 +30,13 @@ import org.jooq.exception.DataAccessException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import kotlin.jvm.optionals.getOrNull
 
 @Controller("/api/v1/dataplane_group")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DataplaneGroupApiController(
   protected val dataplaneGroupService: DataplaneGroupService,
+  protected val dataplaneService: DataplaneService,
   protected val currentUserService: CurrentUserService,
 ) : DataplaneGroupApi {
   @Post("/create")
@@ -48,7 +50,10 @@ class DataplaneGroupApiController(
         organizationId = dataplaneGroupCreateRequestBody.organizationId
         name = dataplaneGroupCreateRequestBody.name
         enabled = dataplaneGroupCreateRequestBody.enabled
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
+        updatedBy =
+          currentUserService.currentUserIdIfExists.orElseThrow {
+            IllegalStateException("No user ID found for creation request for organization ${dataplaneGroupCreateRequestBody.organizationId}")
+          }
       }
     return toDataplaneGroupRead(writeDataplaneGroup(createdDataplaneGroup))
   }
@@ -65,7 +70,10 @@ class DataplaneGroupApiController(
       updatedDataplaneGroup.apply {
         name = dataplaneGroupUpdateRequestBody.name
         enabled = dataplaneGroupUpdateRequestBody.enabled
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
+        updatedBy =
+          currentUserService.currentUserIdIfExists.orElseThrow {
+            IllegalStateException("No user ID found for update request for dataplane group ${dataplaneGroupUpdateRequestBody.dataplaneGroupId}")
+          }
       }
 
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
@@ -78,12 +86,19 @@ class DataplaneGroupApiController(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
   ): DataplaneGroupRead? {
     val deletedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupDeleteRequestBody.dataplaneGroupId)
+    val updatedById =
+      currentUserService.currentUserIdIfExists.orElseThrow {
+        IllegalStateException("No user ID found for deletion request for dataplane group ${dataplaneGroupDeleteRequestBody.dataplaneGroupId}")
+      }
 
     val tombstonedGroup =
       deletedDataplaneGroup.apply {
         tombstone = true
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
+        updatedBy = updatedById
       }
+    dataplaneService.listDataplanes(dataplaneGroupDeleteRequestBody.dataplaneGroupId).forEach {
+      dataplaneService.deleteDataplane(it.id, updatedById)
+    }
 
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))
   }
@@ -112,7 +127,18 @@ class DataplaneGroupApiController(
       .enabled(dataplaneGroup.enabled)
       .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.createdAt), ZoneOffset.UTC))
       .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.updatedAt), ZoneOffset.UTC))
-
+      .dataplanes(
+        dataplaneService.listDataplanes(dataplaneGroup.id).map {
+          DataplaneRead().apply {
+            dataplaneId = it.id
+            dataplaneGroupId = it.dataplaneGroupId
+            name = it.name
+            enabled = it.enabled
+            createdAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.createdAt), ZoneOffset.UTC)
+            updatedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.updatedAt), ZoneOffset.UTC)
+          }
+        },
+      )
     return dataplaneGroupRead
   }
 

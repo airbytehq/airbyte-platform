@@ -16923,15 +16923,14 @@ components:
     DataplaneGroupRead:
       type: object
       required:
-        # TODO: add dataplanes when those endpoints have been added
         - name
         - dataplane_group_id
         - organization_id
         - enabled
         - created_at
         - updated_at
+        - dataplanes
       properties:
-        # TODO: add dataplanes when those endpoints have been added
         name:
           type: string
         dataplane_group_id:
@@ -16948,6 +16947,10 @@ components:
         updated_at:
           type: string
           format: date-time
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneRead"
     DataplaneGroupListResponse:
       type: object
       properties:
