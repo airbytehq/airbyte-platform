@@ -5,21 +5,12 @@ distribution of [OpenJDK](https://openjdk.org/).
 
 # Releasing
 
-To release a new version of this base image, use the following steps:
+To release a new version of this base image, use the [GitHub Actions workflow](https://github.com/airbytehq/airbyte-platform-internal/actions/workflows/build-base-images.yml).
 
-1. Log in to [Dockerhub](https://hub.docker.com/) via the Docker CLI (`docker login`).
-2. Run `docker buildx create --use` to enable Docker `buildx` if you have not used it previously.
-3. Run the following to build and push a new version of this image (replace `<new_version>` with a new version!) :
-   ```
-   docker buildx build --push \
-     --tag airbyte/airbyte-base-java-image:<new_version> \
-     --platform linux/amd64,linux/arm64 .
-   ```
-   To see existing versions, [view the image on Dockerhub](https://hub.docker.com/r/airbyte/airbyte-base-java-image).
-4. Update base Docker image tag to the new version in all Dockerfiles that depend on the base image:
-   ```bash
-   FROM airbyte/airbyte-base-java-image:<NEW VERSION>
-   ```
-5. Update the [airbyte-base-java-python-image](../airbyte-base-java-python-image/) image to use the new version of this image.
+The workflow will build and publish the images to DockerHub with multi-platform support (linux/amd64, linux/arm64).
+
+To see existing versions, [view the image on Dockerhub](https://hub.docker.com/r/airbyte/airbyte-base-java-image).
+
+After publishing new versions, you may want to update references to these images in the codebase.
 
 [dockerhub]: https://hub.docker.com/repository/docker/airbyte/airbyte-base-java-image/general
