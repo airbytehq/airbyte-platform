@@ -11,6 +11,7 @@ import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.repositories.entities.DataplaneClientCredentials
 import io.airbyte.data.services.DataplaneAuthService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
@@ -25,6 +26,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Requires(property = "micronaut.security.enabled", value = "true")
 @Requires(property = "micronaut.security.token.jwt.enabled", value = "true")
+@Replaces(DataplaneAuthServiceNoAuthImpl::class)
 class DataplaneAuthServiceDataImpl(
   private val dataplaneClientCredentialsRepository: DataplaneClientCredentialsRepository,
   private val jwtTokenGenerator: JwtTokenGenerator,
