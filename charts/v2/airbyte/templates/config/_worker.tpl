@@ -114,24 +114,6 @@ Renders the worker.maxSyncWorkers environment variable
 {{- end }}
 
 {{/*
-Renders the worker.shouldRunNotifyWorkflows value
-*/}}
-{{- define "airbyte.worker.shouldRunNotifyWorkflows" }}
-    {{- .Values.worker.shouldRunNotifyWorkflows | default true }}
-{{- end }}
-
-{{/*
-Renders the worker.shouldRunNotifyWorkflows environment variable
-*/}}
-{{- define "airbyte.worker.shouldRunNotifyWorkflows.env" }}
-- name: SHOULD_RUN_NOTIFY_WORKFLOWS
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: SHOULD_RUN_NOTIFY_WORKFLOWS
-{{- end }}
-
-{{/*
 Renders the worker.syncJobMaxAttempts value
 */}}
 {{- define "airbyte.worker.syncJobMaxAttempts" }}
@@ -285,7 +267,6 @@ Renders the set of all worker environment variables
 {{- include "airbyte.worker.configRoot.env" . }}
 {{- include "airbyte.worker.maxNotifyWorkers.env" . }}
 {{- include "airbyte.worker.maxSyncWorkers.env" . }}
-{{- include "airbyte.worker.shouldRunNotifyWorkflows.env" . }}
 {{- include "airbyte.worker.syncJobMaxAttempts.env" . }}
 {{- include "airbyte.worker.syncJobMaxTimeoutDays.env" . }}
 {{- include "airbyte.worker.syncJobInitRetryTimeoutMinutes.env" . }}
@@ -306,7 +287,6 @@ ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activity
 CONFIG_ROOT: {{ include "airbyte.worker.configRoot" . | quote }}
 MAX_NOTIFY_WORKERS: {{ include "airbyte.worker.maxNotifyWorkers" . | quote }}
 MAX_SYNC_WORKERS: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}
-SHOULD_RUN_NOTIFY_WORKFLOWS: {{ include "airbyte.worker.shouldRunNotifyWorkflows" . | quote }}
 SYNC_JOB_MAX_ATTEMPTS: {{ include "airbyte.worker.syncJobMaxAttempts" . | quote }}
 SYNC_JOB_MAX_TIMEOUT_DAYS: {{ include "airbyte.worker.syncJobMaxTimeoutDays" . | quote }}
 SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES: {{ include "airbyte.worker.syncJobInitRetryTimeoutMinutes" . | quote }}

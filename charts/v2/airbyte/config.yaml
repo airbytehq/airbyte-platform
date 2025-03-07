@@ -178,7 +178,8 @@ cluster:
       defaultValue: hybrid
 
     - env: REMOTE_DATAPLANE_SERVICEACCOUNTS
-      key: controlPlane.serviceAccounts
+      key: controlPlane.remoteDataPlaneServiceAccounts
+      valueExp: (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson )
       discriminatorOpts:
        - control-plane
        - hybrid
@@ -1067,9 +1068,37 @@ worker:
       key: maxSyncWorkers
       defaultValue: 5
       
-    - env: SHOULD_RUN_NOTIFY_WORKFLOWS
-      key: shouldRunNotifyWorkflows
-      defaultValue: true
+    #- env: SHOULD_HANDLE_SYNC_CONTROL_PLANE_TASKS
+    #  key: shouldHandleSyncControlPlaneTasks
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS
+    #  key: shouldRunCheckConnectionWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS
+    #  key: shouldRunConnectionManagerWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_DISCOVER_WORKFLOWS
+    #  key: shouldRunDiscoverWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_GET_SPEC_WORKFLOWS
+    #  key: shouldRunGetSpecWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_NOTIFY_WORKFLOWS
+    #  key: shouldRunNotifyWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_SYNC_WORKFLOWS
+    #  key: shouldRunSyncWorkflows
+    #  defaultValue: true
+
+    #- env: SKIP_DATABASE_AVAILABILITY_CHECKS
+    #  key: skipDatabaseAvailabilityChecks
+    #  defaultValue: true
 
     - env: SYNC_JOB_MAX_ATTEMPTS
       key: syncJobMaxAttempts

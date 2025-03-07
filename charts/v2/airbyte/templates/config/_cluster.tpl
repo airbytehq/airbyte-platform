@@ -24,16 +24,16 @@ Renders the cluster.type environment variable
 {{- end }}
 
 {{/*
-Renders the global.cluster.controlPlane.serviceAccounts value
+Renders the global.cluster.controlPlane.remoteDataPlaneServiceAccounts value
 */}}
-{{- define "airbyte.cluster.controlPlane.serviceAccounts" }}
-    {{- .Values.global.cluster.controlPlane.serviceAccounts }}
+{{- define "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts" }}
+    {{- (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) }}
 {{- end }}
 
 {{/*
-Renders the cluster.controlPlane.serviceAccounts environment variable
+Renders the cluster.controlPlane.remoteDataPlaneServiceAccounts environment variable
 */}}
-{{- define "airbyte.cluster.controlPlane.serviceAccounts.env" }}
+{{- define "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" }}
 - name: REMOTE_DATAPLANE_SERVICEACCOUNTS
   valueFrom:
     configMapKeyRef:
@@ -121,7 +121,7 @@ Renders the set of all cluster environment variables
 {{- $opt := (include "airbyte.cluster.type" .) }}
 
 {{- if eq $opt "control-plane" }}
-{{- include "airbyte.cluster.controlPlane.serviceAccounts.env" . }}
+{{- include "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" . }}
 {{- end }}
 
 {{- if eq $opt "data-plane" }}
@@ -132,7 +132,7 @@ Renders the set of all cluster environment variables
 {{- end }}
 
 {{- if eq $opt "hybrid" }}
-{{- include "airbyte.cluster.controlPlane.serviceAccounts.env" . }}
+{{- include "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" . }}
 {{- include "airbyte.cluster.dataPlane.id.env" . }}
 {{- include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint.env" . }}
 {{- include "airbyte.cluster.dataPlane.serviceAccountEmail.env" . }}
@@ -149,7 +149,7 @@ CLUSTER_TYPE: {{ include "airbyte.cluster.type" . | quote }}
 {{- $opt := (include "airbyte.cluster.type" .) }}
 
 {{- if eq $opt "control-plane" }}
-REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ include "airbyte.cluster.controlPlane.serviceAccounts" . | quote }}
+REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) | quote }}
 {{- end }}
 
 {{- if eq $opt "data-plane" }}
@@ -160,7 +160,7 @@ DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH: {{ include "airbyte.cluster.dataPla
 {{- end }}
 
 {{- if eq $opt "hybrid" }}
-REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ include "airbyte.cluster.controlPlane.serviceAccounts" . | quote }}
+REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) | quote }}
 DATA_PLANE_ID: {{ include "airbyte.cluster.dataPlane.id" . | quote }}
 CONTROL_PLANE_AUTH_ENDPOINT: {{ include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint" . | quote }}
 DATA_PLANE_SERVICE_ACCOUNT_EMAIL: {{ include "airbyte.cluster.dataPlane.serviceAccountEmail" . | quote }}

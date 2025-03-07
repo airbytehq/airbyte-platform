@@ -13,7 +13,7 @@ global:
     secretName: ""
 
     controlPlane: 
-      serviceAccounts: ""
+      remoteDataPlaneServiceAccounts: {}
 
     dataPlane:
       id: "local"
@@ -214,6 +214,7 @@ global:
       containerOrchestrator: ""
 
     containerOrchestrator:
+      secretName: ""
       dataPlane:
         secretName: ""
         secretMountPath: ""
