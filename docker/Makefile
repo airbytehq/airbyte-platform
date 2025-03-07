@@ -6,7 +6,7 @@ OS ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 
 PUBLISH ?= false
 
-BASE_JAVA_IMAGE_VERSION ?= 3.3.2
+BASE_JAVA_IMAGE_VERSION ?= 3.3.3
 NGINX_VERSION = 1.27.3
 BASE_JAVA_IMAGE = airbyte/airbyte-base-java-image:$(BASE_JAVA_IMAGE_VERSION)
 
