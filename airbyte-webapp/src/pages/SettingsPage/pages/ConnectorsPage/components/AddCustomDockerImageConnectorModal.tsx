@@ -16,7 +16,7 @@ import { links } from "core/utils/links";
 
 const validationSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),
-  documentationUrl: z.string().url("form.url.error"),
+  documentationUrl: z.string().url("form.url.error").or(z.literal("")),
   dockerImageTag: z.string().trim().nonempty("form.empty.error"),
   dockerRepository: z.string().trim().nonempty("form.empty.error"),
 });
