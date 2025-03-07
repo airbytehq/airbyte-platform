@@ -849,6 +849,12 @@ export function manifestIncrementalSyncToBuilder(
   if (manifestIncrementalSync.type === "CustomIncrementalSync") {
     throw new ManifestCompatibilityError(streamName, "incremental sync uses a custom implementation");
   }
+  if (manifestIncrementalSync.type === "IncrementingCountCursor") {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "incremental sync uses an IncrementingCountCursor, which is unsupported"
+    );
+  }
   assertType(manifestIncrementalSync, "DatetimeBasedCursor", streamName);
   const datetimeBasedCursor = filterKnownFields(
     manifestIncrementalSync,
@@ -1464,9 +1470,11 @@ export function manifestAuthenticatorToBuilder(
       return {
         ...sessionTokenAuth,
         login_requester: {
-          url: `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
-            manifestLoginRequester.path
-          )}`,
+          url: manifestLoginRequester.path
+            ? `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
+                manifestLoginRequester.path
+              )}`
+            : manifestLoginRequester.url_base,
           authenticator: builderLoginRequesterAuthenticator as
             | ApiKeyAuthenticator
             | BearerAuthenticator

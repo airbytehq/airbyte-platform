@@ -366,7 +366,7 @@ export const isYamlString = (value: unknown): value is YamlString => isString(va
 export interface BuilderStream {
   id: string;
   name: string;
-  urlPath: string;
+  urlPath?: string;
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
   decoder: BuilderDecoderConfig;
@@ -567,20 +567,6 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
   return regexBracketResult[2];
 }
 
-function splitUrl(url: string): { base: string; path: string } {
-  const lastSlashIndex = url.lastIndexOf("/");
-
-  if (lastSlashIndex === -1) {
-    // return a "/" for the path to avoid setting path to an empty string, which breaks validation
-    return { base: url, path: "/" };
-  }
-
-  const leftSide = url.substring(0, lastSlashIndex);
-  const rightSide = url.substring(lastSlashIndex + 1);
-
-  return { base: leftSide, path: rightSide || "/" };
-}
-
 function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
   builderValue: BuilderInput | YamlString,
   convertFn: (builderValue: BuilderInput) => ManifestOutput
@@ -660,13 +646,11 @@ export function builderAuthenticatorToManifest(
   }
   if (authenticator.type === "SessionTokenAuthenticator") {
     const builderLoginRequester = authenticator.login_requester;
-    const { base, path } = splitUrl(builderLoginRequester.url ?? "");
     return {
       ...authenticator,
       login_requester: {
         type: "HttpRequester",
-        url_base: base,
-        path,
+        url_base: builderLoginRequester.url,
         authenticator: builderLoginRequester.authenticator,
         error_handler: builderErrorHandlersToManifest(builderLoginRequester.errorHandler),
         http_method: builderLoginRequester.httpMethod,
@@ -1093,7 +1077,7 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
       type: "SimpleRetriever",
       requester: {
         ...requesterRef,
-        path: stream.urlPath?.trim(),
+        path: stream.urlPath?.trim() || undefined,
         http_method: stream.httpMethod,
         request_parameters: fromEntriesOrUndefined(stream.requestOptions.requestParameters),
         request_headers: fromEntriesOrUndefined(stream.requestOptions.requestHeaders),

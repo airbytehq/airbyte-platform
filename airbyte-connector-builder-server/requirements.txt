@@ -4,12 +4,14 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.36.3
+airbyte-cdk==6.38.3
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
+anyascii==0.3.2
+    # via airbyte-cdk
 anyio==4.8.0
     # via httpx
 attributes-doc==0.4.0
@@ -38,7 +40,7 @@ charset-normalizer==3.4.1
     # via requests
 click==8.1.8
     # via nltk
-cryptography==43.0.3
+cryptography==44.0.2
     # via airbyte-cdk
 dpath==2.2.0
     # via airbyte-cdk
@@ -63,7 +65,7 @@ idna==3.10
     #   requests
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.5
+jinja2==3.1.6
     # via airbyte-cdk
 joblib==1.4.2
     # via nltk
@@ -130,7 +132,7 @@ pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-rapidfuzz==3.12.1
+rapidfuzz==3.12.2
     # via airbyte-cdk
 regex==2024.11.6
     # via nltk
@@ -166,8 +168,6 @@ typing-extensions==4.12.2
     #   serpyco-rs
 tzdata==2025.1
     # via pandas
-unidecode==1.3.8
-    # via airbyte-cdk
 url-normalize==1.4.3
     # via requests-cache
 urllib3==2.3.0
