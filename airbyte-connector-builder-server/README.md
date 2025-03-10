@@ -13,7 +13,7 @@ The Connector Builder API server sends commands to an entrypoint of the Airbyte 
 To set up a local CDK environment, navigate to the `airbyte_cdk` folder in your local `airbyte-python-cdk` repo and create your CDK environment:
 
 ```bash
-pyenv local 3.10  # use the python version compatible with the CDK
+pyenv local 3.11  # use the python version compatible with the CDK
 poetry config --local virtualenvs.in-project true  # optional - this creates the .venv folder in the repo's directory
 poetry env use $(pyenv which python)
 poetry install

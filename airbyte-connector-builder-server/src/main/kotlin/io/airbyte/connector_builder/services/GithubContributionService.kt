@@ -7,7 +7,6 @@
 package io.airbyte.connector_builder.services
 
 import io.airbyte.commons.server.handlers.logger
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -20,13 +19,11 @@ import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 
-private val logger = KotlinLogging.logger {}
-
 class GithubContributionService(
   var connectorImageName: String,
   personalAccessToken: String?,
 ) {
-  var githubService: GitHub? = null
+  var githubService: GitHub
   val repositoryName = "airbyte"
   val repoOwner = "airbytehq"
   val connectorDirectory = "airbyte-integrations/connectors"
@@ -45,7 +42,7 @@ class GithubContributionService(
   // PROPERTIES
 
   val airbyteRepository: GHRepository
-    get() = githubService!!.getRepository("$repoOwner/$repositoryName")
+    get() = githubService.getRepository("$repoOwner/$repositoryName")
 
   val forkedRepository: GHRepository
     get() = airbyteRepository.fork()
@@ -86,7 +83,7 @@ class GithubContributionService(
     get() = "$connectorDirectoryPath/acceptance-test-config.yml"
 
   val username: String
-    get() = githubService!!.myself.login
+    get() = githubService.myself.login
 
   val contributionBranchName: String
     get() = "$username/builder-contribute/$connectorImageName"
@@ -125,7 +122,7 @@ class GithubContributionService(
   // TODO: Cache the metadata
   fun readConnectorMetadata(): Map<String, Any>? {
     val metadataFile = safeReadFileContent(connectorMetadataPath, airbyteRepository) ?: return null
-    val rawYamlString = metadataFile.content
+    val rawYamlString = metadataFile.read().bufferedReader().use { it.readText() }
 
     // Parse YAML
     val yaml = Yaml()

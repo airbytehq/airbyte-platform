@@ -66,18 +66,18 @@ class ConnectorContributionHandler(
     val filesToCommit =
       mutableMapOf(
         githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
-        githubContributionService.connectorMetadataPath to {
-          contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService)
-        },
       )
 
-    // Others - generate if not pre-existing
+    // Others - generate if not pre-existing.
+    // Including metadata — do not regenrated it if it already exists.
     val createIfNotExistsFiles =
       listOf(
         githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
         githubContributionService.connectorIconPath to { contributionTemplates.renderIconSvg() },
         githubContributionService.connectorAcceptanceTestConfigPath to { contributionTemplates.renderAcceptanceTestConfigYaml(contributionInfo) },
         githubContributionService.connectorDocsPath to { contributionTemplates.renderContributionDocsMd(contributionInfo) },
+        githubContributionService.connectorMetadataPath to
+          { contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService) },
       )
 
     createIfNotExistsFiles.forEach { (filePath, generationFunction) ->

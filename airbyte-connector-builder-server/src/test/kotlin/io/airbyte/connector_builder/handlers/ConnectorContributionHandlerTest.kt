@@ -97,7 +97,7 @@ class ConnectorContributionHandlerTest {
     every { githubContributionService.checkFileExistsOnMain(any()) } returns true
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(2, filesToCommit.size)
-    assertEquals(setOf("manifestPath", "metadataPath"), filesToCommit.keys)
+    assertEquals(1, filesToCommit.size)
+    assertEquals(setOf("manifestPath"), filesToCommit.keys)
   }
 }
