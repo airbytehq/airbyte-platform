@@ -12,11 +12,15 @@ import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseWorkloadQueueTable
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.workload.repository.WorkloadQueueRepository
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -29,6 +33,8 @@ open class WorkloadService(
   private val messageProducer: TemporalMessageProducer<LauncherInputMessage>,
   private val metricClient: MetricClient,
   private val airbyteApiClient: AirbyteApiClient,
+  private val workloadQueueRepository: WorkloadQueueRepository,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
     const val CONNECTION_ID_LABEL_KEY = "connection_id"
@@ -60,6 +66,10 @@ open class WorkloadService(
       LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs, autoId),
       "wl-create_$workloadId",
     )
+    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+      workloadQueueRepository.enqueueWorkload(queue, priority.toInt(), workloadId)
+    }
+
     metricClient.count(
       metric = OssMetricsRegistry.WORKLOAD_MESSAGE_PUBLISHED,
       attributes =

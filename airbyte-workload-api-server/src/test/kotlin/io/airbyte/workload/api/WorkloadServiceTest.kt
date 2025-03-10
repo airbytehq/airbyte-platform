@@ -11,8 +11,12 @@ import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseWorkloadQueueTable
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.workload.repository.WorkloadQueueRepository
+import io.airbyte.workload.repository.domain.WorkloadQueueItem
 import io.micrometer.core.instrument.Counter
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -30,6 +34,8 @@ class WorkloadServiceTest {
   private val metricClient: MetricClient = mockk()
   private val airbyteApiClient: AirbyteApiClient = mockk()
   private val dataplaneApi: DataplaneApi = mockk()
+  private val workloadQueueRepository: WorkloadQueueRepository = mockk()
+  private val featureFlagClient: FeatureFlagClient = mockk()
 
   private val workloadId = "workloadIdea"
   private val workloadInput = "{}"
@@ -55,11 +61,35 @@ class WorkloadServiceTest {
     priority: WorkloadPriority,
     expectedQueue: String,
   ) {
-    val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient)
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns false
+    val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient, workloadQueueRepository, featureFlagClient)
 
     workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
 
     verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
+  }
+
+  @ParameterizedTest
+  @MethodSource("expectedQueueArgsMatrix")
+  fun `enqueues workload in workload queue table when flag enabled`(
+    workloadType: WorkloadType,
+    priority: WorkloadPriority,
+    expectedQueue: String,
+  ) {
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns true
+    every { workloadQueueRepository.enqueueWorkload(expectedQueue, priority.toInt(), workloadId) } returns
+      WorkloadQueueItem(
+        dataplaneGroup = expectedQueue,
+        priority = priority.toInt(),
+        workloadId = workloadId,
+        pollDeadline = null,
+      )
+    val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient, workloadQueueRepository, featureFlagClient)
+
+    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
+
+    verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
+    verify { workloadQueueRepository.enqueueWorkload(expectedQueue, priority.toInt(), workloadId) }
   }
 
   companion object {

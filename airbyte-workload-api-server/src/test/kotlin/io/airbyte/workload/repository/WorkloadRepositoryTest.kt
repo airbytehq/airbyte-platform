@@ -40,6 +40,7 @@ internal class WorkloadRepositoryTest {
   fun cleanDb() {
     workloadLabelRepo.deleteAll()
     workloadRepo.deleteAll()
+    workloadQueueRepo.deleteAll()
   }
 
   @Test
@@ -485,7 +486,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `get pending workloads returns only pending workloads that match the search criteria`(
     group: String,
     priority: Int,
@@ -511,7 +512,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `get pending workloads handles nullable criteria`(
     group: String,
     priority: Int,
@@ -548,7 +549,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `count pending workloads counts only pending workloads that match the search criteria`(
     group: String,
     priority: Int,
@@ -574,7 +575,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `count pending workloads handles nullable criteria`(
     group: String,
     priority: Int,
@@ -611,7 +612,7 @@ internal class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `count pending workloads by queue returns a queue stats object per dataplane x priority`(
     group: String,
     priority: Int,
@@ -633,6 +634,183 @@ internal class WorkloadRepositoryTest {
       )
     seeds.forEach { workloadRepo.save(it) }
     workloads.forEach { workloadRepo.save(it) }
+
+    val result = workloadRepo.getPendingWorkloadQueueStats()
+    val expected =
+      listOf(
+        WorkloadQueueStats(group, priority, workloads.size.toLong()),
+        WorkloadQueueStats(staticPending1.dataplaneGroup, staticPending1.priority, 1),
+        WorkloadQueueStats(staticPending2.dataplaneGroup, staticPending2.priority, 1),
+      )
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `poll workload gets enqueued workloads for provided params`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "other1"),
+        Fixtures.workload(id = "other2"),
+        Fixtures.workload(id = "other3"),
+      )
+    seeds.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(it.dataplaneGroup!!, it.priority!!, it.id)
+    }
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+
+    val result = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+
+    assertWorkloadsEqual(workloads, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `subsequent calls to poll workload do not return duplicate workloads within poll deadline`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+
+    val result1 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+    assertWorkloadsEqual(workloads, result1, "workloads are delivered as expected")
+
+    val result2 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+    assertWorkloadsEqual(listOf(), result2, "workloads are not re-delivered")
+
+    val freshlyEnqueued =
+      listOf(
+        Fixtures.workload(id = "new1", dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "new2", dataplaneGroup = group, priority = priority),
+      )
+
+    freshlyEnqueued.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+
+    val result3 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+    assertWorkloadsEqual(freshlyEnqueued, result3, "new workloads get delivered as expected")
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `poll workload will re-deliver (return previously seen) workloads once poll deadline expires`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+    val result1 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowMins = 0)
+    assertWorkloadsEqual(workloads, result1, "workloads are delivered as expected")
+
+    val result2 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowMins = 1)
+    assertWorkloadsEqual(workloads, result2, "workloads are re-delivered since we passed an empty window in the first poll")
+
+    val result3 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+    assertWorkloadsEqual(listOf(), result3, "workloads are not re-delivered since we passed a non 0 window")
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `an acked workload is no longer considered enqueued`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+    // split the workloads in 2
+    var index = 0
+    val (toAck, unAcked) = workloads.partition { index++ % 2 == 0 }
+    // ack half of them
+    toAck.forEach {
+      workloadQueueRepo.ackWorkloadQueueItem(it.id)
+    }
+
+    val result = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)
+    assertWorkloadsEqual(unAcked, result, "only un-acked workloads are delivered")
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `count enqueued workloads counts only pending workloads that match the search criteria`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED, dataplaneGroup = group, priority = priority),
+        Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = priority),
+        Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = group, priority = 8),
+      )
+    seeds.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(it.dataplaneGroup!!, it.priority!!, it.id)
+    }
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
+
+    val result = workloadRepo.countPendingWorkloads(group, priority)
+
+    assertEquals(workloads.size.toLong(), result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `get enqueued workload stats returns a queue stats object per dataplane x priority`(
+    group: String,
+    priority: Int,
+    workloads: List<Workload>,
+  ) {
+    val staticPending1 = Fixtures.workload(id = "pending1", status = WorkloadStatus.PENDING, dataplaneGroup = "random-1", priority = 1)
+    val staticPending2 = Fixtures.workload(id = "pending2", status = WorkloadStatus.PENDING, dataplaneGroup = "random-2", priority = 0)
+
+    val seeds =
+      listOf(
+        Fixtures.workload(id = "running1", status = WorkloadStatus.RUNNING),
+        Fixtures.workload(id = "claimed1", status = WorkloadStatus.CLAIMED),
+        Fixtures.workload(id = "launched1", status = WorkloadStatus.LAUNCHED),
+        Fixtures.workload(id = "success1", status = WorkloadStatus.SUCCESS),
+        Fixtures.workload(id = "failure1", status = WorkloadStatus.FAILURE),
+        Fixtures.workload(id = "cancelled1", status = WorkloadStatus.CANCELLED),
+        staticPending1,
+        staticPending2,
+      )
+    seeds.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(it.dataplaneGroup!!, it.priority!!, it.id)
+    }
+    workloads.forEach {
+      workloadRepo.save(it)
+      workloadQueueRepo.enqueueWorkload(group, priority, it.id)
+    }
 
     val result = workloadRepo.getPendingWorkloadQueueStats()
     val expected =
@@ -684,6 +862,7 @@ internal class WorkloadRepositoryTest {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
     lateinit var workloadLabelRepo: WorkloadLabelRepository
+    lateinit var workloadQueueRepo: WorkloadQueueRepository
     private lateinit var jooqDslContext: DSLContext
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
@@ -722,6 +901,7 @@ internal class WorkloadRepositoryTest {
       databaseProviders.createNewConfigsDatabase()
       workloadRepo = context.getBean(WorkloadRepository::class.java)
       workloadLabelRepo = context.getBean(WorkloadLabelRepository::class.java)
+      workloadQueueRepo = context.getBean(WorkloadQueueRepository::class.java)
     }
 
     @AfterAll
@@ -767,6 +947,7 @@ internal class WorkloadRepositoryTest {
     fun assertWorkloadsEqual(
       a: List<Workload>,
       b: List<Workload>,
+      message: String? = null,
     ) {
       val aGroomed =
         a
@@ -785,11 +966,11 @@ internal class WorkloadRepositoryTest {
             it
           }.sortedBy { it.id }
 
-      assertEquals(aGroomed, bGroomed)
+      assertEquals(aGroomed, bGroomed, message)
     }
 
     @JvmStatic
-    fun getPendingWorkloadMatrix(): List<Arguments> =
+    fun pendingWorkloadMatrix(): List<Arguments> =
       listOf(
         Arguments.of(
           "group-1",

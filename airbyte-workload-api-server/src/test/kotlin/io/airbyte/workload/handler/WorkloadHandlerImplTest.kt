@@ -11,6 +11,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseWorkloadQueueTable
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -21,6 +22,7 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.featureFlagClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
@@ -28,7 +30,9 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.signalApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailedSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
+import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
@@ -287,6 +291,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `claiming a workload successfully returns true`() {
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -294,11 +299,14 @@ class WorkloadHandlerImplTest {
         status = WorkloadStatus.CLAIMED,
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertTrue(result)
+    verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
   fun `test claiming a workload successfully`() {
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
       Fixtures.workload(
         id = WORKLOAD_ID,
@@ -306,13 +314,17 @@ class WorkloadHandlerImplTest {
         dataplaneId = DATAPLANE_ID,
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertTrue(result)
+    verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
   fun `test claiming a workload unsuccessfully`() {
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertFalse(result)
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
@@ -350,6 +362,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -371,6 +384,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -392,6 +406,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApiFailingSignal()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -413,6 +428,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, any(), any()) } returns mockk<Counter>()
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
@@ -440,6 +456,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
     verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again", null) }
@@ -480,6 +497,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
@@ -724,6 +742,7 @@ class WorkloadHandlerImplTest {
     val workloadHandlerImpl =
       WorkloadHandlerImpl(
         mockk<WorkloadRepository>(),
+        mockk<WorkloadQueueRepository>(),
         mockk<AirbyteApiClient>(),
         mockk<MetricClient>(),
         mockk<FeatureFlagClient>(),
@@ -735,7 +754,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("getPendingWorkloadMatrix")
+  @MethodSource("pendingWorkloadMatrix")
   fun `poll workloads returns pending workloads`(
     group: String,
     priority: Int,
@@ -773,15 +792,58 @@ class WorkloadHandlerImplTest {
     assertEquals(expected, result)
   }
 
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `poll workloads returns enqueued workloads (separate table enabled)`(
+    group: String,
+    priority: Int,
+    domainWorkloads: List<Workload>,
+  ) {
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns true
+    every { workloadQueueRepository.pollWorkloadQueue(group, priority, 10) }.returns(domainWorkloads)
+    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
+    val expected = domainWorkloads.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("countPendingWorkloadMatrix")
+  fun `count workload queue depth returns count of enqueued workloads (separate table enabled)`(
+    group: String,
+    priority: Int,
+    count: Long,
+  ) {
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns true
+    every { workloadQueueRepository.countEnqueuedWorkloads(group, priority) }.returns(count)
+    val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
+
+    assertEquals(count, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("workloadStatsMatrix")
+  fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority) (separate table enabled)`(
+    stats: List<WorkloadQueueStats>,
+  ) {
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns true
+    every { workloadQueueRepository.getEnqueuedWorkloadStats() }.returns(stats)
+    val result = workloadHandler.getWorkloadQueueStats()
+    val expected = stats.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
+    val workloadQueueRepository = mockk<WorkloadQueueRepository>()
     val metricClient: MetricClient = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
     val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, airbyteApi, metricClient, featureFlagClient))
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, workloadQueueRepository, airbyteApi, metricClient, featureFlagClient))
 
     val configSignalInput =
       ConfigSignalInput(
@@ -857,7 +919,7 @@ class WorkloadHandlerImplTest {
 
   companion object {
     @JvmStatic
-    fun getPendingWorkloadMatrix(): List<Arguments> =
+    fun pendingWorkloadMatrix(): List<Arguments> =
       listOf(
         Arguments.of("group-1", 0, listOf(Fixtures.workload("1"), Fixtures.workload("2"), Fixtures.workload("3"))),
         Arguments.of("group-2", 1, listOf(Fixtures.workload("1"), Fixtures.workload("3"))),

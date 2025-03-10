@@ -9,7 +9,9 @@ import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseWorkloadQueueTable
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -20,6 +22,7 @@ import io.airbyte.workload.api.domain.WorkloadQueueStats
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
+import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -36,6 +39,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
+  private val workloadQueueRepository: WorkloadQueueRepository,
   private val airbyteApi: AirbyteApiClient,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
@@ -134,7 +138,11 @@ class WorkloadHandlerImpl(
     deadline: OffsetDateTime,
   ): Boolean {
     val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
-    return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
+    val claimed = workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
+    if (claimed) {
+      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+    }
+    return claimed
   }
 
   override fun cancelWorkload(
@@ -154,6 +162,8 @@ class WorkloadHandlerImpl(
           null,
         )
         sendSignal(workload.type, workload.signalInput)
+
+        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
       }
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -179,6 +189,8 @@ class WorkloadHandlerImpl(
           null,
         )
         sendSignal(workload.type, workload.signalInput)
+
+        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
       }
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -301,7 +313,12 @@ class WorkloadHandlerImpl(
     priority: WorkloadPriority?,
     quantity: Int,
   ): List<Workload> {
-    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
+    val domainWorkloads =
+      if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+        workloadQueueRepository.pollWorkloadQueue(dataplaneGroup, priority?.toInt(), quantity)
+      } else {
+        workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
+      }
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -309,10 +326,20 @@ class WorkloadHandlerImpl(
   override fun countWorkloadQueueDepth(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
-  ): Long = workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
+  ): Long =
+    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+      workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
+    } else {
+      workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
+    }
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
-    val domainStats = workloadRepository.getPendingWorkloadQueueStats()
+    val domainStats =
+      if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+        workloadQueueRepository.getEnqueuedWorkloadStats()
+      } else {
+        workloadRepository.getPendingWorkloadQueueStats()
+      }
 
     return domainStats.map { it.toApi() }
   }
