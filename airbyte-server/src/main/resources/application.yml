@@ -131,7 +131,8 @@ airbyte:
     identity-provider:
       type: ${IDENTITY_PROVIDER_TYPE:}
       oidc:
-        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_CLIENT_ID:}
+        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID:}
+        audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
         endpoints:
           authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
         fields:
