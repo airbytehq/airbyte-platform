@@ -6,7 +6,6 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.DataplaneClientCredentials
 import io.airbyte.data.services.DataplaneAuthService
-import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -15,7 +14,6 @@ import java.util.UUID
  * A non-secure implementation of DataplaneAuthService for environments where security is disabled.
  */
 @Singleton
-@Requires(property = "micronaut.security.enabled", notEquals = "true")
 class DataplaneAuthServiceNoAuthImpl : DataplaneAuthService {
   override fun createCredentials(
     dataplaneId: UUID,
