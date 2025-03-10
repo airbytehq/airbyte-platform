@@ -6064,6 +6064,28 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/heartbeat:
+    post:
+      summary: For a dataplane to signal it is still alive
+      tags:
+        - dataplane
+      operationId: heartbeatDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneHeartbeatRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane heartbeat information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneHeartbeatResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/initialize:
     post:
       summary: Returns information needed for dataplane startup and initialization (groups, queues, AuthN identify, etc.)
@@ -17108,6 +17130,34 @@ components:
           type: string
         client_secret:
           type: string
+    DataplaneHeartbeatRequestBody:
+      required:
+        - client_id
+      type: object
+      properties:
+        client_id:
+          type: string
+    DataplaneHeartbeatResponse:
+      type: object
+      required:
+        - dataplane_name
+        - dataplane_id
+        - dataplane_enabled
+        - dataplane_group_name
+        - dataplane_group_id
+      properties:
+        dataplane_name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_enabled:
+          type: boolean
+        dataplane_group_name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
     DataplaneInitRequestBody:
       required:
         - client_id
@@ -17120,6 +17170,7 @@ components:
       required:
         - dataplane_name
         - dataplane_id
+        - dataplane_enabled
         - dataplane_group_name
         - dataplane_group_id
       properties:
@@ -17128,6 +17179,8 @@ components:
         dataplane_id:
           type: string
           format: uuid
+        dataplane_enabled:
+          type: boolean
         dataplane_group_name:
           type: string
         dataplane_group_id:

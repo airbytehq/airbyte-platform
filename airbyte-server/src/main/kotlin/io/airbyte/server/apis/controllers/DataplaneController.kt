@@ -10,6 +10,8 @@ import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneCreateResponse
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
 import io.airbyte.api.model.generated.DataplaneGetIdRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
@@ -172,9 +174,28 @@ open class DataplaneController(
     val resp = DataplaneInitResponse()
     resp.dataplaneName = dataplane.name
     resp.dataplaneId = dataplane.id
+    resp.dataplaneEnabled = dataplane.enabled
     resp.dataplaneGroupName = dataplaneGroup.name
     resp.dataplaneGroupId = dataplaneGroup.id
 
     return resp
+  }
+
+  @Post("/heartbeat")
+  @Secured(ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun heartbeatDataplane(
+    @Body req: DataplaneHeartbeatRequestBody,
+  ): DataplaneHeartbeatResponse {
+    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    return DataplaneHeartbeatResponse().apply {
+      dataplaneName = dataplane.name
+      dataplaneId = dataplane.id
+      dataplaneEnabled = dataplane.enabled
+      dataplaneGroupName = dataplaneGroup.name
+      dataplaneGroupId = dataplaneGroup.id
+    }
   }
 }

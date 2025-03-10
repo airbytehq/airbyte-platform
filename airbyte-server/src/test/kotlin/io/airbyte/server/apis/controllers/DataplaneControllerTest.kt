@@ -5,6 +5,8 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
@@ -18,7 +20,6 @@ import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.Assert.assertEquals
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
@@ -116,6 +117,31 @@ class DataplaneControllerTest {
   }
 
   @Test
+  fun `heartbeatDataplane returns expected dataplane information`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneHeartbeatRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.heartbeatDataplane(req)
+
+    val expected = DataplaneHeartbeatResponse()
+    expected.dataplaneName = dataplane.name
+    expected.dataplaneId = dataplane.id
+    expected.dataplaneEnabled = dataplane.enabled
+    expected.dataplaneGroupName = dataplaneGroup.name
+    expected.dataplaneGroupId = dataplaneGroup.id
+
+    Assertions.assertEquals(expected, result)
+  }
+
+  @Test
   fun `initializeDataplane returns information needed for dataplane initialization`() {
     val clientId = "test-client-id"
     val dataplaneId = UUID.randomUUID()
@@ -133,6 +159,7 @@ class DataplaneControllerTest {
     val expected = DataplaneInitResponse()
     expected.dataplaneName = dataplane.name
     expected.dataplaneId = dataplane.id
+    expected.dataplaneEnabled = dataplane.enabled
     expected.dataplaneGroupName = dataplaneGroup.name
     expected.dataplaneGroupId = dataplaneGroup.id
 
