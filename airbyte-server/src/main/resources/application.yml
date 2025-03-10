@@ -64,15 +64,11 @@ micronaut:
     enabled: ${API_AUTHORIZATION_ENABLED:false}
     token:
       jwt:
+        enabled: ${API_AUTHORIZATION_ENABLED:false}
         signatures:
-          jwks:
-            oidc:
-              url: ${AB_AIRBYTE_AUTH_JWKS_ENDPOINT:}
           secret:
             generator:
-              secret: ${AB_AIRBYTE_AUTH_SECRET_SIGNING_KEY:}
-        enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
-      enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
   server:
     port: 8001
     cors:

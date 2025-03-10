@@ -5,6 +5,8 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.OrganizationAuthRole
+import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.helpers.DataplanePasswordEncoder
 import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
@@ -115,6 +117,8 @@ class DataplaneAuthServiceDataImpl(
           "roles" to // TODO: grant no roles; use scopes instead to allow specific endpoints
             buildSet {
               addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN))
+              addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
+              addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
             },
           "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
