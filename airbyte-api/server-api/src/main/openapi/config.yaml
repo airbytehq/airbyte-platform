@@ -6064,6 +6064,28 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/initialize:
+    post:
+      summary: Returns information needed for dataplane startup and initialization (groups, queues, AuthN identify, etc.)
+      tags:
+        - dataplane
+      operationId: initializeDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneInitRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane initialization information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneInitResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -17085,6 +17107,31 @@ components:
           type: string
         client_secret:
           type: string
+    DataplaneInitRequestBody:
+      required:
+        - client_id
+      type: object
+      properties:
+        client_id:
+          type: string
+    DataplaneInitResponse:
+      type: object
+      required:
+        - dataplane_name
+        - dataplane_id
+        - dataplane_group_name
+        - dataplane_group_id
+      properties:
+        dataplane_name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_group_name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
 
   responses:
     NotFoundResponse:

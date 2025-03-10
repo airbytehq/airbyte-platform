@@ -53,4 +53,12 @@ interface DataplaneAuthService {
     clientId: String,
     clientSecret: String,
   ): String
+
+  /**
+   * Retrieves the dataplane id associated with a client id
+   *
+   * @param clientId The client identifier used to obtain the token.
+   * @return the dataplaneId
+   */
+  fun getDataplaneId(clientId: String): UUID
 }

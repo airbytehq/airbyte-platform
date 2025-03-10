@@ -196,6 +196,11 @@ open class DataplaneService(
     clientSecret: String,
   ): String = dataplaneAuthService.getToken(clientId, clientSecret)
 
+  fun getDataplaneFromClientId(clientId: String): Dataplane {
+    val dataplaneId = dataplaneAuthService.getDataplaneId(clientId)
+    return dataplaneDataService.getDataplane(dataplaneId)
+  }
+
   fun writeDataplane(dataplane: Dataplane): Dataplane {
     try {
       return dataplaneDataService.writeDataplane(dataplane)

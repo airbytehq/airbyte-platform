@@ -129,6 +129,12 @@ class DataplaneAuthServiceDataImpl(
       }
   }
 
+  override fun getDataplaneId(clientId: String): UUID =
+    dataplaneClientCredentialsRepository
+      .findByClientId(clientId)
+      ?.dataplaneId
+      ?: throw IllegalArgumentException("Credentials were not found with the clientId provided. clientId: $clientId")
+
   /**
    * Generates a client id string and returns it
    */

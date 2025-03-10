@@ -10,6 +10,8 @@ import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneCreateResponse
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
 import io.airbyte.api.model.generated.DataplaneGetIdRequestBody
+import io.airbyte.api.model.generated.DataplaneInitRequestBody
+import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
@@ -21,6 +23,7 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
 import io.airbyte.data.services.DataplaneAuthService
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Requires
@@ -41,6 +44,7 @@ import java.util.stream.Collectors
 @Requires(bean = DataplaneAuthService::class)
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
+  private val dataplaneGroupService: DataplaneGroupService,
   private val currentUserService: CurrentUserService,
 ) : DataplaneApi {
   @Post("/create")
@@ -154,5 +158,23 @@ open class DataplaneController(
     val accessToken = AccessToken()
     accessToken.accessToken = token
     return accessToken
+  }
+
+  @Post("/initialize")
+  @Secured(ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun initializeDataplane(
+    @Body req: DataplaneInitRequestBody,
+  ): DataplaneInitResponse {
+    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    val resp = DataplaneInitResponse()
+    resp.dataplaneName = dataplane.name
+    resp.dataplaneId = dataplane.id
+    resp.dataplaneGroupName = dataplaneGroup.name
+    resp.dataplaneGroupId = dataplaneGroup.id
+
+    return resp
   }
 }

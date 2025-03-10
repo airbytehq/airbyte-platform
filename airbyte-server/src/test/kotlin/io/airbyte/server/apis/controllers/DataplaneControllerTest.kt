@@ -5,15 +5,21 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
+import io.airbyte.api.model.generated.DataplaneInitRequestBody
+import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
+import io.airbyte.config.DataplaneGroup
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.Assert.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.Optional
@@ -23,8 +29,14 @@ import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 class DataplaneControllerTest {
   companion object {
     private val dataplaneService = mockk<ServerDataplaneService>()
+    private val dataplaneGroupService = mockk<DataplaneGroupService>()
     private val currentUserService = mockk<CurrentUserService>()
-    private val dataplaneController = DataplaneController(dataplaneService, currentUserService)
+    private val dataplaneController =
+      DataplaneController(
+        dataplaneService,
+        dataplaneGroupService,
+        currentUserService,
+      )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
 
@@ -103,6 +115,30 @@ class DataplaneControllerTest {
     assert(accessToken.accessToken == expectedToken)
   }
 
+  @Test
+  fun `initializeDataplane returns information needed for dataplane initialization`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneInitRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.initializeDataplane(req)
+
+    val expected = DataplaneInitResponse()
+    expected.dataplaneName = dataplane.name
+    expected.dataplaneId = dataplane.id
+    expected.dataplaneGroupName = dataplaneGroup.name
+    expected.dataplaneGroupId = dataplaneGroup.id
+
+    Assertions.assertEquals(expected, result)
+  }
+
   private fun createDataplane(id: UUID? = null): Dataplane =
     io.airbyte.data.repositories.entities
       .Dataplane(
@@ -113,6 +149,19 @@ class DataplaneControllerTest {
         updatedBy = UUID.randomUUID(),
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
+        tombstone = false,
+      ).toConfigModel()
+
+  private fun createDataplaneGroup(id: UUID? = null): DataplaneGroup =
+    io.airbyte.data.repositories.entities
+      .DataplaneGroup(
+        id = id ?: UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        name = "Test Dataplane Group",
+        enabled = false,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+        updatedBy = UUID.randomUUID(),
         tombstone = false,
       ).toConfigModel()
 }

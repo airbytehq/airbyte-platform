@@ -38,4 +38,13 @@ class DataplaneAuthServiceNoAuthImpl : DataplaneAuthService {
     clientId: String,
     clientSecret: String,
   ): String = "non-secure-token-${UUID.randomUUID()}"
+
+  override fun getDataplaneId(clientId: String): UUID =
+    TODO(
+      """
+      In a no-auth environment we need to decide if:
+        1) We want to initialize the same way and therefore want to create credentials per dataplane.
+        2) Initialize in a separate fashion and therefore never do this look-up.
+      """.trimIndent(),
+    )
 }

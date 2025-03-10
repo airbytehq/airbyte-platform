@@ -35,6 +35,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
+import org.junit.Assert.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -52,6 +54,7 @@ class DataplaneServiceTest {
   private lateinit var scopedConfigurationService: ScopedConfigurationService
   private lateinit var dataplaneDataService: io.airbyte.data.services.DataplaneService
   private lateinit var dataplaneAuthService: DataplaneAuthService
+  private lateinit var dataplaneService: DataplaneService
 
   private val connectionId = UUID.randomUUID()
   private val sourceId = UUID.randomUUID()
@@ -78,12 +81,7 @@ class DataplaneServiceTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf()
     dataplaneDataService = mockk()
     dataplaneAuthService = mockk()
-  }
-
-  @Test
-  fun testGetQueueNameWithConnection() {
-    val workloadPriority: WorkloadPriority = WorkloadPriority.HIGH
-    val dataplaneService =
+    dataplaneService =
       DataplaneService(
         connectionService,
         workspaceService,
@@ -94,6 +92,11 @@ class DataplaneServiceTest {
         dataplaneDataService,
         dataplaneAuthService,
       )
+  }
+
+  @Test
+  fun testGetQueueNameWithConnection() {
+    val workloadPriority: WorkloadPriority = WorkloadPriority.HIGH
     dataplaneService.getQueueName(connectionId, null, null, null, workloadPriority)
 
     verify(exactly = 1) { connectionService.getStandardSync(connectionId) }
@@ -113,17 +116,6 @@ class DataplaneServiceTest {
   @Test
   fun testGetQueueNameWithSource() {
     val workloadPriority: WorkloadPriority = WorkloadPriority.HIGH
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
 
     dataplaneService.getQueueName(null, ActorType.SOURCE, sourceId, null, workloadPriority)
     verify(exactly = 1) { sourceService.getSourceConnection(sourceId) }
@@ -136,17 +128,6 @@ class DataplaneServiceTest {
   @Test
   fun testGetQueueNameWithDestination() {
     val workloadPriority: WorkloadPriority = WorkloadPriority.DEFAULT
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
 
     dataplaneService.getQueueName(null, ActorType.DESTINATION, destinationId, null, workloadPriority)
     verify(exactly = 1) { destinationService.getDestinationConnection(destinationId) }
@@ -159,19 +140,7 @@ class DataplaneServiceTest {
   @Test
   fun testGetQueueNameWithScopedConfig() {
     val workloadPriority: WorkloadPriority = WorkloadPriority.DEFAULT
-    val localScopedConfigurationService: ScopedConfigurationService = mockk()
-    every { localScopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf(ScopedConfiguration())
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        localScopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf(ScopedConfiguration())
 
     dataplaneService.getQueueName(null, ActorType.DESTINATION, destinationId, null, workloadPriority)
     verify(exactly = 1) { destinationService.getDestinationConnection(destinationId) }
@@ -190,19 +159,7 @@ class DataplaneServiceTest {
   @Test
   fun testGetQueueNameWithScopedConfigAndConnectionId() {
     val workloadPriority: WorkloadPriority = WorkloadPriority.DEFAULT
-    val localScopedConfigurationService: ScopedConfigurationService = mockk()
-    every { localScopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf(ScopedConfiguration())
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        localScopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf(ScopedConfiguration())
 
     dataplaneService.getQueueName(connectionId, null, null, null, workloadPriority)
     verify(exactly = 1) { connectionService.getStandardSync(connectionId) }
@@ -223,19 +180,7 @@ class DataplaneServiceTest {
   @Test
   fun testGetQueueNameWithNothing() {
     val workloadPriority: WorkloadPriority = WorkloadPriority.HIGH
-    val localScopedConfigurationService: ScopedConfigurationService = mockk()
-    every { localScopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf()
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        localScopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf()
 
     dataplaneService.getQueueName(null, null, null, null, workloadPriority)
     verify(exactly = 0) { connectionService.getStandardSync(connectionId) }
@@ -254,18 +199,6 @@ class DataplaneServiceTest {
   @Test
   fun `writeDataplane with a duplicate name returns a problem`() {
     every { dataplaneDataService.writeDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
-
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
 
     assertThrows<DataplaneNameAlreadyExistsProblem> {
       dataplaneService.writeDataplane(createDataplane(UUID.randomUUID()))
@@ -296,18 +229,6 @@ class DataplaneServiceTest {
         enabled = newEnabled
       }
 
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
-
     val updatedDataplane =
       dataplaneService.updateDataplane(
         mockDataplane.id,
@@ -328,18 +249,6 @@ class DataplaneServiceTest {
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
     every { dataplaneDataService.writeDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
 
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
-
     assertThrows<DataplaneNameAlreadyExistsProblem> {
       dataplaneService.updateDataplane(mockDataplane.id, "", true, UUID.randomUUID())
     }
@@ -357,24 +266,25 @@ class DataplaneServiceTest {
     every { dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true }) } returns
       mockDataplane.apply { tombstone = true }
 
-    val dataplaneService =
-      DataplaneService(
-        connectionService,
-        workspaceService,
-        sourceService,
-        destinationService,
-        featureFlagClient,
-        scopedConfigurationService,
-        dataplaneDataService,
-        dataplaneAuthService,
-      )
-
     dataplaneService.deleteDataplane(mockDataplane.id, UUID.randomUUID())
 
     verify {
       dataplaneAuthService.deleteCredentials(mockCredentials.id)
       dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true })
     }
+  }
+
+  @Test
+  fun `getDataplaneFromClientId returns client dataplane id given a client id`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    every { dataplaneAuthService.getDataplaneId(clientId) } returns dataplaneId
+    every { dataplaneDataService.getDataplane(dataplaneId) } returns dataplane
+
+    val result = dataplaneService.getDataplaneFromClientId(clientId)
+
+    Assertions.assertEquals(dataplane, result)
   }
 
   private fun createDataplane(id: UUID? = null): Dataplane =
