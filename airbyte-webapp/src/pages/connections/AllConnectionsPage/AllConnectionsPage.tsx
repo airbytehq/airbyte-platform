@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -14,9 +14,11 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useCurrentWorkspace, useCurrentWorkspaceState } from "core/api";
+import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync } from "core/api";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllConnectionsPage.module.scss";
@@ -24,6 +26,7 @@ import { ConnectionsListCard } from "./ConnectionsListCard";
 import { ConnectionsSummary } from "./ConnectionsSummary";
 import { ConnectionRoutePaths } from "../../routePaths";
 
+const emptyArray: never[] = [];
 export const AllConnectionsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
   const navigate = useNavigate();
@@ -34,7 +37,15 @@ export const AllConnectionsPage: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnection = useIntent("CreateConnection", { workspaceId });
 
-  const { hasConnections } = useCurrentWorkspaceState();
+  const connections = useConnectionList()?.connections ?? (emptyArray as WebBackendConnectionListItem[]);
+  const hasConnections = connections.length > 0;
+  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
+
+  const connectionIds = useMemo(() => connections.map((connection) => connection.connectionId), [connections]);
+  const { data: statusesByConnectionId } = useListConnectionsStatusesAsync(
+    connectionIds,
+    isAllConnectionsStatusEnabled
+  );
 
   const onCreateClick = (sourceDefinitionId?: string) => {
     if (activeConnectionLimitReached && limits) {
@@ -64,7 +75,7 @@ export const AllConnectionsPage: React.FC = () => {
                   </FlexItem>
                   <FlexItem>
                     <Suspense fallback={null}>
-                      <ConnectionsSummary />
+                      <ConnectionsSummary connections={connections} statuses={statusesByConnectionId} />
                     </Suspense>
                   </FlexItem>
                 </FlexContainer>
@@ -85,7 +96,7 @@ export const AllConnectionsPage: React.FC = () => {
               }
             />
             <ScrollParent props={{ className: styles.pageBody }}>
-              <ConnectionsListCard />
+              <ConnectionsListCard connections={connections} />
             </ScrollParent>
           </PageGridContainer>
         ) : (

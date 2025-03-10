@@ -5,18 +5,21 @@ import { FlexContainer } from "components/ui/Flex";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 
+import { useExperiment } from "hooks/services/Experiment";
+
 import { EntityNameCell } from "./EntityNameCell";
+import { StreamsStatusCell } from "./StreamStatusCell";
 import { Status } from "../types";
 
 interface ConnectionStatusProps {
+  connectionId: string;
   status: string | null;
   value: string;
   enabled: boolean;
 }
 
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status, value, enabled }) => {
+const ConnectionStatusPrev: React.FC<Pick<ConnectionStatusProps, "status">> = ({ status }) => {
   const { formatMessage } = useIntl();
-  const isStreamCentricV2 = false;
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(
     () =>
       status === Status.EMPTY
@@ -55,9 +58,19 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status, valu
           id: "connection.failedSync",
         });
 
+  return <StatusIcon title={title} status={statusIconStatus} />;
+};
+
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ connectionId, status, value, enabled }) => {
+  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
+
   return (
     <FlexContainer alignItems="center">
-      {!isStreamCentricV2 && <StatusIcon title={title} status={statusIconStatus} />}
+      {isAllConnectionsStatusEnabled ? (
+        <StreamsStatusCell connectionId={connectionId} />
+      ) : (
+        <ConnectionStatusPrev status={status} />
+      )}
       <EntityNameCell value={value} enabled={enabled} />
     </FlexContainer>
   );
