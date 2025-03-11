@@ -4,12 +4,12 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { StreamConfigDiff } from "core/api/types/AirbyteClient";
+import { StreamCursorFieldDiff } from "core/api/types/AirbyteClient";
 
 import styles from "./CursorFieldsDiffSection.module.scss";
 
 interface CursorFieldsDiffSectionProps {
-  cursorFields: StreamConfigDiff[];
+  cursorFields: StreamCursorFieldDiff[];
 }
 
 export const CursorFieldsDiffSection: React.FC<CursorFieldsDiffSectionProps> = ({ cursorFields }) => {

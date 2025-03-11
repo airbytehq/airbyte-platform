@@ -1,10 +1,12 @@
 import { z } from "zod";
 
 import {
+  CatalogConfigDiff,
   CatalogDiff,
   ConnectionEventType,
   ConnectionScheduleDataBasicScheduleTimeUnit,
   ConnectionScheduleType,
+  DestinationSyncMode,
   FailureOrigin,
   FailureReason,
   FailureType,
@@ -19,14 +21,16 @@ import {
   StreamAttributePrimaryKeyUpdate,
   StreamAttributeTransform,
   StreamAttributeTransformTransformType,
-  StreamConfigDiff,
-  StreamConfigDiffConfigType,
+  StreamCursorFieldDiff,
   StreamDescriptor,
   StreamFieldStatusChangedStatus,
   StreamMapperType,
+  StreamPrimaryKeyDiff,
+  StreamSyncModeDiff,
   StreamTransform,
   StreamTransformTransformType,
   StreamTransformUpdateStream,
+  SyncMode,
   UserReadInConnectionEvent,
 } from "core/api/types/AirbyteClient";
 import { ToZodSchema } from "core/utils/zod";
@@ -183,30 +187,31 @@ const streamFieldStatusChangedSchema = z.object({
   status: z.nativeEnum(StreamFieldStatusChangedStatus).optional(),
 });
 
+const syncModeSchema = z.nativeEnum(SyncMode);
+const destinationSyncModeSchema = z.nativeEnum(DestinationSyncMode);
+
 const syncModeChangedSchema = z.object({
-  currentDestinationSyncMode: z.string().optional(),
-  currentSourceSyncMode: z.string().optional(),
-  prevDestinationSyncMode: z.string().optional(),
-  prevSourceSyncMode: z.string().optional(),
+  currentDestinationSyncMode: destinationSyncModeSchema.optional(),
+  currentSourceSyncMode: syncModeSchema.optional(),
+  prevDestinationSyncMode: destinationSyncModeSchema.optional(),
+  prevSourceSyncMode: syncModeSchema.optional(),
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
-});
+} satisfies ToZodSchema<StreamSyncModeDiff>);
 
-const streamConfigDiffSchema = z.object({
-  configType: z.nativeEnum(StreamConfigDiffConfigType).optional(),
-  current: z.string().optional(),
-  prev: z.string().optional(),
+const streamPrimaryKeyDiffSchema = z.object({
+  current: z.array(z.array(z.string())).optional(),
+  prev: z.array(z.array(z.string())).optional(),
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
-} satisfies ToZodSchema<StreamConfigDiff>);
+} satisfies ToZodSchema<StreamPrimaryKeyDiff>);
 
-export const fieldDataTypeDiffSchema = z.object({
-  current: z.string().optional(),
-  fieldName: z.string().optional(),
-  prev: z.string().optional(),
+const streamCursorFieldDiffSchema = z.object({
+  current: z.array(z.string()).optional(),
+  prev: z.array(z.string()).optional(),
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
-});
+} satisfies ToZodSchema<StreamCursorFieldDiff>);
 
 const catalogConfigDiffSchema = z.object({
   streamsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
@@ -214,9 +219,9 @@ const catalogConfigDiffSchema = z.object({
   fieldsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
   fieldsDisabled: z.array(streamFieldStatusChangedSchema).optional(),
   syncModesChanged: z.array(syncModeChangedSchema).optional(),
-  cursorFieldsChanged: z.array(streamConfigDiffSchema).optional(),
-  primaryKeysChanged: z.array(streamConfigDiffSchema).optional(),
-});
+  cursorFieldsChanged: z.array(streamCursorFieldDiffSchema).optional(),
+  primaryKeysChanged: z.array(streamPrimaryKeyDiffSchema).optional(),
+} satisfies ToZodSchema<CatalogConfigDiff>);
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
 
@@ -462,9 +467,7 @@ export const connectorUpdateEventSchema = generalEventSchema.extend({
 });
 
 export const schemaConfigUpdateEventSchema = generalEventSchema.extend({
-  // TODO: add schema config update event type from AirbyteClient once it is defined
-  // eventType: z.enum([ConnectionEventType.SCHEMA_CONFIG_UPDATE]).required(),
-  eventType: z.enum(["SCHEMA_CONFIG_UPDATE"]),
+  eventType: z.enum([ConnectionEventType.SCHEMA_CONFIG_UPDATE]),
   summary: schemaConfigUpdateSchema,
 });
 

@@ -11396,6 +11396,9 @@ components:
           $ref: "#/components/schemas/ConnectionEventId"
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    # ConnectionEventType enums are also defined in oss/airbyte-data/src/main/kotlin/io/airbyte/data/services/shared/ConnectionEvent.kt.
+    # Please maintain the consistency between them.
+    # If any change made in one place, please do the same in the other place.
     ConnectionEventType:
       type: string
       enum:
@@ -11418,6 +11421,7 @@ components:
         - CONNECTION_ENABLED
         - CONNECTION_DISABLED
         - SCHEMA_UPDATE
+        - SCHEMA_CONFIG_UPDATE
         - CONNECTOR_UPDATE
         - UNKNOWN
     UserReadInConnectionEvent:
@@ -13750,6 +13754,14 @@ components:
         - stream
         - legacy
         - not_set
+    AirbyteCatalogDiff:
+      type: object
+      description: Describes the difference between two Airbyte catalogs. Include both source schema diff and schema config diff.
+      properties:
+        catalogDiff:
+          $ref: "#/components/schemas/CatalogDiff"
+        catalogConfigDiff:
+          $ref: "#/components/schemas/CatalogConfigDiff"
     CatalogConfigDiff:
       type: object
       description: Describes the difference between two configured catalogs.
@@ -13774,21 +13786,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamFieldStatusChanged"
-        fieldsDataTypeChanged:
-          description: list of changes ofr field data type. Order does not matter.
-          type: array
-          items:
-            $ref: "#/components/schemas/FieldDataTypeDiff"
         primaryKeysChanged:
           description: list of changes for primary keys. Order does not matter.
           type: array
           items:
-            $ref: "#/components/schemas/StreamConfigDiff"
+            $ref: "#/components/schemas/StreamPrimaryKeyDiff"
         cursorFieldsChanged:
           description: list of changes for cursor fields. Order does not matter.
           type: array
           items:
-            $ref: "#/components/schemas/StreamConfigDiff"
+            $ref: "#/components/schemas/StreamCursorFieldDiff"
         syncModesChanged:
           description: list of changes for sync mode. Order does not matter.
           type: array
@@ -13825,23 +13832,38 @@ components:
           type: string
         current:
           type: string
-    StreamConfigDiff:
+    StreamPrimaryKeyDiff:
       type: object
-      description: Stream configuration changed
+      description: Primary key changed
       properties:
         streamName:
           type: string
         streamNamespace:
           type: string
-        configType:
-          type: string
-          enum:
-            - primary_key
-            - cursor_field
         prev:
-          type: string
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
         current:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
+    StreamCursorFieldDiff:
+      type: object
+      description: Cursor field changed
+      properties:
+        streamName:
           type: string
+        streamNamespace:
+          type: string
+        prev:
+          type: array
+          items:
+            type: string
+        current:
+          type: array
+          items:
+            type: string
     StreamSyncModeDiff:
       type: object
       description: Sync mode changed
@@ -13851,13 +13873,13 @@ components:
         streamNamespace:
           type: string
         prevSourceSyncMode:
-          type: string
+          $ref: "#/components/schemas/SyncMode"
         prevDestinationSyncMode:
-          type: string
+          $ref: "#/components/schemas/DestinationSyncMode"
         currentSourceSyncMode:
-          type: string
+          $ref: "#/components/schemas/SyncMode"
         currentDestinationSyncMode:
-          type: string
+          $ref: "#/components/schemas/DestinationSyncMode"
     CatalogDiff:
       type: object
       description: Describes the difference between two Airbyte catalogs.

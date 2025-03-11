@@ -84,6 +84,8 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -184,6 +186,8 @@ class WebBackendConnectionsHandlerTest {
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
+  private ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private CatalogConfigDiffHelper catalogConfigDiffHelper;
   private MetricClient metricClient;
 
   private static final String STREAM1 = "stream1";
@@ -211,6 +215,8 @@ class WebBackendConnectionsHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
+    catalogConfigDiffHelper = mock(CatalogConfigDiffHelper.class);
     metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
@@ -285,7 +291,9 @@ class WebBackendConnectionsHandlerTest {
         workspaceService, catalogConverter,
         applySchemaChangeHelper,
         apiPojoConverters,
-        destinationCatalogGenerator));
+        destinationCatalogGenerator,
+        connectionTimelineEventHelper,
+        catalogConfigDiffHelper));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
