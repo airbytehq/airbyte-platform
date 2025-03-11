@@ -1116,35 +1116,46 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db
    */
   @Override
-  public List<StreamDescriptorForDestination> listStreamsForDestination(final UUID destinationId) throws IOException {
-    return database.query(ctx -> ctx
-        .fetch("""
-               SELECT DISTINCT
-                   c.namespace_definition,
-                   c.namespace_format,
-                   c.prefix,
-                   stream_element->'stream'->>'name' AS stream_name,
-                   stream_element->'stream'->>'namespace' AS stream_namespace,
-                   array_agg(c.id) AS connection_ids
-               FROM connection c,
-               LATERAL jsonb_array_elements(c.catalog->'streams') AS stream_element
-               WHERE c.destination_id = ?
-               AND c.status = ?
-               GROUP BY
-                   c.namespace_definition,
-                   c.namespace_format,
-                   c.prefix,
-                   stream_element->'stream'->>'name',
-                   stream_element->'stream'->>'namespace'
-               """, destinationId, StatusType.active)
+  public List<StreamDescriptorForDestination> listStreamsForDestination(final UUID destinationId, final UUID connectionId) throws IOException {
+    return database.query(ctx -> {
+      StringBuilder sql = new StringBuilder("""
+                                                SELECT DISTINCT
+                                                    c.namespace_definition,
+                                                    c.namespace_format,
+                                                    c.prefix,
+                                                    stream_element->'stream'->>'name' AS stream_name,
+                                                    stream_element->'stream'->>'namespace' AS stream_namespace,
+                                                    array_agg(c.id) AS connection_ids
+                                                FROM connection c,
+                                                LATERAL jsonb_array_elements(c.catalog->'streams') AS stream_element
+                                                WHERE c.destination_id = ?
+                                                AND c.status = ?
+                                            """);
 
-        .map(record -> new StreamDescriptorForDestination()
-            .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.fromValue(record.get("namespace_definition", String.class)))
-            .withNamespaceFormat(record.get("namespace_format", String.class))
-            .withStreamName(record.get("stream_name", String.class))
-            .withStreamNamespace(record.get("stream_namespace", String.class))
-            .withConnectionIds(Arrays.asList(record.get("connection_ids", UUID[].class)))
-            .withPrefix(record.get("prefix", String.class))));
+      if (connectionId != null) {
+        sql.append(" AND c.id != ?");
+      }
+
+      sql.append("""
+                     GROUP BY
+                         c.namespace_definition,
+                         c.namespace_format,
+                         c.prefix,
+                         stream_element->'stream'->>'name',
+                         stream_element->'stream'->>'namespace'
+                 """);
+
+      return ctx
+          .fetch(sql.toString(),
+              connectionId != null ? new Object[] {destinationId, StatusType.active, connectionId} : new Object[] {destinationId, StatusType.active})
+          .map(record -> new StreamDescriptorForDestination()
+              .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.fromValue(record.get("namespace_definition", String.class)))
+              .withNamespaceFormat(record.get("namespace_format", String.class))
+              .withStreamName(record.get("stream_name", String.class))
+              .withStreamNamespace(record.get("stream_namespace", String.class))
+              .withConnectionIds(Arrays.asList(record.get("connection_ids", UUID[].class)))
+              .withPrefix(record.get("prefix", String.class)));
+    });
   }
 
 }

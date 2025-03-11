@@ -228,7 +228,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     connectionServiceJooqImpl.writeStandardSync(inactiveSync);
 
     // Get streams for destination
-    final List<StreamDescriptorForDestination> streamConfigs = connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId());
+    final List<StreamDescriptorForDestination> streamConfigs =
+        connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId(), null);
 
     // Should only return selected streams from active connections
     assertEquals(2, streamConfigs.size());
@@ -284,7 +285,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     connectionServiceJooqImpl.writeStandardSync(sync2);
 
     // Get streams for destination
-    final List<StreamDescriptorForDestination> streamConfigs = connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId());
+    final List<StreamDescriptorForDestination> streamConfigs =
+        connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId(), null);
 
     assertEquals(2, streamConfigs.size());
 

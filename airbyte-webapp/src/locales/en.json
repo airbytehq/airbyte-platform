@@ -228,6 +228,8 @@
   "connectionForm.connectionSettings": "Connection settings",
   "connectionForm.settings.advancedButton": "Advanced",
   "connectionForm.validation.error": "The form is invalid. Please make sure that all fields are correct.",
+  "connectionForm.conflictingDestinationStream": "The stream {moreCount, plural, =0 {{stream} is} other {{stream} and {moreCount} others are} } already being synced to this destination. Add a stream name prefix to prevent conflicts or see <lnk>our docs</lnk> for more ways to resolve.",
+  "connectionForm.conflictingDestinationStream.action": "Add prefix + Try again",
   "connectionForm.validation.creationError": "Unable to save the connection. Review the errors above to finish setup.",
   "connectionForm.operations.notSupported": "Normalization and Transformation operations are not supported for this connection.",
   "connectionForm.normalization.title": "Normalization",

@@ -15,6 +15,7 @@ import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateC
 import { Form } from "components/forms";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
@@ -42,20 +43,33 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { defaultGeography } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
-  const { registerNotification } = useNotificationService();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
 
   const { mode } = useConnectionFormService();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
   const validationSchema = useConnectionValidationSchema();
 
-  const onSuccess = () => {
+  const onSubmit = useCallback(
+    (values: FormConnectionFormValues) => {
+      const connectionUpdates: WebBackendConnectionUpdate = {
+        connectionId: connection.connectionId,
+        skipReset: true,
+        ...values,
+      };
+
+      return updateConnection(connectionUpdates);
+    },
+    [connection.connectionId, updateConnection]
+  );
+
+  const onSuccess = useCallback(() => {
     registerNotification({
       id: "connection_settings_change_success",
       text: formatMessage({ id: "form.changesSaved" }),
       type: "success",
     });
-  };
+  }, [formatMessage, registerNotification]);
 
   const onError = useCallback(
     (error: Error, values: FormConnectionFormValues, methods: UseFormReturn<FormConnectionFormValues>) => {
@@ -64,14 +78,45 @@ export const ConnectionSettingsPage: React.FC = () => {
         methods.setError("scheduleData.cron.cronExpression", {
           message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
         });
+        return;
       }
+
+      if (error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+        registerNotification({
+          id: "connection.conflictingDestinationStream",
+          text: formatMessage(
+            {
+              id: "connectionForm.conflictingDestinationStream",
+            },
+            {
+              stream: error.response?.data?.streams?.[0]?.streamName,
+              moreCount:
+                (error.response?.data?.streams?.length ?? 0) > 1 ? (error.response?.data?.streams?.length ?? 1) - 1 : 0,
+              lnk: (...lnk: React.ReactNode[]) => (
+                <ExternalLink href={error.response.documentationUrl ?? ""}>{lnk}</ExternalLink>
+              ),
+            }
+          ),
+          actionBtnText: formatMessage({ id: "connectionForm.conflictingDestinationStream.action" }),
+          onAction: async () => {
+            const randomPrefix = `${Math.random().toString(36).substring(2, 8)}_`;
+            methods.setValue("prefix", randomPrefix);
+            unregisterNotificationById("connection.conflictingDestinationStream");
+            await methods.handleSubmit(onSubmit)();
+            onSuccess();
+          },
+          type: "error",
+        });
+        return;
+      }
+
       registerNotification({
         id: "connection_settings_change_error",
         text: formatMessage({ id: "connection.updateFailed" }),
         type: "error",
       });
     },
-    [formatMessage, registerNotification]
+    [formatMessage, onSubmit, registerNotification, unregisterNotificationById, onSuccess]
   );
 
   const isDeprecated = connection.status === "deprecated";
@@ -86,19 +131,12 @@ export const ConnectionSettingsPage: React.FC = () => {
         <Form<FormConnectionFormValues>
           trackDirtyChanges
           disabled={mode === "readonly"}
-          onSubmit={(values: FormConnectionFormValues) => {
-            const connectionUpdates: WebBackendConnectionUpdate = {
-              connectionId: connection.connectionId,
-              skipReset: true,
-              ...values,
-            };
-
-            return updateConnection(connectionUpdates);
-          }}
+          onSubmit={onSubmit}
           onSuccess={onSuccess}
           onError={onError}
           schema={validationSchema}
           defaultValues={simplifiedInitialValues}
+          reinitializeDefaultValues
         >
           <SimplifiedConnectionsSettingsCard
             title={formatMessage({ id: "sources.settings" })}

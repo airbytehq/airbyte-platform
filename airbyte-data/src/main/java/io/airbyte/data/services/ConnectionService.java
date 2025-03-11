@@ -79,6 +79,6 @@ public interface ConnectionService {
 
   List<UUID> listConnectionIdsForOrganization(UUID organizationId) throws IOException;
 
-  List<StreamDescriptorForDestination> listStreamsForDestination(UUID destinationId) throws IOException;
+  List<StreamDescriptorForDestination> listStreamsForDestination(UUID destinationId, UUID connectionId) throws IOException;
 
 }

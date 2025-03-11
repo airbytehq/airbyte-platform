@@ -446,11 +446,13 @@ export const useUpdateConnectionOptimistically = () => {
       const result = await webBackendUpdateConnection(connectionTagsUpdate, requestOptions);
       return result;
     } catch (e) {
-      notificationService.registerNotification({
-        id: "update-connection-error",
-        type: "error",
-        text: formatMessage({ id: "connection.updateFailed" }),
-      });
+      if (!(e instanceof HttpError && HttpProblem.isType(e, "error:connection-conflicting-destination-stream"))) {
+        notificationService.registerNotification({
+          id: "update-connection-error",
+          type: "error",
+          text: formatMessage({ id: "connection.updateFailed" }),
+        });
+      }
 
       // If the request fails, we need to revert the optimistic update
       queryClient.invalidateQueries<WebBackendConnectionReadList>(connectionsKeys.lists());
@@ -521,6 +523,10 @@ export const useUpdateConnection = () => {
                 />
               ),
             });
+          }
+          if (HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+            // We have custom logic for this error that needs access to the form methods, so we should not register the notification here
+            return null;
           }
 
           return registerNotification({

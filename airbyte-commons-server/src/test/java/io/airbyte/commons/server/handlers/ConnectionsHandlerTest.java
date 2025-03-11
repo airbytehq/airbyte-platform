@@ -1306,7 +1306,7 @@ class ConnectionsHandlerTest {
             .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
             .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(mockDestinationStreamData);
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
@@ -1325,7 +1325,7 @@ class ConnectionsHandlerTest {
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(List.of());
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
@@ -1349,7 +1349,7 @@ class ConnectionsHandlerTest {
             .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
             .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(mockDestinationStreamData);
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
@@ -1998,7 +1998,7 @@ class ConnectionsHandlerTest {
             .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
             .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(mockDestinationStreamData);
 
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())
@@ -2009,15 +2009,15 @@ class ConnectionsHandlerTest {
       }
 
       @Test
-      void testCreateConnectionWithNoConflictingStreamSucceeds()
-          throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+      void testUpdateConnectionWithNoConflictingStreamSucceeds()
+          throws IOException {
 
         when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
             .thenReturn(true);
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(List.of());
 
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())
@@ -2028,7 +2028,7 @@ class ConnectionsHandlerTest {
 
       @Test
       void testUpdateConnectionWithConflictingStreamButUnselected()
-          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+          throws IOException {
         when(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new io.airbyte.featureflag.Organization(organizationId)))
             .thenReturn(true);
 
@@ -2042,7 +2042,7 @@ class ConnectionsHandlerTest {
             .withStreamNamespace(streamNamespace).withNamespaceFormat(standardSync.getNamespaceFormat())
             .withNamespaceDefinition(standardSync.getNamespaceDefinition()).withPrefix(standardSync.getPrefix()));
 
-        when(connectionService.listStreamsForDestination(any()))
+        when(connectionService.listStreamsForDestination(any(), any()))
             .thenReturn(mockDestinationStreamData);
 
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate().connectionId(standardSync.getConnectionId())

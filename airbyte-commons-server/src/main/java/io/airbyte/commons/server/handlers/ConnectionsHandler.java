@@ -461,7 +461,8 @@ public class ConnectionsHandler {
                                                                           final UUID destinationId,
                                                                           final String namespaceDefinitionType,
                                                                           final String namespaceFormat,
-                                                                          final String prefix)
+                                                                          final String prefix,
+                                                                          final UUID currentConnectionId)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(destinationId);
@@ -472,17 +473,18 @@ public class ConnectionsHandler {
             new MetricAttribute(ApmTraceConstants.Tags.ORGANIZATION_ID_KEY, organizationId.toString()),
             new MetricAttribute(ApmTraceConstants.Tags.DESTINATION_ID_KEY, destinationId.toString())));
 
-    final List<StreamDescriptorForDestination> existingStreams = connectionService.listStreamsForDestination(destinationId);
+    final List<StreamDescriptorForDestination> existingStreams = connectionService.listStreamsForDestination(destinationId, currentConnectionId);
 
-    // Create map of existing streams once
+    // Create map of existing streams once, filtering out streams from the current connection if
+    // specified
     final Map<String, StreamDescriptorForDestination> existingStreamMap = existingStreams.stream()
         .collect(Collectors.toMap(
-            newStream -> generateDestinationStreamKey(
-                namespaceDefinitionType,
-                namespaceFormat,
-                prefix,
-                newStream.getStreamNamespace(),
-                newStream.getStreamName()),
+            existingStream -> generateDestinationStreamKey(
+                String.valueOf(existingStream.getNamespaceDefinition()),
+                existingStream.getNamespaceFormat(),
+                existingStream.getPrefix(),
+                existingStream.getStreamNamespace(),
+                existingStream.getStreamName()),
             stream -> stream,
             (existing, replacement) -> existing));
 
@@ -515,7 +517,6 @@ public class ConnectionsHandler {
           .toList();
 
       throw new ConnectionConflictingStreamProblem(new ProblemConnectionConflictingStreamsData().streams(streams));
-
     }
   }
 
@@ -584,7 +585,8 @@ public class ConnectionsHandler {
             connectionCreate.getDestinationId(),
             String.valueOf(connectionCreate.getNamespaceDefinition()),
             connectionCreate.getNamespaceFormat(),
-            connectionCreate.getPrefix());
+            connectionCreate.getPrefix(),
+            null);
       }
 
       assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
@@ -763,7 +765,8 @@ public class ConnectionsHandler {
           connectionPatch.getNamespaceDefinition() != null ? String.valueOf(connectionPatch.getNamespaceDefinition())
               : String.valueOf((sync.getNamespaceDefinition())),
           connectionPatch.getNamespaceFormat() != null ? connectionPatch.getNamespaceFormat() : sync.getNamespaceFormat(),
-          connectionPatch.getPrefix() != null ? connectionPatch.getPrefix() : sync.getPrefix());
+          connectionPatch.getPrefix() != null ? connectionPatch.getPrefix() : sync.getPrefix(),
+          connectionPatch.getConnectionId());
     }
 
     validateConnectionPatch(workspaceHelper, sync, connectionPatch);

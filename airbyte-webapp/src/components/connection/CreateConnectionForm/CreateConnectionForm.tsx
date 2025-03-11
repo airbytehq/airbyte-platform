@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
@@ -38,7 +39,7 @@ const CreateConnectionFormInner: React.FC = () => {
   const { mutateAsync: createConnection } = useCreateConnection();
   const { connection, mode, setSubmitError } = useConnectionFormService();
   const initialValues = useInitialFormValues(connection, mode);
-  const { registerNotification } = useNotificationService();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
   const queryClient = useQueryClient();
@@ -81,7 +82,12 @@ const CreateConnectionFormInner: React.FC = () => {
           }, 2000);
         }
       } catch (error) {
-        setSubmitError(error);
+        if (
+          !(error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream"))
+        ) {
+          setSubmitError(error);
+        }
+
         // Needs to be re-thrown so react-hook-form can handle the error. We should probably get rid of setSubmitError
         // entirely and just use react-hook-form to handle errors.
         throw error;
@@ -108,8 +114,36 @@ const CreateConnectionFormInner: React.FC = () => {
           message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
         });
       }
+      if (error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+        registerNotification({
+          id: "connection.conflictingDestinationStream",
+          text: formatMessage(
+            {
+              id: "connectionForm.conflictingDestinationStream",
+            },
+            {
+              stream: error.response?.data?.streams?.[0]?.streamName,
+              moreCount:
+                (error.response?.data?.streams?.length ?? 0) > 1 ? (error.response?.data?.streams?.length ?? 1) - 1 : 0,
+              lnk: (...lnk: React.ReactNode[]) => (
+                <ExternalLink href={error.response.documentationUrl ?? ""}>{lnk}</ExternalLink>
+              ),
+            }
+          ),
+          actionBtnText: formatMessage({ id: "connectionForm.conflictingDestinationStream.action" }),
+          onAction: () => {
+            // Generate a random 6-character string with underscore suffix
+            const randomPrefix = `${Math.random().toString(36).substring(2, 8)}_`;
+            // Update the form values with the new prefix and resubmit
+            methods.setValue("prefix", randomPrefix);
+            unregisterNotificationById("connection.conflictingDestinationStream");
+            methods.handleSubmit(onSubmit)();
+          },
+          type: "error",
+        });
+      }
     },
-    []
+    [formatMessage, onSubmit, registerNotification, unregisterNotificationById]
   );
 
   return (

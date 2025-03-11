@@ -1,7 +1,7 @@
 import isBoolean from "lodash/isBoolean";
 import pick from "lodash/pick";
 import React, { useCallback, useEffect } from "react";
-import { useFormState } from "react-hook-form";
+import { UseFormReturn, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
@@ -19,10 +19,17 @@ import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message/Message";
 import { ScrollParent } from "components/ui/ScrollParent";
 
-import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
+import {
+  ConnectionValues,
+  HttpError,
+  HttpProblem,
+  useDestinationDefinitionVersion,
+  useGetStateTypeQuery,
+} from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
@@ -85,7 +92,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   const getStateType = useGetStateTypeQuery();
 
   const { formatMessage } = useIntl();
-  const { registerNotification } = useNotificationService();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { openModal } = useModalService();
 
   const { connection, updateConnection, discardRefreshedSchema } = useConnectionEditService();
@@ -177,8 +184,12 @@ export const ConnectionReplicationPage: React.FC = () => {
 
         return Promise.resolve();
       } catch (e) {
-        setSubmitError(e);
-        throw new Error(e); // we _do_ need this to throw in order for isSubmitSuccessful to be false
+        if (!(e instanceof HttpError && HttpProblem.isType(e, "error:connection-conflicting-destination-stream"))) {
+          console.log("setting submit error");
+          setSubmitError(e);
+        }
+
+        throw e; // we _do_ need this to throw in order for isSubmitSuccessful to be false
       }
     },
     [
@@ -213,8 +224,42 @@ export const ConnectionReplicationPage: React.FC = () => {
     });
   };
 
-  const onError = (e: Error) => {
-    trackError(e, { connectionName: connection.name });
+  const onError = (
+    error: Error,
+    _values: RelevantConnectionValues,
+    methods: UseFormReturn<RelevantConnectionValues>
+  ) => {
+    trackError(error, { connectionName: connection.name });
+
+    if (error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+      registerNotification({
+        id: "connection.conflictingDestinationStream",
+        text: formatMessage(
+          {
+            id: "connectionForm.conflictingDestinationStream",
+          },
+          {
+            stream: error.response?.data?.streams?.[0]?.streamName,
+            moreCount:
+              (error.response?.data?.streams?.length ?? 0) > 1 ? (error.response?.data?.streams?.length ?? 1) - 1 : 0,
+            lnk: (...lnk: React.ReactNode[]) => (
+              <ExternalLink href={error.response.documentationUrl ?? ""}>{lnk}</ExternalLink>
+            ),
+          }
+        ),
+        actionBtnText: formatMessage({ id: "connectionForm.conflictingDestinationStream.action" }),
+        onAction: async () => {
+          const randomPrefix = `${Math.random().toString(36).substring(2, 8)}_`;
+          methods.setValue("prefix", randomPrefix);
+          unregisterNotificationById("connection.conflictingDestinationStream");
+          await methods.handleSubmit(onFormSubmit)();
+          onSuccess();
+        },
+        type: "error",
+      });
+      return;
+    }
+
     registerNotification({
       id: "connection_settings_change_error",
       text: formatMessage({ id: "connection.updateFailed" }),
