@@ -29,6 +29,7 @@ import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationBufferOverride;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
+import io.airbyte.featureflag.SingleContainerTest;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceType;
@@ -56,6 +57,8 @@ import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
+import io.airbyte.workers.internal.InMemoryDummyAirbyteDestination;
+import io.airbyte.workers.internal.InMemoryDummyAirbyteSource;
 import io.airbyte.workers.internal.LocalContainerAirbyteDestination;
 import io.airbyte.workers.internal.LocalContainerAirbyteSource;
 import io.airbyte.workers.internal.MessageMetricsTracker;
@@ -170,26 +173,32 @@ public class ReplicationWorkerFactory {
     final var invalidLineConfig = new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks);
 
     // reset jobs use an empty source to induce resetting all data in destination.
-    final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
-        : new LocalContainerAirbyteSource(
-            heartbeatMonitor,
-            getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
-            new MessageMetricsTracker(metricClient),
-            ContainerIOHandle.source());
+    final boolean singleConnectorTest =
+        featureFlagClient.boolVariation(SingleContainerTest.INSTANCE, new Connection(replicationInput.getConnectionId()));
+    final var airbyteSource =
+        singleConnectorTest ? new InMemoryDummyAirbyteSource()
+            : (replicationInput.getIsReset()
+                ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
+                : new LocalContainerAirbyteSource(
+                    heartbeatMonitor,
+                    getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
+                    new MessageMetricsTracker(metricClient),
+                    ContainerIOHandle.source()));
 
     log.info("Setting up destination with image {}.", replicationInput.getDestinationLauncherConfig().getDockerImage());
     final AirbyteMessageBufferedWriterFactory messageWriterFactory =
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(replicationInput.getCatalog()));
 
-    final var airbyteDestination = new LocalContainerAirbyteDestination(
-        getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), DESTINATION_LOG_MDC_BUILDER, invalidLineConfig),
-        new MessageMetricsTracker(metricClient),
-        messageWriterFactory,
-        destinationTimeout,
-        ContainerIOHandle.dest(),
-        replicationInput.getUseFileTransfer());
+    final var airbyteDestination =
+        singleConnectorTest ? new InMemoryDummyAirbyteDestination()
+            : new LocalContainerAirbyteDestination(
+                getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), DESTINATION_LOG_MDC_BUILDER, invalidLineConfig),
+                new MessageMetricsTracker(metricClient),
+                messageWriterFactory,
+                destinationTimeout,
+                ContainerIOHandle.dest(),
+                replicationInput.getUseFileTransfer());
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 

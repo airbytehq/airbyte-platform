@@ -49,6 +49,7 @@ data class ReplicationPodFactory(
     isFileTransfer: Boolean,
     workspaceId: UUID,
     enableAsyncProfiler: Boolean,
+    singleConnectorTest: Boolean = false,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -82,7 +83,7 @@ data class ReplicationPodFactory(
 
     val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
 
-    val containers = mutableListOf(orchContainer, sourceContainer, destContainer)
+    val containers = if (singleConnectorTest) mutableListOf(orchContainer) else mutableListOf(orchContainer, sourceContainer, destContainer)
     if (enableAsyncProfiler) {
       containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
     }

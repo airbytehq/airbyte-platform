@@ -71,6 +71,8 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
 
+object SingleContainerTest : Temporary<Boolean>(key = "platform.single-container-test", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
