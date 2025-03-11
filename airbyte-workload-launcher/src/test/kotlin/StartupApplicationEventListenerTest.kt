@@ -27,6 +27,7 @@ class StartupApplicationEventListenerTest {
         metricClient = mockk(relaxed = true),
         temporalWorkerController = mockk(relaxed = true),
         launcherShutdownHelper = launcherShutdownHelper,
+        controlplanePoller = mockk(relaxed = true),
       )
 
     eventListener.onApplicationEvent(null)

@@ -34,6 +34,7 @@ class PipelineStartupTest {
         metricClient,
         temporalWorkerController,
         mockk(),
+        mockk(relaxed = true),
       )
 
     listener.onApplicationEvent(null)

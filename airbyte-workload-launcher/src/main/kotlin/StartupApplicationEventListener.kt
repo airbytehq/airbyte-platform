@@ -24,6 +24,7 @@ class StartupApplicationEventListener(
   private val metricClient: MetricClient,
   private val temporalWorkerController: TemporalWorkerController,
   private val launcherShutdownHelper: LauncherShutdownHelper,
+  private val controlplanePoller: ControlplanePoller,
 ) : ApplicationEventListener<ServiceReadyEvent> {
   @VisibleForTesting
   var processorThread: Thread? = null
