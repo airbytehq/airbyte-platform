@@ -5,12 +5,15 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.OrganizationAuthRole
+import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.helpers.DataplanePasswordEncoder
 import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.repositories.entities.DataplaneClientCredentials
 import io.airbyte.data.services.DataplaneAuthService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
@@ -32,6 +35,7 @@ class DataplaneAuthServiceDataImpl(
   private val jwtTokenGenerator: JwtTokenGenerator,
   private val dataplanePasswordEncoder: DataplanePasswordEncoder,
   private val tokenExpirationConfig: TokenExpirationConfig,
+  @Property(name = "micronaut.security.token.jwt.claims-validators.issuer") private val tokenIssuer: String,
 ) : DataplaneAuthService {
   companion object {
     const val SECRET_LENGTH = 2096
@@ -110,11 +114,13 @@ class DataplaneAuthServiceDataImpl(
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to "airbyte-controlplane",
+          "iss" to tokenIssuer,
           "sub" to dataplaneClientCredentials.dataplaneId,
           "roles" to // TODO: grant no roles; use scopes instead to allow specific endpoints
             buildSet {
               addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN))
+              addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
+              addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
             },
           "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),

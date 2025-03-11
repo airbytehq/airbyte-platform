@@ -17004,7 +17004,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DataplaneGroupRead"
-
     DataplaneCreateRequestBody:
       type: object
       required:

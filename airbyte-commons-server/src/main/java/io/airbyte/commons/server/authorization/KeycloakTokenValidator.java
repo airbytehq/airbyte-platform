@@ -23,6 +23,7 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.core.order.Ordered;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
@@ -75,6 +76,15 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
     this.keycloakConfiguration = keycloakConfiguration;
     this.tokenRoleResolver = tokenRoleResolver;
     this.metricClient = metricClient;
+  }
+
+  /**
+   * KeycloakTokenValidator should run first so that it can validate and add roles before other
+   * built-in validators run.
+   */
+  @Override
+  public int getOrder() {
+    return Ordered.HIGHEST_PRECEDENCE;
   }
 
   @Override

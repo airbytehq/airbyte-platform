@@ -33,6 +33,7 @@ class DataplaneAuthServiceDataImplTest {
         jwtTokenGenerator,
         dataplanePasswordEncoder,
         TokenExpirationConfig(),
+        "test-issuer",
       )
   }
 

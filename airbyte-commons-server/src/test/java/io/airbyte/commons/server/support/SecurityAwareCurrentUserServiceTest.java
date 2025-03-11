@@ -85,15 +85,16 @@ class SecurityAwareCurrentUserServiceTest {
   void testGetCurrentUserIdIfExistsReturnsCorrectId() {
     ServerRequestContext.with(HttpRequest.GET("/"), () -> {
       try {
+        final UUID userId = UUID.randomUUID();
         final String authUserId = "123e4567-e89b-12d3-a456-426614174000";
-        final AuthenticatedUser expectedUser = new AuthenticatedUser().withAuthUserId(authUserId);
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withAuthUserId(authUserId).withUserId(userId);
 
         when(securityService.username()).thenReturn(Optional.of(authUserId));
         when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(expectedUser));
 
-        final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
-        Assertions.assertTrue(userId.isPresent());
-        Assertions.assertEquals(UUID.fromString(authUserId), userId.get());
+        final Optional<UUID> retrievedUserId = currentUserService.getCurrentUserIdIfExists();
+        Assertions.assertTrue(retrievedUserId.isPresent());
+        Assertions.assertEquals(userId, retrievedUserId.get());
       } catch (final IOException e) {
         fail(e);
       }
