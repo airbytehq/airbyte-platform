@@ -5,9 +5,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -36,10 +33,6 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
-
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)

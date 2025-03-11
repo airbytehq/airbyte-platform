@@ -15,46 +15,48 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.protocol.models.ConnectorSpecification
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
+private val V0_0_0 = Version("0.0.0")
+private val V1_0_0 = Version("1.0.0")
+private val V2_0_0 = Version("2.0.0")
+
 internal class ProtocolVersionCheckerTest {
-  var definitionsProvider: DefinitionsProvider? = null
-  var jobPersistence: JobPersistence? = null
-  var actorDefinitionService: ActorDefinitionService? = null
-  var sourceService: SourceService? = null
-  var destinationService: DestinationService? = null
+  var definitionsProvider: DefinitionsProvider = mockk()
+  var jobPersistence: JobPersistence = mockk()
+  var actorDefinitionService: ActorDefinitionService = mockk()
+  var sourceService: SourceService = mockk()
+  var destinationService: DestinationService = mockk()
 
   @BeforeEach
   fun beforeEach() {
-    actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    definitionsProvider = Mockito.mock(DefinitionsProvider::class.java)
-    jobPersistence = Mockito.mock(JobPersistence::class.java)
-    sourceService = Mockito.mock(SourceService::class.java)
-    destinationService = Mockito.mock(DestinationService::class.java)
-
-    Mockito.`when`(jobPersistence?.getVersion()).thenReturn(Optional.of("1.2.3"))
+    clearAllMocks()
+    every { jobPersistence?.getVersion() } returns Optional.of("1.2.3")
   }
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testFirstInstallCheck(supportAutoUpgrade: Boolean) {
     val expectedRange = AirbyteProtocolVersionRange(V0_0_0, V1_0_0)
-    Mockito.`when`(jobPersistence!!.version).thenReturn(Optional.empty())
+    every { jobPersistence.version } returns Optional.empty()
+    every { jobPersistence.currentProtocolVersionRange } returns Optional.empty()
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val supportedRange = protocolVersionChecker.validate(supportAutoUpgrade)
     Assertions.assertNotNull(supportedRange)
@@ -67,12 +69,12 @@ internal class ProtocolVersionCheckerTest {
     val expectedRange = AirbyteProtocolVersionRange(V1_0_0, V2_0_0)
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     Assertions.assertEquals(expectedRange.max, protocolVersionChecker.targetProtocolVersionRange.max)
     Assertions.assertEquals(expectedRange.min, protocolVersionChecker.targetProtocolVersionRange.min)
@@ -89,40 +91,32 @@ internal class ProtocolVersionCheckerTest {
     val dest2 = UUID.randomUUID()
 
     val initialActorDefinitions =
-      java.util.Map.of(
-        source1,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        source2,
-        java.util.Map.entry(ActorType.SOURCE, V1_0_0),
-        source3,
-        java.util.Map.entry(ActorType.SOURCE, V2_0_0),
-        dest1,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
-        dest2,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
+      mapOf(
+        source1 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        source2 to (ActorType.SOURCE to V1_0_0).toMapEntry(),
+        source3 to (ActorType.SOURCE to V2_0_0).toMapEntry(),
+        dest1 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
+        dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionService!!.actorDefinitionToProtocolVersionMap,
-      ).thenReturn(initialActorDefinitions)
+    every {
+      actorDefinitionService.actorDefinitionToProtocolVersionMap
+    } returns initialActorDefinitions
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         targetRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val conflicts: Map<ActorType, Set<UUID>> = protocolVersionChecker.getConflictingActorDefinitions(targetRange)
 
     val expectedConflicts =
-      java.util.Map.of(
-        ActorType.DESTINATION,
-        java.util.Set.of(dest1, dest2),
-        ActorType.SOURCE,
-        java.util.Set.of(source1),
+      mapOf(
+        ActorType.DESTINATION to setOf(dest1, dest2),
+        ActorType.SOURCE to setOf(source1),
       )
     Assertions.assertEquals(expectedConflicts, conflicts)
   }
@@ -135,25 +129,22 @@ internal class ProtocolVersionCheckerTest {
     val dest1 = UUID.randomUUID()
 
     val initialActorDefinitions =
-      java.util.Map.of(
-        source1,
-        java.util.Map.entry(ActorType.SOURCE, V2_0_0),
-        dest1,
-        java.util.Map.entry(ActorType.DESTINATION, V1_0_0),
+      mapOf(
+        source1 to (ActorType.SOURCE to V2_0_0).toMapEntry(),
+        dest1 to (ActorType.DESTINATION to V1_0_0).toMapEntry(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionService!!.actorDefinitionToProtocolVersionMap,
-      ).thenReturn(initialActorDefinitions)
+    every {
+      actorDefinitionService.actorDefinitionToProtocolVersionMap
+    } returns initialActorDefinitions
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         targetRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val conflicts: Map<ActorType, Set<UUID>> = protocolVersionChecker.getConflictingActorDefinitions(targetRange)
 
@@ -171,21 +162,21 @@ internal class ProtocolVersionCheckerTest {
     val initialConflicts = java.util.Set.of(upgradedSource, notChangedSource, missingSource)
 
     setNewSourceDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(unrelatedSource, V2_0_0),
-        java.util.Map.entry(upgradedSource, V1_0_0),
-        java.util.Map.entry(notChangedSource, V0_0_0),
+      listOf(
+        Pair(unrelatedSource, V2_0_0).toMapEntry(),
+        Pair(upgradedSource, V1_0_0).toMapEntry(),
+        Pair(notChangedSource, V0_0_0).toMapEntry(),
       ),
     )
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         targetRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val actualConflicts =
       protocolVersionChecker.projectRemainingConflictsAfterConnectorUpgrades(targetRange, initialConflicts, ActorType.SOURCE)
@@ -204,21 +195,21 @@ internal class ProtocolVersionCheckerTest {
     val initialConflicts = java.util.Set.of(dest1, dest2, dest3)
 
     setNewDestinationDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(dest1, V2_0_0),
-        java.util.Map.entry(dest2, V1_0_0),
-        java.util.Map.entry(dest3, V2_0_0),
+      listOf(
+        Pair(dest1, V2_0_0).toMapEntry(),
+        Pair(dest2, V1_0_0).toMapEntry(),
+        Pair(dest3, V2_0_0).toMapEntry(),
       ),
     )
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         targetRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val actualConflicts =
       protocolVersionChecker.projectRemainingConflictsAfterConnectorUpgrades(targetRange, initialConflicts, ActorType.DESTINATION)
@@ -234,12 +225,12 @@ internal class ProtocolVersionCheckerTest {
     setCurrentProtocolRangeRange(expectedRange.min, expectedRange.max)
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
 
     val supportedRange = protocolVersionChecker.validate(supportAutoUpgrade)
@@ -263,51 +254,43 @@ internal class ProtocolVersionCheckerTest {
     val expectedTargetVersionRange = AirbyteProtocolVersionRange(V1_0_0, V2_0_0)
 
     val initialActorDefinitions =
-      java.util.Map.of(
-        source1,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        source2,
-        java.util.Map.entry(ActorType.SOURCE, V1_0_0),
-        source3,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        source4,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        dest1,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
-        dest2,
-        java.util.Map.entry(ActorType.DESTINATION, V1_0_0),
-        dest3,
-        java.util.Map.entry(ActorType.DESTINATION, V2_0_0),
+      mapOf(
+        source1 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        source2 to (ActorType.SOURCE to V1_0_0).toMapEntry(),
+        source3 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        source4 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        dest1 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
+        dest2 to (ActorType.DESTINATION to V1_0_0).toMapEntry(),
+        dest3 to (ActorType.DESTINATION to V2_0_0).toMapEntry(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionService!!.actorDefinitionToProtocolVersionMap,
-      ).thenReturn(initialActorDefinitions)
+    every {
+      actorDefinitionService.actorDefinitionToProtocolVersionMap
+    } returns initialActorDefinitions
 
     setNewSourceDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(source1, V1_0_0),
-        java.util.Map.entry(source2, V1_0_0),
-        java.util.Map.entry(source3, V2_0_0),
-        java.util.Map.entry(source4, V1_0_0),
+      listOf(
+        Pair(source1, V1_0_0).toMapEntry(),
+        Pair(source2, V1_0_0).toMapEntry(),
+        Pair(source3, V2_0_0).toMapEntry(),
+        Pair(source4, V1_0_0).toMapEntry(),
       ),
     )
     setNewDestinationDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(dest1, V1_0_0),
-        java.util.Map.entry(dest2, V1_0_0),
-        java.util.Map.entry(dest3, V2_0_0),
+      listOf(
+        Pair(dest1, V1_0_0).toMapEntry(),
+        Pair(dest2, V1_0_0).toMapEntry(),
+        Pair(dest3, V2_0_0).toMapEntry(),
       ),
     )
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedTargetVersionRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val actualRange = protocolVersionChecker.validate(supportAutoUpgrade)
 
@@ -335,42 +318,37 @@ internal class ProtocolVersionCheckerTest {
     val dest2 = UUID.randomUUID()
 
     val initialActorDefinitions =
-      java.util.Map.of(
-        source1,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        source2,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        dest1,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
-        dest2,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
+      mapOf(
+        source1 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        source2 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        dest1 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
+        dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionService!!.actorDefinitionToProtocolVersionMap,
-      ).thenReturn(initialActorDefinitions)
+    every {
+      actorDefinitionService.actorDefinitionToProtocolVersionMap
+    } returns initialActorDefinitions
 
     setNewSourceDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(source1, V0_0_0),
-        java.util.Map.entry(source2, V1_0_0),
+      listOf(
+        Pair(source1, V0_0_0).toMapEntry(),
+        Pair(source2, V1_0_0).toMapEntry(),
       ),
     )
     setNewDestinationDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(dest1, V1_0_0),
-        java.util.Map.entry(dest2, V1_0_0),
+      listOf(
+        Pair(dest1, V1_0_0).toMapEntry(),
+        Pair(dest2, V1_0_0).toMapEntry(),
       ),
     )
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedTargetVersionRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val actualRange = protocolVersionChecker.validate(supportAutoUpgrade)
     Assertions.assertNull(actualRange)
@@ -388,20 +366,15 @@ internal class ProtocolVersionCheckerTest {
     val dest2 = UUID.randomUUID()
 
     val initialActorDefinitions =
-      java.util.Map.of(
-        source1,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        source2,
-        java.util.Map.entry(ActorType.SOURCE, V0_0_0),
-        dest1,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
-        dest2,
-        java.util.Map.entry(ActorType.DESTINATION, V0_0_0),
+      mapOf(
+        source1 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        source2 to (ActorType.SOURCE to V0_0_0).toMapEntry(),
+        dest1 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
+        dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionService!!.actorDefinitionToProtocolVersionMap,
-      ).thenReturn(initialActorDefinitions)
+    every {
+      actorDefinitionService.actorDefinitionToProtocolVersionMap
+    } returns initialActorDefinitions
 
     setNewSourceDefinitions(
       java.util.List.of(
@@ -418,12 +391,12 @@ internal class ProtocolVersionCheckerTest {
 
     val protocolVersionChecker =
       ProtocolVersionChecker(
-        jobPersistence!!,
+        jobPersistence,
         expectedTargetVersionRange,
-        actorDefinitionService!!,
-        definitionsProvider!!,
-        sourceService!!,
-        destinationService!!,
+        actorDefinitionService,
+        definitionsProvider,
+        sourceService,
+        destinationService,
       )
     val actualRange = protocolVersionChecker.validate(supportAutoUpgrade)
     Assertions.assertNull(actualRange)
@@ -433,38 +406,43 @@ internal class ProtocolVersionCheckerTest {
     min: Version,
     max: Version,
   ) {
-    Mockito.`when`(jobPersistence!!.currentProtocolVersionRange).thenReturn(Optional.of(AirbyteProtocolVersionRange(min, max)))
-    Mockito.`when`(jobPersistence!!.airbyteProtocolVersionMin).thenReturn(Optional.of(min))
-    Mockito.`when`(jobPersistence!!.airbyteProtocolVersionMax).thenReturn(Optional.of(max))
+    every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(min, max))
+    every { jobPersistence.airbyteProtocolVersionMin } returns Optional.of(min)
+    every { jobPersistence.airbyteProtocolVersionMax } returns Optional.of(max)
   }
 
   private fun setNewDestinationDefinitions(defs: List<Map.Entry<UUID, Version>>) {
     val destDefinitions =
       defs
-        .stream()
         .map { e: Map.Entry<UUID, Version> ->
           ConnectorRegistryDestinationDefinition()
             .withDestinationDefinitionId(e.key)
             .withSpec(ConnectorSpecification().withProtocolVersion(e.value.serialize()))
         }.toList()
-    Mockito.`when`(definitionsProvider!!.destinationDefinitions).thenReturn(destDefinitions)
+    every { definitionsProvider.destinationDefinitions } returns destDefinitions
   }
 
   private fun setNewSourceDefinitions(defs: List<Map.Entry<UUID, Version>>) {
     val sourceDefinitions =
       defs
-        .stream()
         .map { e: Map.Entry<UUID, Version> ->
           ConnectorRegistrySourceDefinition()
             .withSourceDefinitionId(e.key)
             .withSpec(ConnectorSpecification().withProtocolVersion(e.value.serialize()))
         }.toList()
-    Mockito.`when`(definitionsProvider!!.sourceDefinitions).thenReturn(sourceDefinitions)
-  }
-
-  companion object {
-    private val V0_0_0 = Version("0.0.0")
-    private val V1_0_0 = Version("1.0.0")
-    private val V2_0_0 = Version("2.0.0")
+    every { definitionsProvider.sourceDefinitions } returns sourceDefinitions
   }
 }
+
+/**
+ * Extension function for converting a `Pair` into a `Map.Entry`.
+ *
+ * This function maps a `Pair` of two elements to a `Map.Entry` object using the `java.util.Map.entry` function,
+ * where the first component of the pair is used as the key and the second component is used as the value.
+ *
+ * Necessary because [ActorDefinitionService.getActorDefinitionToProtocolVersionMap] returns a Map<X, Map.Entry<>>
+ *
+ * @receiver The `Pair` instance to be converted.
+ * @return A `Map.Entry` with the first element of the pair as the key and the second element as the value.
+ */
+private fun <A, B> Pair<A, B>.toMapEntry() = java.util.Map.entry(this.first, this.second)
