@@ -3,6 +3,7 @@
   "general.dash": "-",
   "general.maskedString": "***********",
   "general.airbyte": "Airbyte",
+  "general.timeRange": "{from}–{to}",
   "webapp.cannotReachServer": "Cannot reach server. The server may still be starting up.",
   "notifications.error.health": "Cannot reach server",
   "notifications.error.somethingWentWrong": "Something went wrong",
@@ -743,6 +744,9 @@
   "connections.graph.failedJobsCount": "{count, plural, one {# failed sync} other {# failed syncs}}",
   "connections.graph.partialSuccessfulJobsCount": "{count, plural, one {# incomplete sync} other {# incomplete syncs}}",
   "connections.graph.noSyncs": "No syncs",
+  "connections.graph.failedSyncs": "{count, plural, one {# failed sync} other {# failed syncs}}",
+  "connections.graph.successfulSyncs": "{count, plural, one {# successful sync} other {# successful syncs}}",
+  "connections.graph.incompleteSyncs": "{count, plural, one {# partially successful sync} other {# partially successful syncs}}",
 
   "connections.mappings.title": "Mappings",
   "connections.mappings.mappingType": "Mapping type",

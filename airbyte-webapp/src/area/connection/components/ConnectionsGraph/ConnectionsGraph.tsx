@@ -1,16 +1,25 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
-import { useIntl } from "react-intl";
+import { FormattedDate, useIntl } from "react-intl";
 import { Bar, BarChart, BarProps, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { CategoricalChartFunc } from "recharts/types/chart/generateCategoricalChart";
 
+import { Box } from "components/ui/Box";
+import { Drawer } from "components/ui/Drawer";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 
 import { useGetConnectionsGraphData } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import {
+  ConnectionEventMinimal,
+  WebBackendConnectionListItem,
+  ConnectionEventType,
+} from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
+import { ConnectionEventsList } from "./ConnectionEventsList";
 import styles from "./ConnectionsGraph.module.scss";
 import { ConnectionsGraphTooltip } from "./ConnectionsGraphTooltip";
 import { getStartOfFirstWindow } from "./getStartOfFirstWindow";
@@ -22,19 +31,24 @@ interface ConnectionsGraphProps {
   connections: WebBackendConnectionListItem[];
 }
 
+export const CONNECTIONS_GRAPH_EVENT_TYPES = [
+  ConnectionEventType.SYNC_SUCCEEDED,
+  ConnectionEventType.REFRESH_SUCCEEDED,
+  ConnectionEventType.SYNC_INCOMPLETE,
+  ConnectionEventType.REFRESH_INCOMPLETE,
+  ConnectionEventType.SYNC_FAILED,
+  ConnectionEventType.REFRESH_FAILED,
+] as const;
+
 export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, connections }) => {
+  const [didUserOpenDrawer, setDidUserOpenDrawer] = useState(false);
+  const [selectedWindowId, setSelectedWindowId] = useState<number | null>(null);
+
   const { formatDate } = useIntl();
   const connectionIds = connections.map((connection) => connection.connectionId);
   const { data } = useGetConnectionsGraphData({
     connectionIds,
-    eventTypes: [
-      "SYNC_SUCCEEDED",
-      "SYNC_INCOMPLETE",
-      "SYNC_FAILED",
-      "REFRESH_SUCCEEDED",
-      "REFRESH_FAILED",
-      "REFRESH_INCOMPLETE",
-    ],
+    eventTypes: [...CONNECTIONS_GRAPH_EVENT_TYPES],
     createdAtStart: getStartOfFirstWindow(lookback).format(),
     // Intentionally overshooting to the end of the day so we get all current events and so that this query key does
     // not change frequently (which would cause the query to be re-run)
@@ -86,17 +100,18 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
         });
 
         if (window) {
+          window.events.push(event);
           switch (event.eventType) {
-            case "REFRESH_SUCCEEDED":
-            case "SYNC_SUCCEEDED":
+            case ConnectionEventType.REFRESH_SUCCEEDED:
+            case ConnectionEventType.SYNC_SUCCEEDED:
               window.success++;
               break;
-            case "REFRESH_INCOMPLETE":
-            case "SYNC_INCOMPLETE":
+            case ConnectionEventType.REFRESH_INCOMPLETE:
+            case ConnectionEventType.SYNC_INCOMPLETE:
               window.partialSuccess++;
               break;
-            case "REFRESH_FAILED":
-            case "SYNC_FAILED":
+            case ConnectionEventType.REFRESH_FAILED:
+            case ConnectionEventType.SYNC_FAILED:
               window.failure++;
               break;
           }
@@ -114,7 +129,29 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
     [barChartCategories]
   );
 
-  if (!data) {
+  const handleBarChartClick: CategoricalChartFunc = (chartState) => {
+    const { activeLabel } = chartState;
+    const activeLabelNumber = Number(activeLabel);
+    const categoryClicked = barChartCategories.find((category) => category.windowId === activeLabelNumber);
+    if (categoryClicked && categoryClicked.events.length > 0) {
+      setDidUserOpenDrawer(true);
+      setSelectedWindowId(categoryClicked.windowId);
+    }
+  };
+
+  const selectedWindow = useMemo(() => {
+    return barChartCategories.find((category) => category.windowId === selectedWindowId);
+  }, [barChartCategories, selectedWindowId]);
+
+  // Because of the drawer animation and the fact that the connection filters remain interactive, we cannot only rely on
+  // a boolean value to determine if the drawer should be open. Instead, we need to check if the user has clicked the
+  // drawer open button and if the selected window has events (as that the data for that window might be filtered)
+  const isDrawerVisible = useMemo(
+    () => didUserOpenDrawer && !!selectedWindow && selectedWindow.events.length > 0 && data !== undefined,
+    [data, selectedWindow, didUserOpenDrawer]
+  );
+
+  if (data === undefined) {
     return (
       <FlexContainer direction="column" justifyContent="center" className={styles.connectionsGraph__loadingSkeleton}>
         <LoadingSkeleton />
@@ -125,8 +162,8 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
 
   return (
     <DefaultErrorBoundary>
-      <ResponsiveContainer width="99%" height={120} className={styles.connectionsGraph}>
-        <BarChart data={barChartCategories} barCategoryGap={1}>
+      <ResponsiveContainer width="99%" height={120}>
+        <BarChart data={barChartCategories} barCategoryGap={1} onClick={handleBarChartClick}>
           <XAxis
             ticks={ticks}
             tickFormatter={(value) => formatDate(value, lookbackConfigs[lookback].tickDateFormatOptions)}
@@ -179,7 +216,32 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
           ))}
         </BarChart>
       </ResponsiveContainer>
-      <div />
+      <Drawer
+        isOpen={isDrawerVisible}
+        onClose={() => setDidUserOpenDrawer(false)}
+        afterClose={() => {
+          if (!didUserOpenDrawer) {
+            setSelectedWindowId(null);
+          }
+        }}
+        title={
+          selectedWindow ? (
+            <Box pl="lg">
+              <Heading size="sm" as="h2">
+                <FormattedDate value={selectedWindow.windowStart} year="numeric" month="short" day="numeric" />
+              </Heading>
+            </Box>
+          ) : null
+        }
+      >
+        {selectedWindow && (
+          <ConnectionEventsList
+            start={selectedWindow.windowStart}
+            end={selectedWindow.windowEnd}
+            events={selectedWindow.events ?? []}
+          />
+        )}
+      </Drawer>
     </DefaultErrorBoundary>
   );
 };
@@ -195,6 +257,7 @@ type BarChartCategory = {
   windowId: number;
   windowStart: Date;
   windowEnd: Date;
+  events: ConnectionEventMinimal[];
 } & StackedBarSections;
 
 interface StackedBarSections {
@@ -220,6 +283,7 @@ const createBarCategories = (lookback: LookbackWindow): BarChartCategory[] => {
       failure: 0,
       running: 0,
       lookbackConfig: lookbackConfigs[lookback],
+      events: [],
     });
     cursor = cursor.add(windowLength, unit);
   }

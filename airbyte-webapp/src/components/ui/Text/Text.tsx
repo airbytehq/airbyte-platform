@@ -1,6 +1,8 @@
 import classNames from "classnames";
 import React, { HTMLAttributes } from "react";
 
+import { HeadingElementType } from "components/ui/Heading";
+
 import styles from "./Text.module.scss";
 
 export type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
@@ -18,7 +20,7 @@ type TextColor =
   | "grey500"
   | "blue"
   | "yellow600";
-type TextElementType = "p" | "span" | "div";
+type TextElementType = "p" | "span" | "div" | HeadingElementType;
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
 type TextAlignment = "left" | "center" | "right";

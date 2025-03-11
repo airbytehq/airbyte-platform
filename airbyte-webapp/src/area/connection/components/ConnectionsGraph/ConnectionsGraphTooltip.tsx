@@ -1,7 +1,8 @@
 import classNames from "classnames";
-import { FormattedDate, FormattedDateTimeRange, FormattedMessage } from "react-intl";
+import { FormattedDate, FormattedMessage } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
+import { FormattedTimeRange } from "components/FormattedTimeRange";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -46,7 +47,7 @@ export const ConnectionsGraphTooltip: ContentType<number, string> = ({ active, p
                 <FormattedDate value={startDate} day="numeric" month="long" year="numeric" />
               </Text>
               <Text color="grey">
-                <FormattedDateTimeRange from={startDate} to={endDate} hour="numeric" minute="numeric" />
+                <FormattedTimeRange from={startDate} to={endDate} />
               </Text>
             </FlexContainer>
           )}
