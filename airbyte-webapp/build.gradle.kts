@@ -251,11 +251,6 @@ tasks.named("check") {
     dependsOn("licenseCheck", "validateLock", "unusedCode", "prettier", "test")
 }
 
-// Some check tasks only should be run on CI, thus a separate ciCheck task
-tasks.register("ciCheck") {
-    dependsOn("check", "validateLinks")
-}
-
 tasks.named("build") {
     dependsOn("buildStorybook")
 }
