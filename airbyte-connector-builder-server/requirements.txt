@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.39.0
+airbyte-cdk==6.39.1
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
@@ -95,6 +95,7 @@ orjson==3.10.15
     #   langsmith
 packaging==23.2
     # via
+    #   airbyte-cdk
     #   dunamai
     #   langchain-core
 pandas==2.2.2
@@ -161,6 +162,7 @@ tqdm==4.67.1
     # via nltk
 typing-extensions==4.12.2
     # via
+    #   airbyte-cdk
     #   anyio
     #   cattrs
     #   pydantic
