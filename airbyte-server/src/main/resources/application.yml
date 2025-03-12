@@ -119,7 +119,7 @@ airbyte:
     type: ${AB_AIRBYTE_APPLICATIONS:}
   auth:
     token-expiration:
-      application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:180}
+      application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
       dataplane-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_DATAPLANE:5}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}

@@ -10,7 +10,7 @@ import jakarta.inject.Singleton
 @Singleton
 class TokenExpirationConfig(
   @Property(name = "airbyte.auth.token-expiration.application-token-expiration-in-minutes")
-  val applicationTokenExpirationInMinutes: Long = 180,
+  val applicationTokenExpirationInMinutes: Long = 15,
   @Property(name = "airbyte.auth.token-expiration.dataplane-token-expiration-in-minutes")
   val dataplaneTokenExpirationInMinutes: Long = 5,
 )
