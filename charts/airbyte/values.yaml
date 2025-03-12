@@ -345,6 +345,9 @@ webapp:
   connector-builder-server:
     url: /connector-builder-api
 
+  ##  webapp.url Define the url the Airbyte Webapp is hosted at. Used in notification links.
+  url: ""
+
   fullstory:
     # -- Whether or not to enable fullstory
     enabled: false
