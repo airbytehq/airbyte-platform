@@ -1,6 +1,12 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // NOTE: this settings is only discovered when running from oss/build.gradle
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+import java.net.HttpURLConnection
+import java.net.URI
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit.MILLISECONDS
+
 pluginManagement {
   repositories {
     maven {
@@ -39,27 +45,36 @@ buildscript {
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
-  id("com.gradle.enterprise") version "3.15.1"
+  id("com.gradle.develocity") version "3.19.2"
+  id("com.gradle.common-custom-user-data-gradle-plugin") version "2.1"
   id("com.github.burrunan.s3-build-cache") version "1.8.1"
-}
-
-gradleEnterprise {
-  buildScan {
-    termsOfServiceUrl = "https://gradle.com/terms-of-service"
-    termsOfServiceAgree = "yes"
-  }
 }
 
 val isCiServer = System.getenv().containsKey("CI")
 
-gradleEnterprise {
+develocity {
+  server = "http://gradle.internal.airbyte.io"
+  allowUntrustedServer = true
   buildScan {
-    isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
+    publishing.onlyIf { urlAccessible() }
+    uploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
     buildScanPublished {
       file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
     }
   }
 }
+
+private fun urlAccessible(url: String = "http://gradle.internal.airbyte.io"): Boolean =
+  runCatching {
+    val connection =
+      (URI(url).toURL().openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 2.seconds.toInt(MILLISECONDS)
+        readTimeout = 2.seconds.toInt(MILLISECONDS)
+      }
+
+    (connection.responseCode in 200..299)
+  }.getOrDefault(false)
 
 buildCache {
   local {
