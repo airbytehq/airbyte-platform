@@ -32,6 +32,8 @@ micronaut:
           expiration: 180 # 3  mins
       jwt:
         enabled: true
+        claims-validators:
+          issuer: airbyte-server # needs to match the micronaut.application.name property
         signatures:
           secret:
             generator:
