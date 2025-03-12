@@ -10,6 +10,7 @@ import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseConstants;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,7 @@ public class JobsDatabaseInitializer implements DatabaseInitializer {
 
   @Override
   public Optional<Collection<String>> getTableNames() {
-    return Optional.of(DatabaseConstants.JOBS_INITIAL_EXPECTED_TABLES);
+    return Optional.of(Set.of("jobs", "airbyte_metadata", "attempts"));
   }
 
 }

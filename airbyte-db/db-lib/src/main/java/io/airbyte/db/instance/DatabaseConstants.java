@@ -4,7 +4,6 @@
 
 package io.airbyte.db.instance;
 
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import java.util.Collections;
 import java.util.Set;
 
@@ -39,11 +38,6 @@ public final class DatabaseConstants {
    * Logical name of the Jobs database.
    */
   public static final String JOBS_DATABASE_LOGGING_NAME = "airbyte jobs";
-
-  /**
-   * Collection of tables expected to be present in the Jobs database after creation.
-   */
-  public static final Set<String> JOBS_INITIAL_EXPECTED_TABLES = JobsDatabaseSchema.getTableNames();
 
   /**
    * Path to the script that contains the initial schema definition for the Jobs database.
