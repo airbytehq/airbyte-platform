@@ -61,6 +61,7 @@ import {
   JwtAuthenticator,
   JwtAuthenticatorType,
   RequestOptionType,
+  AddedFieldDefinitionType,
 } from "core/api/types/ConnectorManifest";
 
 import { DecoderTypeConfig } from "./Builder/DecoderConfig";
@@ -958,6 +959,7 @@ export function builderTransformationsToManifest(
         type: "AddFields",
         fields: [
           {
+            type: AddedFieldDefinitionType.AddedFieldDefinition,
             path: transformation.path,
             value: transformation.value,
           },

@@ -2,6 +2,7 @@ import { dump } from "js-yaml";
 import merge from "lodash/merge";
 
 import {
+  AddedFieldDefinitionType,
   ConnectorManifest,
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
@@ -468,6 +469,7 @@ describe("Conversion throws error when", () => {
           type: "AddFields" as const,
           fields: [
             {
+              type: AddedFieldDefinitionType.AddedFieldDefinition,
               path: ["path", "to", "field"],
               value: "my_value",
             },
