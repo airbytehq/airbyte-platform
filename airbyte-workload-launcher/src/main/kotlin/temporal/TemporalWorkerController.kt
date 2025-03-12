@@ -17,7 +17,6 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RUNNING
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STOPPED_STATUS
 import io.micronaut.context.annotation.Property
 import io.micronaut.scheduling.annotation.Scheduled
-import io.temporal.worker.WorkerFactory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
@@ -30,17 +29,13 @@ class TemporalWorkerController(
   @Named("workloadLauncherHighPriorityQueue") private val launcherHighPriorityQueue: String,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("workerFactory") private val workerFactory: WorkerFactory,
-  @Named("highPriorityWorkerFactory") private val highPriorityWorkerFactory: WorkerFactory,
+  private val temporalLauncherWorker: TemporalLauncherWorker,
 ) {
   private val started: AtomicBoolean = AtomicBoolean(false)
 
   fun start() {
     started.set(true)
-    workerFactory.start()
-    workerFactory.suspendPolling()
-    highPriorityWorkerFactory.start()
-    highPriorityWorkerFactory.suspendPolling()
+    temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
     checkWorkerStatus()
   }
 
@@ -50,26 +45,21 @@ class TemporalWorkerController(
       val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
       val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
       if (shouldRun) {
-        workerFactory.resumePolling()
-        highPriorityWorkerFactory.resumePolling()
+        temporalLauncherWorker.resumePolling()
       } else {
-        workerFactory.suspendPolling()
-        highPriorityWorkerFactory.suspendPolling()
+        temporalLauncherWorker.suspendPolling()
       }
     }
   }
 
   @Scheduled(fixedRate = "PT60S")
   fun reportPollerStatuses() {
-    reportPollerStatus(workerFactory, launcherQueue)
-    reportPollerStatus(highPriorityWorkerFactory, launcherHighPriorityQueue)
+    reportPollerStatus(launcherQueue)
+    reportPollerStatus(launcherHighPriorityQueue)
   }
 
-  private fun reportPollerStatus(
-    wf: WorkerFactory,
-    queueName: String,
-  ) {
-    val isPollingSuspended = wf.getWorker(queueName).isSuspended
+  private fun reportPollerStatus(queueName: String) {
+    val isPollingSuspended = temporalLauncherWorker.isSuspended(queueName)
     metricClient.count(
       metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POLLER_STATUS,
       attributes =

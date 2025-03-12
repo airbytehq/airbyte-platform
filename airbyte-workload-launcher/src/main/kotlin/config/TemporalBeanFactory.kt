@@ -15,18 +15,10 @@ import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.Priority
 import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
 import io.airbyte.featureflag.WorkloadApiRouting
-import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherMessageConsumer
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherWorkflowImpl
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.temporal.activity.ActivityOptions
-import io.temporal.client.WorkflowClient
-import io.temporal.opentracing.OpenTracingWorkerInterceptor
-import io.temporal.worker.Worker
-import io.temporal.worker.WorkerFactory
-import io.temporal.worker.WorkerFactoryOptions
-import io.temporal.worker.WorkerOptions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -48,40 +40,6 @@ class TemporalBeanFactory {
   @Named("starterActivities")
   fun workloadStarterActivities(launcherMessageConsumer: LauncherMessageConsumer): QueueActivity<LauncherInputMessage> =
     QueueActivityImpl(launcherMessageConsumer)
-
-  @Named("workerFactory")
-  @Singleton
-  fun workloadStarterWorkerFactory(
-    workflowClient: WorkflowClient,
-    temporalProxyHelper: TemporalProxyHelper,
-    @Named("workloadLauncherQueue") launcherQueue: String,
-    @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
-    @Property(name = "airbyte.workload-launcher.temporal.default-queue.parallelism") paralellism: Int,
-    @Property(name = "airbyte.workload-launcher.temporal.default-queue.workflow-parallelism") workflowParalellism: Int,
-  ): WorkerFactory {
-    val workerFactory = baseWorkerFactory(workflowClient)
-    val worker = baseWorker(workerFactory, paralellism, workflowParalellism, launcherQueue)
-    worker.registerActivitiesImplementations(workloadStarterActivities)
-    worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
-    return workerFactory
-  }
-
-  @Named("highPriorityWorkerFactory")
-  @Singleton
-  fun workloadStarterHighPriorityWorkerFactory(
-    workflowClient: WorkflowClient,
-    temporalProxyHelper: TemporalProxyHelper,
-    @Named("workloadLauncherHighPriorityQueue") launcherQueue: String,
-    @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
-    @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.parallelism") paralellism: Int,
-    @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.workflow-parallelism") workflowParalellism: Int,
-  ): WorkerFactory {
-    val workerFactory = baseWorkerFactory(workflowClient)
-    val worker = baseWorker(workerFactory, paralellism, workflowParalellism, launcherQueue)
-    worker.registerActivitiesImplementations(workloadStarterActivities)
-    worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
-    return workerFactory
-  }
 
   @Named("workloadLauncherQueue")
   @Singleton
@@ -113,29 +71,5 @@ class TemporalBeanFactory {
         Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY), PlaneName(dataPlaneName)))
       }
     return featureFlagClient.stringVariation(WorkloadApiRouting, context)
-  }
-
-  private fun baseWorkerFactory(workflowClient: WorkflowClient): WorkerFactory {
-    val workerFactoryOptions =
-      WorkerFactoryOptions
-        .newBuilder()
-        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
-        .build()
-    return WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
-  }
-
-  private fun baseWorker(
-    workerFactory: WorkerFactory,
-    paralellism: Int,
-    workflowParalellism: Int,
-    queueName: String,
-  ): Worker {
-    val workerOptions =
-      WorkerOptions
-        .newBuilder()
-        .setMaxConcurrentActivityExecutionSize(paralellism)
-        .setMaxConcurrentWorkflowTaskExecutionSize(workflowParalellism)
-        .build()
-    return workerFactory.newWorker(queueName, workerOptions)
   }
 }
