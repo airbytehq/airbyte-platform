@@ -12,7 +12,11 @@ import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList } from "core/api";
-import { ConnectionEventMinimal, ConnectionEventType } from "core/api/types/AirbyteClient";
+import {
+  ConnectionEventMinimal,
+  ConnectionEventType,
+  WebBackendConnectionListItem,
+} from "core/api/types/AirbyteClient";
 import { ConnectionTimelineEventIcon } from "pages/connections/ConnectionTimelinePage/ConnectionTimelineEventIcon";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
@@ -57,15 +61,33 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
 
   const connections = useConnectionList();
 
-  const eventsByConnectionId = useMemo(() => {
-    return events.reduce((acc, event) => {
-      if (!acc.has(event.connectionId)) {
-        acc.set(event.connectionId, []);
+  const connectionsWithEvents = useMemo(() => {
+    const unsortedConnections = events.reduce((acc, event) => {
+      const connection = connections?.connections.find((connection) => connection.connectionId === event.connectionId);
+      if (connection) {
+        if (!acc.has(event.connectionId)) {
+          acc.set(event.connectionId, { connection, events: [] });
+        }
+        acc.get(event.connectionId)?.events.push(event);
       }
-      acc.get(event.connectionId)?.push(event);
       return acc;
-    }, new Map<string, ConnectionEventMinimal[]>());
-  }, [events]);
+    }, new Map<string, { connection: WebBackendConnectionListItem; events: ConnectionEventMinimal[] }>());
+
+    const alphabeticallySortedConnections = new Map(
+      Array.from(unsortedConnections.entries()).sort(
+        ([, { connection: connectionA }], [, { connection: connectionB }]) => {
+          return connectionA.name.localeCompare(connectionB.name);
+        }
+      )
+    );
+
+    // Sort events in place by createdAt descending
+    alphabeticallySortedConnections.forEach((connection) => {
+      connection.events.sort((eventA, eventB) => eventB.createdAt.localeCompare(eventA.createdAt));
+    });
+
+    return alphabeticallySortedConnections;
+  }, [connections?.connections, events]);
 
   const windowIsLessThanOneDay = Math.abs(dayjs(end).diff(dayjs(start), "day")) < 1;
 
@@ -78,14 +100,13 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
           </Text>
         )}
         <SyncCount failedCount={failedCount} successCount={successCount} partialSuccessCount={partialSuccessCount} />
-        {Array.from(eventsByConnectionId.entries()).map(([connectionId, connectionEvents]) => {
-          const connection = connections?.connections.find((connection) => connection.connectionId === connectionId);
+        {Array.from(connectionsWithEvents.entries()).map(([connectionId, { connection, events }]) => {
           return (
             <FlexContainer direction="column" gap="none" key={connectionId}>
               <Text size="md" as="h3" className={styles.connectionEventsList__connectionTitle}>
-                {connection?.name || connectionId}
+                {connection.name}
               </Text>
-              {connectionEvents.map((event) => {
+              {events.map((event) => {
                 if (!eventTypeInKeyMap(event.eventType)) {
                   return null;
                 }
