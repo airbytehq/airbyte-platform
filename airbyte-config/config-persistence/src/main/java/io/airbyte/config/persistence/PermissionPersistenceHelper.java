@@ -56,11 +56,14 @@ public class PermissionPersistenceHelper {
           + "   UNION"
           + "   SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])"
           + " )"
-          + " SELECT * from workspace"
+          + " SELECT workspace.*, dataplane_group.name "
+          + " FROM workspace"
+          + " JOIN dataplane_group"
+          + " ON workspace.dataplane_group_id = dataplane_group.id"
           + " WHERE workspace.id IN (SELECT workspace_id from userWorkspaces)"
-          + " AND name ILIKE {2}"
-          + " AND tombstone = false"
-          + " ORDER BY name ASC";
+          + " AND workspace.name ILIKE {2}"
+          + " AND workspace.tombstone = false"
+          + " ORDER BY workspace.name ASC";
 
   // The following constants are used to alias columns in the below query to avoid
   // ambiguity when joining the same table multiple times. They are public so that

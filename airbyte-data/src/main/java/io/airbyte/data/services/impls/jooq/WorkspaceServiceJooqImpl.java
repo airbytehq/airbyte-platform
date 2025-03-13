@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -19,7 +20,6 @@ import static org.jooq.impl.SQLDataType.VARCHAR;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
@@ -32,7 +32,9 @@ import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.config.OrganizationConstantsKt;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -55,6 +57,7 @@ import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -83,6 +86,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionServiceJooqImpl connectionService;
   private final MetricClient metricClient;
+  private final DataplaneGroupService dataplaneGroupService;
 
   @VisibleForTesting
   public WorkspaceServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -90,7 +94,8 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
                                   final SecretsRepositoryReader secretsRepositoryReader,
                                   final SecretsRepositoryWriter secretsRepositoryWriter,
                                   final SecretPersistenceConfigService secretPersistenceConfigService,
-                                  final MetricClient metricClient) {
+                                  final MetricClient metricClient,
+                                  final DataplaneGroupService dataplaneGroupService) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = new ConnectionServiceJooqImpl(database);
     this.featureFlagClient = featureFlagClient;
@@ -98,6 +103,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.metricClient = metricClient;
+    this.dataplaneGroupService = dataplaneGroupService;
   }
 
   /**
@@ -131,12 +137,16 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       throws IOException {
     final Result<Record> result;
     if (includeTombstone) {
-      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
           .from(WORKSPACE)
+          .join(DATAPLANE_GROUP)
+          .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
           .where(WORKSPACE.SLUG.eq(slug))).fetch();
     } else {
-      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
           .from(WORKSPACE)
+          .join(DATAPLANE_GROUP)
+          .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
           .where(WORKSPACE.SLUG.eq(slug)).andNot(WORKSPACE.TOMBSTONE)).fetch();
     }
 
@@ -178,8 +188,10 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public List<StandardWorkspace> listAllWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .and(resourcesQueryPaginated.nameContains() != null ? WORKSPACE.NAME.contains(resourcesQueryPaginated.nameContains()) : noCondition())
         .limit(resourcesQueryPaginated.pageSize())
@@ -192,8 +204,10 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
   @Override
   public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(includeTombstone ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .and(workspaceIds.map(WORKSPACE.ID::in).orElse(noCondition()))
         .fetch())
@@ -210,8 +224,10 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public List<StandardWorkspace> listStandardWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .and(WORKSPACE.ID.in(resourcesQueryPaginated.workspaceIds()))
         .limit(resourcesQueryPaginated.pageSize())
@@ -276,9 +292,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
             .set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.valueOf(Jsons.serialize(workspace.getNotificationSettings())))
             .set(WORKSPACE.FIRST_SYNC_COMPLETE, workspace.getFirstCompletedSync())
             .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
-            .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
-                workspace.getDefaultGeography().value(),
-                io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(workspace.getOrganizationId(), workspace.getDefaultGeography()))
             .set(WORKSPACE.UPDATED_AT, timestamp)
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
@@ -304,9 +318,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
             .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
             .set(WORKSPACE.CREATED_AT, timestamp)
             .set(WORKSPACE.UPDATED_AT, timestamp)
-            .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
-                workspace.getDefaultGeography().value(),
-                io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(workspace.getOrganizationId(), workspace.getDefaultGeography()))
             .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
@@ -473,7 +485,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Get geography for a workspace.
+   * Get geography for the workspace.
    *
    * @param workspaceId workspace id
    * @return geography
@@ -481,11 +493,18 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public Geography getGeographyForWorkspace(final UUID workspaceId) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.GEOGRAPHY)
+    final List<String> geographyString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID)))
         .where(WORKSPACE.ID.eq(workspaceId))
-        .limit(1))
-        .fetchOneInto(Geography.class);
+        .fetchInto(String.class);
+
+    if (geographyString.isEmpty()) {
+      throw new RuntimeException(String.format("Geography wasn't resolved for workspaceId %s",
+          workspaceId));
+    }
+    return Geography.fromValue(geographyString.getFirst().toLowerCase());
   }
 
   /**
@@ -758,6 +777,20 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
       log.warn("Unable to find workspace with ID {}", workspaceId);
       return Optional.empty();
+    }
+  }
+
+  @VisibleForTesting
+  UUID getDataplaneGroupIdFromGeography(UUID organizationId, Geography geography) {
+    try {
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(organizationId, geography).getId();
+    } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
+      log.error(
+          String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
+              organizationId, geography),
+          e);
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
+          .getId();
     }
   }
 

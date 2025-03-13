@@ -25,6 +25,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -38,6 +39,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -106,6 +108,10 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final MetricClient metricClient = mock(MetricClient.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+    final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+        .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
+
     connectionService = new ConnectionServiceJooqImpl(database);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     actorDefinitionVersionUpdater =
@@ -130,13 +136,15 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);
+
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient);
+        metricClient,
+        dataplaneGroupService);
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());

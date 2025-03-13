@@ -96,6 +96,55 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `find dataplane groups by organization id and name`() {
+    val organizationId = UUID.randomUUID()
+    val otherOrganizationId = UUID.randomUUID()
+    val matchingName = Geography.AUTO.name
+    val nonMatchingName = Geography.EU.name
+
+    val dataplaneGroup1 =
+      DataplaneGroup(
+        organizationId = organizationId,
+        name = matchingName,
+        enabled = true,
+        updatedBy = UUID.randomUUID(),
+        tombstone = false,
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    val dataplaneGroup2 =
+      DataplaneGroup(
+        organizationId = organizationId,
+        name = nonMatchingName,
+        enabled = true,
+        updatedBy = UUID.randomUUID(),
+        tombstone = false,
+        updatedAt = OffsetDateTime.now().plusSeconds(1),
+      )
+
+    val dataplaneGroup3 =
+      DataplaneGroup(
+        organizationId = otherOrganizationId,
+        name = matchingName,
+        enabled = true,
+        updatedBy = UUID.randomUUID(),
+        tombstone = false,
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    dataplaneGroupRepository.save(dataplaneGroup1)
+    dataplaneGroupRepository.save(dataplaneGroup2)
+    dataplaneGroupRepository.save(dataplaneGroup3)
+
+    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdAndName(organizationId, matchingName)
+
+    assertEquals(1, retrievedDataplaneGroups.size)
+    assertThat(retrievedDataplaneGroups)
+      .extracting("name")
+      .containsExactly(matchingName)
+  }
+
+  @Test
   fun `list dataplane groups by organization id including tombstoned`() {
     val organizationId = UUID.randomUUID()
     val otherOrganizationId = UUID.randomUUID()

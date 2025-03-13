@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.DataplaneGroup
+import io.airbyte.config.Geography
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.services.DataplaneGroupService
@@ -27,6 +28,16 @@ class DataplaneGroupServiceDataImpl(
       .orElseThrow {
         ConfigNotFoundException(ConfigSchema.DATAPLANE_GROUP, id)
       }.toConfigModel()
+
+  override fun getDataplaneGroupByOrganizationIdAndGeography(
+    organizationId: UUID,
+    geography: Geography,
+  ): DataplaneGroup =
+    repository
+      .findAllByOrganizationIdAndName(organizationId, geography.name)
+      // We have a uniqueness constraint on (organizationId, name) so can just return the first
+      .first()
+      .toConfigModel()
 
   override fun writeDataplaneGroup(dataplaneGroup: DataplaneGroup): DataplaneGroup {
     val entity = dataplaneGroup.toEntity()

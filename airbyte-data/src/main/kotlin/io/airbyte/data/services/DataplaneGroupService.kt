@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.config.DataplaneGroup
+import io.airbyte.config.Geography
 import java.util.UUID
 
 interface DataplaneGroupService {
@@ -12,6 +13,14 @@ interface DataplaneGroupService {
    * Get a dataplane group by its id.
    */
   fun getDataplaneGroup(id: UUID): DataplaneGroup
+
+  /**
+   * Get the dataplane group by geography .
+   */
+  fun getDataplaneGroupByOrganizationIdAndGeography(
+    organizationId: UUID,
+    geography: Geography,
+  ): DataplaneGroup
 
   /**
    * Write (create or update) a dataplane group.

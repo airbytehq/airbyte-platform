@@ -7,10 +7,13 @@ package io.airbyte.config.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
@@ -18,6 +21,7 @@ import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -44,6 +48,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private DataplaneGroupService dataplaneGroupService;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -53,6 +58,10 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    dataplaneGroupService = mock(DataplaneGroupService.class);
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+        .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
+
     final var metricClient = mock(MetricClient.class);
 
     workspaceService = new WorkspaceServiceJooqImpl(
@@ -61,7 +70,8 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient);
+        metricClient,
+        dataplaneGroupService);
     truncateAllTables();
 
     for (final Organization organization : MockData.organizations()) {

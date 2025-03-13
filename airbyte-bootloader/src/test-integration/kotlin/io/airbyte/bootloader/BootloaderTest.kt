@@ -10,6 +10,8 @@ import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
 import io.airbyte.config.Configs
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
+import io.airbyte.config.DataplaneGroup
+import io.airbyte.config.Geography
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.ApplyDefinitionsHelper
 import io.airbyte.config.init.BreakingChangeNotificationHelper
@@ -26,9 +28,11 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.config.specs.LocalDefinitionsProvider
+import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ConnectorRolloutService
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -44,7 +48,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_1_1_013__PopulateDataplaneGroups
+import io.airbyte.db.instance.configs.migrations.V1_1_1_014__AddDataplaneGroupIdToWorkspace
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable
@@ -66,6 +70,7 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 import uk.org.webcompere.systemstubs.jupiter.SystemStub
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension
 import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
@@ -139,6 +144,14 @@ internal class BootloaderTest {
     val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    Mockito
+      .`when`(
+        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
+          DEFAULT_ORGANIZATION_ID,
+          Geography.AUTO,
+        ),
+      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
     val connectionTimelineService =
       Mockito.mock(
         ConnectionTimelineEventService::class.java,
@@ -181,6 +194,7 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        dataplaneGroupService,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -332,6 +346,14 @@ internal class BootloaderTest {
     val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    Mockito
+      .`when`(
+        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
+          DEFAULT_ORGANIZATION_ID,
+          Geography.AUTO,
+        ),
+      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
     val connectionTimelineService =
       Mockito.mock(
         ConnectionTimelineEventService::class.java,
@@ -374,6 +396,7 @@ internal class BootloaderTest {
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
         metricClient,
+        dataplaneGroupService,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -662,7 +685,14 @@ internal class BootloaderTest {
         scopedConfigurationService,
         connectionTimelineService,
       )
-
+    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    Mockito
+      .`when`(
+        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
+          DEFAULT_ORGANIZATION_ID,
+          Geography.AUTO,
+        ),
+      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
     val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
     val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
     val secretPersistenceConfigService =
@@ -677,6 +707,7 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        dataplaneGroupService,
       )
     val sourceService =
       SourceServiceJooqImpl(
@@ -794,7 +825,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_013__PopulateDataplaneGroups::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_014__AddDataplaneGroupIdToWorkspace::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

@@ -265,8 +265,8 @@ abstract class MetricRepositoryTest {
     @Test
     void shouldReturnNumConnectionsBasic() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
-          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID, WORKSPACE.DATAPLANE_GROUP_ID)
+          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID, UUID.randomUUID())
           .execute();
 
       final var srcId = UUID.randomUUID();
@@ -293,8 +293,8 @@ abstract class MetricRepositoryTest {
     @DisplayName("should ignore deleted connections")
     void shouldIgnoreNonRunningConnections() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
-          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID, WORKSPACE.DATAPLANE_GROUP_ID)
+          .values(workspaceId, "test-0", false, DEFAULT_ORGANIZATION_ID, UUID.randomUUID())
           .execute();
 
       final var srcId = UUID.randomUUID();
@@ -323,8 +323,8 @@ abstract class MetricRepositoryTest {
     @DisplayName("should ignore deleted connections")
     void shouldIgnoreDeletedWorkspaces() {
       final var workspaceId = UUID.randomUUID();
-      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID)
-          .values(workspaceId, "test-0", true, DEFAULT_ORGANIZATION_ID)
+      ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.TOMBSTONE, WORKSPACE.ORGANIZATION_ID, WORKSPACE.DATAPLANE_GROUP_ID)
+          .values(workspaceId, "test-0", true, DEFAULT_ORGANIZATION_ID, UUID.randomUUID())
           .execute();
 
       final var srcId = UUID.randomUUID();

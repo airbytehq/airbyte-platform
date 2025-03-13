@@ -18,6 +18,7 @@ import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
@@ -36,6 +37,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -86,6 +88,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   private DestinationService destinationService;
   private ConnectionService connectionService;
   private WorkspaceService workspaceService;
+  private DataplaneGroupService dataplaneGroupService;
 
   @BeforeEach
   void setup() throws Exception {
@@ -107,9 +110,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
     destinationService = spy(new DestinationServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
-    workspaceService = spy(
-        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-            metricClient));
     workspacePersistence = new WorkspacePersistence(database);
     userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
@@ -119,6 +119,37 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     for (final Organization organization : MockData.organizations()) {
       organizationPersistence.createOrganization(organization);
     }
+
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+
+    workspaceService = spy(
+        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
+            metricClient, dataplaneGroupService));
+
   }
 
   @Test
@@ -337,6 +368,50 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     assertEquals(1, workspaces.size());
     assertWorkspaceEquals(workspace, workspaces.get(0));
+  }
+
+  @Test
+  void testListWorkspacesByInstanceAdminUserPaginated() throws Exception {
+    final StandardWorkspace workspace1 = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withName("A Workspace")
+        .withTombstone(false);
+    final StandardWorkspace workspace2 = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withName("B Workspace")
+        .withTombstone(false);
+    final StandardWorkspace deletedWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withName("Deleted Workspace")
+        .withTombstone(true);
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
+    workspaceService.writeStandardWorkspaceNoSecrets(deletedWorkspace);
+
+    List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
+        false,
+        2,
+        0,
+        Optional.empty());
+
+    assertEquals(2, workspaces.size());
+    assertWorkspaceEquals(workspace1, workspaces.get(0));
+    assertWorkspaceEquals(workspace2, workspaces.get(1));
+
+    workspaces = workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
+        false, 1, 1, Optional.empty());
+    assertEquals(1, workspaces.size());
+    assertWorkspaceEquals(workspace2, workspaces.get(0));
+
+    workspaces = workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
+        true, 10, 0, Optional.empty());
+    assertEquals(3, workspaces.size());
+    assertWorkspaceEquals(deletedWorkspace, workspaces.get(2));
+
+    workspaces = workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
+        false, 10, 0, Optional.of("A"));
+    assertEquals(2, workspaces.size());
   }
 
   @Test

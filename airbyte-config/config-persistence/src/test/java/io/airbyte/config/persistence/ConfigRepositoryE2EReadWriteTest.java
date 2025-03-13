@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
@@ -24,6 +25,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
@@ -44,6 +46,7 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
@@ -163,13 +166,25 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient));
+
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    for (final Geography geography : Geography.values()) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography.name())
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+
     workspaceService = spy(new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient));
+        metricClient,
+        dataplaneGroupService));
     operationService = spy(new OperationServiceJooqImpl(database));
 
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
@@ -486,6 +501,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testGetWorkspaceBySlug() throws IOException {
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+
     final StandardWorkspace tombstonedWorkspace = MockData.standardWorkspaces().get(2);
     final Optional<StandardWorkspace> retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace.getSlug(), false);
     final Optional<StandardWorkspace> retrievedTombstonedWorkspaceNoTombstone =
@@ -829,8 +845,23 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testGetGeographyForWorkspace() throws IOException {
+  void testGetGeographyForWorkspace() throws IOException, JsonValidationException {
+    final UUID organizationId = UUID.randomUUID();
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization().withOrganizationId(organizationId));
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+    workspace.withOrganizationId(organizationId);
+
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(workspace.getOrganizationId())
+        .withName(workspace.getDefaultGeography().name())
+        .withEnabled(true)
+        .withTombstone(false));
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
     final Geography expected = workspace.getDefaultGeography();
     final Geography actual = workspaceService.getGeographyForWorkspace(workspace.getWorkspaceId());
 

@@ -175,6 +175,10 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     // We retroactively made orgs required so applying the default org/user migration so we can use the
     // default org to allow this test to pass
     V0_50_19_001__CreateDefaultOrganizationAndUser.createDefaultUserAndOrganization(context);
+    context.alterTable("workspace")
+        .alterColumn("dataplane_group_id")
+        .dropNotNull()
+        .execute();
 
     addWorkspace(context, workspaceId);
     addActorDefinition(context, actorDefinitionId);

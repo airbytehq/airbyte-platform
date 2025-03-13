@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.noCondition;
 
@@ -41,8 +42,10 @@ public class WorkspacePersistence {
                                                                             final int rowOffset,
                                                                             final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(keyword.isPresent() ? WORKSPACE.NAME.containsIgnoreCase(keyword.get()) : noCondition())
         .and(includeDeleted ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .orderBy(WORKSPACE.NAME.asc())
@@ -60,8 +63,10 @@ public class WorkspacePersistence {
    */
   public List<StandardWorkspace> listWorkspacesByInstanceAdminUser(final boolean includeDeleted, final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(keyword.isPresent() ? WORKSPACE.NAME.containsIgnoreCase(keyword.get()) : noCondition())
         .and(includeDeleted ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .orderBy(WORKSPACE.NAME.asc())
@@ -78,8 +83,10 @@ public class WorkspacePersistence {
   public List<StandardWorkspace> listWorkspacesByOrganizationIdPaginated(final ResourcesByOrganizationQueryPaginated query,
                                                                          final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(WORKSPACE.ORGANIZATION_ID.eq(query.organizationId()))
         .and(keyword.isPresent() ? WORKSPACE.NAME.containsIgnoreCase(keyword.get()) : noCondition())
         .and(query.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
@@ -100,8 +107,10 @@ public class WorkspacePersistence {
                                                                 final boolean includeDeleted,
                                                                 final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
         .and(keyword.isPresent() ? WORKSPACE.NAME.containsIgnoreCase(keyword.get()) : noCondition())
         .and(includeDeleted ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
@@ -169,8 +178,10 @@ public class WorkspacePersistence {
    * Fetch the oldest, non-tombstoned Workspace that belongs to the given Organization.
    */
   public StandardWorkspace getDefaultWorkspaceForOrganization(final UUID organizationId) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
+        .join(DATAPLANE_GROUP)
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
         .and(WORKSPACE.TOMBSTONE.notEqual(true))
         .orderBy(WORKSPACE.CREATED_AT.asc())

@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence
 
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.Geography
 import io.airbyte.config.SourceConnection
@@ -29,6 +30,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
+import org.jooq.exception.IntegrityConstraintViolationException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
@@ -77,6 +79,21 @@ open class RepositoryTestSetup {
       // this line is what runs the migrations
       val database = databaseProviders.createNewConfigsDatabase()
 
+      val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database)
+      Geography.entries.forEach {
+        try {
+          dataplaneGroupService.writeDataplaneGroup(
+            DataplaneGroup()
+              .withId(UUID.randomUUID())
+              .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+              .withName(it.name)
+              .withEnabled(true)
+              .withTombstone(false),
+          )
+        } catch (_: IntegrityConstraintViolationException) {
+        }
+      }
+
       val workspaceId = UUID.randomUUID()
       val workspaceService =
         WorkspaceServiceJooqImpl(
@@ -86,6 +103,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
+          dataplaneGroupService,
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(
