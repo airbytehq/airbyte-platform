@@ -16,8 +16,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobStatusSummary;
-import io.airbyte.config.JobWithStatusAndTimestamp;
-import io.airbyte.config.JobsRecordsCommitted;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import java.io.IOException;
@@ -76,13 +74,10 @@ public interface JobPersistence {
    * @param scope key that will be used to determine if two jobs should not be run at the same time;
    *        it is the primary id of the standard sync (StandardSync#connectionId)
    * @param jobConfig configuration for the job
+   * @param isScheduled whether the job is scheduled or not
    * @return job id
    * @throws IOException exception due to interaction with persistence
    */
-  @Deprecated // Use the enqueueJob method with an explicit isScheduled parameter instead.
-  // We shouldn't relay on the default value of isScheduled.
-  Optional<Long> enqueueJob(String scope, JobConfig jobConfig) throws IOException;
-
   Optional<Long> enqueueJob(String scope, JobConfig jobConfig, boolean isScheduled) throws IOException;
 
   /**
@@ -148,11 +143,6 @@ public interface JobPersistence {
    * @throws IOException exception due to interaction with persistence
    */
   void succeedAttempt(long jobId, int attemptNumber) throws IOException;
-
-  /**
-   * Sets an attempt's temporal workflow id. Later used to cancel the workflow.
-   */
-  void setAttemptTemporalWorkflowInfo(long jobId, int attemptNumber, String temporalWorkflowId, String processingTaskQueue) throws IOException;
 
   //
   // END OF LIFECYCLE
@@ -237,59 +227,6 @@ public interface JobPersistence {
 
   List<Job> listJobs(Set<ConfigType> configTypes, Set<JobStatus> jobStatuses, String configId, int pagesize) throws IOException;
 
-  /**
-   * List jobs with filters. Pageable.
-   *
-   * @param configTypes - type of config, e.g. sync
-   * @param configId - id of that config
-   * @return lists job in descending order by created_at
-   * @throws IOException - what you do when you IO
-   */
-  List<Job> listJobs(
-                     Set<JobConfig.ConfigType> configTypes,
-                     String configId,
-                     int limit,
-                     int offset,
-                     final List<JobStatus> statuses,
-                     OffsetDateTime createdAtStart,
-                     OffsetDateTime createdAtEnd,
-                     OffsetDateTime updatedAtStart,
-                     OffsetDateTime updatedAtEnd,
-                     String orderByField,
-                     String orderByMethod)
-      throws IOException;
-
-  /**
-   * List jobs of a connection. Pageable.
-   *
-   * @param configTypes - type of config, e.g. sync
-   * @param workspaceIds - ids of requested workspaces
-   * @return lists job in descending order by created_at
-   * @throws IOException - what you do when you IO
-   */
-  List<Job> listJobs(
-                     Set<JobConfig.ConfigType> configTypes,
-                     List<UUID> workspaceIds,
-                     int limit,
-                     int offset,
-                     final List<JobStatus> statuses,
-                     OffsetDateTime createdAtStart,
-                     OffsetDateTime createdAtEnd,
-                     OffsetDateTime updatedAtStart,
-                     OffsetDateTime updatedAtEnd,
-                     String orderByField,
-                     String orderByMethod)
-      throws IOException;
-
-  /**
-   * List jobs of a config type after a certain time.
-   *
-   * @param configType The type of job
-   * @param attemptEndedAtTimestamp The timestamp after which you want the jobs
-   * @return List of jobs that have attempts after the provided timestamp
-   */
-  List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
-
   List<Job> listJobsForConvertingToEvents(Set<ConfigType> configTypes,
                                           Set<JobStatus> jobStatuses,
                                           OffsetDateTime createdAtStart,
@@ -348,36 +285,11 @@ public interface JobPersistence {
    */
   List<Job> listJobsIncludingId(Set<JobConfig.ConfigType> configTypes, String connectionId, long includingJobId, int pagesize) throws IOException;
 
-  List<Job> listJobsWithStatus(JobStatus status) throws IOException;
-
-  List<Job> listJobsWithStatus(Set<JobConfig.ConfigType> configTypes, JobStatus status) throws IOException;
-
-  List<Job> listJobsWithStatus(JobConfig.ConfigType configType, JobStatus status) throws IOException;
-
   List<Job> listJobsForConnectionWithStatuses(UUID connectionId, Set<JobConfig.ConfigType> configTypes, Set<JobStatus> statuses) throws IOException;
 
   List<AttemptWithJobInfo> listAttemptsForConnectionAfterTimestamp(UUID connectionId,
                                                                    ConfigType configType,
                                                                    Instant attemptEndedAtTimestamp)
-      throws IOException;
-
-  List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(UUID connectionId,
-                                                                             Instant attemptEndedAtTimestamp)
-      throws IOException;
-
-  /**
-   * List job statuses and timestamps for connection id.
-   *
-   * @param connectionId The ID of the connection
-   * @param configTypes The types of jobs
-   * @param jobCreatedAtTimestamp The timestamp after which you want the jobs
-   * @return List of jobs that only include information regarding id, status, timestamps from a
-   *         specific connection that have attempts after the provided timestamp, sorted by jobs'
-   *         createAt in descending order
-   */
-  List<JobWithStatusAndTimestamp> listJobStatusAndTimestampWithConnection(UUID connectionId,
-                                                                          Set<JobConfig.ConfigType> configTypes,
-                                                                          Instant jobCreatedAtTimestamp)
       throws IOException;
 
   Optional<Job> getLastReplicationJob(UUID connectionId) throws IOException;
@@ -393,19 +305,6 @@ public interface JobPersistence {
   List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException;
 
   Optional<Job> getFirstReplicationJob(UUID connectionId) throws IOException;
-
-  Optional<Job> getNextJob() throws IOException;
-
-  /**
-   * List attempts after a certain type of a type. Used for cloud billing.
-   *
-   * @param configType The type of job
-   * @param attemptEndedAtTimestamp The timestamp after which you want the attempts
-   * @return List of attempts (with job attached) that ended after the provided timestamp, sorted by
-   *         attempts' endedAt in ascending order
-   * @throws IOException while interacting with the db.
-   */
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp, final int limit) throws IOException;
 
   /**
    * Returns the AirbyteVersion.
@@ -453,14 +352,8 @@ public interface JobPersistence {
    */
   void setDeployment(UUID uuid) throws IOException;
 
-  /**
-   * Purges job history while ensuring that the latest saved-state information is maintained.
-   */
-  void purgeJobHistory();
   // a deployment references a setup of airbyte. it is created the first time the docker compose or
   // K8s is ready.
-
-  void updateJobConfig(Long jobId, JobConfig config) throws IOException;
 
   /**
    * Convenience POJO for various stats data structures.
