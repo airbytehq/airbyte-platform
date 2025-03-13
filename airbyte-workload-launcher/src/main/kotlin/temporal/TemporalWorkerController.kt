@@ -9,13 +9,16 @@ import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.WorkloadLauncherConsumerEnabled
+import io.airbyte.featureflag.WorkloadLauncherUseDataPlaneAuthNFlow
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RUNNING_STATUS
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STOPPED_STATUS
+import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.annotation.Property
+import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -30,17 +33,29 @@ class TemporalWorkerController(
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
   private val temporalLauncherWorker: TemporalLauncherWorker,
-) {
+) : ApplicationEventListener<DataplaneConfig> {
   private val started: AtomicBoolean = AtomicBoolean(false)
+  private var currentDataplaneConfig: DataplaneConfig? = null
+  private var pollersConsuming: Boolean? = null
 
   fun start() {
     started.set(true)
-    temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
-    checkWorkerStatus()
+
+    if (useDataplaneAuthNFlow()) {
+      updateEnabledStatus()
+    } else {
+      temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
+      checkWorkerStatus()
+    }
   }
 
+  @Deprecated("This will be replaced by ControlplanePoller")
   @Scheduled(fixedRate = "PT10S")
   fun checkWorkerStatus() {
+    if (useDataplaneAuthNFlow()) {
+      return
+    }
+
     if (started.get()) {
       val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
       val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
@@ -58,6 +73,8 @@ class TemporalWorkerController(
     reportPollerStatus(launcherHighPriorityQueue)
   }
 
+  private fun useDataplaneAuthNFlow(): Boolean = featureFlagClient.boolVariation(WorkloadLauncherUseDataPlaneAuthNFlow, PlaneName(dataPlaneName))
+
   private fun reportPollerStatus(queueName: String) {
     val isPollingSuspended = temporalLauncherWorker.isSuspended(queueName)
     metricClient.count(
@@ -68,5 +85,32 @@ class TemporalWorkerController(
           MetricAttribute(MetricTags.STATUS_TAG, if (isPollingSuspended) STOPPED_STATUS else RUNNING_STATUS),
         ),
     )
+  }
+
+  override fun onApplicationEvent(event: DataplaneConfig) {
+    if (currentDataplaneConfig == null) {
+      temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
+    }
+    currentDataplaneConfig = event
+    updateEnabledStatus()
+  }
+
+  private fun updateEnabledStatus() {
+    // If the Controller hasn't been started, we shouldn't consume anything yet.
+    // The launcher is either initializing or resuming claims.
+    // Same if we do not have a current config, there isn't anything to do yet.
+    if (!started.get() || currentDataplaneConfig == null) {
+      return
+    }
+
+    val shouldPollerConsume = currentDataplaneConfig?.dataplaneEnabled ?: false
+    if (shouldPollerConsume != pollersConsuming) {
+      if (shouldPollerConsume) {
+        temporalLauncherWorker.resumePolling()
+      } else {
+        temporalLauncherWorker.suspendPolling()
+      }
+      pollersConsuming = shouldPollerConsume
+    }
   }
 }

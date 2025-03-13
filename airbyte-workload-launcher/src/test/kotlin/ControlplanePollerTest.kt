@@ -11,6 +11,7 @@ import io.airbyte.featureflag.WorkloadLauncherUseDataPlaneAuthNFlow
 import io.airbyte.workload.launcher.ControlplanePoller
 import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
+import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -33,6 +34,7 @@ class ControlplanePollerTest {
   lateinit var featureFlagMap: MutableMap<String, Any>
   lateinit var featureFlagClient: FeatureFlagClient
   lateinit var poller: ControlplanePoller
+  lateinit var eventPublisher: ApplicationEventPublisher<DataplaneConfig>
 
   @BeforeEach
   fun setup() {
@@ -42,12 +44,14 @@ class ControlplanePollerTest {
         WorkloadLauncherUseDataPlaneAuthNFlow.key to true,
       )
     featureFlagClient = TestClient(featureFlagMap)
+    eventPublisher = mockk(relaxed = true)
     poller =
       ControlplanePoller(
         dataplaneName = dataplaneName,
         dataplaneCredentials = dataplaneCreds,
         airbyteApiClient = apiClient,
         featureFlagClient = featureFlagClient,
+        eventPublisher = eventPublisher,
       )
   }
 
@@ -69,16 +73,17 @@ class ControlplanePollerTest {
       }
 
     poller.initialize()
-    assertEquals(
+    val expectedConfig =
       DataplaneConfig(
         dataplaneName = initResponse.dataplaneName,
         dataplaneId = initResponse.dataplaneId,
         dataplaneEnabled = initResponse.dataplaneEnabled,
         dataplaneGroupId = initResponse.dataplaneGroupId,
         dataplaneGroupName = initResponse.dataplaneGroupName,
-      ),
-      poller.dataplaneConfig,
-    )
+      )
+    assertEquals(expectedConfig, poller.dataplaneConfig)
+
+    verify { eventPublisher.publishEvent(expectedConfig) }
   }
 
   @Test
@@ -94,6 +99,7 @@ class ControlplanePollerTest {
       poller.initialize()
     }
     assertNull(poller.dataplaneConfig)
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
   }
 
   @Test
@@ -104,5 +110,6 @@ class ControlplanePollerTest {
       apiClient.dataplaneApi.initializeDataplane(any())
     }
     assertNull(poller.dataplaneConfig)
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
   }
 }

@@ -13,6 +13,7 @@ import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
+import io.micronaut.context.event.ApplicationEventPublisher
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
 
@@ -24,6 +25,7 @@ class ControlplanePoller(
   private val dataplaneCredentials: DataplaneCredentials,
   private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
+  private val eventPublisher: ApplicationEventPublisher<DataplaneConfig>,
 ) {
   var dataplaneConfig: DataplaneConfig? = null
     private set
@@ -47,6 +49,7 @@ class ControlplanePoller(
 
         dataplaneConfig?.let {
           logger.info { "Running as ${it.dataplaneId} (${it.dataplaneName}) for ${it.dataplaneGroupName}" }
+          eventPublisher.publishEvent(it)
         }
       } catch (e: Exception) {
         throw RuntimeException("Failed to initialize data-plane", e)
