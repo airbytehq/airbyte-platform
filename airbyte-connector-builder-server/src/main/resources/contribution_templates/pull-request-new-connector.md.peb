@@ -28,7 +28,7 @@ Contributor-provided connector description:
 </details>
 
 ## Reviewer checklist
-- [ ] Run `/format-fix` to resolve any formatting errors
+- [ ] Consider how the connector handles pagination ([docs](https://docs.airbyte.com/connector-development/connector-builder-ui/pagination)).
 - [ ] Help the contributor upload an icon that follows our icon design guidelines
 - [ ] Click into the CI workflows that wait for a maintainer to run them, which should trigger CI runs
 
