@@ -53,7 +53,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.cron.MicronautCronRunner"
+    mainClass = "io.airbyte.cron.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
