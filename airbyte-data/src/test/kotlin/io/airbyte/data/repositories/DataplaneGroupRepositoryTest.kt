@@ -4,6 +4,7 @@
 
 package io.airbyte.data.repositories
 
+import io.airbyte.config.Geography
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -37,7 +38,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = "Test",
+        name = Geography.AUTO.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -54,12 +55,12 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
 
   @Test
   fun `update dataplane group`() {
-    val updatedName = "Updated dataplane group name"
+    val updatedName = Geography.US.name
     val updatedEnabled = true
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = "Test",
+        name = Geography.AUTO.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -82,7 +83,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = "Test",
+        name = Geography.AUTO.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -101,7 +102,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = "Test 1",
+        name = Geography.AUTO.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -110,7 +111,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = "Test 2",
+        name = Geography.US.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = true,
@@ -119,7 +120,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = "Test 3",
+        name = Geography.EU.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -134,7 +135,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(2, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly("Test 2", "Test 1")
+      .containsExactly(Geography.US.name, Geography.AUTO.name)
   }
 
   @Test
@@ -144,7 +145,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = "Test 1",
+        name = Geography.AUTO.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -153,7 +154,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = "Test 2",
+        name = Geography.EU.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = true,
@@ -162,7 +163,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = "Test 3",
+        name = Geography.US.name,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -177,6 +178,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(1, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly("Test 1")
+      .containsExactly(Geography.AUTO.name)
   }
 }

@@ -284,7 +284,7 @@ create table "public"."dataplane_group" (
   "enabled" boolean not null default true,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_by" uuid not null,
+  "updated_by" uuid,
   "tombstone" boolean not null default false,
   constraint "dataplane_group_pkey" primary key ("id"),
   constraint "dataplane_group_organization_id_name_key" unique ("organization_id", "name")
