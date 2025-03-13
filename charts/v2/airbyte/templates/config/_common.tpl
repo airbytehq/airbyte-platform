@@ -153,7 +153,11 @@ Renders the common.server.host environment variable
 Renders the global.api.authEnabled value
 */}}
 {{- define "airbyte.common.api.authEnabled" }}
-    {{- .Values.global.api.authEnabled | default true }}
+	{{- if eq .Values.global.api.authEnabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.api.authEnabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -207,7 +211,11 @@ Renders the common.api.internalHost environment variable
 Renders the global.local value
 */}}
 {{- define "airbyte.common.local" }}
-    {{- .Values.global.local | default false }}
+	{{- if eq .Values.global.local nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.local }}
+	{{- end }}
 {{- end }}
 
 {{/*

@@ -171,7 +171,11 @@ Renders the worker.syncJobInitRetryTimeoutMinutes environment variable
 Renders the worker.useStreamCapableState value
 */}}
 {{- define "airbyte.worker.useStreamCapableState" }}
-    {{- .Values.worker.useStreamCapableState | default true }}
+	{{- if eq .Values.worker.useStreamCapableState nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.worker.useStreamCapableState }}
+	{{- end }}
 {{- end }}
 
 {{/*

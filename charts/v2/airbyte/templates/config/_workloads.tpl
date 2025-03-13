@@ -171,7 +171,11 @@ Renders the workloads.namespace environment variable
 Renders the global.workloads.pubSub.enabled value
 */}}
 {{- define "airbyte.workloads.pubSub.enabled" }}
-    {{- .Values.global.workloads.pubSub.enabled | default false }}
+	{{- if eq .Values.global.workloads.pubSub.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.workloads.pubSub.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -313,7 +317,11 @@ DATA_SYNC_TASK_QUEUES: {{ include "airbyte.workloads.queues.sync" . | quote }}
 Renders the global.workloads.resources.useConnectorResourceDefaults value
 */}}
 {{- define "airbyte.workloads.resources.useConnectorResourceDefaults" }}
-    {{- .Values.global.workloads.resources.useConnectorResourceDefaults | default true }}
+	{{- if eq .Values.global.workloads.resources.useConnectorResourceDefaults nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.workloads.resources.useConnectorResourceDefaults }}
+	{{- end }}
 {{- end }}
 
 {{/*

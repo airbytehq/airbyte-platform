@@ -63,7 +63,11 @@ Renders the workloadLauncher.unsuccessful environment variable
 Renders the workloadLauncher.enabled value
 */}}
 {{- define "airbyte.workloadLauncher.enabled" }}
-    {{- .Values.workloadLauncher.enabled | default true }}
+	{{- if eq .Values.workloadLauncher.enabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.workloadLauncher.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*

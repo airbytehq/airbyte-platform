@@ -20,7 +20,11 @@ Renders the workloadApiServer secret name
 Renders the workloadApiServer.enabled value
 */}}
 {{- define "airbyte.workloadApiServer.enabled" }}
-    {{- .Values.workloadApiServer.enabled | default true }}
+	{{- if eq .Values.workloadApiServer.enabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.workloadApiServer.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*

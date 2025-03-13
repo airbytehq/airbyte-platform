@@ -45,7 +45,11 @@ Renders the auth.bootstrap secret name
 Renders the global.auth.secretCreationEnabled value
 */}}
 {{- define "airbyte.auth.bootstrap.secretCreationEnabled" }}
-    {{- .Values.global.auth.secretCreationEnabled | default true }}
+	{{- if eq .Values.global.auth.secretCreationEnabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.auth.secretCreationEnabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -593,7 +597,11 @@ Renders the set of all auth.jwt environment variables
 Renders the global.auth.security.cookieSecureSetting value
 */}}
 {{- define "airbyte.auth.security.cookieSecureSetting" }}
-    {{- .Values.global.auth.security.cookieSecureSetting | default true }}
+	{{- if eq .Values.global.auth.security.cookieSecureSetting nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.auth.security.cookieSecureSetting }}
+	{{- end }}
 {{- end }}
 
 {{/*

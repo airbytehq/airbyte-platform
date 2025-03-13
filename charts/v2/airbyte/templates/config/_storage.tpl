@@ -332,7 +332,11 @@ Renders the storage.minio.endpoint environment variable
 Renders the global.storage.minio.s3PathStyleAccess value
 */}}
 {{- define "airbyte.storage.minio.s3PathStyleAccess" }}
-    {{- .Values.global.storage.minio.s3PathStyleAccess | default true }}
+	{{- if eq .Values.global.storage.minio.s3PathStyleAccess nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.storage.minio.s3PathStyleAccess }}
+	{{- end }}
 {{- end }}
 
 {{/*

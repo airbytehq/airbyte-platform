@@ -9,7 +9,11 @@
 Renders the temporal.autoSetup value
 */}}
 {{- define "airbyte.temporal.autoSetup" }}
-    {{- .Values.temporal.autoSetup | default true }}
+	{{- if eq .Values.temporal.autoSetup nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.temporal.autoSetup }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -441,7 +445,11 @@ Renders the temporal.cloud.connectorRollout.namespace environment variable
 Renders the global.temporal.cloud.enabled value
 */}}
 {{- define "airbyte.temporal.cloud.enabled" }}
-    {{- .Values.global.temporal.cloud.enabled | default false }}
+	{{- if eq .Values.global.temporal.cloud.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.temporal.cloud.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
