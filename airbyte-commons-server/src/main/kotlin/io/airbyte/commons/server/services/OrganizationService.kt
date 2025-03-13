@@ -10,8 +10,8 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.commons.server.ConnectionId
-import io.airbyte.commons.server.OrganizationId
+import io.airbyte.config.ConnectionId
+import io.airbyte.config.OrganizationId
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
