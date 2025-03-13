@@ -8,7 +8,11 @@ import { useIntl } from "react-intl";
 
 import { StreamReadTransformedSlices } from "core/api";
 import { ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/AirbyteClient";
-import { DeclarativeStream, PrimaryKey } from "core/api/types/ConnectorManifest";
+import {
+  DeclarativeComponentSchemaStreamsItem,
+  DeclarativeStreamType,
+  PrimaryKey,
+} from "core/api/types/ConnectorManifest";
 import {
   convertJsonToYaml,
   useConnectorBuilderFormState,
@@ -27,7 +31,7 @@ export interface TestWarning {
   priority: "primary" | "secondary";
 }
 
-export const getStreamHash = (resolvedStream: DeclarativeStream): string => {
+export const getStreamHash = (resolvedStream: DeclarativeComponentSchemaStreamsItem): string => {
   return sha1(formatJson(resolvedStream, true));
 };
 
@@ -47,7 +51,7 @@ export const useStreamTestMetadata = () => {
   const updateStreamTestResults = useCallback(
     (
       streamRead: StreamReadTransformedSlices,
-      resolvedTestStream: DeclarativeStream,
+      resolvedTestStream: DeclarativeComponentSchemaStreamsItem,
       streamName: string,
       streamIndex: number
     ) => {
@@ -204,7 +208,7 @@ const isStatusFalse = (status: boolean | undefined): boolean => {
 
 const computeStreamTestResults = (
   streamRead: StreamReadTransformedSlices,
-  resolvedTestStream: DeclarativeStream
+  resolvedTestStream: DeclarativeComponentSchemaStreamsItem
 ): StreamTestResults => {
   const streamHash = getStreamHash(resolvedTestStream);
 
@@ -232,8 +236,15 @@ const computeStreamTestResults = (
 
 const computePrimaryKeyTestResults = (
   streamRead: StreamReadTransformedSlices,
-  resolvedTestStream: DeclarativeStream
+  resolvedTestStream: DeclarativeComponentSchemaStreamsItem
 ): Pick<StreamTestResults, "primaryKeysArePresent" | "primaryKeysAreUnique"> => {
+  if (resolvedTestStream.type !== DeclarativeStreamType.DeclarativeStream) {
+    return {
+      primaryKeysArePresent: true,
+      primaryKeysAreUnique: true,
+    };
+  }
+
   const normalizedPrimaryKey = normalizePrimaryKey(resolvedTestStream.primary_key);
   if (normalizedPrimaryKey === undefined) {
     return {

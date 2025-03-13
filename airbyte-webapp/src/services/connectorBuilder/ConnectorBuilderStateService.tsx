@@ -53,7 +53,7 @@ import {
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
 import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
+import { ConnectorManifest, DeclarativeComponentSchema, DeclarativeStreamType } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
@@ -859,11 +859,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
         // Set the schema_loader on the test stream to the inferred schema as well, so
         // that it is included in the stream when generating the test result stream hash.
-
-        testStream.schema_loader = {
-          type: "InlineSchemaLoader",
-          schema: result.inferred_schema,
-        } as const;
+        if (testStream.type === DeclarativeStreamType.DeclarativeStream) {
+          testStream.schema_loader = {
+            type: "InlineSchemaLoader",
+            schema: result.inferred_schema,
+          } as const;
+        }
       }
 
       // update the version so that it is clear which CDK version was used to test the connector

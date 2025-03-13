@@ -42,7 +42,12 @@ import {
   SourceDefinitionId,
   BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
-import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
+import {
+  DeclarativeComponentSchema,
+  DeclarativeComponentSchemaStreamsItem,
+  NoPaginationType,
+  StateDelegatingStreamType,
+} from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -489,7 +494,7 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream | undefined,
+  testStream: DeclarativeComponentSchemaStreamsItem | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
@@ -527,8 +532,12 @@ export type StreamReadTransformedSlices = Omit<ConnectorBuilderProjectStreamRead
 
 const transformSlices = (
   streamReadData: ConnectorBuilderProjectStreamRead,
-  stream: DeclarativeStream
+  stream: DeclarativeComponentSchemaStreamsItem
 ): StreamReadTransformedSlices => {
+  if (stream.type === StateDelegatingStreamType.StateDelegatingStream) {
+    return streamReadData;
+  }
+
   // With the addition of ResumableFullRefresh, when pagination is configured and both incremental_sync and
   // partition_routers are NOT configured, the CDK splits up each page into a separate slice, each with its own state.
   // This is to allow full refresh syncs to resume from the last page read in the event of a failure.

@@ -51,6 +51,8 @@ import {
   JwtAuthenticator,
   RequestOptionInjectInto,
   CsvDecoderType,
+  StateDelegatingStreamType,
+  ParentStreamConfigStream,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -112,8 +114,16 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     return builderFormValues;
   }
 
-  assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
-  const firstStreamRetriever: SimpleRetriever = streams[0].retriever;
+  if (streams.some((stream) => stream.type === StateDelegatingStreamType.StateDelegatingStream)) {
+    throw new ManifestCompatibilityError(
+      undefined,
+      `${StateDelegatingStreamType.StateDelegatingStream} is not supported`
+    );
+  }
+  const declarativeStreams = streams as DeclarativeStream[];
+
+  assertType<SimpleRetriever>(declarativeStreams[0].retriever, "SimpleRetriever", streams[0].name);
+  const firstStreamRetriever: SimpleRetriever = declarativeStreams[0].retriever;
   assertType<HttpRequester>(firstStreamRetriever.requester, "HttpRequester", streams[0].name);
   builderFormValues.global.urlBase = firstStreamRetriever.requester.url_base;
 
@@ -121,15 +131,15 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
 
   const getStreamName = (stream: DeclarativeStream, index: number) => streamNameOrDefault(stream.name, index);
 
-  const streamNameToIndex = streams.reduce((acc, stream, index) => {
+  const streamNameToIndex = declarativeStreams.reduce((acc, stream, index) => {
     const streamName = getStreamName(stream, index);
     return { ...acc, [streamName]: index.toString() };
   }, {});
 
   const serializedStreamToName = Object.fromEntries(
-    streams.map((stream, index) => [formatJson(stream, true), getStreamName(stream, index)])
+    declarativeStreams.map((stream, index) => [formatJson(stream, true), getStreamName(stream, index)])
   );
-  builderFormValues.streams = streams.map((stream, index) =>
+  builderFormValues.streams = declarativeStreams.map((stream, index) =>
     manifestStreamToBuilder(
       stream,
       getStreamName(stream, index),
@@ -146,7 +156,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.assist = builderMetadata?.assist ?? {};
 
   builderFormValues.global.authenticator = convertOrDumpAsString(
-    streams[0].retriever.requester.authenticator,
+    declarativeStreams[0].retriever.requester.authenticator,
     (authenticator: HttpRequesterAuthenticator | undefined, _streamName?: string, spec?: Spec) =>
       manifestAuthenticatorToBuilder(authenticator, spec),
     {
@@ -629,7 +639,11 @@ export function manifestSubstreamPartitionRouterToBuilder(
     );
   }
 
-  if (!parentStreamConfig.stream.$ref) {
+  function hasRefField(stream: ParentStreamConfigStream): stream is ParentStreamConfigStream & { $ref: string } {
+    return "$ref" in stream;
+  }
+
+  if (!hasRefField(parentStreamConfig.stream)) {
     throw new ManifestCompatibilityError(
       streamName,
       "SubstreamPartitionRouter.parent_stream_configs.stream must use $ref"
