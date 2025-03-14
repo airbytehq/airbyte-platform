@@ -49,6 +49,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     customComponentsCode: componentsFileContent,
     name,
     view: "global" as const,
+    streamTab: "requester" as const,
     testStreamIndex: 0,
     testingValues: initialTestingValues,
   };
@@ -105,7 +106,6 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
 BaseForm.displayName = "BaseForm";
 
 const Panels = React.memo(() => {
-  const formValues = useBuilderWatch("formValues");
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
 
@@ -120,15 +120,7 @@ const Panels = React.memo(() => {
         })}
         panels={[
           {
-            children: (
-              <>
-                {mode === "yaml" ? (
-                  <YamlManifestEditor />
-                ) : (
-                  <Builder hasMultipleStreams={formValues.streams.length > 1} />
-                )}
-              </>
-            ),
+            children: <>{mode === "yaml" ? <YamlManifestEditor /> : <Builder />}</>,
             className: styles.leftPanel,
             minWidth: 350,
           },
@@ -141,7 +133,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [formValues.streams.length, mode, stateKey]
+    [mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

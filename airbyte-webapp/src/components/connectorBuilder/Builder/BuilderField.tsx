@@ -59,6 +59,7 @@ interface BaseFieldProps {
   preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
+  containerClassName?: string;
   disabled?: boolean;
 }
 
@@ -215,7 +216,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
 
   return (
     <ControlLabels
-      className={styles.container}
+      className={props.containerClassName}
       label={label}
       labelAction={labelAction}
       infoTooltipContent={tooltip}

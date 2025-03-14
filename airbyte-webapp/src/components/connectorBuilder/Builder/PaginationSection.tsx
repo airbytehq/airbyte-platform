@@ -18,6 +18,7 @@ import {
   BuilderCursorPagination,
   BuilderPaginator,
   CURSOR_PAGINATION,
+  DownloadRequesterPathFn,
   OFFSET_INCREMENT,
   PAGE_INCREMENT,
   StreamPathFn,
@@ -26,7 +27,7 @@ import {
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface PaginationSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -67,7 +68,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         },
       }}
       copyConfig={{
-        path: "paginator",
+        path: streamFieldPath("paginator"),
         currentStreamIndex,
         componentName: label,
       }}

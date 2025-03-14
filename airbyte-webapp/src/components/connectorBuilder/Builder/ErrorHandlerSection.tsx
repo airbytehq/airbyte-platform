@@ -19,7 +19,11 @@ import { builderErrorHandlersToManifest } from "../types";
 type ErrorHandlerSectionProps =
   | {
       inline: false;
-      basePath: `formValues.streams.${number}.errorHandler`;
+      basePath:
+        | `formValues.streams.${number}.errorHandler`
+        | `formValues.streams.${number}.creationRequester.errorHandler`
+        | `formValues.streams.${number}.pollingRequester.errorHandler`
+        | `formValues.streams.${number}.downloadRequester.errorHandler`;
       currentStreamIndex: number;
     }
   | {
@@ -239,7 +243,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
         },
       }}
       copyConfig={{
-        path: "errorHandler",
+        path: props.basePath,
         currentStreamIndex: props.currentStreamIndex,
         componentName: label,
       }}

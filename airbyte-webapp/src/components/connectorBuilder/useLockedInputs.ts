@@ -65,8 +65,10 @@ export const useGetUniqueKey = () => {
     if (reuseIncrementalField) {
       let existingKey: string | undefined = undefined;
       builderStreams.some((stream) => {
-        if (stream.incrementalSync && !isYamlString(stream.incrementalSync)) {
-          const incrementalDatetime = stream.incrementalSync[reuseIncrementalField];
+        const incrementalSync =
+          stream.requestType === "sync" ? stream.incrementalSync : stream.creationRequester.incrementalSync;
+        if (incrementalSync && !isYamlString(incrementalSync)) {
+          const incrementalDatetime = incrementalSync[reuseIncrementalField];
           if (incrementalDatetime.type === "user_input") {
             existingKey = extractInterpolatedConfigKey(incrementalDatetime.value);
             return true;
@@ -99,13 +101,15 @@ export function getKeyToDesiredLockedInput(
   const incrementalStartDateKeys = new Set<string>();
   const incrementalEndDateKeys = new Set<string>();
   streams.forEach((stream) => {
-    if (stream.incrementalSync && !isYamlString(stream.incrementalSync)) {
-      const startDatetime = stream.incrementalSync.start_datetime;
+    const incrementalSync =
+      stream.requestType === "sync" ? stream.incrementalSync : stream.creationRequester.incrementalSync;
+    if (incrementalSync && !isYamlString(incrementalSync)) {
+      const startDatetime = incrementalSync.start_datetime;
       if (startDatetime.type === "user_input") {
         incrementalStartDateKeys.add(extractInterpolatedConfigKey(startDatetime.value));
       }
 
-      const endDatetime = stream.incrementalSync.end_datetime;
+      const endDatetime = incrementalSync.end_datetime;
       if (endDatetime.type === "user_input") {
         incrementalEndDateKeys.add(extractInterpolatedConfigKey(endDatetime.value));
       }

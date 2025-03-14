@@ -79,7 +79,7 @@ export const AuthenticationSection: React.FC = () => {
 
   const manifestAuthToBuilder = useCallback(
     (authenticator: HttpRequesterAuthenticator | undefined) =>
-      manifestAuthenticatorToBuilder(authenticator, builderInputsToSpec(inputs)),
+      manifestAuthenticatorToBuilder(authenticator, undefined, builderInputsToSpec(inputs)),
     [inputs]
   );
 

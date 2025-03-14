@@ -9,10 +9,15 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import { manifestTransformationsToBuilder } from "../convertManifestToBuilderForm";
-import { BuilderTransformation, builderTransformationsToManifest } from "../types";
+import {
+  BuilderTransformation,
+  DownloadRequesterPathFn,
+  StreamPathFn,
+  builderTransformationsToManifest,
+} from "../types";
 
 interface TransformationSectionProps {
-  streamFieldPath: <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -75,7 +80,7 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
         },
       }}
       copyConfig={{
-        path: "transformations",
+        path: streamFieldPath("transformations"),
         currentStreamIndex,
         componentName: label,
       }}

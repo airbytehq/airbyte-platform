@@ -56,12 +56,20 @@ import {
   ExponentialBackoffStrategy,
   WaitUntilTimeFromHeader,
   WaitTimeFromHeader,
-  SimpleRetrieverDecoder,
   XmlDecoderType,
   JwtAuthenticator,
   JwtAuthenticatorType,
   RequestOptionType,
   AddedFieldDefinitionType,
+  AsyncRetrieverType,
+  DeclarativeStreamType,
+  SimpleRetrieverType,
+  InlineSchemaLoaderType,
+  SimpleRetrieverDecoder,
+  HttpRequesterType,
+  AsyncJobStatusMap,
+  DpathExtractorType,
+  DpathExtractor,
 } from "core/api/types/ConnectorManifest";
 
 import { DecoderTypeConfig } from "./Builder/DecoderConfig";
@@ -77,6 +85,7 @@ export interface BuilderState {
   yaml: string;
   customComponentsCode?: string;
   view: "global" | "inputs" | "components" | number;
+  streamTab: BuilderStreamTab;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
@@ -92,6 +101,8 @@ export interface BuilderFormInput {
   definition: AirbyteJSONSchema;
   isLocked?: boolean;
 }
+
+export type BuilderStreamTab = "requester" | "schema" | "polling" | "download";
 
 type BuilderHttpMethod = "GET" | "POST";
 
@@ -229,7 +240,7 @@ export type BuilderFormOAuthAuthenticator = Omit<
 
 export interface BuilderFormValues {
   global: {
-    urlBase: string;
+    urlBase?: string;
     authenticator: BuilderFormAuthenticator | YamlString;
   };
   assist: AssistData;
@@ -361,28 +372,71 @@ export interface BuilderRecordSelector {
   normalizeToSchema: boolean;
 }
 
+export interface BuilderDpathExtractor {
+  type: DpathExtractorType;
+  field_path: string[];
+}
+
 export type YamlString = string;
 export const isYamlString = (value: unknown): value is YamlString => isString(value);
 
-export interface BuilderStream {
+export type BuilderStream = {
   id: string;
   name: string;
-  urlPath?: string;
-  primaryKey: string[];
-  httpMethod: BuilderHttpMethod;
-  decoder: BuilderDecoderConfig;
-  requestOptions: BuilderRequestOptions;
-  recordSelector?: BuilderRecordSelector | YamlString;
-  paginator?: BuilderPaginator | YamlString;
-  transformations?: BuilderTransformation[] | YamlString;
-  incrementalSync?: BuilderIncrementalSync | YamlString;
-  parentStreams?: BuilderParentStream[] | YamlString;
-  parameterizedRequests?: BuilderParameterizedRequests[] | YamlString;
-  errorHandler?: BuilderErrorHandler[] | YamlString;
   schema?: string;
   autoImportSchema: boolean;
   unknownFields?: YamlString;
   testResults?: StreamTestResults;
+} & (
+  | {
+      requestType: "sync";
+      urlPath?: string;
+      httpMethod: BuilderHttpMethod;
+      decoder: BuilderDecoderConfig;
+      primaryKey: string[];
+      requestOptions: BuilderRequestOptions;
+      incrementalSync?: BuilderIncrementalSync | YamlString;
+      transformations?: BuilderTransformation[] | YamlString;
+      recordSelector?: BuilderRecordSelector | YamlString;
+      paginator?: BuilderPaginator | YamlString;
+      parentStreams?: BuilderParentStream[] | YamlString;
+      parameterizedRequests?: BuilderParameterizedRequests[] | YamlString;
+      errorHandler?: BuilderErrorHandler[] | YamlString;
+    }
+  | {
+      requestType: "async";
+      creationRequester: BuilderBaseRequester & {
+        incrementalSync?: BuilderIncrementalSync | YamlString;
+        parentStreams?: BuilderParentStream[] | YamlString;
+        parameterizedRequests?: BuilderParameterizedRequests[] | YamlString;
+        decoder: BuilderDecoderConfig;
+      };
+      pollingRequester: BuilderBaseRequester & {
+        statusExtractor: BuilderDpathExtractor;
+        statusMapping: AsyncJobStatusMap;
+        downloadTargetExtractor: BuilderDpathExtractor;
+      };
+      downloadRequester: BuilderBaseRequester & {
+        decoder: BuilderDecoderConfig;
+        primaryKey: string[];
+        transformations?: BuilderTransformation[] | YamlString;
+        recordSelector?: BuilderRecordSelector | YamlString;
+        paginator?: BuilderPaginator | YamlString;
+        downloadExtractor?: BuilderDpathExtractor;
+      };
+      // TODO(async): add support for abort/delete/url requesters
+      // abortRequester: BuilderBaseRequester;
+      // deleteRequester: BuilderBaseRequester;
+      // urlRequester: BuilderBaseRequester;
+    }
+);
+
+export interface BuilderBaseRequester {
+  url: string;
+  httpMethod: BuilderHttpMethod;
+  requestOptions: BuilderRequestOptions;
+  errorHandler?: BuilderErrorHandler[] | YamlString;
+  authenticator: BuilderFormAuthenticator | YamlString;
 }
 
 type StreamName = string;
@@ -395,16 +449,13 @@ export interface YamlSupportedComponentName {
     | "incrementalSync"
     | "recordSelector"
     | "parameterizedRequests"
-    | "parentStreams";
+    | "parentStreams"
+    | "authenticator";
   global: "authenticator";
 }
 
 export interface BuilderMetadata {
   autoImportSchema: Record<StreamName, boolean>;
-  yamlComponents?: {
-    streams?: Record<StreamName, Array<YamlSupportedComponentName["stream"]>>;
-    global?: Array<YamlSupportedComponentName["global"]>;
-  };
   testedStreams?: TestedStreams;
   assist?: AssistData;
 }
@@ -450,7 +501,6 @@ export const DATETIME_FORMAT_OPTIONS = [
 
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
-    urlBase: "",
     authenticator: { type: "NoAuth" },
   },
   assist: {
@@ -477,24 +527,73 @@ export const isEmptyOrDefault = (schema?: string) => {
   return !schema || schema === DEFAULT_SCHEMA;
 };
 
-export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
+const DEFAULT_REQUEST_OPTIONS: BuilderRequestOptions = {
+  requestParameters: [],
+  requestHeaders: [],
+  requestBody: {
+    type: "json_list",
+    values: [],
+  },
+};
+
+export const DEFAULT_BUILDER_STREAM_VALUES: BuilderStream = {
+  requestType: "sync" as const,
+  id: "",
   name: "",
   urlPath: "",
   primaryKey: [],
   httpMethod: "GET",
   decoder: { type: "JSON" },
   schema: DEFAULT_SCHEMA,
-  requestOptions: {
-    requestParameters: [],
-    requestHeaders: [],
-    requestBody: {
-      type: "json_list",
-      values: [],
-    },
-  },
+  requestOptions: DEFAULT_REQUEST_OPTIONS,
   autoImportSchema: true,
   unknownFields: undefined,
 };
+
+export const DEFAULT_BUILDER_ASYNC_STREAM_VALUES: BuilderStream = {
+  requestType: "async" as const,
+  id: "",
+  name: "",
+  autoImportSchema: true,
+  unknownFields: undefined,
+  creationRequester: {
+    url: "",
+    httpMethod: "POST",
+    requestOptions: DEFAULT_REQUEST_OPTIONS,
+    authenticator: { type: "NoAuth" },
+    decoder: { type: "JSON" },
+  },
+  pollingRequester: {
+    url: "",
+    httpMethod: "GET",
+    requestOptions: DEFAULT_REQUEST_OPTIONS,
+    authenticator: { type: "NoAuth" },
+    statusExtractor: {
+      type: DpathExtractorType.DpathExtractor,
+      field_path: [],
+    },
+    statusMapping: {
+      completed: [],
+      failed: [],
+      running: [],
+      timeout: [],
+    },
+    downloadTargetExtractor: {
+      type: DpathExtractorType.DpathExtractor,
+      field_path: [],
+    },
+  },
+  downloadRequester: {
+    url: "",
+    httpMethod: "GET",
+    requestOptions: DEFAULT_REQUEST_OPTIONS,
+    authenticator: { type: "NoAuth" },
+    decoder: { type: "JSON" },
+    primaryKey: [],
+  },
+};
+
+export const URL_BASE_PLACEHOLDER = "/";
 
 export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
 
@@ -523,12 +622,15 @@ export function hasIncrementalSyncUserInput(
   streams: BuilderFormValues["streams"],
   key: "start_datetime" | "end_datetime"
 ) {
-  return streams.some(
-    (stream) =>
-      !isYamlString(stream.incrementalSync) &&
-      stream.incrementalSync?.[key]?.type === "user_input" &&
-      (key === "start_datetime" || stream.incrementalSync?.filter_mode === "range")
-  );
+  return streams.some((stream) => {
+    const incrementalSync =
+      stream.requestType === "sync" ? stream.incrementalSync : stream.creationRequester.incrementalSync;
+    return (
+      !isYamlString(incrementalSync) &&
+      incrementalSync?.[key]?.type === "user_input" &&
+      (key === "start_datetime" || incrementalSync?.filter_mode === "range")
+    );
+  });
 }
 
 export function interpolateConfigKey(key: string): string;
@@ -1060,93 +1162,128 @@ const builderDecoderToManifest = (decoder: BuilderDecoderConfig): SimpleRetrieve
   return { type: DECODER_TYPE_MAP[decoder.type] };
 };
 
-type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
+type BaseManifestRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
+
+const builderBaseRequesterToManifest = (builderRequester: BuilderBaseRequester): HttpRequester => {
+  return {
+    type: HttpRequesterType.HttpRequester,
+    url_base: builderRequester.url.trim(),
+    authenticator: convertOrLoadYamlString(builderRequester.authenticator, builderAuthenticatorToManifest),
+    http_method: builderRequester.httpMethod,
+    request_parameters: fromEntriesOrUndefined(builderRequester.requestOptions.requestParameters),
+    request_headers: fromEntriesOrUndefined(builderRequester.requestOptions.requestHeaders),
+    ...builderRequestBodyToStreamRequestBody(builderRequester.requestOptions.requestBody),
+    error_handler: convertOrLoadYamlString(builderRequester.errorHandler, builderErrorHandlersToManifest),
+  };
+};
+
+const builderDpathExtractorToManifest = (extractor: BuilderDpathExtractor): DpathExtractor => {
+  return {
+    type: DpathExtractorType.DpathExtractor,
+    field_path: extractor.field_path,
+  };
+};
 
 function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: BuilderStream[]): DeclarativeStream {
   // cast to tell typescript which properties will be present after resolving the ref
   const requesterRef = {
     $ref: "#/definitions/base_requester",
-  } as unknown as BaseRequester;
+  } as unknown as BaseManifestRequester;
 
   const parentStreamsToManifest = (parentStreams: BuilderParentStream[] | undefined) =>
     builderParentStreamsToManifest(parentStreams, allStreams);
 
-  return merge({} as DeclarativeStream, stream.unknownFields ? load(stream.unknownFields) : {}, {
-    type: "DeclarativeStream",
-    name: stream.name,
-    primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
-    retriever: {
-      type: "SimpleRetriever",
-      requester: {
-        ...requesterRef,
-        path: stream.urlPath?.trim() || undefined,
-        http_method: stream.httpMethod,
-        request_parameters: fromEntriesOrUndefined(stream.requestOptions.requestParameters),
-        request_headers: fromEntriesOrUndefined(stream.requestOptions.requestHeaders),
-        ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
-        error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
+  let declarativeStream: DeclarativeStream;
+  if (stream.requestType === "sync") {
+    declarativeStream = {
+      type: DeclarativeStreamType.DeclarativeStream,
+      name: stream.name,
+      primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
+      retriever: {
+        type: SimpleRetrieverType.SimpleRetriever,
+        requester: {
+          ...requesterRef,
+          path: stream.urlPath?.trim() || undefined,
+          http_method: stream.httpMethod,
+          request_parameters: fromEntriesOrUndefined(stream.requestOptions.requestParameters),
+          request_headers: fromEntriesOrUndefined(stream.requestOptions.requestHeaders),
+          ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
+          error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
+        },
+        record_selector: convertOrLoadYamlString(stream.recordSelector, builderRecordSelectorToManifest),
+        paginator: convertOrLoadYamlString(stream.paginator, builderPaginatorToManifest),
+        partition_router: combinePartitionRouters(
+          ...convertOrLoadYamlString(stream.parameterizedRequests, builderParameterizedRequestsToManifest),
+          ...convertOrLoadYamlString(stream.parentStreams, parentStreamsToManifest)
+        ),
+        decoder: builderDecoderToManifest(stream.decoder),
       },
-      record_selector: convertOrLoadYamlString(stream.recordSelector, builderRecordSelectorToManifest),
-      paginator: convertOrLoadYamlString(stream.paginator, builderPaginatorToManifest),
-      partition_router: combinePartitionRouters(
-        ...convertOrLoadYamlString(stream.parameterizedRequests, builderParameterizedRequestsToManifest),
-        ...convertOrLoadYamlString(stream.parentStreams, parentStreamsToManifest)
+      incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
+      transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
+      schema_loader: { type: InlineSchemaLoaderType.InlineSchemaLoader, schema: schemaRef(stream.name) },
+    };
+  } else {
+    declarativeStream = {
+      type: DeclarativeStreamType.DeclarativeStream,
+      name: stream.name,
+      primary_key: stream.downloadRequester.primaryKey.length > 0 ? stream.downloadRequester.primaryKey : undefined,
+      retriever: {
+        type: AsyncRetrieverType.AsyncRetriever,
+        record_selector: convertOrLoadYamlString(
+          stream.downloadRequester.recordSelector,
+          builderRecordSelectorToManifest
+        ),
+        status_mapping: stream.pollingRequester.statusMapping,
+        status_extractor: builderDpathExtractorToManifest(stream.pollingRequester.statusExtractor),
+        download_target_extractor: builderDpathExtractorToManifest(stream.pollingRequester.downloadTargetExtractor),
+        partition_router: combinePartitionRouters(
+          ...convertOrLoadYamlString(
+            stream.creationRequester.parameterizedRequests,
+            builderParameterizedRequestsToManifest
+          ),
+          ...convertOrLoadYamlString(stream.creationRequester.parentStreams, parentStreamsToManifest)
+        ),
+        decoder: builderDecoderToManifest(stream.creationRequester.decoder),
+        creation_requester: builderBaseRequesterToManifest(stream.creationRequester),
+        polling_requester: builderBaseRequesterToManifest(stream.pollingRequester),
+        download_requester: builderBaseRequesterToManifest(stream.downloadRequester),
+        download_decoder: builderDecoderToManifest(stream.downloadRequester.decoder),
+        download_paginator: convertOrLoadYamlString(stream.downloadRequester.paginator, builderPaginatorToManifest),
+        download_extractor: stream.downloadRequester.downloadExtractor?.field_path
+          ? stream.downloadRequester.downloadExtractor.field_path.length > 0
+            ? builderDpathExtractorToManifest(stream.downloadRequester.downloadExtractor)
+            : undefined
+          : undefined,
+        // abort_requester - TODO(async)
+        // delete_requester - TODO(async)
+        // url_requester - TODO(async)
+      },
+      incremental_sync: convertOrLoadYamlString(
+        stream.creationRequester.incrementalSync,
+        builderIncrementalSyncToManifest
       ),
-      decoder: builderDecoderToManifest(stream.decoder),
-    },
-    incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
-    transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
-    schema_loader: { type: "InlineSchemaLoader", schema: schemaRef(stream.name) },
-  });
+      transformations: convertOrLoadYamlString(
+        stream.downloadRequester.transformations,
+        builderTransformationsToManifest
+      ),
+      schema_loader: { type: InlineSchemaLoaderType.InlineSchemaLoader, schema: schemaRef(stream.name) },
+    };
+  }
+  return merge({} as DeclarativeStream, stream.unknownFields ? load(stream.unknownFields) : {}, declarativeStream);
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
-  const componentNameIfString = <
-    ComponentName extends YamlSupportedComponentName["stream"] | YamlSupportedComponentName["global"],
-  >(
-    componentName: ComponentName,
-    value: unknown
-  ) => (isYamlString(value) ? [componentName] : []);
-
-  const yamlComponentsPerStream = {} as Record<string, Array<YamlSupportedComponentName["stream"]>>;
   const testedStreams = {} as TestedStreams;
   values.streams.forEach((stream) => {
-    const yamlComponents = [
-      ...componentNameIfString("paginator", stream.paginator),
-      ...componentNameIfString("errorHandler", stream.errorHandler),
-      ...componentNameIfString("transformations", stream.transformations),
-      ...componentNameIfString("incrementalSync", stream.incrementalSync),
-      ...componentNameIfString("recordSelector", stream.recordSelector),
-      ...componentNameIfString("parameterizedRequests", stream.parameterizedRequests),
-      ...componentNameIfString("parentStreams", stream.parentStreams),
-    ];
-    if (yamlComponents.length > 0) {
-      yamlComponentsPerStream[stream.name] = yamlComponents;
-    }
-
     if (stream.testResults) {
       testedStreams[stream.name] = stream.testResults;
     }
   });
-  const hasStreamYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
-
-  const globalYamlComponents = [...componentNameIfString("authenticator", values.global.authenticator)];
-  const hasGlobalYamlComponents = globalYamlComponents.length > 0;
 
   const assistData = values.assist ?? {};
 
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
-    ...((hasStreamYamlComponents || hasGlobalYamlComponents) && {
-      yamlComponents: {
-        ...(hasStreamYamlComponents && {
-          streams: yamlComponentsPerStream,
-        }),
-        ...(hasGlobalYamlComponents && {
-          global: globalYamlComponents,
-        }),
-      },
-    }),
     testedStreams,
     assist: assistData,
   };
@@ -1279,9 +1416,9 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     })
   );
 
-  const baseRequester: BaseRequester = {
+  const baseRequester: BaseManifestRequester = {
     type: "HttpRequester",
-    url_base: values.global?.urlBase?.trim(),
+    url_base: values.global?.urlBase?.trim() ?? "/",
     authenticator: convertOrLoadYamlString(values.global.authenticator, builderAuthenticatorToManifest),
   };
 
@@ -1338,6 +1475,15 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+export type CreationRequesterPathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.streams.${number}.creationRequester.${T}`;
+export type PollingRequesterPathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.streams.${number}.pollingRequester.${T}`;
+export type DownloadRequesterPathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.streams.${number}.downloadRequester.${T}`;
 
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;

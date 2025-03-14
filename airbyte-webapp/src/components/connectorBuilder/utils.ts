@@ -56,31 +56,27 @@ function orderKeys(obj: unknown): unknown {
   );
 }
 
+export type StreamFieldPath = `formValues.streams.${number}.${string}`;
+
 export const useCopyValueIncludingArrays = () => {
   const { getValues, setValue, control } = useFormContext();
 
-  const streamPath = (streamNum: number, pathInStream: string) => `formValues.streams.${streamNum}.${pathInStream}`;
+  const replaceStreamIndex = (path: string, streamIndex: number) => {
+    return path.replace(/^formValues.streams.\d+/, `formValues.streams.${streamIndex}`);
+  };
 
-  return (fromStream: number, toStream: number, pathInStream: string, setValueOptions: SetValueConfig) => {
-    const valueToCopy = getValues(streamPath(fromStream, pathInStream));
-    setValue(streamPath(toStream, pathInStream), valueToCopy, setValueOptions);
+  return (fromStream: number, toStream: number, streamFieldPath: StreamFieldPath, setValueOptions: SetValueConfig) => {
+    const fromPath = replaceStreamIndex(streamFieldPath, fromStream);
+    const toPath = replaceStreamIndex(streamFieldPath, toStream);
+    const valueToCopy = getValues(fromPath);
+    setValue(toPath, valueToCopy, setValueOptions);
 
     // must explicitly call setValue on each array's path, so that useFieldArray properly reacts to it
-    const affectedArrayPathsInStream = [...control._names.array]
-      .filter((arrayPath) => arrayPath.includes(streamPath(toStream, pathInStream)))
-      .map((fullArrayPath) => {
-        const regex = /streams\.\d+\.(.*)/;
-        const match = fullArrayPath.match(regex);
-        if (match && match.length >= 2) {
-          return match[1];
-        }
-        return undefined;
-      })
-      .filter((arrayPathInStream?: string): arrayPathInStream is string => Boolean(arrayPathInStream));
+    const affectedArrayPaths = [...control._names.array].filter((arrayPath) => arrayPath.includes(toPath));
 
-    affectedArrayPathsInStream.forEach((arrayPathInStream) => {
-      const arrayValueToCopy = getValues(streamPath(fromStream, arrayPathInStream));
-      setValue(streamPath(toStream, arrayPathInStream), arrayValueToCopy, setValueOptions);
+    affectedArrayPaths.forEach((arrayPath) => {
+      const arrayValueToCopy = getValues(replaceStreamIndex(arrayPath, fromStream));
+      setValue(replaceStreamIndex(arrayPath, toStream), arrayValueToCopy, setValueOptions);
     });
   };
 };

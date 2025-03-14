@@ -76,6 +76,7 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) =>
       selected={view === num}
       showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
       onClick={() => {
+        setValue("streamTab", "requester");
         setValue("view", num);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected",

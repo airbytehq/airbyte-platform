@@ -206,7 +206,7 @@ function getConnectorName(fileName?: string | undefined, formValues?: BuilderFor
     return DEFAULT_CONNECTOR_NAME;
   }
   const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
-  if (fileNameNoType === "manifest" && formValues) {
+  if (fileNameNoType === "manifest" && formValues?.global?.urlBase) {
     // remove http protocol from beginning of url
     return formValues.global.urlBase.replace(/(^\w+:|^)\/\//, "");
   }

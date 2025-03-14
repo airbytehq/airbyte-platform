@@ -8,10 +8,10 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import { manifestRecordSelectorToBuilder } from "../convertManifestToBuilderForm";
-import { StreamPathFn, builderRecordSelectorToManifest } from "../types";
+import { DownloadRequesterPathFn, StreamPathFn, builderRecordSelectorToManifest } from "../types";
 
 interface RecordSelectorSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -41,7 +41,7 @@ export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
         },
       }}
       copyConfig={{
-        path: "recordSelector",
+        path: streamFieldPath("recordSelector"),
         currentStreamIndex,
         componentName: label,
       }}
