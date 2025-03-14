@@ -6,6 +6,7 @@ import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
 import { AnyObject } from "yup/lib/types";
+import { z } from "zod";
 
 import {
   ListPartitionRouter,
@@ -312,6 +313,22 @@ export const jsonString = yup.string().test({
   message: "connectorBuilder.invalidJSON",
 });
 
+export const zodJsonString = z.string().refine(
+  (val) => {
+    if (!val) {
+      return true;
+    }
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  {
+    message: "connectorBuilder.invalidJSON",
+  }
+);
 const nonArrayJsonString = jsonString.test({
   test: (val: string | undefined) => {
     if (!val) {

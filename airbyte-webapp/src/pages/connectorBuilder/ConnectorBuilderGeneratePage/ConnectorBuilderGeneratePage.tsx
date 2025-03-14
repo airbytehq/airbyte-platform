@@ -1,10 +1,10 @@
 import cloneDeep from "lodash/cloneDeep";
 import merge from "lodash/merge";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
-import * as yup from "yup";
+import { z } from "zod";
 
 import {
   AssistErrorFormError,
@@ -32,6 +32,7 @@ import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/Co
 import { links } from "core/utils/links";
 import { convertSnakeToCamel } from "core/utils/strings";
 import { useDebounceValue } from "core/utils/useDebounceValue";
+import { ToZodSchema } from "core/utils/zod";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import { ConnectorBuilderFormManagementStateProvider } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -112,17 +113,31 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     [getAssistValues, createAndNavigate, setSubmittedAssistValues, assistSessionId]
   );
 
-  const formSchema = yup.object().shape({
-    name: yup.string().required("form.empty.error"),
-    docsUrl: yup
-      .string()
-      .test("oneOfDocsOrOpenApi", "connectorBuilder.assist.config.docsUrl.oneOf.error", (value, context) => {
-        const { openapiSpecUrl } = context.parent;
-        return Boolean(value?.trim()) || Boolean(openapiSpecUrl?.trim());
-      }),
-    openapiSpecUrl: yup.string(),
-    firstStream: yup.string().required("form.empty.error"),
-  });
+  const formSchema = z
+    .object({
+      name: z.string().trim().nonempty("form.empty.error"),
+      docsUrl: z.string().trim().optional(),
+      openapiSpecUrl: z.string().trim().optional(),
+      firstStream: z.string().trim().nonempty("form.empty.error"),
+    } satisfies ToZodSchema<GeneratorFormResponse>)
+    .superRefine((values, ctx) => {
+      const hasDocsUrl = Boolean(values.docsUrl?.trim());
+      const hasOpenapiSpecUrl = Boolean(values.openapiSpecUrl?.trim());
+
+      if (!hasDocsUrl && !hasOpenapiSpecUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "connectorBuilder.assist.config.docsUrl.oneOf.error",
+          path: ["docsUrl"],
+        });
+
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "connectorBuilder.assist.config.docsUrl.oneOf.error",
+          path: ["openapiSpecUrl"],
+        });
+      }
+    });
 
   const defaultValues = {
     name: "",
@@ -134,7 +149,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="2xl" className={styles.container}>
       <AirbyteTitle title={<FormattedMessage id="connectorBuilder.generatePage.prompt" />} />
-      <Form defaultValues={defaultValues} schema={formSchema} onSubmit={onFormSubmit}>
+      <Form defaultValues={defaultValues} zodSchema={formSchema} onSubmit={onFormSubmit}>
         {isLoadingWithDelay ? (
           <AssistWaiting onSkip={onSkip} />
         ) : (
@@ -151,7 +166,10 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
 
 const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormError[] }> = ({ assistApiErrors }) => {
   const { formatMessage } = useIntl();
-  const { setError } = useFormContext();
+  const { setError, trigger } = useFormContext();
+  const { touchedFields } = useFormState();
+  const docsUrl = useWatch({ name: "docsUrl" });
+  const openapiSpecUrl = useWatch({ name: "openapiSpecUrl" });
 
   // Show any validation errors from the assist as form field errors
   useEffect(() => {
@@ -163,6 +181,15 @@ const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormE
       }
     }
   }, [setError, assistApiErrors]);
+
+  useEffect(() => {
+    if (touchedFields.docsUrl) {
+      trigger("docsUrl");
+    }
+    if (touchedFields.openapiSpecUrl) {
+      trigger("openapiSpecUrl");
+    }
+  }, [docsUrl, openapiSpecUrl, trigger, touchedFields]);
 
   return (
     <>
@@ -188,7 +215,6 @@ const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormE
         label={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.label" })}
         placeholder={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.placeholder" })}
         labelTooltip={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.tooltip" })}
-        optional
       />
       <FormControl
         fieldType="input"

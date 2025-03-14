@@ -6,7 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import { useParams } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Form, FormControl } from "components/forms";
@@ -35,6 +35,7 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useLocalStorage } from "core/utils/useLocalStorage";
+import { ToZodSchema } from "core/utils/zod";
 import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
 import {
@@ -147,12 +148,12 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
 
   const schema = useMemo(
     () =>
-      yup.object().shape({
-        name: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
-        description: yup.string().max(256, "connectorBuilder.maxLength"),
-        useVersion: yup.bool().required(),
-        version: yup.number().min(minVersion).required(),
-      }),
+      z.object({
+        name: z.string().trim().nonempty("form.empty.error").max(256, "connectorBuilder.maxLength"),
+        description: z.string().max(256, "connectorBuilder.maxLength").optional(),
+        useVersion: z.boolean(),
+        version: z.number().min(minVersion),
+      } satisfies ToZodSchema<PublishToWorkspaceFormValues>),
     [minVersion]
   );
 
@@ -247,7 +248,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
         useVersion: true,
         version: minVersion,
       }}
-      schema={schema}
+      zodSchema={schema}
       onSubmit={handleSubmit}
     >
       <ModalBody>
@@ -421,7 +422,7 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
 interface ContributeToAirbyteFormValues {
   name: string;
   connectorImageName: string;
-  description?: string;
+  description: string;
   githubToken: string;
   isEditing: boolean;
 }
@@ -565,24 +566,20 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
         githubToken: "",
         isEditing: false,
       }}
-      schema={yup.object().shape({
-        name: yup.string().required("form.empty.error"),
-        connectorImageName: yup
+      zodSchema={z.object({
+        name: z.string().trim().nonempty("form.empty.error"),
+        connectorImageName: z
           .string()
-          .required("form.empty.error")
-          .test((value, { createError }) => {
-            if (!value) {
-              return createError({ message: "form.empty.error" });
-            }
-            if (imageNameError) {
-              return createError({ message: imageNameError, type: NON_I18N_ERROR_TYPE });
-            }
-            return true;
+          .trim()
+          .nonempty("form.empty.error")
+          .refine(() => !imageNameError, {
+            message: imageNameError || "form.empty.error",
+            params: { type: NON_I18N_ERROR_TYPE },
           }),
-        description: yup.string().required("form.empty.error"),
-        githubToken: yup.string().required("form.empty.error"),
-        isEditing: yup.boolean().required("form.empty.error"),
-      })}
+        description: z.string().trim().nonempty("form.empty.error"),
+        githubToken: z.string().trim().nonempty("form.empty.error"),
+        isEditing: z.boolean(),
+      } satisfies ToZodSchema<ContributeToAirbyteFormValues>)}
       onSubmit={handleSubmit}
     >
       <ModalBody>
@@ -686,7 +683,7 @@ const ConnectorImageNameInput: React.FC<{
     debouncedCheckContribution.cancel();
 
     if (!imageName) {
-      // don't need to set footer or error state, because the yup validation will take precedence here
+      // don't need to set footer or error state, because the zod validation will take precedence here
       return;
     }
 
