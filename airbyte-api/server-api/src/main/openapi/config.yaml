@@ -91,6 +91,12 @@ tags:
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
   - name: public
     description: Public resources that are considered stable and are intended to be consumed as API by end users.
+  - name: actor_templates
+    description: Interactions with actor connection templates, used in conjunction with actor_masks to generate sources.
+  - name: actor_masks
+    description: Interactions with actor connection masks, used in conjunction with actor_templates to generate sources.
+  - name: embedded
+    description: Endpoints specific to workflows for Airbyte operators and their end-users.
 
 paths:
   /v1/workspaces/create:
@@ -6105,6 +6111,138 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DataplaneInitResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_templates/list:
+    post:
+      summary: List all actor templates available to a workspace
+      tags:
+        - actor_template
+        - embedded
+      operationId: listActorTemplates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorTemplateListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved actor template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorTemplateList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_templates/get:
+    post:
+      summary: Get details of a specific actor template
+      tags:
+        - actor_template
+        - embedded
+      operationId: getActorTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorTemplateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved actor template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorTemplateList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_masks/get:
+    post:
+      summary: Get details of a specific actor mask
+      tags:
+        - actor_mask
+        - embedded
+      operationId: getActorMask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorMaskRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved actor mask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorMaskRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_masks/create:
+    post:
+      summary: Create an actor mask
+      tags:
+        - actor_mask
+        - embedded
+      operationId: createActorMask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorMaskCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created actor mask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorMaskRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_masks/list_for_workspace:
+    post:
+      summary: List actor masks
+      tags:
+        - actor_mask
+        - embedded
+      operationId: listActorMasksForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListActorMasksRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created actor mask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorMaskReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_masks/update:
+    post:
+      summary: Update an actor mask
+      tags:
+        - actor_mask
+        - embedded
+      operationId: updateActorMask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorMaskUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated actor mask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorMaskRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -17207,6 +17345,216 @@ components:
         dataplane_group_id:
           type: string
           format: uuid
+
+    # ACTOR TEMPLATES
+    ActorTemplateListRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    ActorTemplateList:
+      type: object
+      required:
+        - actorTemplates
+      properties:
+        actorTemplates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorTemplateSnippet"
+    ActorTemplateSnippet:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+    ActorTemplateRequestBody:
+      type: object
+      required:
+        - templateId
+      properties:
+        templateId:
+          type: string
+          format: uuid
+    ActorTemplateRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefintionVersionId
+        - sourceType
+        - streamSelection
+        - actorProperties
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefintionVersionId:
+          type: string
+          format: uuid
+        sourceType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        streamSelection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorTemplateStreamConfig"
+        actorProperties:
+          $ref: "#/components/schemas/ActorTemplateActorProperties"
+    ActorTemplateActorProperties:
+      type: object
+      required:
+        - connectionSpecification
+      properties:
+        connectionSpecification:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        documentationUrl:
+          type: string
+        advancedAuth:
+          $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
+    ActorTemplateStreamConfig:
+      type: object
+      required:
+        - streamDescriptor
+        - state
+      properties:
+        streamDescriptor:
+          $ref: "#/components/schemas/StreamDescriptor"
+        status:
+          $ref: "#/components/schemas/ActorTemplateStreamStateEnum"
+    ActorTemplateStreamStateEnum:
+      type: string
+      enum:
+        - selected
+        - deselected
+        - suggested
+        - optional
+      x-sdk-component: true
+
+    # ACTOR MASKS
+    ActorMaskRequestBody:
+      type: object
+      required:
+        - actorMaskId
+      properties:
+        actorMaskId:
+          type: string
+          format: uuid
+    ActorMaskRead:
+      type: object
+      required:
+        - actorMaskId
+        - actorTemplateId
+        - actorProperties
+      properties:
+        actorMaskId:
+          type: string
+          format: uuid
+        actorTemplateId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+        actorProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+        streamSelection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorMaskStreamConfig"
+    ActorMaskStreamConfig:
+      type: object
+      required:
+        - streamDescriptor
+        - state
+      properties:
+        streamDescriptor:
+          $ref: "#/components/schemas/StreamDescriptor"
+        status:
+          $ref: "#/components/schemas/ActorMaskStreamStateEnum"
+    ActorMaskStreamStateEnum:
+      type: string
+      enum:
+        - selected
+        - deselected
+      x-sdk-component: true
+    ActorMaskCreateRequestBody:
+      type: object
+      required:
+        - actorTemplateId
+        - actorProperties
+      properties:
+        actorTemplateId:
+          type: string
+          format: uuid
+        actorProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+        streamSelection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorMaskStreamConfig"
+    ActorMaskUpdateRequestBody:
+      type: object
+      required:
+        - actorMaskId
+      properties:
+        actorMaskId:
+          type: string
+          format: uuid
+        actorProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+        streamSelection:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorMaskStreamConfig"
+    ListActorMasksRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    ActorMaskReadList:
+      type: object
+      required:
+        - actorMasks
+      properties:
+        actorMasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorMaskReadListItem"
+    ActorMaskReadListItem:
+      type: object
+      required:
+        - actorMaskId
+        - actorTemplateName
+        - actorTemplateIcon
+      properties:
+        actorMaskId:
+          type: string
+          format: uuid
+        actorTemplateName:
+          type: string
+        actorTemplateIcon:
+          type: string
+          description: url to icon in connector asset (svg) registry
 
   responses:
     NotFoundResponse:
