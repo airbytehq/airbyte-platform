@@ -16,6 +16,7 @@ import {
   extractInterpolatedConfigKey,
   isYamlString,
   JWT_AUTHENTICATOR,
+  YamlString,
 } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 
@@ -96,7 +97,20 @@ export function getKeyToDesiredLockedInput(
   authenticator: BuilderFormValues["global"]["authenticator"],
   streams: BuilderStream[]
 ): Record<string, BuilderFormInput> {
-  const authKeyToDesiredInput = isYamlString(authenticator) ? {} : getAuthKeyToDesiredLockedInput(authenticator);
+  const authKeyToDesiredInput = {
+    ...getAuthKeyToDesiredLockedInput(authenticator),
+    ...streams.reduce((acc, stream) => {
+      if (stream.requestType === "async") {
+        return {
+          ...acc,
+          ...getAuthKeyToDesiredLockedInput(stream.creationRequester.authenticator),
+          ...getAuthKeyToDesiredLockedInput(stream.pollingRequester.authenticator),
+          ...getAuthKeyToDesiredLockedInput(stream.downloadRequester.authenticator),
+        };
+      }
+      return acc;
+    }, {}),
+  };
 
   const incrementalStartDateKeys = new Set<string>();
   const incrementalEndDateKeys = new Set<string>();
@@ -140,8 +154,12 @@ export function getKeyToDesiredLockedInput(
 }
 
 export function getAuthKeyToDesiredLockedInput(
-  authenticator: BuilderFormAuthenticator
+  authenticator: BuilderFormAuthenticator | YamlString
 ): Record<string, BuilderFormInput> {
+  if (isYamlString(authenticator)) {
+    return {};
+  }
+
   switch (authenticator.type) {
     case API_KEY_AUTHENTICATOR:
     case BEARER_AUTHENTICATOR:

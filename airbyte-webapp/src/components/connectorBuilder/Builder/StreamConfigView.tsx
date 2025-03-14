@@ -29,6 +29,7 @@ import {
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
@@ -360,6 +361,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               <DecoderConfig decoderType={selectedCreationDecoder.type} streamFieldPath={streamFieldPath} />
             )}
           </BuilderCard>
+          <AuthenticationSection authPath={creationRequesterPath("authenticator")} />
           <RequestOptionSection
             inline={false}
             basePath={creationRequesterPath("requestOptions")}
@@ -390,6 +392,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               manifestPath="HttpRequester.properties.http_method"
             />
           </BuilderCard>
+          <AuthenticationSection authPath={pollingRequesterPath("authenticator")} />
           <BuilderCard>
             <GroupControls
               label={
@@ -547,6 +550,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               optional
             />
           </BuilderCard>
+          <AuthenticationSection authPath={downloadRequesterPath("authenticator")} />
           <RecordSelectorSection streamFieldPath={downloadRequesterPath} currentStreamIndex={streamNum} />
           <RequestOptionSection
             inline={false}

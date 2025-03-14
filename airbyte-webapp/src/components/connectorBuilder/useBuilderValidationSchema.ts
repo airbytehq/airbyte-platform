@@ -234,6 +234,7 @@ export const useBuilderValidationSchema = () => {
             incrementalSync: maybeYamlSchema(incrementalSyncSchema),
             parentStreams: parentStreamSchema,
             parameterizedRequests: parameterizedRequestsSchema,
+            authenticator: maybeYamlSchema(authenticatorSchema),
           })
         ),
         pollingRequester: ifRequestType(
@@ -255,6 +256,7 @@ export const useBuilderValidationSchema = () => {
             downloadTargetExtractor: yup.object().shape({
               field_path: yup.array().of(yup.string()),
             }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
           })
         ),
         downloadRequester: ifRequestType(
@@ -271,10 +273,11 @@ export const useBuilderValidationSchema = () => {
             downloadExtractor: yup.object().shape({
               field_path: yup.array().of(yup.string()),
             }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
           })
         ),
       }),
-    [formatMessage, parameterizedRequestsSchema, parentStreamSchema]
+    [formatMessage, parameterizedRequestsSchema, parentStreamSchema, authenticatorSchema]
   );
 
   const builderFormValidationSchema = useMemo(

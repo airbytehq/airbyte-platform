@@ -7,6 +7,7 @@ import { Message } from "components/ui/Message";
 import { DefaultErrorHandlerBackoffStrategiesItem, HttpResponseFilter } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 
+import { AuthPath } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderList } from "./BuilderList";
@@ -28,7 +29,7 @@ type ErrorHandlerSectionProps =
     }
   | {
       inline: true;
-      basePath: "formValues.global.authenticator.login_requester.errorHandler";
+      basePath: `${AuthPath}.login_requester.errorHandler`;
     };
 
 export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) => {

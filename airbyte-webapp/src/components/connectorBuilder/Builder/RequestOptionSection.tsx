@@ -1,6 +1,7 @@
 import { useIntl } from "react-intl";
 
 import { AssistButton } from "./Assist/AssistButton";
+import { AuthPath } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
@@ -20,7 +21,7 @@ type RequestOptionSectionProps =
     }
   | {
       inline: true;
-      basePath: "formValues.global.authenticator.login_requester.requestOptions";
+      basePath: `${AuthPath}.login_requester.requestOptions`;
     };
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
