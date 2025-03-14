@@ -32,6 +32,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.Optional
+import kotlin.time.Duration.Companion.minutes
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -108,8 +109,7 @@ open class ApplicationsController(
                 clientSecret = applicationTokenRequestWithGrant.clientSecret,
               ),
           PublicAccessTokenResponse.TokenType.BEARER,
-          // This is longer for pro, but there's no reason for the terraform provider/sdks to not just get a new token every 3 min
-          tokenExpirationConfig.applicationTokenExpirationInMinutes,
+          tokenExpirationConfig.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
         ),
       ).build()
 
