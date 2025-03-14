@@ -27,7 +27,12 @@ import {
 } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA } from "../types";
+import {
+  BuilderStream,
+  DEFAULT_BUILDER_STREAM_VALUES,
+  DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+  DEFAULT_SCHEMA,
+} from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface AddStreamResponse {
@@ -167,9 +172,20 @@ const AddStreamModal = ({
 
       onSubmit({
         streamName: values.streamName,
-        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, otherStreamValues, {
-          urlPath: values.urlPath,
-        }),
+        newStreamValues: merge(
+          {},
+          values.requestType === "sync" ? DEFAULT_BUILDER_STREAM_VALUES : DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+          otherStreamValues,
+          values.requestType === "sync"
+            ? {
+                urlPath: values.urlPath,
+              }
+            : {
+                creationRequester: {
+                  url: values.urlPath,
+                },
+              }
+        ),
       });
     },
     [streams, onSubmit]
@@ -226,6 +242,7 @@ interface AddStreamFormValues {
   urlPath: string;
   copyOtherStream?: boolean;
   streamToCopy?: string;
+  requestType?: BuilderStream["requestType"];
 }
 
 const AddStreamForm = ({
@@ -269,12 +286,14 @@ const AddStreamForm = ({
       urlPath: "",
       copyOtherStream: false,
       streamToCopy: streams[0]?.name,
+      requestType: "sync" as const,
     },
     resolver: yupResolver(yup.object().shape(validator)),
     mode: "onChange",
   });
 
   const useOtherStream = methods.watch("copyOtherStream");
+  const requestType = methods.watch("requestType");
 
   return (
     <FormProvider {...methods}>
@@ -294,8 +313,18 @@ const AddStreamForm = ({
             <BuilderField
               path="urlPath"
               type="jinja"
-              label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
-              tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+              label={formatMessage({
+                id:
+                  useOtherStream || requestType === "sync"
+                    ? "connectorBuilder.addStreamModal.urlPathLabel"
+                    : "connectorBuilder.asyncStream.url.label",
+              })}
+              tooltip={formatMessage({
+                id:
+                  useOtherStream || requestType === "sync"
+                    ? "connectorBuilder.addStreamModal.urlPathTooltip"
+                    : "connectorBuilder.asyncStream.url.tooltip",
+              })}
               bubbleUpUndoRedo={false}
             />
           )}
@@ -316,6 +345,23 @@ const AddStreamForm = ({
                 />
               )}
             </>
+          )}
+          {!useOtherStream && (
+            <BuilderField
+              type="enum"
+              path="requestType"
+              label={formatMessage({ id: "connectorBuilder.requestType" })}
+              options={[
+                {
+                  value: "sync",
+                  label: formatMessage({ id: "connectorBuilder.requestType.sync" }),
+                },
+                {
+                  value: "async",
+                  label: formatMessage({ id: "connectorBuilder.requestType.async" }),
+                },
+              ]}
+            />
           )}
         </ModalBody>
         <ModalFooter>

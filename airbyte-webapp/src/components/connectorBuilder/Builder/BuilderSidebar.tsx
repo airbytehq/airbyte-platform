@@ -60,8 +60,9 @@ interface StreamViewButtonProps {
   id: string;
   name: string;
   num: number;
+  async: boolean;
 }
-const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) => {
+const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num, async }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
@@ -85,13 +86,16 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) =>
         });
       }}
     >
-      {name && name.trim() ? (
-        <Text className={styles.streamViewText}>{name}</Text>
-      ) : (
-        <Text className={styles.emptyStreamViewText}>
-          <FormattedMessage id="connectorBuilder.emptyName" />
-        </Text>
-      )}
+      <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
+        {name && name.trim() ? (
+          <Text className={styles.streamViewText}>{name}</Text>
+        ) : (
+          <Text className={styles.emptyStreamViewText}>
+            <FormattedMessage id="connectorBuilder.emptyName" />
+          </Text>
+        )}
+        {async && <Text className={styles.asyncBadge}>async</Text>}
+      </FlexContainer>
     </ViewSelectButton>
   );
 };
@@ -193,8 +197,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         </FlexContainer>
 
         <div className={styles.streamList}>
-          {formValues.streams.map(({ name, id }, num) => (
-            <StreamViewButton key={num} id={id} name={name} num={num} />
+          {formValues.streams.map(({ name, id, requestType }, num) => (
+            <StreamViewButton key={num} id={id} name={name} num={num} async={requestType === "async"} />
           ))}
         </div>
       </FlexContainer>

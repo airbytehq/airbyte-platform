@@ -46,6 +46,7 @@ import {
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
   useIsForeignWorkspace,
+  useCancelBuilderProjectStreamRead,
 } from "core/api";
 import {
   ConnectorBuilderProjectTestingValues,
@@ -152,6 +153,7 @@ export interface TestReadContext {
   };
   queuedStreamRead: boolean;
   queueStreamRead: () => void;
+  cancelStreamRead: () => void;
   testStreamRequestType: "sync" | "async";
 }
 
@@ -392,9 +394,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
             manifest: convertedManifest,
             componentsFileContent: customComponentsCode,
           });
-          // don't need to explicitly validate here, since automatic form validation will still prevent
-          // publishing if there are any form errors
-          setValue("formValues", convertedFormValues, { shouldValidate: false });
+          setValue("formValues", convertedFormValues, { shouldValidate: true });
           setValue("mode", "ui");
         } catch (e) {
           confirmDiscard(e.message);
@@ -903,6 +903,14 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setQueuedStreamRead(true);
   }, []);
 
+  const cancel = useCancelBuilderProjectStreamRead(projectId, streamName);
+  const cancelStreamRead = useCallback(() => {
+    // Cancel the query using React Query's remove method
+    cancel();
+    // Also ensure queuedStreamRead is set to false to prevent auto-refetching
+    setQueuedStreamRead(false);
+  }, [cancel]);
+
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 
   const ctx = {
@@ -913,6 +921,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setTestState,
     queuedStreamRead,
     queueStreamRead,
+    cancelStreamRead,
     testStreamRequestType:
       testStream?.type === DeclarativeStreamType.DeclarativeStream &&
       testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever

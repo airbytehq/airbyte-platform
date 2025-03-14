@@ -16,6 +16,7 @@ import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;
+  cancelStreamRead: () => void;
   hasTestingValuesErrors: boolean;
   setTestingValuesInputOpen: (open: boolean) => void;
   hasResolveErrors: boolean;
@@ -28,6 +29,7 @@ interface StreamTestButtonProps {
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   queueStreamRead,
+  cancelStreamRead,
   hasTestingValuesErrors,
   setTestingValuesInputOpen,
   hasResolveErrors,
@@ -119,11 +121,24 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       tooltipContent
     );
 
-  return finalTooltipContent !== undefined ? (
-    <Tooltip control={testButton} containerClassName={styles.testButtonTooltipContainer}>
-      {finalTooltipContent}
-    </Tooltip>
-  ) : (
-    testButton
+  return (
+    <FlexContainer>
+      {finalTooltipContent !== undefined ? (
+        <Tooltip control={testButton} containerClassName={styles.testButtonTooltipContainer}>
+          {finalTooltipContent}
+        </Tooltip>
+      ) : (
+        testButton
+      )}
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!isLoading}
+        onClick={cancelStreamRead}
+        data-testid="cancel-stream-read"
+      >
+        <FormattedMessage id="connectorBuilder.cancel" />
+      </Button>
+    </FlexContainer>
   );
 };

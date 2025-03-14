@@ -583,37 +583,58 @@ const RequestTypeSelector = ({
   streamFieldPath: StreamPathFn;
   selectedValue: BuilderStream["requestType"];
 }) => {
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue } = useFormContext();
   const id = useBuilderWatch(streamFieldPath("id"));
   const name = useBuilderWatch(streamFieldPath("name"));
 
-  return (
-    <FlexContainer alignItems="center">
-      <Text color="grey500">
-        <FormattedMessage id="connectorBuilder.requestType" />
-      </Text>
-      <ListBox<BuilderStream["requestType"]>
-        selectedValue={selectedValue}
-        onSelect={(newValue) => {
-          if (newValue === selectedValue) {
-            return;
-          }
+  const handleSelect = useCallback(
+    (newValue: BuilderStream["requestType"]) => {
+      if (newValue === selectedValue) {
+        return;
+      }
+
+      openConfirmationModal({
+        title:
+          newValue === "sync"
+            ? "connectorBuilder.requestType.confirm.title.sync"
+            : "connectorBuilder.requestType.confirm.title.async",
+        text: "connectorBuilder.requestType.confirm.text",
+        submitButtonText:
+          newValue === "sync"
+            ? "connectorBuilder.requestType.confirm.submit.sync"
+            : "connectorBuilder.requestType.confirm.submit.async",
+        submitButtonVariant: "primary",
+        cancelButtonText: "connectorBuilder.requestType.confirm.cancel",
+        onSubmit: () => {
           if (newValue === "sync") {
             setValue(`formValues.streams.${streamNum}`, {
               ...DEFAULT_BUILDER_STREAM_VALUES,
               id,
               name,
             });
-            return;
-          }
-          if (newValue === "async") {
+          } else if (newValue === "async") {
             setValue(`formValues.streams.${streamNum}`, {
               ...DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
               id,
               name,
             });
           }
-        }}
+          closeConfirmationModal();
+        },
+      });
+    },
+    [selectedValue, openConfirmationModal, closeConfirmationModal, setValue, streamNum, id, name]
+  );
+
+  return (
+    <FlexContainer alignItems="center">
+      <Text color="grey500" align="right">
+        <FormattedMessage id="connectorBuilder.requestType" />:
+      </Text>
+      <ListBox<BuilderStream["requestType"]>
+        selectedValue={selectedValue}
+        onSelect={handleSelect}
         options={[
           {
             label: <FormattedMessage id="connectorBuilder.requestType.sync" />,

@@ -518,6 +518,13 @@ export const useBuilderProjectReadStream = (
   );
 };
 
+export const useCancelBuilderProjectStreamRead = (builderProjectId: string, streamName: string) => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.cancelQueries(connectorBuilderProjectsKeys.read(builderProjectId, streamName));
+  };
+};
+
 export type Page = ConnectorBuilderProjectStreamReadSlicesItemPagesItem & {
   state?: ConnectorBuilderProjectStreamReadSlicesItemStateItem[];
 };

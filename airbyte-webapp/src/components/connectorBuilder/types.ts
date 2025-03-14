@@ -1167,7 +1167,7 @@ type BaseManifestRequester = Pick<HttpRequester, "type" | "url_base" | "authenti
 const builderBaseRequesterToManifest = (builderRequester: BuilderBaseRequester): HttpRequester => {
   return {
     type: HttpRequesterType.HttpRequester,
-    url_base: builderRequester.url.trim(),
+    url_base: builderRequester.url?.trim(),
     authenticator: convertOrLoadYamlString(builderRequester.authenticator, builderAuthenticatorToManifest),
     http_method: builderRequester.httpMethod,
     request_parameters: fromEntriesOrUndefined(builderRequester.requestOptions.requestParameters),

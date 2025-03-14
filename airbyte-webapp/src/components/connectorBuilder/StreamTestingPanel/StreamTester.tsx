@@ -46,6 +46,7 @@ export const StreamTester: React.FC<{
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
     queuedStreamRead,
     queueStreamRead,
+    cancelStreamRead,
     testStreamRequestType,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
@@ -160,6 +161,7 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
+        cancelStreamRead={cancelStreamRead}
         hasTestingValuesErrors={hasTestingValuesErrors}
         setTestingValuesInputOpen={setTestingValuesInputOpen}
         hasResolveErrors={Boolean(resolveErrorMessage)}
