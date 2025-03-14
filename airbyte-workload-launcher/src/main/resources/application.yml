@@ -92,6 +92,7 @@ airbyte:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-launcher:
+    heartbeat-rate: PT30S
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
     parallelism-max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}

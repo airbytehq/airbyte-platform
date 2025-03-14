@@ -3,6 +3,8 @@
  */
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
+import io.airbyte.api.client.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitResponse
 import io.airbyte.featureflag.FeatureFlagClient
@@ -112,4 +114,93 @@ class ControlplanePollerTest {
     assertNull(poller.dataplaneConfig)
     verify(exactly = 0) { eventPublisher.publishEvent(any()) }
   }
+
+  @Test
+  fun `Heartbeat should publish changes`() {
+    val heartbeatResponse =
+      DataplaneHeartbeatResponse(
+        dataplaneName = "dataplane-name",
+        dataplaneId = UUID.randomUUID(),
+        dataplaneEnabled = true,
+        dataplaneGroupId = UUID.randomUUID(),
+        dataplaneGroupName = "group-name",
+      )
+    every {
+      apiClient.dataplaneApi
+    } returns
+      mockk {
+        every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneCreds.clientId)) } returns heartbeatResponse
+      }
+
+    poller.heartbeat()
+
+    val expectedConfig =
+      DataplaneConfig(
+        dataplaneName = heartbeatResponse.dataplaneName,
+        dataplaneId = heartbeatResponse.dataplaneId,
+        dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
+        dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
+        dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
+      )
+    verify { eventPublisher.publishEvent(expectedConfig) }
+  }
+
+  @Test
+  fun `Heartbeat should only publish changes and omit duplicates`() {
+    val heartbeatResponse =
+      DataplaneHeartbeatResponse(
+        dataplaneName = "dataplane-name",
+        dataplaneId = UUID.randomUUID(),
+        dataplaneEnabled = true,
+        dataplaneGroupId = UUID.randomUUID(),
+        dataplaneGroupName = "group-name",
+      )
+    val heartbeatResponse2 = heartbeatResponse.copy(dataplaneId = UUID.randomUUID())
+    val heartbeatResponse3 = heartbeatResponse.copy(dataplaneId = UUID.randomUUID())
+    every {
+      apiClient.dataplaneApi
+    } returns
+      mockk {
+        every {
+          heartbeatDataplane(
+            DataplaneHeartbeatRequestBody(dataplaneCreds.clientId),
+          )
+        } returns heartbeatResponse andThen
+          heartbeatResponse andThen
+          heartbeatResponse2 andThen
+          heartbeatResponse3 andThen
+          heartbeatResponse3 andThen
+          heartbeatResponse3
+      }
+
+    repeat(6) {
+      poller.heartbeat()
+    }
+
+    verify(exactly = 1) {
+      eventPublisher.publishEvent(heartbeatResponse.toConfig())
+      eventPublisher.publishEvent(heartbeatResponse2.toConfig())
+      eventPublisher.publishEvent(heartbeatResponse3.toConfig())
+    }
+  }
+
+  @Test
+  fun `Heartbeat is a noop if feature flag is off`() {
+    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
+
+    poller.heartbeat()
+    verify(exactly = 0) {
+      apiClient.dataplaneApi.heartbeatDataplane(any())
+      eventPublisher.publishEvent(any())
+    }
+  }
+
+  private fun DataplaneHeartbeatResponse.toConfig(): DataplaneConfig =
+    DataplaneConfig(
+      dataplaneName = dataplaneName,
+      dataplaneId = dataplaneId,
+      dataplaneEnabled = dataplaneEnabled,
+      dataplaneGroupId = dataplaneGroupId,
+      dataplaneGroupName = dataplaneGroupName,
+    )
 }

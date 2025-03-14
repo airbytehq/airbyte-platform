@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.PlaneName
@@ -14,6 +15,7 @@ import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.event.ApplicationEventPublisher
+import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
 
@@ -38,7 +40,7 @@ class ControlplanePoller(
           airbyteApiClient.dataplaneApi.initializeDataplane(
             DataplaneInitRequestBody(clientId = dataplaneCredentials.clientId),
           )
-        dataplaneConfig =
+        val config =
           DataplaneConfig(
             dataplaneId = initResponse.dataplaneId,
             dataplaneName = initResponse.dataplaneName,
@@ -47,13 +49,41 @@ class ControlplanePoller(
             dataplaneGroupName = initResponse.dataplaneGroupName,
           )
 
-        dataplaneConfig?.let {
-          logger.info { "Running as ${it.dataplaneId} (${it.dataplaneName}) for ${it.dataplaneGroupName}" }
-          eventPublisher.publishEvent(it)
-        }
+        logger.info { "Running as ${config.dataplaneId} (${config.dataplaneName}) for ${config.dataplaneGroupName}" }
+        publishConfigChange(config)
       } catch (e: Exception) {
         throw RuntimeException("Failed to initialize data-plane", e)
       }
+    }
+  }
+
+  @Scheduled(fixedRate = "\${airbyte.workload-launcher.heartbeat-rate}")
+  fun heartbeat() {
+    if (useDataplaneAuthNFlow()) {
+      try {
+        val heartbeatResponse =
+          airbyteApiClient.dataplaneApi.heartbeatDataplane(
+            DataplaneHeartbeatRequestBody(clientId = dataplaneCredentials.clientId),
+          )
+        publishConfigChange(
+          DataplaneConfig(
+            dataplaneId = heartbeatResponse.dataplaneId,
+            dataplaneName = heartbeatResponse.dataplaneName,
+            dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
+            dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
+            dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
+          ),
+        )
+      } catch (e: Exception) {
+        logger.warn(e) { "Failed to heart beat" }
+      }
+    }
+  }
+
+  private fun publishConfigChange(config: DataplaneConfig) {
+    if (config != dataplaneConfig) {
+      dataplaneConfig = config
+      eventPublisher.publishEvent(config)
     }
   }
 
