@@ -53,7 +53,12 @@ import {
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
 import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema, DeclarativeStreamType } from "core/api/types/ConnectorManifest";
+import {
+  ConnectorManifest,
+  DeclarativeComponentSchema,
+  DeclarativeStreamType,
+  AsyncRetrieverType,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
@@ -147,6 +152,7 @@ export interface TestReadContext {
   };
   queuedStreamRead: boolean;
   queueStreamRead: () => void;
+  testStreamRequestType: "sync" | "async";
 }
 
 interface FormManagementStateContext {
@@ -907,6 +913,11 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setTestState,
     queuedStreamRead,
     queueStreamRead,
+    testStreamRequestType:
+      testStream?.type === DeclarativeStreamType.DeclarativeStream &&
+      testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever
+        ? ("async" as const)
+        : ("sync" as const),
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

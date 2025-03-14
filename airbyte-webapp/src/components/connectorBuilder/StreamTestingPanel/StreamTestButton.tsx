@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -22,6 +23,7 @@ interface StreamTestButtonProps {
   isStreamTestRunning: boolean;
   className?: string;
   forceDisabled?: boolean;
+  requestType: "sync" | "async";
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -33,6 +35,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   isStreamTestRunning,
   className,
   forceDisabled,
+  requestType,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
@@ -104,9 +107,21 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     </Button>
   );
 
-  return tooltipContent !== undefined ? (
+  const finalTooltipContent =
+    requestType === "async" ? (
+      <FlexContainer direction="column" alignItems="center">
+        {tooltipContent ?? null}
+        <Text italicized className={styles.longRequestWarning} size="sm">
+          <FormattedMessage id="connectorBuilder.asyncStream.longRequestWarning" />
+        </Text>
+      </FlexContainer>
+    ) : (
+      tooltipContent
+    );
+
+  return finalTooltipContent !== undefined ? (
     <Tooltip control={testButton} containerClassName={styles.testButtonTooltipContainer}>
-      {tooltipContent}
+      {finalTooltipContent}
     </Tooltip>
   ) : (
     testButton
