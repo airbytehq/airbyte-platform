@@ -414,6 +414,7 @@ create table "public"."secret_config" (
   "updated_by" uuid not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "airbyte_managed" boolean not null,
   constraint "secret_config_pkey" primary key ("id"),
   constraint "secret_config_secret_storage_id_descriptor_key" unique ("secret_storage_id", "descriptor"),
   constraint "secret_config_secret_storage_id_external_coordinate_key" unique ("secret_storage_id", "external_coordinate")

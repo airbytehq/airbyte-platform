@@ -57,6 +57,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
         secretStorageId = persistedSecretStorage.id!!,
         descriptor = "test",
         externalCoordinate = "some.coordinate",
+        airbyteManaged = true,
         createdBy = userId,
         updatedBy = userId,
       )
@@ -115,6 +116,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
         secretStorageId = persistedSecretStorage.id!!,
         descriptor = "test",
         externalCoordinate = "some.coordinate",
+        airbyteManaged = true,
         createdBy = userId,
         updatedBy = userId,
       )
@@ -192,6 +194,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
         secretStorageId = persistedSecretStorage.id!!,
         descriptor = "test",
         externalCoordinate = "some.coordinate",
+        airbyteManaged = true,
         createdBy = userId,
         updatedBy = userId,
       )

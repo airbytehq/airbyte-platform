@@ -14,6 +14,7 @@ fun EntitySecretConfig.toConfigModel(): ModelSecretConfig =
     descriptor = this.descriptor,
     externalCoordinate = this.externalCoordinate,
     tombstone = this.tombstone,
+    airbyteManaged = this.airbyteManaged,
     createdBy = this.createdBy,
     updatedBy = this.updatedBy,
     createdAt = this.createdAt,

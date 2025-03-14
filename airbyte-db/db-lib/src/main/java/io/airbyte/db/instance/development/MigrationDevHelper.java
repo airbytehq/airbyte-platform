@@ -81,7 +81,7 @@ public class MigrationDevHelper {
     LOGGER.info("\n==== New Migration File ====\n" + filePath);
 
     final File file = new File(Path.of(filePath).toUri());
-    Files.createDirectories(file.toPath());
+    Files.createDirectories(file.toPath().getParent());
 
     try (final PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
       writer.println(newMigration);

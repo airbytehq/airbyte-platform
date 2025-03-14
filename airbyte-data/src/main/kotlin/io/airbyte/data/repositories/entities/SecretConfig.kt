@@ -20,6 +20,7 @@ data class SecretConfig(
   var descriptor: String,
   var externalCoordinate: String,
   var tombstone: Boolean = false,
+  var airbyteManaged: Boolean,
   var createdBy: UUID,
   var updatedBy: UUID,
   @DateCreated
