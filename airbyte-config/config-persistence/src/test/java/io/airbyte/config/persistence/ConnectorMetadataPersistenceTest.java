@@ -112,7 +112,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
-    connectionService = new ConnectionServiceJooqImpl(database);
+    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     actorDefinitionVersionUpdater =
         spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,

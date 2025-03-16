@@ -7,6 +7,7 @@ package io.airbyte.metrics.reporter;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -73,10 +74,16 @@ abstract class MetricRepositoryTest {
       final var dstId = UUID.randomUUID();
       final var activeConnectionId = UUID.randomUUID();
       final var inactiveConnectionId = UUID.randomUUID();
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.STATUS, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID,
-          CONNECTION.DESTINATION_ID, CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL)
-          .values(activeConnectionId, StatusType.active, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true)
-          .values(inactiveConnectionId, StatusType.inactive, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true)
+          CONNECTION.DESTINATION_ID, CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          .values(activeConnectionId, StatusType.active, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true,
+              GeographyType.EU, euDataplaneGroupId)
+          .values(inactiveConnectionId, StatusType.inactive, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true,
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       // non-pending jobs
@@ -114,10 +121,14 @@ abstract class MetricRepositoryTest {
       final var connectionUuid = UUID.randomUUID();
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.valueOf(EU_REGION))
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS)
@@ -137,10 +148,14 @@ abstract class MetricRepositoryTest {
       final var connectionUuid = UUID.randomUUID();
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.valueOf(EU_REGION))
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       // non-pending jobs
@@ -166,11 +181,14 @@ abstract class MetricRepositoryTest {
       final var connectionUuid = UUID.randomUUID();
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.valueOf(EU_REGION))
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT)
@@ -195,10 +213,14 @@ abstract class MetricRepositoryTest {
       final var connectionUuid = UUID.randomUUID();
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY)
-          .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active, GeographyType.EU)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS)
@@ -278,10 +300,16 @@ abstract class MetricRepositoryTest {
           .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -306,12 +334,20 @@ abstract class MetricRepositoryTest {
           .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.deprecated)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.inactive)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.deprecated,
+              GeographyType.EU, euDataplaneGroupId)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.inactive,
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -336,9 +372,14 @@ abstract class MetricRepositoryTest {
           .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS)
-          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
+              GeographyType.EU, euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -456,12 +497,16 @@ abstract class MetricRepositoryTest {
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
       final var syncConfigType = JobConfigType.sync;
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,
-          CONNECTION.UPDATED_AT)
+          CONNECTION.UPDATED_AT, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 6, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt)
+              JSONB.valueOf("{\"units\": 6, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt, GeographyType.EU,
+              euDataplaneGroupId)
           .execute();
 
       // Jobs running in prior day will not be counted
@@ -487,14 +532,19 @@ abstract class MetricRepositoryTest {
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
       final var syncConfigType = JobConfigType.sync;
+      final var euDataplaneGroupId = UUID.randomUUID();
+      ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,
-          CONNECTION.UPDATED_AT)
+          CONNECTION.UPDATED_AT, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
           .values(inactiveConnectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.inactive, updateAt, updateAt)
+              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.inactive, updateAt, updateAt, GeographyType.EU,
+              euDataplaneGroupId)
           .values(activeConnectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt)
+              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt, GeographyType.EU,
+              euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT, JOBS.UPDATED_AT, JOBS.CONFIG_TYPE)

@@ -48,7 +48,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_1_1_015__AddAirbyteManagedBooleanToSecretConfigTable
+import io.airbyte.db.instance.configs.migrations.V1_1_1_016__AddDataplaneGroupIdToConnection
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable
@@ -133,17 +133,6 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
-    val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
-    val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
-    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService =
-      Mockito.mock(
-        SecretPersistenceConfigService::class.java,
-      )
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
-    val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
     val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
     Mockito
       .`when`(
@@ -152,6 +141,18 @@ internal class BootloaderTest {
           Geography.AUTO,
         ),
       ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
+
+    val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
+    val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
+    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
+    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
+    val secretPersistenceConfigService =
+      Mockito.mock(
+        SecretPersistenceConfigService::class.java,
+      )
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
+    val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
+    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
     val connectionTimelineService =
       Mockito.mock(
         ConnectionTimelineEventService::class.java,
@@ -341,11 +342,6 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
-    val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
-    val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
-    val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
     val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
     Mockito
       .`when`(
@@ -354,6 +350,12 @@ internal class BootloaderTest {
           Geography.AUTO,
         ),
       ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
+
+    val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
+    val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
+    val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
+    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
     val connectionTimelineService =
       Mockito.mock(
         ConnectionTimelineEventService::class.java,
@@ -668,9 +670,18 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
+    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    Mockito
+      .`when`(
+        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
+          DEFAULT_ORGANIZATION_ID,
+          Geography.AUTO,
+        ),
+      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
+
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
     val connectionTimelineService =
@@ -685,14 +696,6 @@ internal class BootloaderTest {
         scopedConfigurationService,
         connectionTimelineService,
       )
-    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    Mockito
-      .`when`(
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
-          DEFAULT_ORGANIZATION_ID,
-          Geography.AUTO,
-        ),
-      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
     val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
     val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
     val secretPersistenceConfigService =
@@ -825,7 +828,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_015__AddAirbyteManagedBooleanToSecretConfigTable::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_016__AddDataplaneGroupIdToConnection::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

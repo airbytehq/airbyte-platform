@@ -132,7 +132,20 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
 
-    connectionService = spy(new ConnectionServiceJooqImpl(database));
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
+
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    for (final Geography geography : Geography.values()) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography.name())
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+
+    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -141,8 +154,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         scopedConfigurationService,
         connectionTimelineEventService);
     catalogService = spy(new CatalogServiceJooqImpl(database));
-    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
+
     oauthService = spy(new OAuthServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
@@ -166,16 +178,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient));
-
-    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    for (final Geography geography : Geography.values()) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography.name())
-          .withEnabled(true)
-          .withTombstone(false));
-    }
 
     workspaceService = spy(new WorkspaceServiceJooqImpl(
         database,

@@ -149,7 +149,11 @@ public class DbConverter {
             Jsons.deserialize(record.get(CONNECTION.RESOURCE_REQUIREMENTS).data(), ResourceRequirements.class))
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
-        .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
+        .withGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
+            .map(String::toLowerCase)
+            .map(Geography::fromValue)
+            .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
+
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())

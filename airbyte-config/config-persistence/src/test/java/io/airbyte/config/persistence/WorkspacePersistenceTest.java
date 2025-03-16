@@ -96,7 +96,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    connectionService = spy(new ConnectionServiceJooqImpl(database));
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
 
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
@@ -120,7 +121,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
       organizationPersistence.createOrganization(organization);
     }
 
-    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(UUID.randomUUID())
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)

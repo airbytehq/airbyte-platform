@@ -44,7 +44,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
   public ConnectionServiceJooqImplTest() {
-    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
+    final DataplaneGroupServiceTestJooqImpl dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
   }
 
   private static Stream<Arguments> actorSyncsStreamTestProvider() {

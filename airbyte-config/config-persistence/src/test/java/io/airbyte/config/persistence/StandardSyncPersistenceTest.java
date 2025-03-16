@@ -27,6 +27,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopedResourceRequirements;
@@ -85,6 +86,8 @@ import org.junit.jupiter.api.Test;
 class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID workspaceId = UUID.randomUUID();
+  private static final UUID dataplaneGroupId = UUID.randomUUID();
+  private static final String mockVersion = "0.2.2";
 
   private StandardSyncPersistence standardSyncPersistence;
 
@@ -93,6 +96,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   private DestinationService destinationService;
   private WorkspaceService workspaceService;
   private OperationService operationService;
+  private DataplaneGroupService dataplaneGroupService;
 
   private StandardSourceDefinition sourceDef1;
   private StandardSourceDefinition sourceDefAlpha;
@@ -110,7 +114,18 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    standardSyncPersistence = new StandardSyncPersistence(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
+
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(dataplaneGroupId)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+
+    standardSyncPersistence = new StandardSyncPersistence(database, dataplaneGroupService);
 
     final var featureFlagClient = mock(TestClient.class);
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -119,7 +134,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final var metricClient = mock(MetricClient.class);
 
-    connectionService = new ConnectionServiceJooqImpl(database);
+    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -144,17 +159,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);
-
-    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
-
-    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
-        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name())
-        .withEnabled(true)
-        .withTombstone(false));
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
@@ -455,6 +459,85 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(Status.DEPRECATED, sync4.getStatus());
   }
 
+  @Test
+  void testGetDataplaneGroupIdFromGeography() throws IOException, JsonValidationException {
+    Geography geography = Geography.AUTO;
+    UUID newDataplaneGroupId = UUID.randomUUID();
+    UUID newWorkspaceId = UUID.randomUUID();
+    UUID newOrganizationId = UUID.randomUUID();
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(new Organization().withOrganizationId(newOrganizationId).withEmail("test@test.test").withName("test"));
+
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(newDataplaneGroupId)
+        .withOrganizationId(newOrganizationId)
+        .withName(geography.name())
+        .withEnabled(true)
+        .withTombstone(false));
+
+    final StandardWorkspace workspace = new StandardWorkspace()
+        .withWorkspaceId(newWorkspaceId)
+        .withName("Another Workspace")
+        .withSlug("another-workspace")
+        .withInitialSetupComplete(true)
+        .withTombstone(false)
+        .withDefaultGeography(geography)
+        .withOrganizationId(newOrganizationId);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    SourceConnection source = createSourceConnection(newWorkspaceId, createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    source.withSourceId(source.getSourceId());
+
+    DestinationConnection destination = createDestinationConnection(
+        newWorkspaceId, createStandardDestDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    destination.withDestinationId(destination.getDestinationId());
+
+    StandardSync connection = createStandardSync(source, destination);
+
+    UUID result = standardSyncPersistence.getDataplaneGroupIdFromGeography(connection, geography);
+
+    assertEquals(newDataplaneGroupId, result);
+  }
+
+  @Test
+  void testGetDataplaneGroupIdFromGeography_FallbackToDefault() throws IOException, JsonValidationException {
+    // No dataplane group exists for this org;
+    // we should fall back to the default org's default dataplane group ID
+    final UUID newWorkspaceId = UUID.randomUUID();
+    final UUID newOrganizationId = UUID.randomUUID();
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(new Organization().withOrganizationId(newOrganizationId).withEmail("test@test.test").withName("test"));
+    final Geography geography = Geography.AUTO;
+
+    final StandardWorkspace workspace = new StandardWorkspace()
+        .withWorkspaceId(newWorkspaceId)
+        .withName("Another Workspace")
+        .withSlug("another-workspace")
+        .withInitialSetupComplete(true)
+        .withTombstone(false)
+        .withDefaultGeography(geography)
+        .withOrganizationId(newOrganizationId);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    SourceConnection source = createSourceConnection(newWorkspaceId, createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    source.withSourceId(source.getSourceId());
+
+    DestinationConnection destination = createDestinationConnection(
+        newWorkspaceId, createStandardDestDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    destination.withDestinationId(destination.getDestinationId());
+
+    final UUID newConnectionId = UUID.randomUUID();
+    StandardSync connection = mock(StandardSync.class);
+    connection.setConnectionId(newConnectionId);
+    connection.setSourceId(source.getSourceId());
+    connection.setDestinationId(destination.getDestinationId());
+    connection.setGeography(geography);
+
+    UUID result = standardSyncPersistence.getDataplaneGroupIdFromGeography(connection, geography);
+
+    assertEquals(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, geography).getId(), result);
+  }
+
   private void createBaseObjects() throws IOException, JsonValidationException {
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
@@ -466,7 +549,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
-    sourceDef1 = createStandardSourceDefinition("0.2.2", ReleaseStage.GENERALLY_AVAILABLE);
+    sourceDef1 = createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE);
     source1 = createSourceConnection(workspaceId, sourceDef1);
 
     final StandardSourceDefinition sourceDef2 = createStandardSourceDefinition("1.1.0", ReleaseStage.GENERALLY_AVAILABLE);

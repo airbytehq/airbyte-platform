@@ -10,6 +10,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_TAG;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
@@ -36,8 +37,10 @@ import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.data.config.OrganizationConstantsKt;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
 import io.airbyte.db.Database;
@@ -56,6 +59,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +68,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -77,18 +82,24 @@ import org.jooq.SelectJoinStep;
 import org.jooq.TableField;
 import org.jooq.impl.DSL;
 import org.jooq.impl.TableImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class ConnectionServiceJooqImpl implements ConnectionService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String OPERATION_IDS_AGG_DELIMITER = ",";
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
 
   private final ExceptionWrappingDatabase database;
+  private final DataplaneGroupService dataplaneGroupService;
 
   @VisibleForTesting
-  public ConnectionServiceJooqImpl(@Named("configDatabase") final Database database) {
+  public ConnectionServiceJooqImpl(@Named("configDatabase") final Database database, final DataplaneGroupService dataplaneGroupService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.dataplaneGroupService = dataplaneGroupService;
   }
 
   /**
@@ -171,13 +182,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
 
         // inner join with all connection_operation rows that match the connection's id
         .join(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         // The schema management can be non-existent for a connection id, thus we need to do a left join
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         // only keep rows for connections that have an operationId that matches the input.
         // needs to be a sub query because we want to keep all operationIds for matching connections
         // in the main query
@@ -186,7 +198,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 .where(CONNECTION_OPERATION.OPERATION_ID.eq(operationId))))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -224,7 +236,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -234,6 +246,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         // join with source actors so that we can filter by workspaceId
         .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        // join with dataplane_group to get the dataplane group name (formerly geography)
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(ACTOR.WORKSPACE_ID.eq(standardSyncQuery.workspaceId())
             .and(standardSyncQuery.destinationId() == null || standardSyncQuery.destinationId().isEmpty() ? noCondition()
                 : CONNECTION.DESTINATION_ID.in(standardSyncQuery.destinationId()))
@@ -244,7 +258,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                     StatusType.deprecated)))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -289,7 +303,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
             ACTOR.WORKSPACE_ID,
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -301,6 +315,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         // The schema management can be non-existent for a connection id, thus we need to do a left join
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(CONNECTION_TAG).on(CONNECTION_TAG.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(ACTOR.WORKSPACE_ID.in(standardSyncsQueryPaginated.workspaceIds())
             .and(standardSyncsQueryPaginated.destinationId() == null || standardSyncsQueryPaginated.destinationId().isEmpty() ? noCondition()
                 : CONNECTION.DESTINATION_ID.in(standardSyncsQueryPaginated.destinationId()))
@@ -311,7 +326,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 ? noCondition()
                 : CONNECTION_TAG.TAG_ID.in(standardSyncsQueryPaginated.tagIds())))
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE))
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+            DATAPLANE_GROUP.NAME))
         .limit(standardSyncsQueryPaginated.pageSize())
         .offset(standardSyncsQueryPaginated.rowOffset())
         .fetch();
@@ -336,13 +352,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.SOURCE_ID.eq(sourceId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -365,13 +382,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.DESTINATION_ID.eq(destinationId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -395,14 +413,15 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.SOURCE_ID.in(sourceIds)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
             .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -428,14 +447,15 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.DESTINATION_ID.in(destinationIds)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
             .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive))) // Close parentheses properly here
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -467,15 +487,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
         .leftJoin(SCHEMA_MANAGEMENT).on(CONNECTION.ID.eq(SCHEMA_MANAGEMENT.CONNECTION_ID))
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
             .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -527,11 +548,18 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    */
   @Override
   public Geography getGeographyForConnection(final UUID connectionId) throws IOException {
-    return database.query(ctx -> ctx.select(CONNECTION.GEOGRAPHY)
+    final List<String> geographyString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
+        .leftJoin(DATAPLANE_GROUP)
+        .on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID)))
         .where(CONNECTION.ID.eq(connectionId))
-        .limit(1))
-        .fetchOneInto(Geography.class);
+        .fetchInto(String.class);
+
+    if (geographyString.isEmpty()) {
+      throw new RuntimeException(String.format("Geography wasn't resolved for connectionId %s",
+          connectionId));
+    }
+    return Geography.fromValue(geographyString.getFirst().toLowerCase());
   }
 
   /**
@@ -678,10 +706,11 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
           .from(CONNECTION)
           // The schema management can be non-existent for a connection id, thus we need to do a left join
-          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
+          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+          .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID));
       if (configId.isPresent()) {
         return query.where(CONNECTION.ID.eq(configId.get())).fetch();
       }
@@ -774,6 +803,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
               io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+          .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
 
@@ -824,6 +854,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
           .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
               io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+          .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
@@ -1022,8 +1053,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   public static List<StandardSync> getNonDeprecatedConnectionsForActor(final UUID actorId, final DSLContext ctx) {
-    return ctx.select(CONNECTION.asterisk())
+    return ctx.select(CONNECTION.asterisk(), DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
+        .leftJoin(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.SOURCE_ID.eq(actorId).or(CONNECTION.DESTINATION_ID.eq(actorId)).and(CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         .fetch().stream()
         .map(record -> record.into(CONNECTION).into(StandardSync.class))
@@ -1156,6 +1188,31 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
               .withConnectionIds(Arrays.asList(record.get("connection_ids", UUID[].class)))
               .withPrefix(record.get("prefix", String.class)));
     });
+  }
+
+  @VisibleForTesting
+  UUID getDataplaneGroupIdFromGeography(StandardSync connection, Geography geography) {
+    UUID organizationId;
+    try {
+      organizationId = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)
+          .from(ACTOR)
+          .join(WORKSPACE)
+          .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+          .where(ACTOR.ID.eq(connection.getSourceId()))
+          .fetchOneInto(UUID.class));
+    } catch (IOException e) {
+      throw new IllegalStateException("No organization found for actor " + connection.getSourceId(), e);
+    }
+    try {
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(organizationId, geography).getId();
+    } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
+      log.error(
+          String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
+              organizationId, geography),
+          e);
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
+          .getId();
+    }
   }
 
 }

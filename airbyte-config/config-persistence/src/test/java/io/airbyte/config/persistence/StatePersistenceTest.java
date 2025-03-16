@@ -94,6 +94,20 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final var metricClient = mock(MetricClient.class);
+
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
+
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    for (final Geography geography : Geography.values()) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography.name())
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+
     connectionService = mock(ConnectionService.class);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -101,7 +115,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         new ActorDefinitionServiceJooqImpl(database),
         mock(ScopedConfigurationService.class),
         connectionTimelineEventService);
-    connectionService = new ConnectionServiceJooqImpl(database);
+    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
@@ -120,19 +134,6 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);
-
-    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
-
-    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    for (final Geography geography : Geography.values()) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography.name())
-          .withEnabled(true)
-          .withTombstone(false));
-    }
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,

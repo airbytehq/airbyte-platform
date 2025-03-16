@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
@@ -15,6 +16,9 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DataplaneGroup;
+import io.airbyte.config.Geography;
+import io.airbyte.config.Organization;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -24,12 +28,15 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DataplaneGroupService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -63,7 +70,19 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("test")
+        .withEmail("test@test.com"));
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName(Geography.AUTO.name())
+        .withEnabled(true)
+        .withTombstone(false));
+    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);

@@ -97,7 +97,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
                                   final MetricClient metricClient,
                                   final DataplaneGroupService dataplaneGroupService) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.connectionService = new ConnectionServiceJooqImpl(database);
+    this.connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;

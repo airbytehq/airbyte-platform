@@ -187,6 +187,7 @@ create table "public"."connection" (
   "non_breaking_change_preference" "non_breaking_change_preference_type" not null default cast('ignore' as non_breaking_change_preference_type),
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
+  "dataplane_group_id" uuid not null,
   constraint "connection_pkey" primary key ("id")
 );
 create table "public"."connection_operation" (

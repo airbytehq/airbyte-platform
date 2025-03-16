@@ -19,6 +19,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -92,7 +93,20 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    connectionService = spy(new ConnectionServiceJooqImpl(database));
+    organizationService.writeOrganization(new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID).withName("Test Organization").withEmail("test@test.com"));
+
+    dataplaneGroupService = spy(new DataplaneGroupServiceTestJooqImpl(database));
+    for (final Geography geography : Geography.values()) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography.name())
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+
+    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
 
     sourceService = spy(
         new SourceServiceJooqImpl(
@@ -126,14 +140,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
             metricClient));
 
     organizationService.writeOrganization(MockData.defaultOrganization());
-
-    dataplaneGroupService = spy(new DataplaneGroupServiceTestJooqImpl(database));
-    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
-        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name())
-        .withEnabled(true)
-        .withTombstone(false));
 
     workspaceService = spy(
         new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,

@@ -206,7 +206,7 @@ open class RepositoryTestSetup {
           .withWorkspaceId(workspaceId),
       )
 
-      val connectionRepo = StandardSyncPersistence(database)
+      val connectionRepo = StandardSyncPersistence(database, dataplaneGroupService)
       connectionRepo.writeStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
