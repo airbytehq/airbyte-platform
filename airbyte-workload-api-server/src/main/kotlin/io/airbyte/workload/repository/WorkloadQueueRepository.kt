@@ -7,6 +7,7 @@ package io.airbyte.workload.repository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadQueueItem
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
+import io.micronaut.data.annotation.Join
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -15,9 +16,10 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES)
 interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> {
+  @Join(value = "workloadLabels")
   @Query(
     """
-      WITH ids AS MATERIALIZED (
+      WITH polled_q_ids AS MATERIALIZED (
          SELECT id FROM workload_queue
             WHERE
               (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
@@ -30,17 +32,26 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
          ORDER BY created_at ASC
          LIMIT :quantity
          FOR UPDATE SKIP LOCKED
-      )
-      UPDATE workload_queue AS q
-         SET
-            poll_deadline = now() + (:redeliveryWindowMins * interval '1 minute'),
-            updated_at = now()
-      FROM workload w
-         WHERE q.id = ANY(SELECT id FROM ids)
-         AND w.id = q.workload_id
-      RETURNING
-         w.*
-      ;
+      ),
+      workloads AS (
+        UPDATE workload_queue AS q
+           SET
+              poll_deadline = now() + (:redeliveryWindowMins * interval '1 minute'),
+              updated_at = now()
+        FROM workload w
+              WHERE q.id = ANY(SELECT id FROM polled_q_ids)
+              AND w.id = q.workload_id
+        RETURNING
+           w.*
+	    )
+    SELECT
+        workloads.*,
+        l.id AS workload_labels_id,
+        l.key AS workload_labels_key,
+        l.value AS workload_labels_value
+    FROM workloads
+        LEFT JOIN workload_label l
+            ON l.workload_id = workloads.id;
     """,
   )
   fun pollWorkloadQueue(

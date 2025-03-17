@@ -955,6 +955,7 @@ internal class WorkloadRepositoryTest {
             it.createdAt = it.createdAt?.truncatedTo(ChronoUnit.MILLIS)
             it.updatedAt = it.updatedAt?.truncatedTo(ChronoUnit.MILLIS)
             it.deadline = it.deadline?.truncatedTo(ChronoUnit.MILLIS)
+            it.workloadLabels = it.workloadLabels ?: listOf()
             it
           }.sortedBy { it.id }
       val bGroomed =
@@ -963,6 +964,7 @@ internal class WorkloadRepositoryTest {
             it.createdAt = it.createdAt?.truncatedTo(ChronoUnit.MILLIS)
             it.updatedAt = it.updatedAt?.truncatedTo(ChronoUnit.MILLIS)
             it.deadline = it.deadline?.truncatedTo(ChronoUnit.MILLIS)
+            it.workloadLabels = it.workloadLabels ?: listOf()
             it
           }.sortedBy { it.id }
 
