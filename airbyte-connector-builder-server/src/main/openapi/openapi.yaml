@@ -131,6 +131,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/health:
     get:
       tags:
@@ -454,6 +455,13 @@ components:
         cdk_version:
           type: string
           description: The version of the CDK used by the server
+        capabilities:
+          type: object
+          description: The capabilities of the server
+          properties:
+            custom_code_execution:
+              type: boolean
+              description: Whether the server allows custom code execution
     ConnectorConfig:
       type: object
       description: The config blob containing the user inputs for testing

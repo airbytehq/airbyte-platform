@@ -151,6 +151,7 @@ airbyte:
     write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
+    enable-unsafe-code: ${AIRBYTE_ENABLE_UNSAFE_CODE:false}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
   role: ${AIRBYTE_ROLE:}
   worker:

@@ -7,6 +7,7 @@ package io.airbyte.connector_builder.command_runner;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.file_writer.AirbyteArgument;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriter;
@@ -35,6 +36,8 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   // Custom components must be in one of these modules to be loaded
   private final String pythonPath;
 
+  private final Boolean enableUnsafeCodeGlobalOverride;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(SynchronousPythonCdkCommandRunner.class);
 
   @Inject
@@ -43,12 +46,14 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
                                            final AirbyteStreamFactory streamFactory,
                                            final String python,
                                            final String cdkEntrypoint,
-                                           final String pythonPath) {
+                                           final String pythonPath,
+                                           final Boolean enableUnsafeCodeGlobalOverride) {
     this.writer = writer;
     this.streamFactory = streamFactory;
     this.python = python; // TODO: Remove this and invoke directly
     this.cdkEntrypoint = cdkEntrypoint;
     this.pythonPath = pythonPath; // TODO: Remove this and invoke directly
+    this.enableUnsafeCodeGlobalOverride = enableUnsafeCodeGlobalOverride;
   }
 
   /**
@@ -97,6 +102,7 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
     LOGGER.debug("Preparing command for {}: {}", cdkCommand, Joiner.on(" ").join(command));
     final ProcessBuilder processBuilder = new ProcessBuilder(command);
     addPythonPathToSubprocessEnvironment(processBuilder);
+    applyUnsafeCodeExecutionVariable(processBuilder);
 
     final AirbyteCdkPythonProcess cdkProcess = new AirbyteCdkPythonProcess(
         writer, config, catalog, processBuilder);
@@ -113,6 +119,17 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   // TODO: Remove this and invoke directly
   private void addPythonPathToSubprocessEnvironment(ProcessBuilder processBuilder) {
     processBuilder.environment().put("PYTHONPATH", this.pythonPath);
+  }
+
+  /**
+   * Enable unsafe code execution in the CDK. This method sets an environment variable to allow custom
+   * code execution in the CDK. It should only be used in development environments or run in a secure
+   * environment.
+   *
+   * @param processBuilder the ProcessBuilder instance to which the environment variable will be added
+   */
+  private void applyUnsafeCodeExecutionVariable(ProcessBuilder processBuilder) {
+    processBuilder.environment().put(EnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), enableUnsafeCodeGlobalOverride.toString());
   }
 
 }

@@ -9,8 +9,8 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -115,7 +115,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
-  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
 
   return (
     <Sidebar yamlSelected={false}>

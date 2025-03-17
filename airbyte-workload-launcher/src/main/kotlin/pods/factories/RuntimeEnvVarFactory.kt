@@ -54,6 +54,7 @@ class RuntimeEnvVarFactory(
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
   @Value("\${airbyte.container.orchestrator.java-opts}") private val containerOrchestratorJavaOpts: String,
+  @Value("\${airbyte.container.orchestrator.enable-unsafe-code}") private val enableUnsafeCodeGlobalOverride: Boolean,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val airbyteEdition: Configs.AirbyteEdition,
@@ -216,8 +217,15 @@ class RuntimeEnvVarFactory(
   internal fun getDeclarativeCustomCodeSupportEnvVars(context: Context): List<EnvVar> {
     val useAllowCustomCode = featureFlagClient.boolVariation(UseAllowCustomCode, context)
 
+    // Turn on unsafe code execution if the feature flag is enabled or the global override is set.
+    // PROBLEM TO WORKAROUND: We do not haven't the ability to set feature flags for OSS/Enterprise customers.
+    // HACK: We in stead use a global override in the form of an environment variable AIRBYTE_ENABLE_UNSAFE_CODE.
+    //       Any customer can set this environment variable to enable unsafe code execution.
+    // WHEN TO REMOVE: When we have the ability to set feature flags for OSS/Enterprise customers.
+    val useUnsafeCode = useAllowCustomCode || enableUnsafeCodeGlobalOverride
+
     return listOf(
-      EnvVar(EnvVarConstants.AIRBYTE_ALLOW_CUSTOM_CODE_ENV_VAR, useAllowCustomCode.toString(), null),
+      EnvVar(EnvVarConstants.AIRBYTE_ENABLE_UNSAFE_CODE_ENV_VAR, useUnsafeCode.toString(), null),
     )
   }
 

@@ -9,9 +9,9 @@ import { ExternalLink } from "components/ui/Link";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCustomComponentsEnabled } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
-import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { YamlEditor } from "./YamlEditor";
@@ -41,7 +41,7 @@ export const YamlManifestEditor: React.FC = () => {
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
   const debouncedUpdateJsonManifest = useMemo(() => debounce(updateJsonManifest, 200), [updateJsonManifest]);
 
-  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const [selectedTab, setSelectedTab] = useState(TAB_MANIFEST);
 
   return (

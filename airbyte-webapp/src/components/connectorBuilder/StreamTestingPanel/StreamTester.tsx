@@ -9,7 +9,7 @@ import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Text } from "components/ui/Text";
 
-import { HttpError } from "core/api";
+import { HttpError, useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -76,6 +76,8 @@ export const StreamTester: React.FC<{
     [getStreamTestMetadataStatus, streamName]
   );
   const streamHasCustomType = getStreamHasCustomType(streamName);
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 
   const logNumByType = useMemo(
     () =>
@@ -149,7 +151,7 @@ export const StreamTester: React.FC<{
         </Text>
       )}
 
-      {streamHasCustomType && (
+      {cantProcessCustomComponents && (
         <Message type="error" text={formatMessage({ id: "connectorBuilder.warnings.containsCustomComponent" })} />
       )}
 
@@ -168,11 +170,11 @@ export const StreamTester: React.FC<{
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
         className={
-          !streamHasCustomType && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+          !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
             ? styles.pulsateButton
             : undefined
         }
-        forceDisabled={streamHasCustomType}
+        forceDisabled={cantProcessCustomComponents}
         requestType={testStreamRequestType}
       />
 
