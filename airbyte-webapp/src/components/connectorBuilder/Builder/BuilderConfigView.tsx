@@ -6,7 +6,7 @@ import { Heading } from "components/ui/Heading";
 import styles from "./BuilderConfigView.module.scss";
 
 interface BuilderConfigViewProps {
-  heading?: string;
+  heading?: React.ReactNode;
   className?: string;
 }
 

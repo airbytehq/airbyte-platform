@@ -2,11 +2,15 @@ import classNames from "classnames";
 import debounce from "lodash/debounce";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
 
 import { FlexItem } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
+import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -54,7 +58,23 @@ export const YamlManifestEditor: React.FC = () => {
               <ButtonTab
                 key={tab}
                 id={tab}
-                name={tab}
+                name={
+                  <>
+                    {tab}
+                    {tab === TAB_COMPONENTS && (
+                      <InfoTooltip placement="top">
+                        <FormattedMessage
+                          id="connectorBuilder.customComponents.tooltip"
+                          values={{
+                            lnk: (...lnk: React.ReactNode[]) => (
+                              <ExternalLink href={links.connectorBuilderCustomComponents}>{lnk}</ExternalLink>
+                            ),
+                          }}
+                        />
+                      </InfoTooltip>
+                    )}
+                  </>
+                }
                 className={classNames(styles.editorTab, { [styles.activeTab]: selectedTab === tab })}
                 isActive={selectedTab === tab}
                 onSelect={() => {
