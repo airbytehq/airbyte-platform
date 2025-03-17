@@ -6154,7 +6154,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorTemplateList"
+                $ref: "#/components/schemas/ActorTemplateRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/actor_masks/get:
@@ -17393,7 +17393,6 @@ components:
         - name
         - icon
         - sourceDefintionVersionId
-        - sourceType
         - streamSelection
         - actorProperties
       properties:
@@ -17408,8 +17407,6 @@ components:
         sourceDefintionVersionId:
           type: string
           format: uuid
-        sourceType:
-          $ref: "#/components/schemas/ActorTypeEnum"
         streamSelection:
           type: array
           items:

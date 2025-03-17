@@ -1,3 +1,4 @@
+export * from "./embeddedWidget";
 export * from "./actorDefinitionVersions";
 export * from "./applications";
 export * from "./auth";

@@ -31,6 +31,7 @@ export const defaultCloudFeatures = [
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.EmailNotifications,
+  FeatureItem.EmbeddedUI,
   FeatureItem.ExternalInvitations,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,

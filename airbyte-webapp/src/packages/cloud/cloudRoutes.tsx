@@ -19,6 +19,7 @@ import { useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
+import { EmbeddedSourceCreatePage } from "pages/embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import {
   SourcesPage as SettingsSourcesPage,
@@ -138,6 +139,7 @@ const MainRoutes: React.FC = () => {
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
     </DefaultErrorBoundary>
@@ -146,6 +148,7 @@ const MainRoutes: React.FC = () => {
 
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
+  const allowEmbeddedWidgetContent = useFeature(FeatureItem.EmbeddedUI);
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;
@@ -155,6 +158,12 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
+      {allowEmbeddedWidgetContent && (
+        <Route
+          path={`${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.EmbeddedWidget}/*`}
+          element={<EmbeddedSourceCreatePage />}
+        />
+      )}
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
