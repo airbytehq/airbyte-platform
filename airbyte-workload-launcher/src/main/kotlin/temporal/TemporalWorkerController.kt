@@ -32,7 +32,8 @@ class TemporalWorkerController(
   @Named("workloadLauncherHighPriorityQueue") private val launcherHighPriorityQueue: String,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
-  private val temporalLauncherWorker: TemporalLauncherWorker,
+//  private val pollingConsumer: WorkloadApiQueueConsumer, // Uncomment and comment the line below to swap consumers. TODO: wire this up properly.
+  private val pollingConsumer: TemporalLauncherWorker,
 ) : ApplicationEventListener<DataplaneConfig> {
   private val started: AtomicBoolean = AtomicBoolean(false)
   private var currentDataplaneConfig: DataplaneConfig? = null
@@ -44,7 +45,7 @@ class TemporalWorkerController(
     if (useDataplaneAuthNFlow()) {
       updateEnabledStatus()
     } else {
-      temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
+      pollingConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
       checkWorkerStatus()
     }
   }
@@ -60,9 +61,9 @@ class TemporalWorkerController(
       val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
       val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
       if (shouldRun) {
-        temporalLauncherWorker.resumePolling()
+        pollingConsumer.resumePolling()
       } else {
-        temporalLauncherWorker.suspendPolling()
+        pollingConsumer.suspendPolling()
       }
     }
   }
@@ -76,7 +77,7 @@ class TemporalWorkerController(
   private fun useDataplaneAuthNFlow(): Boolean = featureFlagClient.boolVariation(WorkloadLauncherUseDataPlaneAuthNFlow, PlaneName(dataPlaneName))
 
   private fun reportPollerStatus(queueName: String) {
-    val isPollingSuspended = temporalLauncherWorker.isSuspended(queueName)
+    val isPollingSuspended = pollingConsumer.isSuspended(queueName)
     metricClient.count(
       metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POLLER_STATUS,
       attributes =
@@ -89,7 +90,7 @@ class TemporalWorkerController(
 
   override fun onApplicationEvent(event: DataplaneConfig) {
     if (currentDataplaneConfig == null) {
-      temporalLauncherWorker.initialize(launcherQueue, launcherHighPriorityQueue)
+      pollingConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
     }
     currentDataplaneConfig = event
     updateEnabledStatus()
@@ -106,9 +107,9 @@ class TemporalWorkerController(
     val shouldPollerConsume = currentDataplaneConfig?.dataplaneEnabled ?: false
     if (shouldPollerConsume != pollersConsuming) {
       if (shouldPollerConsume) {
-        temporalLauncherWorker.resumePolling()
+        pollingConsumer.resumePolling()
       } else {
-        temporalLauncherWorker.suspendPolling()
+        pollingConsumer.suspendPolling()
       }
       pollersConsuming = shouldPollerConsume
     }

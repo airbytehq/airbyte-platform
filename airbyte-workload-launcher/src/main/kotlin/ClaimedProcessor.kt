@@ -45,7 +45,7 @@ class ClaimedProcessor(
   private val pipe: LaunchPipeline,
   private val metricClient: MetricClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
+  @Value("\${airbyte.workload-launcher.parallelism.default-queue}") parallelism: Int,
   private val claimProcessorTracker: ClaimProcessorTracker,
   @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration = 5.seconds.toJavaDuration(),
   @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration = 60.seconds.toJavaDuration(),

@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.workload.launcher.pipeline.consumer
+
+import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority
+import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.model.toInternalApi
+import reactor.core.publisher.Flux
+import java.time.Duration
+import kotlin.concurrent.Volatile
+
+/**
+ * Polls the workload api backed queue with given configuration.
+ * Emits a Flux<LauncherInput> for consumption by the pipeline.
+ *
+ * Starts in a suspended state until #resumePolling is called.
+ */
+class WorkloadApiQueuePoller(
+  private val workloadApiClient: WorkloadApiClient,
+  private val pollSizeItems: Int,
+  private val pollIntervalSeconds: Long,
+  private val priority: WorkloadPriority,
+) {
+  @Volatile
+  private var suspended = true
+  private var initialized = false
+  private lateinit var groupId: String
+  lateinit var flux: Flux<LauncherInput>
+    private set
+
+  fun initialize(groupId: String): WorkloadApiQueuePoller {
+    if (initialized) return this
+
+    this.groupId = groupId
+    this.flux = buildInputFlux()
+    initialized = true
+
+    return this
+  }
+
+  fun suspendPolling() {
+    suspended = true
+  }
+
+  fun resumePolling() {
+    suspended = false
+  }
+
+  fun isSuspended(): Boolean = suspended
+
+  private fun buildInputFlux(): Flux<LauncherInput> {
+    val interval = Flux.interval(Duration.ofSeconds(pollIntervalSeconds))
+
+    val pollFlux: Flux<Workload> =
+      Flux.create { sink ->
+        val results = workloadApiClient.pollQueue(groupId, priority, pollSizeItems)
+        results.forEach(sink::next)
+        sink.complete()
+      }
+
+    return interval
+      .takeWhile { !suspended }
+      .flatMap { pollFlux }
+      .map(this::workloadToInputMessage)
+  }
+
+  private fun workloadToInputMessage(workload: Workload): LauncherInput =
+    LauncherInput(
+      workloadId = workload.id,
+      workloadInput = workload.inputPayload,
+      labels = workload.labels.associate { it.key to it.value },
+      logPath = workload.logPath,
+      mutexKey = workload.mutexKey,
+      workloadType = workload.type.toInternalApi(),
+      autoId = workload.autoId,
+    )
+}

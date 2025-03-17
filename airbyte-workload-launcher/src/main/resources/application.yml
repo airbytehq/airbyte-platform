@@ -95,15 +95,23 @@ airbyte:
     heartbeat-rate: PT30S
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
-    parallelism-max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
+    parallelism:
+      default-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      high-priority-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
     temporal:
       default-queue:
-        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
       high-priority-queue:
-        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
     network-policy-introspection: false
+    consumer:
+      default-queue:
+        poll-interval-seconds: 5
+        poll-size-items: 10
+      high-priority-queue:
+        poll-interval-seconds: 1
+        poll-size-items: 10
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:

@@ -6,9 +6,12 @@ package io.airbyte.workload.launcher.client
 
 import com.amazonaws.internal.ExceptionUtils
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
+import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority
+import io.airbyte.workload.api.client.model.generated.WorkloadQueuePollRequest
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -86,5 +89,23 @@ class WorkloadApiClient(
     }
 
     return result
+  }
+
+  fun pollQueue(
+    groupId: String?,
+    priority: WorkloadPriority?,
+    pollSizeItems: Int,
+  ): List<Workload> {
+    val req = WorkloadQueuePollRequest(pollSizeItems, groupId, priority)
+
+    val resp = workloadApiClient.workloadApi.pollWorkloadQueue(req)
+
+    if (resp.workloads.isNotEmpty()) {
+      logger.info {
+        "$groupId-$priority resp: $resp"
+      }
+    }
+
+    return resp.workloads
   }
 }

@@ -20,9 +20,9 @@ import jakarta.inject.Singleton
 
 @Singleton
 class TemporalLauncherWorker(
-  @Property(name = "airbyte.workload-launcher.temporal.default-queue.parallelism") private val defaultParalellism: Int,
+  @Property(name = "airbyte.workload-launcher.parallelism.default-queue") private val defaultParalellism: Int,
   @Property(name = "airbyte.workload-launcher.temporal.default-queue.workflow-parallelism") private val defaultWorkflowParalellism: Int,
-  @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.parallelism") private val highPrioParalellism: Int,
+  @Property(name = "airbyte.workload-launcher.parallelism.high-priority-queue") private val highPrioParalellism: Int,
   @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.workflow-parallelism") private val highPrioWorkflowParalellism: Int,
   @Named("starterActivities") private val workloadStarterActivities: QueueActivity<LauncherInputMessage>,
   private val temporalProxyHelper: TemporalProxyHelper,
