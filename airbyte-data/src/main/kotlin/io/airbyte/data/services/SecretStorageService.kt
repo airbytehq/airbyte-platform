@@ -4,12 +4,13 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.config.SecretStorage
-import io.airbyte.config.SecretStorageScopeType
+import io.airbyte.domain.models.SecretStorage
+import io.airbyte.domain.models.SecretStorageId
+import io.airbyte.domain.models.SecretStorageScopeType
 import java.util.UUID
 
 interface SecretStorageService {
-  fun findById(id: UUID): SecretStorage?
+  fun findById(id: SecretStorageId): SecretStorage?
 
   fun listByScopeTypeAndScopeId(
     scopeType: SecretStorageScopeType,

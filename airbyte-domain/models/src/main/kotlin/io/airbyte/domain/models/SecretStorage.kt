@@ -2,8 +2,9 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config
+package io.airbyte.domain.models
 
+import com.fasterxml.jackson.databind.JsonNode
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -15,7 +16,7 @@ import java.util.UUID
  * storage as its scope, and references a secret that contains the secret storage's configuration.
  */
 data class SecretStorage(
-  val id: UUID?,
+  val id: SecretStorageId? = null,
   val scopeType: SecretStorageScopeType,
   val scopeId: UUID,
   val descriptor: String,
@@ -40,3 +41,8 @@ enum class SecretStorageType {
   VAULT,
   LOCAL_TESTING,
 }
+
+data class SecretStorageWithConfig(
+  val secretStorage: SecretStorage,
+  val config: JsonNode?,
+)

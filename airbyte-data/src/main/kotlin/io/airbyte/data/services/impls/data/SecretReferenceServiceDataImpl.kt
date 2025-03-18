@@ -4,12 +4,12 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.SecretReference
-import io.airbyte.config.SecretReferenceScopeType
 import io.airbyte.data.repositories.SecretReferenceRepository
 import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.domain.models.SecretReference
+import io.airbyte.domain.models.SecretReferenceScopeType
 import jakarta.inject.Singleton
 import java.util.UUID
 

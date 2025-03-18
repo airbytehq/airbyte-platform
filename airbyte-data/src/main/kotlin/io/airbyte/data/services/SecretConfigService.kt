@@ -4,9 +4,9 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.config.SecretConfig
-import java.util.UUID
+import io.airbyte.domain.models.SecretConfig
+import io.airbyte.domain.models.SecretConfigId
 
 interface SecretConfigService {
-  fun findById(id: UUID): SecretConfig?
+  fun findById(id: SecretConfigId): SecretConfig?
 }

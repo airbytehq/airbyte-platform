@@ -4,16 +4,17 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
-import io.airbyte.config.SecretStorage as ModelSecretStorage
-import io.airbyte.config.SecretStorageScopeType as ModelScopeType
-import io.airbyte.config.SecretStorageType as ModelStorageType
+import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.data.repositories.entities.SecretStorage as EntitySecretStorage
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageScopeType as EntityScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageType as EntityStorageType
+import io.airbyte.domain.models.SecretStorage as ModelSecretStorage
+import io.airbyte.domain.models.SecretStorageScopeType as ModelScopeType
+import io.airbyte.domain.models.SecretStorageType as ModelStorageType
 
 fun EntitySecretStorage.toConfigModel(): ModelSecretStorage =
   ModelSecretStorage(
-    id = this.id,
+    id = this.id?.let { SecretStorageId(it) },
     scopeType = this.scopeType.toConfigModel(),
     scopeId = this.scopeId,
     descriptor = this.descriptor,

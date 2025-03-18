@@ -4,16 +4,16 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.SecretConfig
 import io.airbyte.data.repositories.SecretConfigRepository
 import io.airbyte.data.services.SecretConfigService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.domain.models.SecretConfig
+import io.airbyte.domain.models.SecretConfigId
 import jakarta.inject.Singleton
-import java.util.UUID
 
 @Singleton
 class SecretConfigServiceDataImpl(
   private val secretConfigRepository: SecretConfigRepository,
 ) : SecretConfigService {
-  override fun findById(id: UUID): SecretConfig? = secretConfigRepository.findById(id).orElse(null)?.toConfigModel()
+  override fun findById(id: SecretConfigId): SecretConfig? = secretConfigRepository.findById(id.value).orElse(null)?.toConfigModel()
 }

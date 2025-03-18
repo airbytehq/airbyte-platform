@@ -4,12 +4,13 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.SecretStorage
-import io.airbyte.config.SecretStorageScopeType
 import io.airbyte.data.repositories.SecretStorageRepository
 import io.airbyte.data.services.SecretStorageService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.domain.models.SecretStorage
+import io.airbyte.domain.models.SecretStorageId
+import io.airbyte.domain.models.SecretStorageScopeType
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -17,7 +18,7 @@ import java.util.UUID
 class SecretStorageServiceDataImpl(
   private val secretStorageRepository: SecretStorageRepository,
 ) : SecretStorageService {
-  override fun findById(id: UUID): SecretStorage? = secretStorageRepository.findById(id).orElse(null)?.toConfigModel()
+  override fun findById(id: SecretStorageId): SecretStorage? = secretStorageRepository.findById(id.value).orElse(null)?.toConfigModel()
 
   override fun listByScopeTypeAndScopeId(
     scopeType: SecretStorageScopeType,

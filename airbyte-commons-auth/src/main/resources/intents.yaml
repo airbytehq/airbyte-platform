@@ -85,3 +85,9 @@ intents:
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
+
+  ManageSecretStorages:
+    name: Manage secret storages
+    description: Ability to manage secret storages
+    roles:
+      - ADMIN

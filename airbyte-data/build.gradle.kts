@@ -29,6 +29,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.airbyte.protocol)

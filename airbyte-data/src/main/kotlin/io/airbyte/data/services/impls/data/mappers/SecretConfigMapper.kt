@@ -4,12 +4,13 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
-import io.airbyte.config.SecretConfig as ModelSecretConfig
+import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.data.repositories.entities.SecretConfig as EntitySecretConfig
+import io.airbyte.domain.models.SecretConfig as ModelSecretConfig
 
 fun EntitySecretConfig.toConfigModel(): ModelSecretConfig =
   ModelSecretConfig(
-    id = this.id,
+    id = this.id?.let { SecretConfigId(it) },
     secretStorageId = this.secretStorageId,
     descriptor = this.descriptor,
     externalCoordinate = this.externalCoordinate,

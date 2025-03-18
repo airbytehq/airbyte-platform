@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config
+package io.airbyte.domain.models
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -12,7 +12,7 @@ import java.util.UUID
  * The external coordinate describes the location of the secret within the secret storage.
  */
 data class SecretConfig(
-  val id: UUID?,
+  val id: SecretConfigId? = null,
   val secretStorageId: UUID,
   val descriptor: String,
   val externalCoordinate: String,

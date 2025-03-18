@@ -4283,6 +4283,29 @@ paths:
           description: Successful operation
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/get:
+    post:
+      tags:
+        - secret_storage
+      summary: Get secret storage by its id
+      operationId: getSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
@@ -15717,6 +15740,45 @@ components:
           $ref: "#/components/schemas/ScopeId"
     SecretPersistenceConfigurationJson:
       type: object
+    SecretStorageIdRequestBody:
+      description: Request body containing a secret storage ID
+      required:
+        - secretStorageId
+      properties:
+        secretStorageId:
+          $ref: "#/components/schemas/SecretStorageId"
+    SecretStorageId:
+      type: string
+      format: uuid
+    SecretStorageType:
+      type: string
+      enum:
+        - local_testing
+        - google_secret_manager
+        - vault
+        - aws_secrets_manager
+        - azure_key_vault
+    SecretStorageRead:
+      description: Object representing a secret storage
+      required:
+        - id
+        - secretStorageType
+        - isConfiguredFromEnvironment
+        - scopeType
+        - scopeId
+      properties:
+        id:
+          $ref: "#/components/schemas/SecretStorageId"
+        secretStorageType:
+          $ref: "#/components/schemas/SecretStorageType"
+        isConfiguredFromEnvironment:
+          type: boolean
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        config:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
     ApplicationCreate:
       required:
         - name

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config
+package io.airbyte.domain.models
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -17,8 +17,8 @@ import java.util.UUID
  *
  */
 data class SecretReference(
-  val id: UUID?,
-  val secretConfigId: UUID,
+  val id: SecretReferenceId? = null,
+  val secretConfigId: SecretConfigId,
   val scopeType: SecretReferenceScopeType,
   val scopeId: UUID,
   val hydrationPath: String?,

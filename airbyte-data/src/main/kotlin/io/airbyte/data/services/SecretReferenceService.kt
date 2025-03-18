@@ -4,8 +4,8 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.config.SecretReference
-import io.airbyte.config.SecretReferenceScopeType
+import io.airbyte.domain.models.SecretReference
+import io.airbyte.domain.models.SecretReferenceScopeType
 import java.util.UUID
 
 interface SecretReferenceService {

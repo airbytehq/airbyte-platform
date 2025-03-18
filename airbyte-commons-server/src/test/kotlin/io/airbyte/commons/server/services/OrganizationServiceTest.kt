@@ -7,12 +7,12 @@ package io.airbyte.commons.server.services
 import io.airbyte.analytics.BillingTrackingHelper
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.config.ConnectionId
-import io.airbyte.config.OrganizationId
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.config.OrganizationPaymentConfig.SubscriptionStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
+import io.airbyte.domain.models.ConnectionId
+import io.airbyte.domain.models.OrganizationId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
