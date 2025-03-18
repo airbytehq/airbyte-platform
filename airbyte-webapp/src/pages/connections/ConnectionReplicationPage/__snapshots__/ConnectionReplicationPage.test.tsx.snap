@@ -222,6 +222,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                         type="checkbox"
                                       />
                                       <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                         data-icon="minus"
                                         data-testid="mocksvg"
@@ -336,6 +340,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="minus"
                                           data-testid="mocksvg"
@@ -441,6 +449,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -571,6 +583,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="check"
                                           data-testid="mocksvg"
@@ -696,6 +712,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button
@@ -995,6 +1015,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                         type="checkbox"
                                       />
                                       <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                         data-icon="minus"
                                         data-testid="mocksvg"
@@ -1109,6 +1133,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="minus"
                                           data-testid="mocksvg"
@@ -1214,6 +1242,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -1344,6 +1376,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="check"
                                           data-testid="mocksvg"
@@ -1469,6 +1505,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button

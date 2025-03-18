@@ -562,6 +562,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                         type="checkbox"
                                       />
                                       <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
+                                      />
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                         data-icon="minus"
                                         data-testid="mocksvg"
@@ -676,6 +680,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="minus"
                                           data-testid="mocksvg"
@@ -781,6 +789,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -935,6 +947,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           type="checkbox"
                                         />
                                         <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
+                                        />
+                                        <div
                                           class="<removed-for-snapshot-test>"
                                           data-icon="check"
                                           data-testid="mocksvg"
@@ -1084,6 +1100,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button
