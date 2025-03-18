@@ -9,9 +9,6 @@ import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
-import io.airbyte.workload.launcher.pipeline.stages.StageName
-import io.airbyte.workload.launcher.pipeline.stages.model.StageError
-import io.airbyte.workload.launcher.pipeline.stages.model.StageIO
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -53,43 +50,15 @@ internal class WorkloadApiClientTest {
         mutexKey = "",
         autoId = UUID.randomUUID(),
       )
-    val stageIo: StageIO = mockk()
     val requestCapture = slot<WorkloadFailureRequest>()
 
     every { workloadApi.workloadFailure(any()) } returns Unit
-    every { stageIo.msg } returns launcherInput
-    val failure = StageError(stageIo, StageName.LAUNCH, RuntimeException("Cause"))
+    val failure = RuntimeException("Cause")
 
-    workloadApiClient.reportFailure(failure)
+    workloadApiClient.reportFailure(workloadId, failure)
 
     verify(exactly = 1) { workloadApi.workloadFailure(capture(requestCapture)) }
     assertEquals(workloadId, requestCapture.captured.workloadId)
-  }
-
-  @Test
-  internal fun `test that a failure is not reported to the Workload API for the claim stage`() {
-    val workloadId = "workload-id"
-    val launcherInput =
-      LauncherInput(
-        workloadId = workloadId,
-        workloadInput = "",
-        labels = mapOf(),
-        logPath = "",
-        workloadType = WorkloadType.SYNC,
-        mutexKey = "",
-        autoId = UUID.randomUUID(),
-      )
-    val stageIo: StageIO = mockk()
-    val failure: StageError = mockk()
-
-    every { workloadApi.workloadFailure(any()) } returns Unit
-    every { stageIo.msg } returns launcherInput
-    every { failure.stageName } returns StageName.CLAIM
-    every { failure.io } returns stageIo
-
-    workloadApiClient.reportFailure(failure)
-
-    verify(exactly = 0) { workloadApi.workloadFailure(any()) }
   }
 
   @Test

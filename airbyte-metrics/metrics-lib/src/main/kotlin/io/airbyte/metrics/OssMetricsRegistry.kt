@@ -691,6 +691,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_launcher_rehydrate_failure",
     metricDescription = "tracks whenever the launcher rehydrate process failed",
   ),
+  WORKLOAD_LAUNCHER_NON_STAGE_FAILURE(
+    metricName = "workload_launcher_non_stage_failure",
+    metricDescription = "Count of launcher errors occurring outside the staged pipeline",
+  ),
   WORKLOAD_QUEUE_SIZE(
     metricName = "workload_queue_size",
     metricDescription = "used to track the queue size launcher does not processes a workload successfully",

@@ -12,8 +12,6 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.api.client.model.generated.WorkloadQueuePollRequest
-import io.airbyte.workload.launcher.pipeline.stages.StageName
-import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -26,18 +24,15 @@ class WorkloadApiClient(
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
   @Value("\${micronaut.application.name}") private val applicationName: String,
 ) {
-  fun reportFailure(failure: StageError) {
-    // This should never happen, but if it does, we should avoid blowing up.
-    if (failure.stageName == StageName.CLAIM) {
-      logger.warn { "Unexpected StageError for stage: ${StageName.CLAIM}. Ignoring." }
-      return
-    }
-
+  fun reportFailure(
+    workloadId: String,
+    error: Throwable,
+  ) {
     try {
-      updateStatusToFailed(failure.io.msg.workloadId, ExceptionUtils.exceptionStackTrace(failure))
+      updateStatusToFailed(workloadId, ExceptionUtils.exceptionStackTrace(error))
     } catch (e: Exception) {
       logger.warn(e) {
-        "Could not set the status for workload ${failure.io.msg.workloadId} to failed.\n" +
+        "Could not set the status for workload $workloadId to failed.\n" +
           "Exception: $e\n" +
           "message: ${e.message}\n" +
           "stackTrace: ${e.stackTrace}\n"

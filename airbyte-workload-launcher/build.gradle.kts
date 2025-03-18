@@ -69,7 +69,7 @@ dependencies {
   testImplementation(libs.testcontainers.vault)
   testImplementation(libs.jakarta.ws.rs.api)
   testImplementation(libs.kubernetes.mock.server)
-
+  testImplementation(libs.reactor.test)
 }
 
 airbyte {
