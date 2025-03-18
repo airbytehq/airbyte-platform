@@ -23,6 +23,7 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.DestinationInfo;
@@ -193,7 +194,9 @@ class CustomerioNotificationClientTest {
         600,
         0,
         0,
-        RANDOM_INPUT);
+        RANDOM_INPUT,
+        null,
+        null);
     final boolean result =
         customerioNotificationClient.notifyConnectionDisabled(summary, WORKSPACE.getEmail());
 
@@ -285,7 +288,9 @@ class CustomerioNotificationClientTest {
         48,
         0L,
         0L,
-        "Connection to the source failed");
+        "Connection to the source failed",
+        FailureReason.FailureType.CONFIG_ERROR,
+        FailureReason.FailureOrigin.SOURCE);
     String email = "joe@foobar.com";
     String transactionId = "201";
 

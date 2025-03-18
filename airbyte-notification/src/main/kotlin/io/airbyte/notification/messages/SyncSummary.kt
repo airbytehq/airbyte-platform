@@ -4,6 +4,7 @@
 
 package io.airbyte.notification.messages
 
+import io.airbyte.config.FailureReason
 import java.time.Duration
 import java.time.Instant
 
@@ -22,7 +23,10 @@ data class SyncSummary(
   val recordsCommitted: Long,
   val recordsFilteredOut: Long = 0,
   val bytesFilteredOut: Long = 0,
+  // Note: It's a little odd to rename what we call "failure" internally to "error" externally, but we already locked in this terminology and it doesn't feel like it warrants a breaking change.
   val errorMessage: String? = null,
+  val errorType: FailureReason.FailureType? = null,
+  val errorOrigin: FailureReason.FailureOrigin? = null,
 ) {
   fun getDurationInSeconds(): Long? =
     when {

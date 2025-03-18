@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.config.FailureReason;
 import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.DestinationInfo;
 import io.airbyte.notification.messages.SourceInfo;
@@ -107,7 +108,9 @@ class NotificationTest {
         45L,
         0,
         0,
-        "Something failed");
+        "Something failed",
+        FailureReason.FailureType.CONFIG_ERROR,
+        FailureReason.FailureOrigin.DESTINATION);
     Notification notification = new Notification();
     notification.setData(syncSummary);
 
@@ -146,6 +149,8 @@ class NotificationTest {
                                      "bytesFilteredOut":0,
                                      "recordsCommitted":45,
                                      "errorMessage":"Something failed",
+                                     "errorType":"config_error",
+                                     "errorOrigin":"destination",
                                      "bytesEmittedFormatted": "1000 B",
                                      "bytesCommittedFormatted":"90 B",
                                      "success":false,
