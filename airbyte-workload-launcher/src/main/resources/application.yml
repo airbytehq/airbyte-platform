@@ -55,8 +55,8 @@ airbyte:
     rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-credentials:
-    client-id: client-id
-    client-secret: client-secret
+    client-id: ${DATAPLANE_CLIENT_ID:client-id}
+    client-secret: ${DATAPLANE_CLIENT_SECRET:client-secret}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
