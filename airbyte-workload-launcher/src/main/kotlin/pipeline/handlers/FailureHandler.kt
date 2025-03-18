@@ -21,6 +21,7 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import java.util.Optional
 import java.util.function.Function
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -48,6 +49,24 @@ class FailureHandler(
       }
 
       val attrs =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
+          MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS),
+        )
+
+      if (io.receivedAt != null) {
+        metricClient
+          .timer(
+            metric = OssMetricsRegistry.WORKLOAD_LAUNCH_DURATION,
+            attributes =
+              arrayOf(
+                MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
+                MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS),
+              ),
+          )?.record(io.receivedAt!!.elapsedNow().toJavaDuration())
+      }
+
+      val kubeAttrs =
         buildList {
           if (e.cause is KubeClientException) {
             val clientEx = (e.cause as KubeClientException)
@@ -56,13 +75,11 @@ class FailureHandler(
               add(MetricAttribute(MetricTags.KUBE_POD_TYPE_TAG, clientEx.podType.toString()))
             }
           }
-          add(MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()))
-          add(MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS))
         }
 
       metricClient.count(
         metric = OssMetricsRegistry.WORKLOAD_PROCESSED,
-        attributes = attrs.toTypedArray(),
+        attributes = attrs + kubeAttrs.toTypedArray(),
       )
       logger.info { logMsgTemplate.orElse { id -> "Pipeline aborted after error for workload: $id." }.apply(io.msg.workloadId) }
     }

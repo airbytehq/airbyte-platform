@@ -25,7 +25,6 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
 import kotlin.time.TimeSource
-import kotlin.time.toJavaDuration
 
 @Singleton
 class LaunchPipeline(
@@ -42,38 +41,23 @@ class LaunchPipeline(
   private val ctxFactory: LogContextFactory,
 ) {
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
-  fun accept(msg: LauncherInput) {
-    val startTime = TimeSource.Monotonic.markNow()
-    metricClient.count(
-      metric = OssMetricsRegistry.WORKLOAD_RECEIVED,
-      attributes =
-        arrayOf(
-          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
-        ),
-    )
+  fun accept(input: LauncherInput) {
     val disposable =
-      buildPipeline(msg)
+      buildPipeline(input)
         .subscribeOn(Schedulers.immediate())
         .subscribe()
-    metricClient
-      .timer(
-        metric = OssMetricsRegistry.WORKLOAD_LAUNCH_DURATION,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
-          ),
-      )?.record(startTime.elapsedNow().toJavaDuration())
+
     disposable.dispose()
   }
 
   /*
    * Builds an executable pipeline instance from a single input.
    */
-  fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {
-    addTagsToTrace(msg)
-    val input = inputToStageIO(msg)
+  fun buildPipeline(input: LauncherInput): Mono<LaunchStageIO> {
+    ingestMetrics(input)
+    val io = inputToStageIO(input)
 
-    return input
+    return io
       .toMono()
       .flatMap(build)
       .flatMap(claim)
@@ -81,7 +65,7 @@ class LaunchPipeline(
       .flatMap(check)
       .flatMap(mutex)
       .flatMap(launch)
-      .onErrorResume { e -> failureHandler.apply(e, input) }
+      .onErrorResume { e -> failureHandler.apply(e, io) }
       .doOnNext(successHandler::accept)
   }
 
@@ -90,6 +74,7 @@ class LaunchPipeline(
    */
   fun apply(publisher: Flux<LauncherInput>): Flux<LaunchStageIO> =
     publisher
+      .map(this::ingestMetrics)
       .map(this::inputToStageIO)
       .flatMap(build)
       .flatMap(claim)
@@ -100,16 +85,25 @@ class LaunchPipeline(
 //      .onErrorResume { e -> failureHandler.apply(e, input) } // TODO: fix error handling
       .doOnNext(successHandler::accept)
 
-  private fun inputToStageIO(launcherInput: LauncherInput): LaunchStageIO {
-    addTagsToTrace(launcherInput)
-    val loggingCtx = ctxFactory.create(launcherInput)
-    return LaunchStageIO(launcherInput, loggingCtx)
+  private fun inputToStageIO(input: LauncherInput): LaunchStageIO {
+    val loggingCtx = ctxFactory.create(input)
+    return LaunchStageIO(input, loggingCtx, receivedAt = TimeSource.Monotonic.markNow())
   }
 
-  private fun addTagsToTrace(msg: LauncherInput) {
+  private fun ingestMetrics(input: LauncherInput): LauncherInput {
+    metricClient.count(
+      metric = OssMetricsRegistry.WORKLOAD_RECEIVED,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, input.workloadType.toString()),
+        ),
+    )
+
     val commonTags = hashMapOf<String, Any>()
     commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
-    commonTags[MetricTags.WORKLOAD_ID_TAG] = msg.workloadId
+    commonTags[MetricTags.WORKLOAD_ID_TAG] = input.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags)
+
+    return input
   }
 }
