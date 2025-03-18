@@ -5,13 +5,14 @@ import (
 	"slices"
 	"testing"
 
+	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHelmTemplateWithDefaultValues(t *testing.T) {
 
-	chartYaml := renderChart(t, BaseHelmOptions())
-	envMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+	chartYaml := helmtests.RenderChart(t, helmtests.BaseHelmOptions(), chartPath)
+	envMap := helmtests.GetConfigMap(chartYaml, "airbyte-airbyte-env")
 
 	t.Run("storage configs", func(t *testing.T) {
 		assert.Equal(t, envMap.Data["STORAGE_TYPE"], "minio")
@@ -27,14 +28,14 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 
 	t.Run("airbyte-env configmap", func(t *testing.T) {
 		// Make sure the env config map has all (and only) the expected keys.
-		configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+		configMap := helmtests.GetConfigMap(chartYaml, "airbyte-airbyte-env")
 		keys := slices.Collect(maps.Keys(configMap.Data))
 		assert.ElementsMatch(t, keys, commonConfigMapKeys)
 	})
 
 	t.Run("airbyte-secrets secret", func(t *testing.T) {
 		// Make sure the secret has all (and only) the expected keys.
-		secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+		secret := helmtests.GetSecret(chartYaml, "airbyte-airbyte-secrets")
 		keys := slices.Collect(maps.Keys(secret.StringData))
 		assert.ElementsMatch(t, keys, commonSecretkeys)
 	})
@@ -42,53 +43,53 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 	t.Run("the airbyte-airbyte-yml secret is not created by default", func(t *testing.T) {
 		// The airbyte-airbyte-yml secret is not created by default.
 		// The global.airbyteYml value must be set in order to render this resource.
-		assertNoResource(t, chartYaml, "Secret", "airbyte-airbyte-yml")
+		helmtests.AssertNoResource(t, chartYaml, "Secret", "airbyte-airbyte-yml")
 	})
 
 	t.Run("service account is created by default", func(t *testing.T) {
-		assert.NotNil(t, getServiceAccount(chartYaml, "airbyte-admin"))
-		assert.NotNil(t, getRole(chartYaml, "airbyte-admin-role"))
-		getRoleBinding(chartYaml, "airbyte-admin-binding")
+		assert.NotNil(t, helmtests.GetServiceAccount(chartYaml, "airbyte-admin"))
+		assert.NotNil(t, helmtests.GetRole(chartYaml, "airbyte-admin-role"))
+		helmtests.GetRoleBinding(chartYaml, "airbyte-admin-binding")
 	})
 }
 
 func TestAirbyteYmlSecret(t *testing.T) {
 	// The airbyte-airbyte-yml secret is created when the global.airbyteYml value is set.
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	opts.SetFiles = map[string]string{
 		"global.airbyteYml": "fixtures/airbyte.yaml",
 	}
-	chartYml := renderChart(t, opts)
-	secret := getSecret(chartYml, "airbyte-airbyte-yml")
+	chartYml := helmtests.RenderChart(t, opts, chartPath)
+	secret := helmtests.GetSecret(chartYml, "airbyte-airbyte-yml")
 	assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
 	assert.NotEmpty(t, secret.Data["fileContents"])
 }
 
 func TestEnterpriseConfigKeys(t *testing.T) {
-	opts := BaseHelmOptionsForEnterpriseWithValues()
-	chartYaml := renderChart(t, opts)
+	opts := helmtests.BaseHelmOptionsForEnterpriseWithValues()
+	chartYaml := helmtests.RenderChart(t, opts, chartPath)
 
-	configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+	configMap := helmtests.GetConfigMap(chartYaml, "airbyte-airbyte-env")
 	keys := slices.Collect(maps.Keys(configMap.Data))
 	assert.ElementsMatch(t, keys, enterpriseEditionConfigMapKeys)
 
-	secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+	secret := helmtests.GetSecret(chartYaml, "airbyte-airbyte-secrets")
 	keys = slices.Collect(maps.Keys(secret.StringData))
 	assert.ElementsMatch(t, keys, enterpriseEditionSecretKeys)
 }
 
 func TestProConfigKeys(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	opts.SetValues["global.edition"] = "pro"
 	opts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
 	opts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
-	chartYaml := renderChart(t, opts)
+	chartYaml := helmtests.RenderChart(t, opts, chartPath)
 
-	configMap := getConfigMap(chartYaml, "airbyte-airbyte-env")
+	configMap := helmtests.GetConfigMap(chartYaml, "airbyte-airbyte-env")
 	keys := slices.Collect(maps.Keys(configMap.Data))
 	assert.ElementsMatch(t, keys, enterpriseEditionConfigMapKeys)
 
-	secret := getSecret(chartYaml, "airbyte-airbyte-secrets")
+	secret := helmtests.GetSecret(chartYaml, "airbyte-airbyte-secrets")
 	keys = slices.Collect(maps.Keys(secret.StringData))
 	assert.ElementsMatch(t, keys, enterpriseEditionSecretKeys)
 }

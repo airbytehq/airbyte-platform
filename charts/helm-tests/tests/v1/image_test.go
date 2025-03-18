@@ -6,15 +6,16 @@ import (
 	"strings"
 	"testing"
 
+	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func TestImages_Default(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:dev",
@@ -37,10 +38,10 @@ func TestImages_Default(t *testing.T) {
 }
 
 func TestImages_DefaultAllEnabled(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	enableAllImages(opts)
 
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:dev",
@@ -68,11 +69,11 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 }
 
 func TestImages_GlobalTag(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	enableAllImages(opts)
 
 	opts.SetValues["global.image.tag"] = "test-tag"
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:test-tag",
@@ -100,13 +101,13 @@ func TestImages_GlobalTag(t *testing.T) {
 }
 
 func TestImages_GlobalRegistry(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	enableAllImages(opts)
 
 	reg := "http://my-registry/"
 	opts.SetValues["global.image.registry"] = reg
 
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 
 	for _, img := range findAllImages(chart) {
 		if !strings.HasPrefix(img, reg) {
@@ -116,7 +117,7 @@ func TestImages_GlobalRegistry(t *testing.T) {
 
 	// Some images show up in the env config map,
 	// e.g. images that are getting passed into the workload-launcher.
-	env := getConfigMap(chart, "airbyte-airbyte-env")
+	env := helmtests.GetConfigMap(chart, "airbyte-airbyte-env")
 	for k, v := range env.Data {
 		if strings.HasSuffix(k, "_IMAGE") {
 			if !strings.HasPrefix(v, reg) {
@@ -134,15 +135,15 @@ func TestImages_GlobalRegistry(t *testing.T) {
 
 func TestImages_GlobalRegistry_NoTrailingSlash(t *testing.T) {
 	// test that the global registry can have no trailing slash
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	opts.SetValues["global.image.registry"] = "http://my-registry"
-	chart := renderChart(t, opts)
-	s := getDeployment(chart, "airbyte-server")
+	chart := helmtests.RenderChart(t, opts, chartPath)
+	s := helmtests.GetDeployment(chart, "airbyte-server")
 	assert.Equal(t, "http://my-registry/airbyte/server:dev", s.Spec.Template.Spec.Containers[0].Image)
 }
 
 func TestImages_AppTag(t *testing.T) {
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	enableAllImages(opts)
 
 	// This is here to demonstrate that the app image tags
@@ -153,11 +154,11 @@ func TestImages_AppTag(t *testing.T) {
 		"postgresql", "minio", "testWebapp", "temporal-ui",
 		"featureflag-server", "keycloak", "keycloak-setup",
 	}
-	for _, app := range slices.Concat(allApps, moreApps) {
-		setAppOpt(opts, app, "image.tag", "app-tag")
+	for _, app := range slices.Concat(helmtests.AllApps, moreApps) {
+		helmtests.SetAppOpt(opts, app, "image.tag", "app-tag")
 	}
 
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:app-tag",
@@ -187,18 +188,18 @@ func TestImages_AppTag(t *testing.T) {
 
 func TestImages_PullSecrets(t *testing.T) {
 	// If global.imagePullSecrets is set, then all pods should use it.
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	enableAllImages(opts)
 
 	opts.SetValues["global.imagePullSecrets[0].name"] = "test-img-pull-secret-1"
 	opts.SetValues["global.imagePullSecrets[1].name"] = "test-img-pull-secret-2"
-	chart := renderChart(t, opts)
+	chart := helmtests.RenderChart(t, opts, chartPath)
 
-	objs := decodeK8sResources(chart)
+	objs := helmtests.DecodeK8sResources(chart)
 	for _, obj := range objs {
 
-		name := getK8sObjName(obj)
-		podSpec := getPodSpec(obj)
+		name := helmtests.GetK8sObjName(obj)
+		podSpec := helmtests.GetPodSpec(obj)
 		if podSpec == nil {
 			continue
 		}
@@ -215,14 +216,14 @@ func TestImages_PullSecrets(t *testing.T) {
 func TestImages_StringImages(t *testing.T) {
 	// Make sure the imageUrl helper handles the cases where the image value
 	// is a string instead of an object.
-	opts := BaseHelmOptions()
+	opts := helmtests.BaseHelmOptions()
 	opts.SetValues["workload-launcher.containerOrchestrator.image"] = "my-oc"
 	opts.SetValues["workload-launcher.connectorSidecar.image"] = "my-cs"
 	opts.SetValues["workload-launcher.workloadInit.image"] = "my-wi"
 	opts.SetValues["workload-launcher.connectorProfiler.image"] = "my-cp"
 
-	chart := renderChart(t, opts)
-	env := getConfigMap(chart, "airbyte-airbyte-env")
+	chart := helmtests.RenderChart(t, opts, chartPath)
+	env := helmtests.GetConfigMap(chart, "airbyte-airbyte-env")
 	assert.Equal(t, "my-oc", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "my-cs", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "my-wi", env.Data["WORKLOAD_INIT_IMAGE"])
@@ -242,7 +243,7 @@ func enableAllImages(opts *helm.Options) {
 }
 
 func findAllImages(chartYaml string) []string {
-	objs := decodeK8sResources(chartYaml)
+	objs := helmtests.DecodeK8sResources(chartYaml)
 	imageSet := map[string]bool{}
 
 	for _, obj := range objs {
@@ -256,7 +257,7 @@ func findAllImages(chartYaml string) []string {
 			continue
 		}
 
-		podSpec := getPodSpec(obj)
+		podSpec := helmtests.GetPodSpec(obj)
 		if podSpec == nil {
 			continue
 		}

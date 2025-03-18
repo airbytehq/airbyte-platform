@@ -1,4 +1,4 @@
-package tests
+package helmtests
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 )
 
-var allApps = []string{
+var AllApps = []string{
 	"server",
 	"webapp",
 	"connector-builder-server",
@@ -21,7 +21,7 @@ var allApps = []string{
 	"workload-launcher",
 }
 
-func setAppOpt(opts *helm.Options, appName, name, value string) {
+func SetAppOpt(opts *helm.Options, appName, name, value string) {
 	key := fmt.Sprintf("%s.%s", appName, name)
 	opts.SetValues[key] = value
 }

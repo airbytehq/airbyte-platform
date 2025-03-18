@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests/tests"
+	"github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests/tests/v1"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/logger"

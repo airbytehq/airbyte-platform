@@ -1,4 +1,4 @@
-package tests
+package helmtests
 
 import (
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -7,10 +7,10 @@ import (
 
 func BaseHelmOptions() *helm.Options {
 	return &helm.Options{
-		Logger:            logger.Discard,
-		SetValues:         make(map[string]string),
-		SetJsonValues:     make(map[string]string),
-		ExtraArgs:         make(map[string][]string),
+		Logger:        logger.Discard,
+		SetValues:     make(map[string]string),
+		SetJsonValues: make(map[string]string),
+		ExtraArgs:     make(map[string][]string),
 		// BuildDependencies: true,
 	}
 }

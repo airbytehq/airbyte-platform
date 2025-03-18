@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ import (
 
 func TestBasicTopologyConfiguration(t *testing.T) {
 	// use enterprise as a base because it enables more things by default.
-	opts := BaseHelmOptionsForEnterpriseWithValues()
+	opts := helmtests.BaseHelmOptionsForEnterpriseWithValues()
 	opts.SetValues["metrics.enabled"] = "true"
 
 	expectSelector := map[string]string{
@@ -68,24 +69,24 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, app := range allApps {
+	for _, app := range helmtests.AllApps {
 		t.Run(app, func(t *testing.T) {
-			setAppOpt(opts, app, "nodeSelector.machineSize", "xlarge")
-			setAppOpt(opts, app, "nodeSelector.region", "us-west-2")
+			helmtests.SetAppOpt(opts, app, "nodeSelector.machineSize", "xlarge")
+			helmtests.SetAppOpt(opts, app, "nodeSelector.region", "us-west-2")
 
-			setAppOpt(opts, app, "tolerations[0].key", "key1")
-			setAppOpt(opts, app, "tolerations[0].operator", "Equal")
-			setAppOpt(opts, app, "tolerations[0].value", "value1")
-			setAppOpt(opts, app, "tolerations[0].effect", "NoSchedule")
+			helmtests.SetAppOpt(opts, app, "tolerations[0].key", "key1")
+			helmtests.SetAppOpt(opts, app, "tolerations[0].operator", "Equal")
+			helmtests.SetAppOpt(opts, app, "tolerations[0].value", "value1")
+			helmtests.SetAppOpt(opts, app, "tolerations[0].effect", "NoSchedule")
 
-			setAppOpt(opts, app, "tolerations[1].key", "key2")
-			setAppOpt(opts, app, "tolerations[1].operator", "Equal")
-			setAppOpt(opts, app, "tolerations[1].value", "value2")
-			setAppOpt(opts, app, "tolerations[1].effect", "NoSchedule")
+			helmtests.SetAppOpt(opts, app, "tolerations[1].key", "key2")
+			helmtests.SetAppOpt(opts, app, "tolerations[1].operator", "Equal")
+			helmtests.SetAppOpt(opts, app, "tolerations[1].value", "value2")
+			helmtests.SetAppOpt(opts, app, "tolerations[1].effect", "NoSchedule")
 
 			opts.SetJsonValues[app+".affinity"] = string(affinityData)
 
-			chartYaml := renderChart(t, opts)
+			chartYaml := helmtests.RenderChart(t, opts, chartPath)
 			spec := appPodSpec(chartYaml, app)
 			assert.Equal(t, expectSelector, spec.NodeSelector)
 			assert.Equal(t, expectTolerations, spec.Tolerations)
@@ -101,12 +102,12 @@ func appPodSpec(chartYaml, appName string) corev1.PodSpec {
 
 	switch appName {
 	case "airbyte-bootloader":
-		return getPod(chartYaml, resourceName).Spec
+		return helmtests.GetPod(chartYaml, resourceName).Spec
 	case "keycloak-setup":
-		return getJob(chartYaml, resourceName).Spec.Template.Spec
+		return helmtests.GetJob(chartYaml, resourceName).Spec.Template.Spec
 	case "keycloak", "db":
-		return getStatefulSet(chartYaml, resourceName).Spec.Template.Spec
+		return helmtests.GetStatefulSet(chartYaml, resourceName).Spec.Template.Spec
 	default:
-		return getDeployment(chartYaml, resourceName).Spec.Template.Spec
+		return helmtests.GetDeployment(chartYaml, resourceName).Spec.Template.Spec
 	}
 }
