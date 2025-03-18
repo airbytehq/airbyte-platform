@@ -29,10 +29,15 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import {
+  clearConnectorChatBuilderStorage,
+  getConnectorChatBuilderParamsFromStorage,
+} from "core/utils/connectorChatBuilderStorage";
 import { links } from "core/utils/links";
 import { convertSnakeToCamel } from "core/utils/strings";
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { ToZodSchema } from "core/utils/zod";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import { ConnectorBuilderFormManagementStateProvider } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -157,6 +162,7 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
             isLoading={isCreateLoading}
             onCancel={onCancel}
             assistApiErrors={assistApiErrors}
+            onSubmit={onFormSubmit}
           />
         )}
       </Form>
@@ -164,9 +170,14 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
   );
 };
 
-const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormError[] }> = ({ assistApiErrors }) => {
+const GenerateConnectorFormFields: React.FC<{
+  assistApiErrors?: AssistErrorFormError[];
+  onSubmit: (values: GeneratorFormResponse) => Promise<void>;
+}> = ({ assistApiErrors, onSubmit }) => {
   const { formatMessage } = useIntl();
-  const { setError, trigger } = useFormContext();
+  const { setError, setValue, handleSubmit, trigger } = useFormContext();
+  const isConnectorBuilderGenerateFromParamsEnabled = useExperiment("connectorBuilder.generateConnectorFromParams");
+
   const { touchedFields } = useFormState();
   const docsUrl = useWatch({ name: "docsUrl" });
   const openapiSpecUrl = useWatch({ name: "openapiSpecUrl" });
@@ -181,6 +192,27 @@ const GenerateConnectorFormFields: React.FC<{ assistApiErrors?: AssistErrorFormE
       }
     }
   }, [setError, assistApiErrors]);
+
+  useEffect(() => {
+    const connectorChatBuilderParams = getConnectorChatBuilderParamsFromStorage();
+
+    if (connectorChatBuilderParams && isConnectorBuilderGenerateFromParamsEnabled) {
+      setValue("name", connectorChatBuilderParams.name);
+      setValue("docsUrl", connectorChatBuilderParams.documentation_url);
+      setValue("firstStream", connectorChatBuilderParams.stream);
+      if (connectorChatBuilderParams.submit_form) {
+        const submitAndCleanup = async (data: GeneratorFormResponse) => {
+          await onSubmit(data);
+
+          clearConnectorChatBuilderStorage();
+        };
+
+        handleSubmit((data) => submitAndCleanup(data as GeneratorFormResponse))();
+      } else {
+        clearConnectorChatBuilderStorage();
+      }
+    }
+  }, [setValue, handleSubmit, onSubmit, isConnectorBuilderGenerateFromParamsEnabled]);
 
   useEffect(() => {
     if (touchedFields.docsUrl) {
@@ -232,7 +264,8 @@ const ConnectorBuilderGenerateForm: React.FC<{
   isLoading: boolean;
   assistApiErrors?: AssistErrorFormError[];
   onCancel: () => void;
-}> = ({ isLoading, onCancel, assistApiErrors }) => {
+  onSubmit: (values: GeneratorFormResponse) => Promise<void>;
+}> = ({ isLoading, onCancel, assistApiErrors, onSubmit }) => {
   return (
     <FlexContainer direction="column" gap="xl">
       <Card className={styles.formCard} noPadding>
@@ -260,7 +293,7 @@ const ConnectorBuilderGenerateForm: React.FC<{
             />
           </Text>
           <FlexContainer direction="column" gap="none" className={styles.formFields}>
-            <GenerateConnectorFormFields assistApiErrors={assistApiErrors} />
+            <GenerateConnectorFormFields assistApiErrors={assistApiErrors} onSubmit={onSubmit} />
           </FlexContainer>
         </FlexContainer>
       </Card>

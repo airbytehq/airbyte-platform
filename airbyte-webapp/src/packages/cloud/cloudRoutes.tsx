@@ -12,6 +12,7 @@ import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { storeConnectorChatBuilderFromQuery } from "core/utils/connectorChatBuilderStorage";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
@@ -188,6 +189,10 @@ export const Routing: React.FC = () => {
   const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
+
+  useEffectOnce(() => {
+    storeConnectorChatBuilderFromQuery(search);
+  });
 
   const loginRedirectSearchParam = `${createSearchParams({
     loginRedirect: `${originalPathname}${search}${hash}`,

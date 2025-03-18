@@ -24,6 +24,7 @@ export interface Experiments {
   "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.declarativeOauth": boolean;
+  "connectorBuilder.generateConnectorFromParams": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
@@ -51,6 +52,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.contributeEditsToMarketplace": true,
   "connectorBuilder.customComponents": false,
   "connectorBuilder.declarativeOauth": true,
+  "connectorBuilder.generateConnectorFromParams": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
