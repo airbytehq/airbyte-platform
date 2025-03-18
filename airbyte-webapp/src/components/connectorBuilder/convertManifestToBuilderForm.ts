@@ -51,6 +51,8 @@ import {
   JwtAuthenticator,
   RequestOptionInjectInto,
   CsvDecoderType,
+  ZipfileDecoderType,
+  GzipDecoderType,
   StateDelegatingStreamType,
   ParentStreamConfigStream,
   SimpleRetrieverType,
@@ -97,6 +99,7 @@ import {
   YamlString,
   YamlSupportedComponentName,
   JWT_AUTHENTICATOR,
+  BuilderNestedDecoderConfig,
   BuilderDpathExtractor,
 } from "./types";
 import {
@@ -622,6 +625,8 @@ const manifestDecoderToBuilder = (
     XmlDecoderType.XmlDecoder,
     IterableDecoderType.IterableDecoder,
     CsvDecoderType.CsvDecoder,
+    GzipDecoderType.GzipDecoder,
+    ZipfileDecoderType.ZipfileDecoder,
   ];
   const decoderType = decoder?.type;
   if (!supportedDecoderTypes.includes(decoderType)) {
@@ -639,6 +644,16 @@ const manifestDecoderToBuilder = (
       return { type: "Iterable" };
     case CsvDecoderType.CsvDecoder:
       return { type: "CSV", delimiter: decoder?.delimiter, encoding: decoder?.encoding };
+    case GzipDecoderType.GzipDecoder:
+      return {
+        type: "gzip",
+        decoder: manifestDecoderToBuilder(decoder?.decoder, streamName) as BuilderNestedDecoderConfig,
+      };
+    case ZipfileDecoderType.ZipfileDecoder:
+      return {
+        type: "ZIP file",
+        decoder: manifestDecoderToBuilder(decoder?.decoder, streamName) as BuilderNestedDecoderConfig,
+      };
     default:
       return { type: "JSON" };
   }

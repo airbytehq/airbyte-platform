@@ -60,6 +60,11 @@ import {
   JwtAuthenticator,
   JwtAuthenticatorType,
   RequestOptionType,
+  GzipDecoderDecoder,
+  ZipfileDecoderDecoder,
+  JsonDecoderType,
+  JsonlDecoderType,
+  IterableDecoderType,
   AddedFieldDefinitionType,
   AsyncRetrieverType,
   DeclarativeStreamType,
@@ -106,9 +111,16 @@ export type BuilderStreamTab = "requester" | "schema" | "polling" | "download";
 
 type BuilderHttpMethod = "GET" | "POST";
 
-export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "CSV"] as const;
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "CSV", "gzip", "ZIP file"] as const;
 
-export type ManifestDecoderType = "JsonDecoder" | "XmlDecoder" | "JsonlDecoder" | "IterableDecoder" | "CsvDecoder";
+export type ManifestDecoderType =
+  | "JsonDecoder"
+  | "XmlDecoder"
+  | "JsonlDecoder"
+  | "IterableDecoder"
+  | "CsvDecoder"
+  | "GzipDecoder"
+  | "ZipfileDecoder";
 
 interface JSONDecoderConfig {
   type: "JSON";
@@ -132,12 +144,30 @@ interface CSVDecoderConfig {
   encoding?: string;
 }
 
+interface GzipDecoderConfig {
+  type: "gzip";
+  decoder: BuilderNestedDecoderConfig;
+}
+
+interface ZipfileDecoderConfig {
+  type: "ZIP file";
+  decoder: BuilderNestedDecoderConfig;
+}
+
 export type BuilderDecoderConfig =
   | JSONDecoderConfig
   | XMLDecoderConfig
   | JSONLinesDecoderConfig
   | IterableDecoderConfig
-  | CSVDecoderConfig;
+  | CSVDecoderConfig
+  | GzipDecoderConfig
+  | ZipfileDecoderConfig;
+
+export type BuilderNestedDecoderConfig =
+  | JSONDecoderConfig
+  | CSVDecoderConfig
+  | GzipDecoderConfig
+  | JSONLinesDecoderConfig;
 
 // Intermediary mapping of builder -> manifest decoder types
 // TODO: find a way to abstract/simplify the decoder manifest -> UI typing so we don't have so many places to update when adding new decoders
@@ -147,6 +177,8 @@ const DECODER_TYPE_MAP: Record<(typeof BUILDER_DECODER_TYPES)[number], ManifestD
   "JSON Lines": "JsonlDecoder",
   Iterable: "IterableDecoder",
   CSV: "CsvDecoder",
+  gzip: "GzipDecoder",
+  "ZIP file": "ZipfileDecoder",
 } as const;
 
 // Registry of decoder configurations. Additional configurations can be added here as more decoders are supported.
@@ -171,6 +203,30 @@ export const DECODER_CONFIGS: Partial<Record<(typeof BUILDER_DECODER_TYPES)[numb
         manifestPath: "CsvDecoder.properties.encoding",
         placeholder: "utf-8",
         optional: true,
+      },
+    ],
+  },
+  gzip: {
+    title: "connectorBuilder.decoder.gzipDecoder.label",
+    fields: [
+      {
+        key: "decoder",
+        type: "string",
+        label: "connectorBuilder.decoder.nestedDecoder.label",
+        tooltip: "connectorBuilder.decoder.nestedDecoder.tooltip",
+        optional: false,
+      },
+    ],
+  },
+  "ZIP file": {
+    title: "connectorBuilder.decoder.zipfileDecoder.label",
+    fields: [
+      {
+        key: "decoder",
+        type: "string",
+        label: "connectorBuilder.decoder.nestedDecoder.label",
+        tooltip: "connectorBuilder.decoder.nestedDecoder.tooltip",
+        optional: false,
       },
     ],
   },
@@ -1138,11 +1194,6 @@ export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSel
 }
 
 const builderDecoderToManifest = (decoder: BuilderDecoderConfig): SimpleRetrieverDecoder | undefined => {
-  // No decoder is specified for JSON responses
-  if (decoder.type === "JSON") {
-    return undefined;
-  }
-
   if (decoder.type === "CSV") {
     const result: SimpleRetrieverDecoder = {
       type: "CsvDecoder" as const,
@@ -1159,7 +1210,27 @@ const builderDecoderToManifest = (decoder: BuilderDecoderConfig): SimpleRetrieve
     return result;
   }
 
-  return { type: DECODER_TYPE_MAP[decoder.type] };
+  if (decoder.type === "gzip") {
+    const result: SimpleRetrieverDecoder = {
+      type: "GzipDecoder" as const,
+      decoder: builderDecoderToManifest(decoder.decoder) as GzipDecoderDecoder,
+    };
+
+    return result;
+  }
+
+  if (decoder.type === "ZIP file") {
+    const result: SimpleRetrieverDecoder = {
+      type: "ZipfileDecoder" as const,
+      decoder: builderDecoderToManifest(decoder.decoder) as ZipfileDecoderDecoder,
+    };
+
+    return result;
+  }
+
+  return {
+    type: DECODER_TYPE_MAP[decoder.type] as JsonDecoderType | XmlDecoderType | JsonlDecoderType | IterableDecoderType,
+  };
 };
 
 type BaseManifestRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;

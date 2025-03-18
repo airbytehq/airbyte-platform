@@ -16,10 +16,12 @@ import { Text } from "components/ui/Text";
 
 import {
   CsvDecoderType,
+  GzipDecoderType,
   IterableDecoderType,
   JsonDecoderType,
   JsonlDecoderType,
   XmlDecoderType,
+  ZipfileDecoderType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -203,10 +205,15 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
                 JsonlDecoderType.JsonlDecoder,
                 IterableDecoderType.IterableDecoder,
                 CsvDecoderType.CsvDecoder,
+                GzipDecoderType.GzipDecoder,
+                ZipfileDecoderType.ZipfileDecoder,
               ]}
             />
             {selectedDecoder.type && DECODER_CONFIGS[selectedDecoder.type] && (
-              <DecoderConfig decoderType={selectedDecoder.type} streamFieldPath={streamFieldPath} />
+              <DecoderConfig
+                decoderType={selectedDecoder.type}
+                decoderFieldPath={(fieldPath: string) => `${streamFieldPath("decoder")}.${fieldPath}`}
+              />
             )}
             <BuilderField
               type="array"
@@ -358,7 +365,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               ]}
             />
             {selectedCreationDecoder.type && DECODER_CONFIGS[selectedCreationDecoder.type] && (
-              <DecoderConfig decoderType={selectedCreationDecoder.type} streamFieldPath={streamFieldPath} />
+              <DecoderConfig
+                decoderType={selectedCreationDecoder.type}
+                decoderFieldPath={(fieldPath: string) => `${creationRequesterPath("decoder")}.${fieldPath}`}
+              />
             )}
           </BuilderCard>
           <AuthenticationSection authPath={creationRequesterPath("authenticator")} />
@@ -518,7 +528,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               ]}
             />
             {selectedDownloadDecoder.type && DECODER_CONFIGS[selectedDownloadDecoder.type] && (
-              <DecoderConfig decoderType={selectedDownloadDecoder.type} streamFieldPath={streamFieldPath} />
+              <DecoderConfig
+                decoderType={selectedDownloadDecoder.type}
+                decoderFieldPath={(fieldPath: string) => `${downloadRequesterPath("decoder")}.${fieldPath}`}
+              />
             )}
             <GroupControls
               label={
