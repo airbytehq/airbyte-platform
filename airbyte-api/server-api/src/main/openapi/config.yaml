@@ -11604,7 +11604,7 @@ components:
     ConnectionEventMinimal:
       type: object
       required:
-        - id
+        - eventId
         - connectionId
         - createdAt
         - eventType

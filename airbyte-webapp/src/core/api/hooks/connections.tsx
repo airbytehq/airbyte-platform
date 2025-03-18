@@ -44,6 +44,7 @@ import {
   AirbyteCatalog,
   ConnectionEventsListMinimalRequestBody,
   ConnectionEventsRequestBody,
+  ConnectionEventType,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -673,13 +674,15 @@ export const useGetConnectionUptimeHistory = (connectionId: string, numberOfJobs
   );
 };
 
+const CONNECTION_STATUS_REFETCH_INTERVAL = 10_000;
+
 export const useListConnectionsStatuses = (connectionIds: string[]) => {
   const requestOptions = useRequestOptions();
   const queryKey = connectionsKeys.statuses(connectionIds);
 
   return (
     useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
-      refetchInterval: 10000,
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }) ?? []
   );
 };
@@ -691,7 +694,7 @@ export const useListConnectionsStatusesAsync = (connectionIds: string[], enabled
   return (
     useQuery(queryKey, async () => getConnectionStatuses({ connectionIds }, requestOptions), {
       enabled,
-      refetchInterval: 10000,
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }) ?? []
   );
 };
@@ -727,15 +730,24 @@ export const useSetConnectionStatusActiveJob = () => {
   };
 };
 
+export const CONNECTIONS_GRAPH_EVENT_TYPES = [
+  ConnectionEventType.SYNC_SUCCEEDED,
+  ConnectionEventType.REFRESH_SUCCEEDED,
+  ConnectionEventType.SYNC_INCOMPLETE,
+  ConnectionEventType.REFRESH_INCOMPLETE,
+  ConnectionEventType.SYNC_FAILED,
+  ConnectionEventType.REFRESH_FAILED,
+] as const;
+
 export const useGetConnectionsGraphData = (requestBody: ConnectionEventsListMinimalRequestBody) => {
   const requestOptions = useRequestOptions();
 
   return useQuery(
     connectionsKeys.eventsListMinimal(requestBody),
-    () => listConnectionEventsMinimal(requestBody, requestOptions),
+    async () =>
+      listConnectionEventsMinimal({ ...requestBody, eventTypes: [...CONNECTIONS_GRAPH_EVENT_TYPES] }, requestOptions),
     {
-      staleTime: 30_000,
-      refetchInterval: 60_000,
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }
   );
 };

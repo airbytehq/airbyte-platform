@@ -12,27 +12,23 @@ import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList } from "core/api";
-import {
-  ConnectionEventMinimal,
-  ConnectionEventType,
-  WebBackendConnectionListItem,
-} from "core/api/types/AirbyteClient";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { ConnectionTimelineEventIcon } from "pages/connections/ConnectionTimelinePage/ConnectionTimelineEventIcon";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionEventsList.module.scss";
-import { CONNECTIONS_GRAPH_EVENT_TYPES } from "./ConnectionsGraph";
+import { GraphEvent } from "./ConnectionsGraph";
 import { SyncCount } from "./SyncCount";
 
 interface ConnectionEventsListProps {
-  events: ConnectionEventMinimal[];
+  events: GraphEvent[];
   start: Date;
   end: Date;
 }
 
 const syncStatusKeyMap: Record<
-  (typeof CONNECTIONS_GRAPH_EVENT_TYPES)[number],
-  { key: string; icon: IconType; statusIcon: IconType }
+  GraphEvent["eventType"],
+  { key: string; icon: IconType; statusIcon: IconType | undefined }
 > = {
   SYNC_FAILED: { key: "jobs.jobStatus.sync.failed", icon: "connection", statusIcon: "statusError" },
   REFRESH_FAILED: { key: "jobs.jobStatus.sync.failed", icon: "connection", statusIcon: "statusError" },
@@ -40,9 +36,10 @@ const syncStatusKeyMap: Record<
   REFRESH_SUCCEEDED: { key: "jobs.jobStatus.sync.succeeded", icon: "connection", statusIcon: "statusSuccess" },
   SYNC_INCOMPLETE: { key: "jobs.jobStatus.sync.partialSuccess", icon: "connection", statusIcon: "statusWarning" },
   REFRESH_INCOMPLETE: { key: "jobs.jobStatus.sync.partialSuccess", icon: "connection", statusIcon: "statusWarning" },
+  RUNNING_JOB: { key: "jobs.jobStatus.sync.running", icon: "connection", statusIcon: undefined },
 };
 
-function eventTypeInKeyMap(eventType: ConnectionEventType): eventType is keyof typeof syncStatusKeyMap {
+function eventTypeInKeyMap(eventType: GraphEvent["eventType"]): eventType is keyof typeof syncStatusKeyMap {
   return eventType in syncStatusKeyMap;
 }
 
@@ -58,6 +55,9 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
     return events.filter((event) => event.eventType === "REFRESH_INCOMPLETE" || event.eventType === "SYNC_INCOMPLETE")
       .length;
   }, [events]);
+  const runningCount = useMemo(() => {
+    return events.filter((event) => event.eventType === "RUNNING_JOB").length;
+  }, [events]);
 
   const connections = useConnectionList();
 
@@ -71,7 +71,7 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
         acc.get(event.connectionId)?.events.push(event);
       }
       return acc;
-    }, new Map<string, { connection: WebBackendConnectionListItem; events: ConnectionEventMinimal[] }>());
+    }, new Map<string, { connection: WebBackendConnectionListItem; events: GraphEvent[] }>());
 
     const alphabeticallySortedConnections = new Map(
       Array.from(unsortedConnections.entries()).sort(
@@ -99,7 +99,12 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
             <FormattedTimeRange from={start} to={end} />
           </Text>
         )}
-        <SyncCount failedCount={failedCount} successCount={successCount} partialSuccessCount={partialSuccessCount} />
+        <SyncCount
+          failedCount={failedCount}
+          successCount={successCount}
+          partialSuccessCount={partialSuccessCount}
+          runningCount={runningCount}
+        />
         {Array.from(connectionsWithEvents.entries()).map(([connectionId, { connection, events }]) => {
           return (
             <FlexContainer direction="column" gap="none" key={connectionId}>
@@ -110,15 +115,18 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
                 if (!eventTypeInKeyMap(event.eventType)) {
                   return null;
                 }
+
+                const linkTo =
+                  event.eventType === "RUNNING_JOB"
+                    ? `${event.connectionId}/${ConnectionRoutePaths.Timeline}`
+                    : `${event.connectionId}/${ConnectionRoutePaths.Timeline}?eventId=${event.eventId}`;
+
                 return (
-                  <Link
-                    className={styles.connectionEventsList__eventLink}
-                    to={`${event.connectionId}/${ConnectionRoutePaths.Timeline}?eventId=${event.eventId}`}
-                    key={event.eventId}
-                  >
+                  <Link className={styles.connectionEventsList__eventLink} to={linkTo} key={event.eventId}>
                     <ConnectionTimelineEventIcon
                       icon={syncStatusKeyMap[event.eventType].icon}
                       statusIcon={syncStatusKeyMap[event.eventType].statusIcon}
+                      running={event.eventType === "RUNNING_JOB"}
                     />
                     <FlexContainer direction="column" gap="xs">
                       <Text>

@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 
-import { useGetConnectionsGraphData } from "core/api";
+import { CONNECTIONS_GRAPH_EVENT_TYPES, useGetConnectionsGraphData } from "core/api";
 import {
   ConnectionEventMinimal,
   WebBackendConnectionListItem,
@@ -23,7 +23,8 @@ import { ConnectionEventsList } from "./ConnectionEventsList";
 import styles from "./ConnectionsGraph.module.scss";
 import { ConnectionsGraphTooltip } from "./ConnectionsGraphTooltip";
 import { getStartOfFirstWindow } from "./getStartOfFirstWindow";
-import { LookbackWindow, lookbackConfigs, LookbackConfiguration } from "./lookbackConfiguration";
+import { LookbackConfiguration, LookbackWindow, lookbackConfigs } from "./lookbackConfiguration";
+import { RunningJobEvent, useCurrentlyRunningSyncs } from "./useCurrentlyRunningSyncs";
 import { tooltipConfig } from "../HistoricalOverview/ChartConfig";
 
 interface ConnectionsGraphProps {
@@ -31,14 +32,18 @@ interface ConnectionsGraphProps {
   connections: WebBackendConnectionListItem[];
 }
 
-export const CONNECTIONS_GRAPH_EVENT_TYPES = [
-  ConnectionEventType.SYNC_SUCCEEDED,
-  ConnectionEventType.REFRESH_SUCCEEDED,
-  ConnectionEventType.SYNC_INCOMPLETE,
-  ConnectionEventType.REFRESH_INCOMPLETE,
-  ConnectionEventType.SYNC_FAILED,
-  ConnectionEventType.REFRESH_FAILED,
-] as const;
+interface BackendEvent extends ConnectionEventMinimal {
+  eventType: (typeof CONNECTIONS_GRAPH_EVENT_TYPES)[number];
+}
+
+export type GraphEvent = BackendEvent | RunningJobEvent;
+
+const isGraphEvent = (event: ConnectionEventMinimal | RunningJobEvent): event is GraphEvent => {
+  return (
+    event.eventType === "RUNNING_JOB" ||
+    CONNECTIONS_GRAPH_EVENT_TYPES.includes(event.eventType as (typeof CONNECTIONS_GRAPH_EVENT_TYPES)[number])
+  );
+};
 
 export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, connections }) => {
   const [didUserOpenDrawer, setDidUserOpenDrawer] = useState(false);
@@ -46,7 +51,8 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
 
   const { formatDate } = useIntl();
   const connectionIds = connections.map((connection) => connection.connectionId);
-  const { data } = useGetConnectionsGraphData({
+  const currentlyRunningEvents = useCurrentlyRunningSyncs(connectionIds);
+  const { data: timelineData } = useGetConnectionsGraphData({
     connectionIds,
     eventTypes: [...CONNECTIONS_GRAPH_EVENT_TYPES],
     createdAtStart: getStartOfFirstWindow(lookback).format(),
@@ -54,6 +60,14 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
     // not change frequently (which would cause the query to be re-run)
     createdAtEnd: dayjs().endOf("day").format(),
   });
+
+  const combinedEvents = useMemo(() => {
+    if (timelineData === undefined || currentlyRunningEvents === undefined) {
+      return undefined;
+    }
+
+    return [...timelineData.events, ...currentlyRunningEvents];
+  }, [timelineData, currentlyRunningEvents]);
 
   const [colorMap, setColorMap] = useState<ColorMap>({
     success: "",
@@ -91,17 +105,17 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
 
   const barChartCategories: BarChartCategory[] = useMemo(() => {
     const windows = createBarCategories(lookback);
-    if (data?.events) {
-      data.events.forEach((event) => {
-        const syncDate = dayjs(event.createdAt);
+    if (combinedEvents) {
+      combinedEvents.forEach((syncEvent) => {
+        const syncDate = dayjs(syncEvent.createdAt);
         const window = windows.find((window) => {
           // "[)" means inclusive start, exclusive end: https://day.js.org/docs/en/plugin/is-between
           return syncDate.isBetween(window.windowStart, window.windowEnd, null, "[)");
         });
 
-        if (window) {
-          window.events.push(event);
-          switch (event.eventType) {
+        if (window && isGraphEvent(syncEvent)) {
+          window.events.push(syncEvent);
+          switch (syncEvent.eventType) {
             case ConnectionEventType.REFRESH_SUCCEEDED:
             case ConnectionEventType.SYNC_SUCCEEDED:
               window.success++;
@@ -114,12 +128,15 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
             case ConnectionEventType.SYNC_FAILED:
               window.failure++;
               break;
+            case "RUNNING_JOB":
+              window.running++;
+              break;
           }
         }
       });
     }
     return windows;
-  }, [lookback, data]);
+  }, [lookback, combinedEvents]);
 
   const ticks = useMemo(
     () =>
@@ -147,11 +164,11 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
   // a boolean value to determine if the drawer should be open. Instead, we need to check if the user has clicked the
   // drawer open button and if the selected window has events (as that the data for that window might be filtered)
   const isDrawerVisible = useMemo(
-    () => didUserOpenDrawer && !!selectedWindow && selectedWindow.events.length > 0 && data !== undefined,
-    [data, selectedWindow, didUserOpenDrawer]
+    () => didUserOpenDrawer && !!selectedWindow && selectedWindow.events.length > 0 && combinedEvents !== undefined,
+    [combinedEvents, selectedWindow, didUserOpenDrawer]
   );
 
-  if (data === undefined) {
+  if (combinedEvents === undefined) {
     return (
       <FlexContainer direction="column" justifyContent="center" className={styles.connectionsGraph__loadingSkeleton}>
         <LoadingSkeleton />
@@ -257,7 +274,7 @@ type BarChartCategory = {
   windowId: number;
   windowStart: Date;
   windowEnd: Date;
-  events: ConnectionEventMinimal[];
+  events: GraphEvent[];
 } & StackedBarSections;
 
 interface StackedBarSections {

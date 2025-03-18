@@ -8,17 +8,20 @@ interface SyncCountProps {
   failedCount: number;
   successCount: number;
   partialSuccessCount: number;
+  runningCount: number;
 }
 
 export const SyncCount: React.FC<SyncCountProps> = ({
   failedCount,
   successCount,
   partialSuccessCount,
+  runningCount,
 }: SyncCountProps) => {
   const parts: Array<{ id: string; textColor: TextProps["color"]; count: number }> = [
-    { id: "connections.graph.failedSyncs", textColor: "red", count: failedCount },
-    { id: "connections.graph.successfulSyncs", textColor: "green600", count: successCount },
-    { id: "connections.graph.incompleteSyncs", textColor: "grey", count: partialSuccessCount },
+    { id: "connections.graph.runningSyncsCount", textColor: "blue", count: runningCount },
+    { id: "connections.graph.failedSyncsCount", textColor: "red", count: failedCount },
+    { id: "connections.graph.successfulSyncsCount", textColor: "green600", count: successCount },
+    { id: "connections.graph.partialSuccessfulSyncsCount", textColor: "yellow600", count: partialSuccessCount },
   ];
 
   const nonZeroParts = parts.filter((part) => part.count > 0);

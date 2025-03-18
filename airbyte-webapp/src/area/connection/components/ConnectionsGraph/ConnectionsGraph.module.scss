@@ -27,12 +27,16 @@
       background-color: colors.$green-300;
     }
 
-    &--incomplete {
+    &--partialSuccess {
       background-color: colors.$yellow-600;
     }
 
     &--failure {
       background-color: colors.$red-400;
+    }
+
+    &--running {
+      background-color: colors.$blue-400;
     }
   }
 }
