@@ -120,6 +120,7 @@ open class WorkloadApi(
       workloadCreateRequest.type,
       autoId,
       workloadCreateRequest.priority,
+      workloadCreateRequest.dataplaneGroup,
     )
     return HttpResponse.status(HttpStatus.NO_CONTENT)
   }

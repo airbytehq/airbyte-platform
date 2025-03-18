@@ -365,6 +365,12 @@ data class GeographicRegion(
   }
 }
 
+data class DataplaneGroup(
+  override val key: String,
+) : Context {
+  override val kind: String = "dataplane-group"
+}
+
 data class CloudProviderRegion(
   override val key: String,
 ) : Context {

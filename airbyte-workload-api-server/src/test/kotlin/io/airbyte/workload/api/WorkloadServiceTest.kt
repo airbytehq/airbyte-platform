@@ -64,7 +64,7 @@ class WorkloadServiceTest {
     every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns false
     val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient, workloadQueueRepository, featureFlagClient)
 
-    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
+    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority, "does-not-apply")
 
     verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
   }
@@ -86,9 +86,9 @@ class WorkloadServiceTest {
       )
     val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient, workloadQueueRepository, featureFlagClient)
 
-    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
+    workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority, expectedQueue)
 
-    verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
+    verify(exactly = 0) { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
     verify { workloadQueueRepository.enqueueWorkload(expectedQueue, priority.toInt(), workloadId) }
   }
 

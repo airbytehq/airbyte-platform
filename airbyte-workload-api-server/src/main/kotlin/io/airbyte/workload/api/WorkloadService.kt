@@ -12,9 +12,13 @@ import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
-import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.UseWorkloadQueueTable
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -54,20 +58,26 @@ open class WorkloadService(
     workloadType: WorkloadType,
     autoId: UUID,
     priority: WorkloadPriority,
+    dataplaneGroup: String?,
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    val queue = getQueueName(labels, priority)
+    val queue: String
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
-    messageProducer.publish(
-      queue,
-      LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs, autoId),
-      "wl-create_$workloadId",
-    )
-    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
-      workloadQueueRepository.enqueueWorkload(queue, priority.toInt(), workloadId)
+
+    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, getFeatureFlagContext(labels, dataplaneGroup)) && dataplaneGroup != null) {
+      workloadQueueRepository.enqueueWorkload(dataplaneGroup = dataplaneGroup, priority = priority.toInt(), workloadId = workloadId)
+      // TODO This is only for metric purpose, clean up once we delete the temporal queue
+      queue = "$dataplaneGroup-$priority"
+    } else {
+      queue = getQueueName(labels, priority)
+      messageProducer.publish(
+        queue,
+        LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs, autoId),
+        "wl-create_$workloadId",
+      )
     }
 
     metricClient.count(
@@ -79,6 +89,21 @@ open class WorkloadService(
           MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType.toString()),
         ),
     )
+  }
+
+  private fun getFeatureFlagContext(
+    labels: Map<String, String>,
+    dataplaneGroup: String?,
+  ): Context {
+    val contexts = mutableListOf<Context>()
+    labels[CONNECTION_ID_LABEL_KEY]?.let {
+      contexts.add(Connection(it))
+    }
+    labels[WORKSPACE_ID_LABEL_KEY]?.let {
+      contexts.add(Workspace(it))
+    }
+    dataplaneGroup?.let { contexts.add(DataplaneGroup(it)) }
+    return Multi(contexts)
   }
 
   private fun getQueueName(
