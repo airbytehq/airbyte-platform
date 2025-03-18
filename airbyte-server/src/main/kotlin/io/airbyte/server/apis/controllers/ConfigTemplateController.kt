@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ActorTemplateListRequestBody
-import io.airbyte.api.model.generated.ActorTemplateRequestBody
+import io.airbyte.api.model.generated.ConfigTemplateListRequest
+import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
@@ -14,13 +14,13 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 
-@Controller("/api/v1/actor_templates")
-class ActorTemplateController {
+@Controller("/api/v1/config_templates")
+class ConfigTemplateController {
   @Post("/list")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun listActorTemplates(
-    @Body actorTemplateListRequestBody: ActorTemplateListRequestBody,
+  fun listConfigTemplates(
+    @Body configTemplateListRequest: ConfigTemplateListRequest,
   ) {
     // No-op
   }
@@ -28,8 +28,8 @@ class ActorTemplateController {
   @Post("/get")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun getActorTemplate(
-    @Body actorTemplateRequestBody: ActorTemplateRequestBody,
+  fun getConfigTemplate(
+    @Body configTemplateRequestBody: ConfigTemplateRequestBody,
   ) {
     // No-op
   }

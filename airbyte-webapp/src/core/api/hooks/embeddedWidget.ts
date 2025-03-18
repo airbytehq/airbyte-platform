@@ -1,20 +1,20 @@
 import { useMutation } from "@tanstack/react-query";
 
 import {
-  mockActorTemplateAlsoFaker,
-  mockActorTemplateFakerOneWithStreams,
-  mockActorTemplateList,
+  mockConfigTemplateAlsoFaker,
+  mockConfigTemplateFakerOne,
+  mockConfigTemplateList,
   mockTemplateForGDrive,
-} from "test-utils/mock-data/mockActorTemplate";
+} from "test-utils/mock-data/mockConfigTemplates";
 
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { ActorMaskCreateRequestBody, ActorTemplateList, ActorTemplateRead } from "../types/AirbyteClient";
+import { ConfigTemplateList, ConfigTemplateRead, PartialUserConfigCreate } from "../types/AirbyteClient";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
-const actorTemplates = {
-  all: [SCOPE_ORGANIZATION, "actorConnectionTemplates"] as const,
-  lists: () => [...actorTemplates.all, "list"],
-  detail: (actorConnectionTemplateId: string) => [...actorTemplates.all, "details", actorConnectionTemplateId] as const,
+const configTemplates = {
+  all: [SCOPE_ORGANIZATION, "configTemplates"] as const,
+  lists: () => [...configTemplates.all, "list"],
+  detail: (configTemplateId: string) => [...configTemplates.all, "details", configTemplateId] as const,
 };
 
 /**
@@ -23,34 +23,34 @@ const actorTemplates = {
  *
  * they return the mocks imported above instead of real data
  */
-export const useListActorTemplates = (organizationId: string): ActorTemplateList => {
+export const useListConfigTemplates = (organizationId: string): ConfigTemplateList => {
   console.log(organizationId);
-  return useSuspenseQuery(actorTemplates.lists(), () => {
-    return mockActorTemplateList;
+  return useSuspenseQuery(configTemplates.lists(), () => {
+    return mockConfigTemplateList;
   });
 };
 
-export const useGetActorConnectionTemplate = (actorConnectionTemplateId: string) => {
-  return useSuspenseQuery(actorTemplates.detail(actorConnectionTemplateId), (): ActorTemplateRead => {
-    if (actorConnectionTemplateId === "1") {
-      return mockActorTemplateFakerOneWithStreams;
+export const useGetConfigTemplate = (configTemplateId: string) => {
+  return useSuspenseQuery(configTemplates.detail(configTemplateId), (): ConfigTemplateRead => {
+    if (configTemplateId === "1") {
+      return mockConfigTemplateFakerOne;
     }
-    if (actorConnectionTemplateId === "2") {
-      return mockActorTemplateAlsoFaker;
+    if (configTemplateId === "2") {
+      return mockConfigTemplateAlsoFaker;
     }
-    if (actorConnectionTemplateId === "3") {
+    if (configTemplateId === "3") {
       return mockTemplateForGDrive;
     }
-    return mockActorTemplateFakerOneWithStreams;
+    return mockConfigTemplateFakerOne;
   });
 };
 
-export const useCreateActorConnectionMask = () => {
-  return useMutation(async (actorConnectionMaskCreate: ActorMaskCreateRequestBody) => {
-    console.log(actorConnectionMaskCreate);
+export const useCreatePartialUserConfig = () => {
+  return useMutation(async (partialUserConfigCreate: PartialUserConfigCreate) => {
+    console.log(partialUserConfigCreate);
     try {
       // Try to create source
-      return alert(`${JSON.stringify(actorConnectionMaskCreate)}`);
+      return alert(`${JSON.stringify(partialUserConfigCreate)}`);
     } catch (e) {
       throw e;
     }

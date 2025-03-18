@@ -4,10 +4,9 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ActorMaskCreateRequestBody
-import io.airbyte.api.model.generated.ActorMaskRequestBody
-import io.airbyte.api.model.generated.ActorMaskUpdateRequestBody
-import io.airbyte.api.model.generated.ListActorMasksRequestBody
+import io.airbyte.api.model.generated.PartialUserConfigCreate
+import io.airbyte.api.model.generated.PartialUserConfigRequestBody
+import io.airbyte.api.model.generated.PartialUserConfigUpdate
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
@@ -16,13 +15,13 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 
-@Controller("/api/v1/actor_masks")
-class ActorMaskController {
+@Controller("/api/v1/partial_user_configs")
+class PartialUserConfigController {
   @Post("/list")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun listActorMasks(
-    @Body actorMaskListRequestBody: ListActorMasksRequestBody,
+  fun listPartialUserConfigs(
+    @Body listPartialUserConfigRequestBody: PartialUserConfigRequestBody,
   ) {
     // No-op
   }
@@ -30,8 +29,8 @@ class ActorMaskController {
   @Post("/create")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun createActorMask(
-    @Body createActorMaskRequestBody: ActorMaskCreateRequestBody,
+  fun createPartialUserConfig(
+    @Body partialUserConfigCreate: PartialUserConfigCreate,
   ) {
     // No-op
   }
@@ -39,8 +38,8 @@ class ActorMaskController {
   @Post("/update")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun updateActorMask(
-    @Body updateActorMaskRequestBody: ActorMaskUpdateRequestBody,
+  fun updatePartialUserConfig(
+    @Body partialUserConfigUpdate: PartialUserConfigUpdate,
   ) {
     // No-op
   }
@@ -48,8 +47,8 @@ class ActorMaskController {
   @Post("/get")
   @Secured(ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun getActorMask(
-    @Body actorMaskRequestBody: ActorMaskRequestBody,
+  fun getPartialUserConfig(
+    @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
   ) {
     // No-op
     // ALSO: fix annotations later

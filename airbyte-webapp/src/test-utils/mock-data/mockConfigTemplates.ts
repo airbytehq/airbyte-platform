@@ -1,12 +1,11 @@
-import { ActorTemplateList, ActorTemplateRead } from "core/api/types/AirbyteClient";
+import { ConfigTemplateList, ConfigTemplateRead } from "core/api/types/AirbyteClient";
 
-export const mockTemplateForGDrive: ActorTemplateRead = {
+export const mockTemplateForGDrive: ConfigTemplateRead = {
   id: "3",
   name: "GDrive",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-google-drive/latest/icon.svg",
   sourceDefintionVersionId: "312341234",
-  streamSelection: [],
-  actorProperties: {
+  configTemplateSpec: {
     advancedAuth: {
       authFlowType: "oauth2.0",
       predicateKey: ["credentials", "auth_type"],
@@ -588,8 +587,8 @@ export const mockTemplateForGDrive: ActorTemplateRead = {
   },
 };
 
-export const mockActorTemplateList: ActorTemplateList = {
-  actorTemplates: [
+export const mockConfigTemplateList: ConfigTemplateList = {
+  configTemplates: [
     {
       id: "1",
       name: "FakerOne",
@@ -608,12 +607,12 @@ export const mockActorTemplateList: ActorTemplateList = {
   ],
 };
 
-export const mockActorTemplateFakerOneWithStreams: ActorTemplateRead = {
+export const mockConfigTemplateFakerOne: ConfigTemplateRead = {
   id: "1",
   name: "FakerOne",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
   sourceDefintionVersionId: "actor-definition-version-id",
-  actorProperties: {
+  configTemplateSpec: {
     connectionSpecification: {
       type: "object",
       title: "Faker Source Spec",
@@ -630,18 +629,14 @@ export const mockActorTemplateFakerOneWithStreams: ActorTemplateRead = {
       },
     },
   },
-  streamSelection: [
-    { streamDescriptor: { name: "products" }, status: "optional" },
-    { streamDescriptor: { name: "purchases" }, status: "suggested" },
-  ],
 };
 
-export const mockActorTemplateAlsoFaker: ActorTemplateRead = {
+export const mockConfigTemplateAlsoFaker: ConfigTemplateRead = {
   id: "2",
   name: "Also Faker!",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
   sourceDefintionVersionId: "actor-definition-version-id",
-  actorProperties: {
+  configTemplateSpec: {
     connectionSpecification: {
       type: "object",
       title: "Faker Source Spec",
@@ -658,5 +653,4 @@ export const mockActorTemplateAlsoFaker: ActorTemplateRead = {
       },
     },
   },
-  streamSelection: [],
 };

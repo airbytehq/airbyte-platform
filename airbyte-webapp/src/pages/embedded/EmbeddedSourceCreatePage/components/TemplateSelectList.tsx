@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { Box } from "components/ui/Box";
 
-import { useListActorTemplates } from "core/api";
+import { useListConfigTemplates } from "core/api";
 
 import styles from "./TemplateSelectList.module.scss";
 
@@ -18,11 +18,11 @@ export const TemplateSelectList: React.FC = () => {
     });
   };
 
-  const { actorTemplates } = useListActorTemplates(organizationId ?? "");
+  const { configTemplates } = useListConfigTemplates(organizationId ?? "");
 
   return (
     <ul className={styles.list}>
-      {actorTemplates.map((template) => {
+      {configTemplates.map((template) => {
         return (
           <li key={template.id}>
             <Box py="sm">

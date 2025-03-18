@@ -91,10 +91,10 @@ tags:
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
   - name: public
     description: Public resources that are considered stable and are intended to be consumed as API by end users.
-  - name: actor_templates
-    description: Interactions with actor connection templates, used in conjunction with actor_masks to generate sources.
-  - name: actor_masks
-    description: Interactions with actor connection masks, used in conjunction with actor_templates to generate sources.
+  - name: config_templates
+    description: Interactions with config templates, used in conjunction with partial_user_configs to generate sources.
+  - name: partial_user_configs
+    description: Interactions with partial user configs, used in conjunction with config_templates to generate sources.
   - name: embedded
     description: Endpoints specific to workflows for Airbyte operators and their end-users.
 
@@ -6136,136 +6136,137 @@ paths:
                 $ref: "#/components/schemas/DataplaneInitResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_templates/list:
+
+  /v1/config_templates/list:
     post:
-      summary: List all actor templates available to a workspace
+      summary: List all config templates available to a workspace
       tags:
-        - actor_template
+        - config_template
         - embedded
-      operationId: listActorTemplates
+      operationId: listConfigTemplates
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ActorTemplateListRequestBody"
+              $ref: "#/components/schemas/ConfigTemplateListRequest"
         required: true
       responses:
         "200":
-          description: Successfully retrieved actor template list
+          description: Successfully retrieved config template list
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorTemplateList"
+                $ref: "#/components/schemas/ConfigTemplateList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_templates/get:
+  /v1/config_templates/get:
     post:
-      summary: Get details of a specific actor template
+      summary: Get details of a specific config template
       tags:
-        - actor_template
+        - config_template
         - embedded
-      operationId: getActorTemplate
+      operationId: getConfigTemplate
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ActorTemplateRequestBody"
+              $ref: "#/components/schemas/ConfigTemplateRequestBody"
         required: true
       responses:
         "200":
-          description: Successfully retrieved actor template
+          description: Successfully retrieved config template
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorTemplateRead"
+                $ref: "#/components/schemas/ConfigTemplateRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_masks/get:
+  /v1/partial_user_configs/get:
     post:
-      summary: Get details of a specific actor mask
+      summary: Get details of a specific partial user config
       tags:
-        - actor_mask
+        - partial_user_configs
         - embedded
-      operationId: getActorMask
+      operationId: getPartialUserConfig
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ActorMaskRequestBody"
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
         required: true
       responses:
         "200":
-          description: Successfully retrieved actor mask
+          description: Successfully retrieved partial user config
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorMaskRead"
+                $ref: "#/components/schemas/PartialUserConfigRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_masks/create:
+  /v1/partial_user_configs/create:
     post:
-      summary: Create an actor mask
+      summary: Create a partial user config
       tags:
-        - actor_mask
+        - partial_user_configs
         - embedded
-      operationId: createActorMask
+      operationId: createPartialUserConfig
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ActorMaskCreateRequestBody"
+              $ref: "#/components/schemas/PartialUserConfigCreate"
         required: true
       responses:
         "200":
-          description: Successfully created actor mask
+          description: Successfully created partial user config + source
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorMaskRead"
+                $ref: "#/components/schemas/PartialUserConfigWithSource"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_masks/list_for_workspace:
+  /v1/partial_user_configs/list:
     post:
-      summary: List actor masks
+      summary: List partial user configs
       tags:
-        - actor_mask
+        - partial_user_configs
         - embedded
-      operationId: listActorMasksForWorkspace
+      operationId: listPartialUserConfigs
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ListActorMasksRequestBody"
+              $ref: "#/components/schemas/ListPartialUserConfigsRequest"
         required: true
       responses:
         "200":
-          description: Successfully created actor mask
+          description: Successfully retrieved partial user configs
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorMaskReadList"
+                $ref: "#/components/schemas/PartialUserConfigReadList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/actor_masks/update:
+  /v1/partial_user_configs/update:
     post:
-      summary: Update an actor mask
+      summary: Update a part
       tags:
-        - actor_mask
+        - partial_user_configs
         - embedded
-      operationId: updateActorMask
+      operationId: updateUserConfig
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ActorMaskUpdateRequestBody"
+              $ref: "#/components/schemas/PartialUserConfigUpdate"
         required: true
       responses:
         "200":
-          description: Successfully updated actor mask
+          description: Successfully updated partial user config
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ActorMaskRead"
+                $ref: "#/components/schemas/PartialUserConfigWithSource"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -17408,8 +17409,8 @@ components:
           type: string
           format: uuid
 
-    # ACTOR TEMPLATES
-    ActorTemplateListRequestBody:
+    # CONFIG TEMPLATES
+    ConfigTemplateListRequest:
       type: object
       required:
         - workspaceId
@@ -17417,16 +17418,16 @@ components:
         workspaceId:
           type: string
           format: uuid
-    ActorTemplateList:
+    ConfigTemplateList:
       type: object
       required:
-        - actorTemplates
+        - configTemplates
       properties:
-        actorTemplates:
+        configTemplates:
           type: array
           items:
-            $ref: "#/components/schemas/ActorTemplateSnippet"
-    ActorTemplateSnippet:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+    ConfigTemplateListItem:
       type: object
       required:
         - id
@@ -17440,23 +17441,22 @@ components:
           type: string
         icon:
           type: string
-    ActorTemplateRequestBody:
+    ConfigTemplateRequestBody:
       type: object
       required:
-        - templateId
+        - configTemplateId
       properties:
-        templateId:
+        configTemplateId:
           type: string
           format: uuid
-    ActorTemplateRead:
+    ConfigTemplateRead:
       type: object
       required:
         - id
         - name
         - icon
         - sourceDefintionVersionId
-        - streamSelection
-        - actorProperties
+        - configTemplateSpec
       properties:
         id:
           type: string
@@ -17469,13 +17469,10 @@ components:
         sourceDefintionVersionId:
           type: string
           format: uuid
-        streamSelection:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActorTemplateStreamConfig"
-        actorProperties:
-          $ref: "#/components/schemas/ActorTemplateActorProperties"
-    ActorTemplateActorProperties:
+        configTemplateSpec:
+          $ref: "#/components/schemas/ConfigTemplateSpec"
+    ConfigTemplateSpec:
+      description: matches the properties available for a SourceCreate
       type: object
       required:
         - connectionSpecification
@@ -17488,101 +17485,59 @@ components:
           $ref: "#/components/schemas/AdvancedAuth"
         advancedAuthGlobalCredentialsAvailable:
           type: boolean
-    ActorTemplateStreamConfig:
-      type: object
-      required:
-        - streamDescriptor
-        - state
-      properties:
-        streamDescriptor:
-          $ref: "#/components/schemas/StreamDescriptor"
-        status:
-          $ref: "#/components/schemas/ActorTemplateStreamStateEnum"
-    ActorTemplateStreamStateEnum:
-      type: string
-      enum:
-        - selected
-        - deselected
-        - suggested
-        - optional
-      x-sdk-component: true
 
-    # ACTOR MASKS
-    ActorMaskRequestBody:
+    # PARTIAL USER CONFIGS
+    PartialUserConfigRequestBody:
       type: object
       required:
-        - actorMaskId
+        - partialUserConfigId
       properties:
-        actorMaskId:
+        partialUserConfigId:
           type: string
           format: uuid
-    ActorMaskRead:
+    PartialUserConfigRead:
       type: object
       required:
-        - actorMaskId
-        - actorTemplateId
-        - actorProperties
+        - partialUserConfigId
+        - configTemplateId
+        - partialUserConfigProperties
       properties:
-        actorMaskId:
+        partialUserConfigId:
           type: string
           format: uuid
-        actorTemplateId:
+        configTemplateId:
+          description: the template that this user config is connected with
           type: string
           format: uuid
         sourceId:
+          description: the source that this partial user config is for
           type: string
-        actorProperties:
+        partialUserConfigProperties:
           $ref: "#/components/schemas/SourceConfiguration"
-        streamSelection:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActorMaskStreamConfig"
-    ActorMaskStreamConfig:
+    PartialUserConfigCreate:
       type: object
       required:
-        - streamDescriptor
-        - state
-      properties:
-        streamDescriptor:
-          $ref: "#/components/schemas/StreamDescriptor"
-        status:
-          $ref: "#/components/schemas/ActorMaskStreamStateEnum"
-    ActorMaskStreamStateEnum:
-      type: string
-      enum:
-        - selected
-        - deselected
-      x-sdk-component: true
-    ActorMaskCreateRequestBody:
-      type: object
-      required:
-        - actorTemplateId
+        - configTemplateId
         - actorProperties
       properties:
-        actorTemplateId:
+        configTemplateId:
+          description: the template that this user config is connected with
           type: string
           format: uuid
-        actorProperties:
+        partialUserConfigProperties:
           $ref: "#/components/schemas/SourceConfiguration"
-        streamSelection:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActorMaskStreamConfig"
-    ActorMaskUpdateRequestBody:
+    PartialUserConfigWithSource:
       type: object
+      description: the partial user config and its associated source
       required:
-        - actorMaskId
+        - partialUserConfig
+        - source
       properties:
-        actorMaskId:
-          type: string
-          format: uuid
-        actorProperties:
-          $ref: "#/components/schemas/SourceConfiguration"
-        streamSelection:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActorMaskStreamConfig"
-    ListActorMasksRequestBody:
+        partialUserConfig:
+          $ref: "#/components/schemas/PartialUserConfigRead"
+        source:
+          $ref: "#/components/schemas/SourceResponse"
+    ListPartialUserConfigsRequest:
       type: object
       required:
         - workspaceId
@@ -17590,28 +17545,39 @@ components:
         workspaceId:
           type: string
           format: uuid
-    ActorMaskReadList:
+    PartialUserConfigUpdate:
       type: object
       required:
-        - actorMasks
+        - partialUserConfigId
       properties:
-        actorMasks:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActorMaskReadListItem"
-    ActorMaskReadListItem:
-      type: object
-      required:
-        - actorMaskId
-        - actorTemplateName
-        - actorTemplateIcon
-      properties:
-        actorMaskId:
+        partialUserConfigId:
           type: string
           format: uuid
-        actorTemplateName:
+        actorProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigReadList:
+      type: object
+      required:
+        - partialUserConfigs
+      properties:
+        partialUserConfigs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartialUserConfigListItem"
+    PartialUserConfigListItem:
+      type: object
+      required:
+        - partialUserConfigId
+        - configTemplateName
+        - configTemplateIcon
+      properties:
+        partialUserConfigId:
           type: string
-        actorTemplateIcon:
+          format: uuid
+        configTemplateName:
+          type: string
+          description: the display name for the template
+        configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
 
