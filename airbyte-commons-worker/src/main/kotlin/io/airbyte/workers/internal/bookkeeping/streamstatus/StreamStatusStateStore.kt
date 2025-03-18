@@ -44,17 +44,24 @@ class StreamStatusStateStore {
     runState: ApiEnum,
   ): StreamStatusValue {
     val value = store[key]
+    val currentRunState = value?.runState
 
-    store[key] =
-      if (value == null) {
-        StreamStatusValue(runState = runState)
-      } else if (value.runState == null) {
-        StreamStatusValue(runState = runState)
-      } else {
-        StreamStatusValue(runState = resolveRunState(value.runState!!, runState))
+    // Determine new run state based on current state
+    val newRunState =
+      when {
+        currentRunState == null -> runState
+        else -> resolveRunState(currentRunState, runState)
       }
 
-    return store[key]!!
+    // Create new status value
+    val streamStatusValue = StreamStatusValue(runState = newRunState)
+
+    // Only update store if run state has changed
+    if (currentRunState != newRunState) {
+      store[key] = streamStatusValue
+    }
+
+    return streamStatusValue
   }
 
   fun setLatestStateId(
@@ -112,13 +119,17 @@ class StreamStatusStateStore {
   fun markStreamNotEmpty(key: StreamStatusKey): StreamStatusValue {
     val value = store[key]
 
-    if (value == null) {
-      store[key] = StreamStatusValue(streamEmpty = false)
-    } else {
-      value.streamEmpty = false
+    return when {
+      value == null -> {
+        val newValue = StreamStatusValue(streamEmpty = false)
+        store[key] = newValue
+        newValue
+      }
+      else -> {
+        value.streamEmpty = false
+        value
+      }
     }
-
-    return store[key]!!
   }
 
   fun isStreamComplete(

@@ -42,6 +42,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.general.buffered.worker.ReplicationWorkerK;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -216,6 +217,98 @@ public class ReplicationWorkerFactory {
         featureFlagClient, jobRunConfig, replicationInput, replicationAirbyteMessageEventPublishingHelper,
         onReplicationRunning, destinationTimeout, workloadApiClient, analyticsMessageTracker,
         workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory, metricClient, recordMapper,
+        destinationCatalogGenerator);
+  }
+
+  public ReplicationWorkerK createK(final ReplicationInput replicationInput,
+                                    final JobRunConfig jobRunConfig,
+                                    final IntegrationLauncherConfig sourceLauncherConfig,
+                                    final IntegrationLauncherConfig destinationLauncherConfig,
+                                    final VoidCallable onReplicationRunning,
+                                    final String workloadId)
+      throws IOException {
+    final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(
+        new SourceIdRequestBody(replicationInput.getSourceId())).getSourceDefinitionId();
+    final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceDefinitionId, airbyteApiClient.getSourceDefinitionApi());
+    final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
+    final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
+
+    log.info("Setting up source with image {}.", replicationInput.getSourceLauncherConfig().getDockerImage());
+    final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
+        new Multi(List.of(
+            new Connection(sourceLauncherConfig.getConnectionId()),
+            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
+    final var invalidLineConfig = new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks);
+
+    // reset jobs use an empty source to induce resetting all data in destination.
+    final boolean singleConnectorTest =
+        featureFlagClient.boolVariation(SingleContainerTest.INSTANCE, new Connection(replicationInput.getConnectionId()));
+    final var airbyteSource =
+        singleConnectorTest ? new InMemoryDummyAirbyteSource()
+            : (replicationInput.getIsReset()
+                ? new EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
+                : new LocalContainerAirbyteSource(
+                    heartbeatMonitor,
+                    getStreamFactory(sourceLauncherConfig, replicationInput.getCatalog(), SOURCE_LOG_MDC_BUILDER, invalidLineConfig),
+                    new MessageMetricsTracker(metricClient),
+                    ContainerIOHandle.source()));
+
+    log.info("Setting up destination with image {}.", replicationInput.getDestinationLauncherConfig().getDockerImage());
+    final AirbyteMessageBufferedWriterFactory messageWriterFactory =
+        new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
+            Optional.of(replicationInput.getCatalog()));
+
+    final var airbyteDestination =
+        singleConnectorTest ? new InMemoryDummyAirbyteDestination()
+            : new LocalContainerAirbyteDestination(
+                getStreamFactory(destinationLauncherConfig, replicationInput.getCatalog(), DESTINATION_LOG_MDC_BUILDER, invalidLineConfig),
+                new MessageMetricsTracker(metricClient),
+                messageWriterFactory,
+                destinationTimeout,
+                ContainerIOHandle.dest(),
+                replicationInput.getUseFileTransfer());
+    final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
+
+    final AnalyticsMessageTracker analyticsMessageTracker = new AnalyticsMessageTracker(trackingClient);
+
+    final FieldSelector fieldSelector =
+        createFieldSelector(recordSchemaValidator, metricReporter, featureFlagClient, replicationInput.getWorkspaceId(), sourceDefinitionId);
+
+    log.info("Setting up replication worker...");
+    final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
+    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, replicationInput, featureFlagClient);
+    final Context flagContext = getFeatureFlagContext(replicationInput);
+    final int bufferSize = featureFlagClient.intVariation(ReplicationBufferOverride.INSTANCE, flagContext);
+    final BufferConfiguration bufferConfiguration =
+        bufferSize > 0 ? BufferConfiguration.withBufferSize(bufferSize) : BufferConfiguration.withDefaultConfiguration();
+
+    return ReplicationWorkerKFactory.create(
+        jobRunConfig.getJobId(),
+        Math.toIntExact(jobRunConfig.getAttemptId()),
+        airbyteSource,
+        new NamespacingMapper(
+            replicationInput.getNamespaceDefinition(),
+            replicationInput.getNamespaceFormat(),
+            replicationInput.getPrefix()),
+        airbyteDestination,
+        messageTracker,
+        syncPersistence,
+        recordSchemaValidator,
+        fieldSelector,
+        new ReplicationFeatureFlagReader(featureFlagClient, flagContext),
+        replicationAirbyteMessageEventPublishingHelper,
+        onReplicationRunning,
+        destinationTimeout,
+        heartbeatMonitor,
+        workloadApiClient,
+        analyticsMessageTracker,
+        workloadId,
+        airbyteApiClient,
+        streamStatusCompletionTracker,
+        streamStatusTrackerFactory,
+        bufferConfiguration,
+        replicationInput,
+        recordMapper,
         destinationCatalogGenerator);
   }
 

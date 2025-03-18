@@ -10,6 +10,8 @@ import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator.BYTES_TO_GB
+import io.airbyte.featureflag.CoRoutineBufferedReplicationWorker
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -36,6 +38,11 @@ import java.util.UUID
 import java.util.function.ToDoubleFunction
 
 internal class ReplicationJobOrchestratorTest {
+  private val featureFlagClient =
+    mockk<FeatureFlagClient>(relaxed = true) {
+      every { boolVariation(flag = CoRoutineBufferedReplicationWorker, context = any()) } returns false
+    }
+
   @Test
   fun testSuccessfulJobRun() {
     val attemptNumber = 1
@@ -146,6 +153,7 @@ internal class ReplicationJobOrchestratorTest {
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
+        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
@@ -283,6 +291,7 @@ internal class ReplicationJobOrchestratorTest {
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
+        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
@@ -421,6 +430,7 @@ internal class ReplicationJobOrchestratorTest {
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
+        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
@@ -559,6 +569,7 @@ internal class ReplicationJobOrchestratorTest {
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
+        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
