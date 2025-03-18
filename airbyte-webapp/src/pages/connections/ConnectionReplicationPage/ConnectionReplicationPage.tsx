@@ -14,6 +14,7 @@ import {
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
 import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRefreshing";
+import { useReplicationConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/zodSchema";
 import { SyncCatalogTable } from "components/connection/SyncCatalogTable";
 import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -36,6 +37,7 @@ import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -90,6 +92,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
   const getStateType = useGetStateTypeQuery();
+  const isZodSchemaValidatorEnabled = useExperiment("connection.zodSchemaValidator");
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
@@ -105,6 +108,7 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   type RelevantConnectionValues = Pick<ConnectionValues, (typeof relevantConnectionKeys)[number]>;
   const validationSchema = useConnectionValidationSchema().pick(relevantConnectionKeys);
+  const zodValidationSchema = useReplicationConnectionValidationZodSchema();
 
   const saveConnection = useCallback(
     async (values: Partial<ConnectionValues>, skipReset: boolean) => {
@@ -274,6 +278,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           defaultValues={initialValues}
           reinitializeDefaultValues
           schema={validationSchema}
+          zodSchema={isZodSchemaValidatorEnabled ? zodValidationSchema : undefined}
           onSubmit={onFormSubmit}
           trackDirtyChanges
           onError={onError}

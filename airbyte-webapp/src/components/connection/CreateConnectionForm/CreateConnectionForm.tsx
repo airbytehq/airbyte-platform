@@ -16,7 +16,7 @@ import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -30,11 +30,13 @@ import {
   useConnectionValidationSchema,
   useInitialFormValues,
 } from "../ConnectionForm/formConfig";
+import { useConnectionValidationZodSchema } from "../ConnectionForm/schemas/zodSchema";
 
 export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
 
 const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
+  const isZodSchemaValidatorEnabled = useExperiment("connection.zodSchemaValidator");
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
   const { connection, mode, setSubmitError } = useConnectionFormService();
@@ -45,6 +47,7 @@ const CreateConnectionFormInner: React.FC = () => {
   const queryClient = useQueryClient();
 
   const validationSchema = useConnectionValidationSchema();
+  const zodValidationSchema = useConnectionValidationZodSchema();
 
   const onSubmit = useCallback(
     async ({ ...restFormValues }: FormConnectionFormValues) => {
@@ -152,6 +155,7 @@ const CreateConnectionFormInner: React.FC = () => {
         <Form<FormConnectionFormValues>
           defaultValues={initialValues}
           schema={validationSchema}
+          zodSchema={isZodSchemaValidatorEnabled ? zodValidationSchema : undefined}
           onSubmit={onSubmit}
           onError={onError}
           trackDirtyChanges
