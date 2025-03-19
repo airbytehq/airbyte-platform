@@ -2,12 +2,14 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package pipeline.handlers
+package io.airbyte.workload.launcher.pipeline.handlers
 
 import io.airbyte.config.WorkloadType
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
-import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
+import io.airbyte.workload.launcher.pipeline.handlers.FailureHandlerTest.Fixtures.launcherInput
+import io.airbyte.workload.launcher.pipeline.handlers.FailureHandlerTest.Fixtures.stageIO
+import io.airbyte.workload.launcher.pipeline.handlers.FailureHandlerTest.Fixtures.workloadId
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
@@ -20,9 +22,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import pipeline.handlers.FailureHandlerTest.Fixtures.launcherInput
-import pipeline.handlers.FailureHandlerTest.Fixtures.stageIO
-import pipeline.handlers.FailureHandlerTest.Fixtures.workloadId
 import java.util.Optional
 import java.util.UUID
 

@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.config
 
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueuePoller
@@ -18,11 +19,13 @@ class WorkloadApiQueueBeanFactory {
   @Named("highPriorityQueuePoller")
   fun highPriorityQueuePoller(
     workloadApiClient: WorkloadApiClient,
+    metricClient: MetricClient,
     @Value("\${airbyte.workload-launcher.consumer.high-priority-queue.poll-size-items}") pollSizeItems: Int,
     @Value("\${airbyte.workload-launcher.consumer.high-priority-queue.poll-interval-seconds}") pollIntervalSeconds: Long,
   ): WorkloadApiQueuePoller =
     WorkloadApiQueuePoller(
       workloadApiClient,
+      metricClient,
       pollSizeItems,
       pollIntervalSeconds,
       WorkloadPriority.HIGH,
@@ -32,11 +35,13 @@ class WorkloadApiQueueBeanFactory {
   @Named("defaultPriorityQueuePoller")
   fun defaultPriorityQueuePoller(
     workloadApiClient: WorkloadApiClient,
+    metricClient: MetricClient,
     @Value("\${airbyte.workload-launcher.consumer.default-queue.poll-size-items}") pollSizeItems: Int,
     @Value("\${airbyte.workload-launcher.consumer.default-queue.poll-interval-seconds}") pollIntervalSeconds: Long,
   ): WorkloadApiQueuePoller =
     WorkloadApiQueuePoller(
       workloadApiClient,
+      metricClient,
       pollSizeItems,
       pollIntervalSeconds,
       WorkloadPriority.DEFAULT,

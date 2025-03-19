@@ -4,11 +4,9 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +16,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.openapitools.client.infrastructure.ClientException
-import java.util.UUID
 
 private const val APPLICATION_NAME = "airbyte-workload-launcher"
 private const val DATA_PLANE_ID = "data-plane-id"
@@ -40,16 +37,6 @@ internal class WorkloadApiClientTest {
   @Test
   internal fun `test reporting a failure to the workload API`() {
     val workloadId = "workload-id"
-    val launcherInput =
-      LauncherInput(
-        workloadId = workloadId,
-        workloadInput = "",
-        labels = mapOf(),
-        logPath = "",
-        workloadType = WorkloadType.SYNC,
-        mutexKey = "",
-        autoId = UUID.randomUUID(),
-      )
     val requestCapture = slot<WorkloadFailureRequest>()
 
     every { workloadApi.workloadFailure(any()) } returns Unit

@@ -695,6 +695,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_launcher_non_stage_failure",
     metricDescription = "Count of launcher errors occurring outside the staged pipeline",
   ),
+  WORKLOAD_QUEUE_CONSUMER_FAILURE(
+    metricName = "workload_queue_consumer_failure",
+    metricDescription = "Count of errors in the consumer",
+  ),
   WORKLOAD_QUEUE_SIZE(
     metricName = "workload_queue_size",
     metricDescription = "used to track the queue size launcher does not processes a workload successfully",
