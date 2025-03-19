@@ -35,6 +35,7 @@ import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
+import { BuilderOneOf } from "./BuilderOneOf";
 import { DecoderConfig } from "./DecoderConfig";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
@@ -59,6 +60,7 @@ import {
   isEmptyOrDefault,
   DEFAULT_BUILDER_STREAM_VALUES,
   DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+  BuilderPollingTimeout,
 } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -404,6 +406,46 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
           </BuilderCard>
           <AuthenticationSection authPath={pollingRequesterPath("authenticator")} />
           <BuilderCard>
+            <BuilderOneOf<BuilderPollingTimeout>
+              path={pollingRequesterPath("pollingTimeout")}
+              label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.label" })}
+              manifestPath="AsyncRetriever.properties.polling_job_timeout"
+              options={[
+                {
+                  label: formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number" }),
+                  default: {
+                    type: "number",
+                    value: 15,
+                  },
+                  children: (
+                    <BuilderField
+                      type="integer"
+                      path={pollingRequesterPath("pollingTimeout.value")}
+                      label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number.label" })}
+                      tooltip={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number.tooltip" })}
+                      step={1}
+                      min={1}
+                    />
+                  ),
+                },
+                {
+                  label: formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom" }),
+                  default: {
+                    type: "custom",
+                    value: "{{ }}",
+                  },
+                  children: (
+                    <BuilderField
+                      type="jinja"
+                      path={pollingRequesterPath("pollingTimeout.value")}
+                      label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.label" })}
+                      tooltip={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.tooltip" })}
+                      pattern={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.pattern" })}
+                    />
+                  ),
+                },
+              ]}
+            />
             <GroupControls
               label={
                 <ControlLabels

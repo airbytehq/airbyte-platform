@@ -257,6 +257,17 @@ export const useBuilderValidationSchema = () => {
               field_path: yup.array().of(yup.string()),
             }),
             authenticator: maybeYamlSchema(authenticatorSchema),
+            pollingTimeout: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: "number",
+                then: yup
+                  .number()
+                  .integer("connectorBuilder.asyncStream.polling.timeout.number.integer")
+                  .required(REQUIRED_ERROR)
+                  .min(1, "connectorBuilder.asyncStream.polling.timeout.number.min"),
+                otherwise: interpolationString,
+              }),
+            }),
           })
         ),
         downloadRequester: ifRequestType(

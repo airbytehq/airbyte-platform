@@ -436,6 +436,16 @@ export interface BuilderDpathExtractor {
 export type YamlString = string;
 export const isYamlString = (value: unknown): value is YamlString => isString(value);
 
+export type BuilderPollingTimeout =
+  | {
+      type: "number";
+      value: number;
+    }
+  | {
+      type: "custom";
+      value: string;
+    };
+
 export type BuilderStream = {
   id: string;
   name: string;
@@ -471,6 +481,7 @@ export type BuilderStream = {
         statusExtractor: BuilderDpathExtractor;
         statusMapping: AsyncJobStatusMap;
         downloadTargetExtractor: BuilderDpathExtractor;
+        pollingTimeout: BuilderPollingTimeout;
       };
       downloadRequester: BuilderBaseRequester & {
         decoder: BuilderDecoderConfig;
@@ -638,6 +649,7 @@ export const DEFAULT_BUILDER_ASYNC_STREAM_VALUES: BuilderStream = {
       type: DpathExtractorType.DpathExtractor,
       field_path: [],
     },
+    pollingTimeout: { type: "number", value: 15 },
   },
   downloadRequester: {
     url: "",
@@ -1324,6 +1336,10 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
         decoder: builderDecoderToManifest(stream.creationRequester.decoder),
         creation_requester: builderBaseRequesterToManifest(stream.creationRequester),
         polling_requester: builderBaseRequesterToManifest(stream.pollingRequester),
+        polling_job_timeout:
+          stream.pollingRequester.pollingTimeout.value === 15
+            ? undefined
+            : stream.pollingRequester.pollingTimeout.value,
         download_requester: builderBaseRequesterToManifest(stream.downloadRequester),
         download_decoder: builderDecoderToManifest(stream.downloadRequester.decoder),
         download_paginator: convertOrLoadYamlString(stream.downloadRequester.paginator, builderPaginatorToManifest),

@@ -437,6 +437,7 @@ const manifestAsyncStreamToBuilder = (
     status_extractor,
     status_mapping,
     download_target_extractor,
+    polling_job_timeout,
     ...unknownRetrieverFields
   } = retriever;
   assertType<HttpRequester>(creation_requester, "HttpRequester", streamName);
@@ -513,6 +514,9 @@ const manifestAsyncStreamToBuilder = (
       statusMapping: status_mapping,
       statusExtractor: manifestDpathExtractorToBuilder(status_extractor),
       downloadTargetExtractor: manifestDpathExtractorToBuilder(download_target_extractor),
+      pollingTimeout: isString(polling_job_timeout)
+        ? { type: "custom", value: polling_job_timeout }
+        : { type: "number", value: polling_job_timeout ?? 15 },
     },
     downloadRequester: {
       ...manifestAsyncHttpRequesterToBuilder(download_requester, streamName, spec),
