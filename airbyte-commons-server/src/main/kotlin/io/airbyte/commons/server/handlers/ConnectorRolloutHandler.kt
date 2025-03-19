@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
@@ -10,6 +11,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
 import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse
 import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
@@ -237,7 +239,8 @@ open class ConnectorRolloutHandler
         )
       }
       val connectorRollout =
-        initializedRollouts.first()
+        initializedRollouts
+          .first()
           .withUpdatedBy(updatedBy)
           .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
           .withInitialRolloutPct(initialRolloutPct?.toLong())
@@ -619,7 +622,7 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(rollout.id), false)
     }
 
-    open fun manualDoConnectorRolloutUpdate(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutRead {
+    open fun manualDoConnectorRolloutUpdate(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutManualRolloutResponse {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id)
       if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
         try {
@@ -661,7 +664,9 @@ open class ConnectorRolloutHandler
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
       }
-      return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id), false)
+      val response = ConnectorRolloutManualRolloutResponse()
+      response.status("ok")
+      return response
     }
 
     open fun manualFinalizeConnectorRollout(
@@ -774,21 +779,19 @@ open class ConnectorRolloutHandler
       return buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)!!, false)
     }
 
-    internal fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy {
-      return if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
+    internal fun getRolloutStrategyForManualUpdate(currentRolloutStrategy: ConnectorEnumRolloutStrategy?): ConnectorEnumRolloutStrategy =
+      if (currentRolloutStrategy == null || currentRolloutStrategy == ConnectorEnumRolloutStrategy.MANUAL) {
         ConnectorEnumRolloutStrategy.MANUAL
       } else {
         ConnectorEnumRolloutStrategy.OVERRIDDEN
       }
-    }
 
-    internal fun getRolloutStrategyForManualStart(rolloutStrategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy {
-      return if (rolloutStrategy == null || rolloutStrategy == ConnectorRolloutStrategy.MANUAL) {
+    internal fun getRolloutStrategyForManualStart(rolloutStrategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy =
+      if (rolloutStrategy == null || rolloutStrategy == ConnectorRolloutStrategy.MANUAL) {
         ConnectorEnumRolloutStrategy.MANUAL
       } else {
         ConnectorEnumRolloutStrategy.AUTOMATED
       }
-    }
 
     @Transactional("config")
     open fun getActorSelectionInfo(

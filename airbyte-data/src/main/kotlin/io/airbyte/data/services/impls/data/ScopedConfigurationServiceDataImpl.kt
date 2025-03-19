@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ConfigOriginType
@@ -17,12 +21,15 @@ import java.util.Optional
 import java.util.UUID
 
 @Singleton
-class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigurationRepository) : ScopedConfigurationService {
-  override fun getScopedConfiguration(configId: UUID): ScopedConfiguration {
-    return repository.findById(configId).orElseThrow {
-      ConfigNotFoundException(ConfigSchema.SCOPED_CONFIGURATION, configId)
-    }.toConfigModel()
-  }
+class ScopedConfigurationServiceDataImpl(
+  private val repository: ScopedConfigurationRepository,
+) : ScopedConfigurationService {
+  override fun getScopedConfiguration(configId: UUID): ScopedConfiguration =
+    repository
+      .findById(configId)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigSchema.SCOPED_CONFIGURATION, configId)
+      }.toConfigModel()
 
   override fun getScopedConfiguration(
     key: String,
@@ -30,25 +37,23 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
     resourceId: UUID,
     scopeType: ConfigScopeType,
     scopeId: UUID,
-  ): Optional<ScopedConfiguration> {
-    return Optional.ofNullable(
-      repository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
-        key,
-        resourceType.toEntity(),
-        resourceId,
-        scopeType.toEntity(),
-        scopeId,
-      )?.toConfigModel(),
+  ): Optional<ScopedConfiguration> =
+    Optional.ofNullable(
+      repository
+        .getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+          key,
+          resourceType.toEntity(),
+          resourceId,
+          scopeType.toEntity(),
+          scopeId,
+        )?.toConfigModel(),
     )
-  }
 
   override fun getScopedConfiguration(
     key: String,
     scopeType: ConfigScopeType,
     scopeId: UUID,
-  ): List<ScopedConfiguration> {
-    return repository.findByKeyAndScopeTypeAndScopeId(key, scopeType.toEntity(), scopeId).map { it.toConfigModel() }
-  }
+  ): List<ScopedConfiguration> = repository.findByKeyAndScopeTypeAndScopeId(key, scopeType.toEntity(), scopeId).map { it.toConfigModel() }
 
   override fun getScopedConfiguration(
     configKey: ScopedConfigurationKey,
@@ -113,8 +118,7 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
             supportedScope.toEntity(),
             // Get the id for this scope
             scopes[supportedScope]!!,
-          )
-          .map { it.toConfigModel() }
+          ).map { it.toConfigModel() }
           .toList()
 
       // For each iteration, add or replace items to give a "sorted" values list
@@ -149,8 +153,7 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
             supportedScope.toEntity(),
             // Get the id for this scope
             scopes[supportedScope]!!,
-          )
-          .map { it.toConfigModel() }
+          ).map { it.toConfigModel() }
           .toList()
 
       // For each iteration, add or replace items to give a "sorted" values list
@@ -212,17 +215,17 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
     return repository.save(scopedConfiguration.toEntity()).toConfigModel()
   }
 
-  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> {
-    return repository.saveAll(scopedConfigurations.map { it.toEntity() }).map { it.toConfigModel() }
-  }
+  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> =
+    repository
+      .saveAll(
+        scopedConfigurations.map {
+          it.toEntity()
+        },
+      ).map { it.toConfigModel() }
 
-  override fun listScopedConfigurations(): List<ScopedConfiguration> {
-    return repository.findAll().map { it.toConfigModel() }.toList()
-  }
+  override fun listScopedConfigurations(): List<ScopedConfiguration> = repository.findAll().map { it.toConfigModel() }.toList()
 
-  override fun listScopedConfigurations(key: String): List<ScopedConfiguration> {
-    return repository.findByKey(key).map { it.toConfigModel() }.toList()
-  }
+  override fun listScopedConfigurations(key: String): List<ScopedConfiguration> = repository.findByKey(key).map { it.toConfigModel() }.toList()
 
   override fun listScopedConfigurationsWithScopes(
     key: String,
@@ -230,15 +233,16 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
     resourceId: UUID,
     scopeType: ConfigScopeType,
     scopeIds: List<UUID>,
-  ): List<ScopedConfiguration> {
-    return repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
-      key,
-      resourceType.toEntity(),
-      resourceId,
-      scopeType.toEntity(),
-      scopeIds,
-    ).map { it.toConfigModel() }.toList()
-  }
+  ): List<ScopedConfiguration> =
+    repository
+      .findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+        key,
+        resourceType.toEntity(),
+        resourceId,
+        scopeType.toEntity(),
+        scopeIds,
+      ).map { it.toConfigModel() }
+      .toList()
 
   override fun listScopedConfigurationsWithOrigins(
     key: String,
@@ -246,15 +250,16 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
     resourceId: UUID,
     originType: ConfigOriginType,
     origins: List<String>,
-  ): List<ScopedConfiguration> {
-    return repository.findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
-      key,
-      resourceType.toEntity(),
-      resourceId,
-      originType.toEntity(),
-      origins,
-    ).map { it.toConfigModel() }.toList()
-  }
+  ): List<ScopedConfiguration> =
+    repository
+      .findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
+        key,
+        resourceType.toEntity(),
+        resourceId,
+        originType.toEntity(),
+        origins,
+      ).map { it.toConfigModel() }
+      .toList()
 
   override fun listScopedConfigurationsWithValues(
     key: String,
@@ -263,16 +268,17 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
     scopeType: ConfigScopeType,
     originType: ConfigOriginType,
     values: List<String>,
-  ): List<ScopedConfiguration> {
-    return repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
-      key,
-      resourceType.toEntity(),
-      resourceId,
-      scopeType.toEntity(),
-      originType.toEntity(),
-      values,
-    ).map { it.toConfigModel() }.toList()
-  }
+  ): List<ScopedConfiguration> =
+    repository
+      .findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
+        key,
+        resourceType.toEntity(),
+        resourceId,
+        scopeType.toEntity(),
+        originType.toEntity(),
+        values,
+      ).map { it.toConfigModel() }
+      .toList()
 
   override fun deleteScopedConfiguration(configId: UUID) {
     repository.deleteById(configId)

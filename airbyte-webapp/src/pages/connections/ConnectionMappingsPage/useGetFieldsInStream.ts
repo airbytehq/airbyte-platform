@@ -1,13 +1,7 @@
-/**
- * todo: this lists all fields for a stream (maybe obvious) however, in reality we want all fields for a stream at the point of this mapping
- * that PR is in flight to be added at a (very soon) later time
- * https://github.com/airbytehq/airbyte-internal-issues/issues/11010
- */
-
-import { useCurrentConnection } from "core/api";
+import { useCurrentConnection, useInitialValidation } from "core/api";
 import { traverseSchemaToField } from "core/domain/catalog";
 
-import { getStreamDescriptorForKey } from "./MappingContext";
+import { getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
 
 export const useGetFieldsInStream = (streamDescriptorKey: string) => {
   const { syncCatalog } = useCurrentConnection();
@@ -25,4 +19,29 @@ export const useGetFieldsInStream = (streamDescriptorKey: string) => {
     fieldType: field.type,
     airbyteType: field.airbyte_type,
   }));
+};
+export const useGetFieldsForMapping = (streamDescriptorKey: string, mapperId: string) => {
+  const { streamsWithMappings } = useMappingContext();
+  const mappings = streamsWithMappings[streamDescriptorKey];
+  const initialData = useInitialValidation(getStreamDescriptorForKey(streamDescriptorKey), mappings);
+
+  if (!initialData) {
+    return [];
+  }
+
+  const mapperIdx = initialData?.mappers.findIndex((m) => m.id === mapperId);
+
+  if (mapperIdx === undefined || mapperIdx === -1) {
+    return [];
+  }
+
+  if (mapperIdx === 0) {
+    return initialData?.initialFields.sort((a, b) => {
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  return initialData?.mappers[mapperIdx - 1].outputFields.sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
 };

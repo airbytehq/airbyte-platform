@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -25,11 +25,13 @@ public interface JobCreationAndStatusUpdateActivity {
   class JobCreationInput {
 
     private UUID connectionId;
+    private boolean isScheduled;
 
     public JobCreationInput() {}
 
-    public JobCreationInput(UUID connectionId) {
+    public JobCreationInput(UUID connectionId, boolean isScheduled) {
       this.connectionId = connectionId;
+      this.isScheduled = isScheduled;
     }
 
     public UUID getConnectionId() {
@@ -40,23 +42,41 @@ public interface JobCreationAndStatusUpdateActivity {
       this.connectionId = connectionId;
     }
 
+    public UUID connectionId() {
+      return connectionId;
+    }
+
+    public boolean isScheduled() {
+      return isScheduled;
+    }
+
+    public void setScheduled(boolean scheduled) {
+      isScheduled = scheduled;
+    }
+
     @Override
     public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
       JobCreationInput that = (JobCreationInput) o;
-      return Objects.equals(connectionId, that.connectionId);
+      return isScheduled == that.isScheduled && Objects.equals(connectionId, that.connectionId);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(connectionId);
+      return Objects.hash(connectionId, isScheduled);
     }
 
     @Override
     public String toString() {
-      return "JobCreationInput{connectionId=" + connectionId + '}';
+      return "JobCreationInput{"
+          + "connectionId=" + connectionId
+          + ", isScheduled=" + isScheduled
+          + '}';
     }
 
   }

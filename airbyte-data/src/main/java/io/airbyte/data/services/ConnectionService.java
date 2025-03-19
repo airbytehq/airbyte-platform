@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -37,7 +37,11 @@ public interface ConnectionService {
 
   List<StandardSync> listWorkspaceStandardSyncs(StandardSyncQuery standardSyncQuery) throws IOException;
 
-  Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(List<UUID> workspaceIds, boolean includeDeleted, int pageSize, int rowOffset)
+  Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(List<UUID> workspaceIds,
+                                                                    List<UUID> tagIds,
+                                                                    boolean includeDeleted,
+                                                                    int pageSize,
+                                                                    int rowOffset)
       throws IOException;
 
   Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(StandardSyncsQueryPaginated standardSyncsQueryPaginated) throws IOException;
@@ -46,7 +50,14 @@ public interface ConnectionService {
 
   List<StandardSync> listConnectionsByDestination(UUID destinationId, boolean includeDeleted) throws IOException;
 
-  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId, String actorTypeValue, boolean includeDeleted)
+  List<StandardSync> listConnectionsBySources(List<UUID> sourceIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
+  List<StandardSync> listConnectionsByDestinations(List<UUID> destinationIds, boolean includeDeleted, boolean includeInactive) throws IOException;
+
+  List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId,
+                                                               String actorTypeValue,
+                                                               boolean includeDeleted,
+                                                               boolean includeInactive)
       throws IOException;
 
   List<StreamDescriptor> getAllStreamsForConnection(UUID connectionId) throws ConfigNotFoundException, IOException;

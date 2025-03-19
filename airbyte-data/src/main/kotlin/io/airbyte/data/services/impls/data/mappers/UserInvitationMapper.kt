@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.data.repositories.entities.UserInvitation
@@ -12,42 +16,38 @@ typealias ModelInvitationStatus = io.airbyte.config.InvitationStatus
 typealias EntityUserInvitation = UserInvitation
 typealias ModelUserInvitation = io.airbyte.config.UserInvitation
 
-fun EntityScopeType.toConfigModel(): ModelScopeType {
-  return when (this) {
+fun EntityScopeType.toConfigModel(): ModelScopeType =
+  when (this) {
     EntityScopeType.organization -> ModelScopeType.ORGANIZATION
     EntityScopeType.workspace -> ModelScopeType.WORKSPACE
   }
-}
 
-fun ModelScopeType.toEntity(): EntityScopeType {
-  return when (this) {
+fun ModelScopeType.toEntity(): EntityScopeType =
+  when (this) {
     ModelScopeType.ORGANIZATION -> EntityScopeType.organization
     ModelScopeType.WORKSPACE -> EntityScopeType.workspace
   }
-}
 
-fun EntityInvitationStatus.toConfigModel(): ModelInvitationStatus {
-  return when (this) {
+fun EntityInvitationStatus.toConfigModel(): ModelInvitationStatus =
+  when (this) {
     EntityInvitationStatus.pending -> ModelInvitationStatus.PENDING
     EntityInvitationStatus.accepted -> ModelInvitationStatus.ACCEPTED
     EntityInvitationStatus.cancelled -> ModelInvitationStatus.CANCELLED
     EntityInvitationStatus.declined -> ModelInvitationStatus.DECLINED
     EntityInvitationStatus.expired -> ModelInvitationStatus.EXPIRED
   }
-}
 
-fun ModelInvitationStatus.toEntity(): EntityInvitationStatus {
-  return when (this) {
+fun ModelInvitationStatus.toEntity(): EntityInvitationStatus =
+  when (this) {
     ModelInvitationStatus.PENDING -> EntityInvitationStatus.pending
     ModelInvitationStatus.ACCEPTED -> EntityInvitationStatus.accepted
     ModelInvitationStatus.CANCELLED -> EntityInvitationStatus.cancelled
     ModelInvitationStatus.DECLINED -> EntityInvitationStatus.declined
     ModelInvitationStatus.EXPIRED -> EntityInvitationStatus.expired
   }
-}
 
-fun EntityUserInvitation.toConfigModel(): ModelUserInvitation {
-  return ModelUserInvitation()
+fun EntityUserInvitation.toConfigModel(): ModelUserInvitation =
+  ModelUserInvitation()
     .withId(this.id)
     .withInviteCode(this.inviteCode)
     .withInviterUserId(this.inviterUserId)
@@ -60,10 +60,9 @@ fun EntityUserInvitation.toConfigModel(): ModelUserInvitation {
     .withCreatedAt(this.createdAt?.toEpochSecond())
     .withUpdatedAt(this.updatedAt?.toEpochSecond())
     .withExpiresAt(this.expiresAt.toEpochSecond())
-}
 
-fun ModelUserInvitation.toEntity(): EntityUserInvitation {
-  return EntityUserInvitation(
+fun ModelUserInvitation.toEntity(): EntityUserInvitation =
+  EntityUserInvitation(
     id = this.id,
     inviteCode = this.inviteCode,
     inviterUserId = this.inviterUserId,
@@ -77,4 +76,3 @@ fun ModelUserInvitation.toEntity(): EntityUserInvitation {
     updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     expiresAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(this.expiresAt), ZoneOffset.UTC),
   )
-}

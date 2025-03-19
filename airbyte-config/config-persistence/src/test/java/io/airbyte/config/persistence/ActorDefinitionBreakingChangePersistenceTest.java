@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -22,6 +22,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -31,6 +32,7 @@ import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -126,6 +128,8 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
+    final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final MetricClient metricClient = mock(MetricClient.class);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
 
     sourceService = spy(
@@ -140,7 +144,9 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
                 featureFlagClient,
                 connectionService,
                 actorDefinitionService,
-                scopedConfigurationService)));
+                scopedConfigurationService,
+                connectionTimelineEventService),
+            metricClient));
     destinationService = spy(
         new DestinationServiceJooqImpl(
             database,
@@ -153,7 +159,9 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
                 featureFlagClient,
                 connectionService,
                 actorDefinitionService,
-                scopedConfigurationService)));
+                scopedConfigurationService,
+                connectionTimelineEventService),
+            metricClient));
 
     sourceService.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

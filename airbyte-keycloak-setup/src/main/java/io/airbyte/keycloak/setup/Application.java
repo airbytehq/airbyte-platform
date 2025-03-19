@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -20,7 +20,8 @@ public class Application {
 
   public static void main(final String[] args) {
     try {
-      final ApplicationContext applicationContext = Micronaut.run(Application.class, args);
+      final ApplicationContext applicationContext =
+          Micronaut.build(args).deduceCloudEnvironment(false).deduceEnvironment(false).mainClass(Application.class).start();
       final KeycloakSetup keycloakSetup = applicationContext.getBean(KeycloakSetup.class);
       keycloakSetup.run();
       System.exit(0);

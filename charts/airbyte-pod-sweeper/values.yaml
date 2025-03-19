@@ -9,7 +9,7 @@ global:
     # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
-enabled: true
+enabled: false
 ##  podSweeper.image.repository The image repository to use for the pod sweeper
 ##  podSweeper.image.pullPolicy The pull policy for the pod sweeper image
 ##  podSweeper.image.tag The pod sweeper image tag to use
@@ -113,7 +113,7 @@ timeToDeletePods:
   ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
   unsuccessful: 120
 
-replicaCount: 1
+replicaCount: 0
 
 ## namespace [string] namespace to deploy pod-sweeper at
 namespace: ""

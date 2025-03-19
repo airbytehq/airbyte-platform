@@ -1,11 +1,11 @@
 ##  global.serviceAccountName Name of service account to be associated with service
-##  deploymentMode Determines deployment mode of airbyte
+##  edition Determines the edition of airbyte (community, enterprise, cloud)
 ##  secretName Overrides the secret name with credentials to S3 Bucket and logging
 ##  database.secretName Name of database secret
 ##  database.secretValue Value of database password key stored in secret
 global:
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
+  edition: community
   secretName: ""
   database:
     secretName: ""

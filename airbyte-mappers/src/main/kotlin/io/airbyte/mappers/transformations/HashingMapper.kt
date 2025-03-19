@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.FieldType
@@ -35,9 +39,7 @@ class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
   override val name: String
     get() = MapperOperationName.HASHING
 
-  override fun spec(): MapperSpec<HashingMapperConfig> {
-    return hashingMapperSpec
-  }
+  override fun spec(): MapperSpec<HashingMapperConfig> = hashingMapperSpec
 
   override fun schema(
     config: HashingMapperConfig,

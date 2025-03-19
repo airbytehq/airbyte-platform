@@ -18,12 +18,6 @@ jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceLink: jest.fn().mockReturnValue((link: string) => link),
 }));
 
-jest.mock("core/api/cloud", () => ({
-  useGetCloudWorkspaceAsync: jest.fn().mockReturnValue({
-    workspaceId: "workspace-1",
-  }),
-}));
-
 jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: jest.fn(),
   Intent: jest.requireActual("core/utils/rbac").Intent,
@@ -78,7 +72,7 @@ describe("StatusBanner", () => {
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
     expect(wrapper.container.textContent).toContain("Your syncs are disabled.");
-    expect(wrapper.container.textContent).toContain("billing@airbyte.io");
+    expect(wrapper.container.textContent).toContain("Airbyte Support");
   });
 
   it("should render disabled banner w/o link", async () => {

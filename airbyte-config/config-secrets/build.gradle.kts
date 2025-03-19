@@ -42,7 +42,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }

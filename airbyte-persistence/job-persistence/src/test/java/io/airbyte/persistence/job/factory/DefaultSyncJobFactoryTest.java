@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.factory;
@@ -131,7 +131,7 @@ class DefaultSyncJobFactoryTest {
         jobCreator.createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcDockerImageIsDefault, srcProtocolVersion,
             dstDockerImage,
             dstDockerImageIsDefault, dstProtocolVersion, operations,
-            persistedWebhookConfigs, standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId))
+            persistedWebhookConfigs, standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId, true))
                 .thenReturn(Optional.of(jobId));
     when(sourceService.getStandardSourceDefinition(sourceDefinitionId))
         .thenReturn(standardSourceDefinition);
@@ -163,14 +163,14 @@ class DefaultSyncJobFactoryTest {
             connectionService,
             operationService,
             workspaceService);
-    final long actualJobId = factory.createSync(connectionId);
+    final long actualJobId = factory.createSync(connectionId, true);
     assertEquals(jobId, actualJobId);
 
     verify(jobCreator)
         .createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcDockerImageIsDefault, srcProtocolVersion,
             dstDockerImage, dstDockerImageIsDefault, dstProtocolVersion,
             operations, persistedWebhookConfigs,
-            standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId);
+            standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId, true);
 
     assertEquals(configAfterInjection, sourceConnection.getConfiguration());
     verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId);

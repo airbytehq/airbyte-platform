@@ -35,7 +35,6 @@ dependencies {
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(libs.commons.io)
 
   migrations(libs.platform.testcontainers.postgresql)
   migrations(sourceSets["main"].output)
@@ -50,7 +49,6 @@ dependencies {
   implementation(libs.jna.platform)
 
   testImplementation(project(":oss:airbyte-test-utils"))
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

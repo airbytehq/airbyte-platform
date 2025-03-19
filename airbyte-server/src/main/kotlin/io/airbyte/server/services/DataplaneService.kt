@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.services
 
 import io.airbyte.api.model.generated.ActorType
@@ -47,7 +51,7 @@ class DataplaneService(
     workspaceId: UUID?,
     priority: @NotNull WorkloadPriority,
   ): String {
-    val connection = connectionId?.let { connectionService.getStandardSync(connectionId) }
+    val connection = connectionId?.let { connectionService.getStandardSync(it) }
     val resolvedWorkspaceId = workspaceId ?: resolveWorkspaceId(connection, actorType, actorId)
     val geography = getGeography(connection, resolvedWorkspaceId)
 
@@ -76,17 +80,14 @@ class DataplaneService(
     connection: StandardSync?,
     actorType: ActorType?,
     actorId: UUID?,
-  ): UUID? {
-    return connection?.let {
-      destinationService.getDestinationConnection(connection.destinationId).workspaceId
-    } ?: actorType?.let {
-      when (actorType) {
-        ActorType.SOURCE -> sourceService.getSourceConnection(actorId).workspaceId
-        ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
-        else -> null
-      }
+  ): UUID? =
+    connection?.let {
+      destinationService.getDestinationConnection(it.destinationId).workspaceId
+    } ?: when (actorType) {
+      ActorType.SOURCE -> sourceService.getSourceConnection(actorId).workspaceId
+      ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
+      else -> null
     }
-  }
 
   /**
    * Given a connectionId and workspaceId, attempt to resolve geography.
@@ -96,24 +97,23 @@ class DataplaneService(
     workspaceId: UUID?,
   ): Geography {
     try {
-      return connection?.let {
-        connection.geography
-      } ?: workspaceId?.let {
-        workspaceService.getGeographyForWorkspace(workspaceId)
-      } ?: Geography.AUTO
-    } catch (e: Exception) {
+      return connection?.geography
+        ?: workspaceId?.let {
+          workspaceService.getGeographyForWorkspace(it)
+        } ?: Geography.AUTO
+    } catch (_: Exception) {
       throw BadRequestProblem(ProblemMessageData().message("Unable to find geography of for connection [$connection], workspace [$workspaceId]"))
     }
   }
 
-  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean {
-    return workspaceId?.let {
-      scopedConfigurationService.getScopedConfigurations(
-        NetworkSecurityTokenKey,
-        mapOf(ConfigScopeType.WORKSPACE to workspaceId),
-      ).isNotEmpty()
+  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean =
+    workspaceId?.let {
+      scopedConfigurationService
+        .getScopedConfigurations(
+          NetworkSecurityTokenKey,
+          mapOf(ConfigScopeType.WORKSPACE to it),
+        ).isNotEmpty()
     } ?: false
-  }
 
   /**
    * Build the feature flag context for network security token.
@@ -132,13 +132,8 @@ class DataplaneService(
         CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
       )
 
-    workspaceId?.let {
-      context.add(Workspace(workspaceId))
-    }
-
-    connectionId?.let {
-      context.add(Connection(connectionId))
-    }
+    workspaceId?.let { context.add(Workspace(it)) }
+    connectionId?.let { context.add(Connection(it)) }
 
     if (WorkloadPriority.HIGH == priority) {
       context.add(Priority(HIGH_PRIORITY))
@@ -160,13 +155,8 @@ private fun buildFeatureFlagContext(
 ): MutableList<Context> {
   val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
 
-  workspaceId?.let {
-    context.add(Workspace(workspaceId))
-  }
-
-  connectionId?.let {
-    context.add(Connection(connectionId))
-  }
+  workspaceId?.let { context.add(Workspace(it)) }
+  connectionId?.let { context.add(Connection(it)) }
 
   if (WorkloadPriority.HIGH == priority) {
     context.add(Priority(HIGH_PRIORITY))
@@ -175,10 +165,9 @@ private fun buildFeatureFlagContext(
   return context
 }
 
-fun Geography.toGeographicRegion(): String {
-  return when (this) {
+fun Geography.toGeographicRegion(): String =
+  when (this) {
     Geography.AUTO -> GeographicRegion.US
     Geography.US -> GeographicRegion.US
     Geography.EU -> GeographicRegion.EU
   }
-}

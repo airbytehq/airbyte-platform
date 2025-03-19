@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -14,10 +14,10 @@ import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.FailureCause;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.RecordMetricInput;
 import io.micronaut.http.HttpStatus;
@@ -69,7 +69,6 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
-        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))));
   }
@@ -84,7 +83,6 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
-        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
         eq(additionalAttribute));
@@ -99,7 +97,6 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
-        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
         eq(new MetricAttribute(MetricTags.FAILURE_CAUSE, failureCause.name())));
@@ -116,7 +113,6 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
-        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID_WITHOUT_WORKSPACE))));
   }
 

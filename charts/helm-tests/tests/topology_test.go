@@ -100,8 +100,6 @@ func appPodSpec(chartYaml, appName string) corev1.PodSpec {
 	resourceName := "airbyte-" + appName
 
 	switch appName {
-	case "pod-sweeper":
-		return getDeployment(chartYaml, "airbyte-pod-sweeper").Spec.Template.Spec
 	case "airbyte-bootloader":
 		return getPod(chartYaml, resourceName).Spec
 	case "keycloak-setup":

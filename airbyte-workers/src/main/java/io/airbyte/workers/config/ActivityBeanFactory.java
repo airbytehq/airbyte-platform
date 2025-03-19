@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -7,7 +7,7 @@ package io.airbyte.workers.config;
 import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
@@ -22,7 +22,6 @@ import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.sync.AsyncReplicationActivity;
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity;
-import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity;
 import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity;
@@ -87,14 +86,13 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("syncActivities")
   public List<Object> syncActivities(final ConfigFetchActivity configFetchActivity,
-                                     final RefreshSchemaActivity refreshSchemaActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final InvokeOperationsActivity invokeOperationsActivity,
                                      final AsyncReplicationActivity asyncReplicationActivity,
                                      final WorkloadStatusCheckActivity workloadStatusCheckActivity,
                                      final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
-    return List.of(configFetchActivity, refreshSchemaActivity, reportRunTimeActivity,
-        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity, discoverCatalogHelperActivity);
+    return List.of(configFetchActivity, reportRunTimeActivity, invokeOperationsActivity, asyncReplicationActivity,
+        workloadStatusCheckActivity, discoverCatalogHelperActivity);
   }
 
   @Singleton

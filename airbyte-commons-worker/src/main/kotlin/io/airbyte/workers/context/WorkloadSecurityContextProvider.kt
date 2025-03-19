@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.context
@@ -80,20 +80,22 @@ class WorkloadSecurityContextProvider(
       false -> null
     }
 
+  fun rootSecurityContext(): PodSecurityContext = PodSecurityContextBuilder().withRunAsUser(ROOT_USER_ID).build()
+
   private fun baseContainerSecurityContext(
     user: Long,
     group: Long,
-  ): SecurityContextBuilder {
-    return SecurityContextBuilder()
+  ): SecurityContextBuilder =
+    SecurityContextBuilder()
       .withRunAsUser(user)
       .withRunAsGroup(group)
       .withAllowPrivilegeEscalation(false)
       .withReadOnlyRootFilesystem(false)
       .withCapabilities(CapabilitiesBuilder().addAllToDrop(DEFAULT_CAPABILITIES).build())
-  }
 
   companion object {
     val DEFAULT_CAPABILITIES = listOf("ALL")
+    const val ROOT_USER_ID = 0L
     const val ROOTLESS_USER_ID = 1000L
     const val ROOTLESS_GROUP_ID = 1000L
     const val SECCOMP_PROFILE_TYPE = "RuntimeDefault"

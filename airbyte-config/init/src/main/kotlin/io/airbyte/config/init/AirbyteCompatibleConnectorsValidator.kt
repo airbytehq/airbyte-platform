@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init
@@ -19,9 +19,8 @@ interface AirbyteCompatibleConnectorsValidator {
     connectorVersion: String,
   ): ConnectorPlatformCompatibilityValidationResult
 
-  fun validateDeclarativeManifest(connectorVersion: String): ConnectorPlatformCompatibilityValidationResult {
-    return validate(DECLARATIVE_MANIFEST_DEFINITION_ID, connectorVersion)
-  }
+  fun validateDeclarativeManifest(connectorVersion: String): ConnectorPlatformCompatibilityValidationResult =
+    validate(DECLARATIVE_MANIFEST_DEFINITION_ID, connectorVersion)
 
   companion object {
     const val DECLARATIVE_MANIFEST_DEFINITION_ID = "8dbab097-db1e-4555-87e8-52f5f94bfad4"
@@ -29,7 +28,7 @@ interface AirbyteCompatibleConnectorsValidator {
 }
 
 @Singleton
-@Requires(property = "airbyte.deployment-mode", value = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^cloud$")
 class AlwaysValidAirbyteCompatibleConnectorsValidator : AirbyteCompatibleConnectorsValidator {
   init {
     logger.info { "Airbyte connector <> platform compatibility validation disabled.  All connector versions will be considered valid." }
@@ -38,13 +37,11 @@ class AlwaysValidAirbyteCompatibleConnectorsValidator : AirbyteCompatibleConnect
   override fun validate(
     connectorId: String,
     connectorVersion: String,
-  ): ConnectorPlatformCompatibilityValidationResult {
-    return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
-  }
+  ): ConnectorPlatformCompatibilityValidationResult = ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
 }
 
 @Singleton
-@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^community|enterprise$")
 class RealAirbyteCompatibleConnectorsValidator(
   private val airbyteCompatibleConnectorVersionsProvider: AirbyteCompatibleConnectorVersionsProvider,
   private val airbyteVersion: AirbyteVersion,
@@ -86,8 +83,8 @@ class RealAirbyteCompatibleConnectorsValidator(
     connectorVersion: String,
     compatibilityRule: CompatibilityRule,
     currentAirbyteVersion: Semver,
-  ): ConnectorPlatformCompatibilityValidationResult {
-    return if (compatibilityRule.blocked) {
+  ): ConnectorPlatformCompatibilityValidationResult =
+    if (compatibilityRule.blocked) {
       ConnectorPlatformCompatibilityValidationResult(
         isValid = false,
         message =
@@ -105,7 +102,9 @@ class RealAirbyteCompatibleConnectorsValidator(
             " Compatible Airbyte Version(s): ${compatibilityRule.airbyteVersion}",
       )
     }
-  }
 }
 
-data class ConnectorPlatformCompatibilityValidationResult(val isValid: Boolean, val message: String?)
+data class ConnectorPlatformCompatibilityValidationResult(
+  val isValid: Boolean,
+  val message: String?,
+)

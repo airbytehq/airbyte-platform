@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -8,7 +8,6 @@ import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGA
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,11 +25,9 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.LogFormatType;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
@@ -301,12 +298,7 @@ public class AcceptanceTestsResources {
     // Assert that job logs exist
     final var jobId = connectionSyncRead1.getJob().getId();
     final var attemptId = connectionSyncRead1.getAttempts().size() - 1;
-    final var attempt = testHarness.getApiClient().getAttemptApi().getAttemptForJob(
-        new GetAttemptStatsRequestBody(jobId, attemptId));
-    // Structured logs should exist
-    assertEquals(LogFormatType.STRUCTURED, attempt.getLogType());
-    assertFalse(attempt.getLogs().getEvents().isEmpty());
-    assertTrue(attempt.getLogs().getLogLines().isEmpty());
+    testHarness.validateLogs(jobId, attemptId);
 
     return new SyncIds(connectionId, jobId, attemptId);
   }

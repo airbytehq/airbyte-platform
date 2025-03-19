@@ -1,18 +1,25 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
-import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.domain.WorkloadQueueStats
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
-import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -30,21 +37,20 @@ private val logger = KotlinLogging.logger {}
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
   private val airbyteApi: AirbyteApiClient,
-  private val metricClient: CustomMetricPublisher,
+  private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
       listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
   }
 
-  override fun getWorkload(workloadId: String): ApiWorkload {
-    return getDomainWorkload(workloadId).toApi()
-  }
+  override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
 
-  private fun getDomainWorkload(workloadId: String): DomainWorkload {
-    return workloadRepository.findById(workloadId)
+  private fun getDomainWorkload(workloadId: String): DomainWorkload =
+    workloadRepository
+      .findById(workloadId)
       .orElseThrow { NotFoundException("Could not find workload with id: $workloadId") }
-  }
 
   override fun getWorkloads(
     dataplaneId: List<String>?,
@@ -61,9 +67,7 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
-  override fun workloadAlreadyExists(workloadId: String): Boolean {
-    return workloadRepository.existsById(workloadId)
-  }
+  override fun workloadAlreadyExists(workloadId: String): Boolean = workloadRepository.existsById(workloadId)
 
   override fun createWorkload(
     workloadId: String,
@@ -75,6 +79,8 @@ class WorkloadHandlerImpl(
     autoId: UUID,
     deadline: OffsetDateTime,
     signalInput: String?,
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -96,6 +102,8 @@ class WorkloadHandlerImpl(
         autoId = autoId,
         deadline = deadline,
         signalInput = signalInput,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority?.toInt() ?: 0,
       )
     workloadRepository.save(domainWorkload).toApi()
 
@@ -125,27 +133,8 @@ class WorkloadHandlerImpl(
     dataplaneId: String,
     deadline: OffsetDateTime,
   ): Boolean {
-    val workload = getDomainWorkload(workloadId)
-
-    if (workload.dataplaneId != null && !workload.dataplaneId.equals(dataplaneId)) {
-      return false
-    }
-
-    when (workload.status) {
-      WorkloadStatus.PENDING ->
-        workloadRepository.update(
-          workloadId,
-          dataplaneId,
-          WorkloadStatus.CLAIMED,
-          deadline,
-        )
-      WorkloadStatus.CLAIMED -> {}
-      else -> throw InvalidStatusTransitionException(
-        "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
-      )
-    }
-
-    return true
+    val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
+    return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
   }
 
   override fun cancelWorkload(
@@ -307,6 +296,27 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
+  override fun pollWorkloadQueue(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+    quantity: Int,
+  ): List<Workload> {
+    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
+
+    return domainWorkloads.map { it.toApi() }
+  }
+
+  override fun countWorkloadQueueDepth(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+  ): Long = workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
+
+  override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
+    val domainStats = workloadRepository.getPendingWorkloadQueueStats()
+
+    return domainStats.map { it.toApi() }
+  }
+
   override fun getWorkloadsWithExpiredDeadline(
     dataplaneId: List<String>?,
     workloadStatus: List<ApiWorkloadStatus>?,
@@ -335,9 +345,13 @@ class WorkloadHandlerImpl(
         } catch (e: Exception) {
           logger.error(e) { "Failed to deserialize signal payload: $signalPayload" }
           metricClient.count(
-            OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+            metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+            attributes =
+              arrayOf(
+                MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+                MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+                MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType.toString()),
+              ),
           )
           return
         }
@@ -351,19 +365,27 @@ class WorkloadHandlerImpl(
           ),
         )
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
-          MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
+              MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+            ),
         )
       } catch (e: Exception) {
         logger.error(e) { "Failed to send signal for the payload: $signalPayload" }
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
-          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-          MetricAttribute(MetricTags.FAILURE_TYPE, e.message),
+          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, workloadType.toString()),
+              MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+              e.message?.let { m ->
+                MetricAttribute(MetricTags.FAILURE_TYPE, m)
+              },
+            ),
         )
       }
     }

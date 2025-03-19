@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.workflows
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -12,13 +16,13 @@ import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.SignalInput
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.ConnectorCommand
 import io.airbyte.workers.commands.DiscoverCommand
@@ -178,19 +182,19 @@ class ConnectorCommandActivityImpl(
       throw e
     } finally {
       metricAttributes.add(MetricAttribute(MetricTags.STATUS, if (success) MetricTags.SUCCESS else MetricTags.FAILURE))
-      metricClient.count(OssMetricsRegistry.COMMAND_STEP, 1, *metricAttributes.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.COMMAND_STEP, attributes = metricAttributes.toTypedArray())
       metricClient.distribution(
-        OssMetricsRegistry.COMMAND_STEP_DURATION,
-        stopwatch.getElapsedTimeInNanos().toDouble(),
-        *metricAttributes.toTypedArray(),
+        metric = OssMetricsRegistry.COMMAND_STEP_DURATION,
+        value = stopwatch.getElapsedTimeInNanos().toDouble(),
+        attributes = metricAttributes.toTypedArray(),
       )
 
       if (reportCommandSummaryMetrics) {
-        metricClient.count(OssMetricsRegistry.COMMAND, 1, MetricAttribute(MetricTags.COMMAND, activityInput.input.type))
+        metricClient.count(metric = OssMetricsRegistry.COMMAND, attributes = arrayOf(MetricAttribute(MetricTags.COMMAND, activityInput.input.type)))
         metricClient.distribution(
-          OssMetricsRegistry.COMMAND_DURATION,
-          (System.currentTimeMillis() - activityInput.startTimeInMillis).toDouble(),
-          MetricAttribute(MetricTags.COMMAND, activityInput.input.type),
+          metric = OssMetricsRegistry.COMMAND_DURATION,
+          value = (System.currentTimeMillis() - activityInput.startTimeInMillis).toDouble(),
+          attributes = arrayOf(MetricAttribute(MetricTags.COMMAND, activityInput.input.type)),
         )
       }
     }

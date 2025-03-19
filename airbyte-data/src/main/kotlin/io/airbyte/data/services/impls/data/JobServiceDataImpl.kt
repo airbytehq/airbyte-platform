@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.data
@@ -44,7 +44,7 @@ class JobServiceDataImpl(
       .findAll(
         Specifications.jobWithAssociatedAttempts(
           configTypes = configTypes.map { it.toEntity() }.toSet(),
-          scope = scope,
+          scopes = scope?.takeIf { it.isNotBlank() }?.let { setOf(it) } ?: emptySet(),
           statuses = statuses.map { it.toEntity() }.toSet(),
           createdAtStart = createdAtStart,
           createdAtEnd = createdAtEnd,
@@ -57,6 +57,39 @@ class JobServiceDataImpl(
       .toList()
   }
 
+  override fun listJobsForScopes(
+    configTypes: Set<JobConfig.ConfigType>,
+    scopes: Set<String>,
+    limit: Int,
+    offset: Int,
+    statuses: List<io.airbyte.config.JobStatus>,
+    createdAtStart: OffsetDateTime?,
+    createdAtEnd: OffsetDateTime?,
+    updatedAtStart: OffsetDateTime?,
+    updatedAtEnd: OffsetDateTime?,
+    orderByField: String?,
+    orderByMethod: String?,
+  ): List<Job> {
+    val pageable = buildPageable(limit, offset, orderByField, orderByMethod)
+    return jobsWithAttemptsRepository
+      .findAll(
+        Specifications.jobWithAssociatedAttempts(
+          configTypes = configTypes.map { it.toEntity() }.toSet(),
+          scopes = scopes,
+          statuses = statuses.map { it.toEntity() }.toSet(),
+          createdAtStart = createdAtStart,
+          createdAtEnd = createdAtEnd,
+          updatedAtStart = updatedAtStart,
+          updatedAtEnd = updatedAtEnd,
+        ),
+        pageable,
+      ).toList()
+      .map { it.toConfigModel() }
+      .toList()
+  }
+
+  override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
+
   override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
 
   override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)
@@ -65,9 +98,7 @@ class JobServiceDataImpl(
     scope: String,
     jobId: Long,
     status: JobStatus,
-  ): Job? {
-    return jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
-  }
+  ): Job? = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
 
   private fun buildPageable(
     limit: Int,

@@ -854,7 +854,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -885,7 +885,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       </span>
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -894,11 +894,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1010,7 +1006,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -1041,7 +1037,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       </span>
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -1050,11 +1046,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                 >
                                   <div
                                     data-testid="cursor-field-cell"
-                                  >
-                                    <span
-                                      class="<removed-for-snapshot-test>"
-                                    />
-                                  </div>
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
@@ -107,7 +108,6 @@ internal class UserApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetOrCreateUser() {
     every { userHandler.getOrCreateUserByAuthId(any()) } returns UserGetOrCreateByAuthIdResponse().userRead(UserRead())
 

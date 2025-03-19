@@ -1,8 +1,15 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnableAsyncProfiler
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.KubeClientException
@@ -39,13 +46,12 @@ class KubePodClient(
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
   private val replicationPodFactory: ReplicationPodFactory,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
 ) {
-  fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
-  }
+  fun podsExistForAutoId(autoId: UUID): Boolean = kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(
@@ -63,6 +69,7 @@ class KubePodClient(
       )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+    val enableAsyncProfiler = featureFlagClient.boolVariation(EnableAsyncProfiler, Connection(replicationInput.connectionId))
     var pod =
       replicationPodFactory.create(
         kubeInput.podName,
@@ -80,6 +87,7 @@ class KubePodClient(
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.useFileTransfer,
         replicationInput.workspaceId,
+        enableAsyncProfiler,
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
@@ -65,11 +69,11 @@ class StreamRefreshesHandler(
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =
         ManuallyStartedEvent(
-          jobId = job.id,
-          startTimeEpochSeconds = job.createdAtInSecond,
+          jobId = it.id,
+          startTimeEpochSeconds = it.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            job.config.refresh.streamsToRefresh.map { refreshStream ->
+            it.config.refresh.streamsToRefresh.map { refreshStream ->
               refreshStream.streamDescriptor
             },
         )

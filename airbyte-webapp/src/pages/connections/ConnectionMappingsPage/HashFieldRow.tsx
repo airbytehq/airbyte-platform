@@ -21,7 +21,6 @@ import styles from "./MappingRow.module.scss";
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
-import { useGetFieldsInStream } from "./useGetFieldsInStream";
 
 const hashingMapperConfigSchema = yup.object().shape({
   targetField: yup.string().required("form.empty.error"),
@@ -36,8 +35,9 @@ export const HashFieldRow: React.FC<{
   mapping: StreamMapperWithId<HashingMapperConfiguration>;
   streamDescriptorKey: string;
 }> = ({ mapping, streamDescriptorKey }) => {
-  const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
+  const { updateLocalMapping, validatingStreams } = useMappingContext();
+
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
 
   const defaultValues = useMemo(() => {
     return {
@@ -51,38 +51,57 @@ export const HashFieldRow: React.FC<{
     defaultValues,
     resolver: autoSubmitResolver<HashingMapperConfiguration>(hashingMapperConfigSchema, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
-      validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
+
+  useEffect(() => {
+    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
+      methods.setError("targetField", { message: mapping.validationError.message });
+    } else {
+      methods.clearErrors("targetField");
+    }
+  }, [mapping.validationError, methods]);
 
   if (!mapping) {
     return null;
   }
-
   return (
     <FormProvider {...methods}>
       <form>
         <MappingRowContent>
           <MappingTypeListBox
+            disabled={isStreamValidating}
             selectedValue={StreamMapperType.hashing}
             mappingId={mapping.id}
             streamDescriptorKey={streamDescriptorKey}
           />
-          <SelectTargetField<HashingMapperConfiguration> name="targetField" targetFieldOptions={fieldsInStream} />
+          <MappingRowItem>
+            <SelectTargetField<HashingMapperConfiguration>
+              name="targetField"
+              mappingId={mapping.id}
+              streamDescriptorKey={streamDescriptorKey}
+              disabled={isStreamValidating}
+            />
+          </MappingRowItem>
           <MappingRowItem>
             <Text>
               <FormattedMessage id="connections.mappings.using" />
             </Text>
           </MappingRowItem>
           <MappingRowItem>
-            <SelectHashingMethod />
+            <SelectHashingMethod disabled={isStreamValidating} />
           </MappingRowItem>
         </MappingRowContent>
+        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
+          <Text italicized color="red">
+            {mapping.validationError.message}
+          </Text>
+        )}
       </form>
     </FormProvider>
   );
@@ -90,6 +109,7 @@ export const HashFieldRow: React.FC<{
 
 const SelectHashingMethodControlButton: React.FC<ListBoxControlButtonProps<HashingMapperConfigurationMethod>> = ({
   selectedOption,
+  isDisabled,
 }) => {
   if (!selectedOption) {
     return (
@@ -101,7 +121,7 @@ const SelectHashingMethodControlButton: React.FC<ListBoxControlButtonProps<Hashi
 
   return (
     <FlexContainer alignItems="center" gap="none">
-      <Text>{selectedOption.label}</Text>
+      <Text color={isDisabled ? "grey300" : "darkBlue"}>{selectedOption.label}</Text>
       <Icon type="caretDown" color="disabled" />
     </FlexContainer>
   );
@@ -113,7 +133,7 @@ const supportedHashTypes = [
   { label: "SHA-512", value: HashingMapperConfigurationMethod["SHA-512"] },
 ];
 
-const SelectHashingMethod = () => {
+const SelectHashingMethod: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<HashingMapperConfiguration>();
 
   return (
@@ -125,6 +145,7 @@ const SelectHashingMethod = () => {
         <ListBox
           buttonClassName={styles.controlButton}
           controlButton={SelectHashingMethodControlButton}
+          isDisabled={disabled}
           onSelect={(value) => {
             field.onChange(value);
             // We're using onBlur mode, so we need to manually trigger the validation

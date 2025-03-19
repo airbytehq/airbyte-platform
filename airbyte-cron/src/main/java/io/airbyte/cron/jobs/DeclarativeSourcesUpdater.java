@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -12,10 +12,10 @@ import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RunDeclarativeSourcesUpdater;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -54,7 +54,7 @@ public class DeclarativeSourcesUpdater {
     }
 
     log.info("Getting latest CDK versions and updating declarative sources...");
-    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "declarative_sources_updater"));
+    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, new MetricAttribute(MetricTags.CRON_TYPE, "declarative_sources_updater"));
     declarativeSourceUpdater.apply();
     log.info("Done updating declarative sources.");
   }

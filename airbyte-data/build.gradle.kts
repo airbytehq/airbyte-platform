@@ -14,7 +14,6 @@ dependencies {
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
-  implementation(libs.bundles.apache)
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.datadog)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.temporal.config.TemporalQueueConfiguration;
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException;
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
@@ -48,7 +49,7 @@ import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
@@ -90,7 +91,7 @@ public class TemporalClientTest {
 
   private static final String CHECK_TASK_QUEUE = "CHECK_CONNECTION";
   private static final String DISCOVER_TASK_QUEUE = "DISCOVER_SCHEMA";
-  private static final String UI_COMMANDS_TASK_QUEUE = "ui-commands-queue";
+  private static final String UI_COMMANDS_TASK_QUEUE = "ui_commands";
   private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID);
@@ -115,12 +116,10 @@ public class TemporalClientTest {
   private ConnectionManagerUtils connectionManagerUtils;
   private StreamResetRecordsHelper streamResetRecordsHelper;
   private Path workspaceRoot;
-  private String uiCommandsQueue;
 
   @BeforeEach
   void setup() throws IOException {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test");
-    uiCommandsQueue = "ui-commands-queue";
     logPath = workspaceRoot.resolve(String.valueOf(JOB_ID)).resolve(String.valueOf(ATTEMPT_ID)).resolve(DEFAULT_LOG_FILENAME);
     workflowClient = mock(WorkflowClient.class);
     when(workflowClient.getOptions()).thenReturn(WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build());
@@ -138,7 +137,8 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
-        spy(new TemporalClient(workspaceRoot, uiCommandsQueue, workflowClientWrapped, workflowServiceStubsWrapped, streamResetPersistence,
+        spy(new TemporalClient(workspaceRoot, new TemporalQueueConfiguration(), workflowClientWrapped, workflowServiceStubsWrapped,
+            streamResetPersistence,
             streamRefreshesRepository,
             connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class), new TestClient(), scopedConfigurationService));
   }
@@ -155,7 +155,7 @@ public class TemporalClientTest {
       final var metricClient = mock(MetricClient.class);
       final var scopedConfigurationService = mock(ScopedConfigurationService.class);
       temporalClient = spy(
-          new TemporalClient(workspaceRoot, uiCommandsQueue, new WorkflowClientWrapped(workflowClient, metricClient),
+          new TemporalClient(workspaceRoot, new TemporalQueueConfiguration(), new WorkflowClientWrapped(workflowClient, metricClient),
               new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence, streamRefreshesRepository,
               mConnectionManagerUtils, streamResetRecordsHelper, metricClient, new TestClient(), scopedConfigurationService));
     }

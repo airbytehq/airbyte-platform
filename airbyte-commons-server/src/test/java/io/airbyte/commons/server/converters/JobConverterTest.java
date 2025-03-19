@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -108,20 +108,20 @@ class JobConverterTest {
 
   private static Stream<Arguments> getExtractRefreshScenarios() {
     return Stream.of(Arguments.of(
-        new Job(1, ConfigType.SYNC, null, null, null, null, null, 13, 37), Optional.empty()),
+        new Job(1, ConfigType.SYNC, null, null, null, null, null, 13, 37, true), Optional.empty()),
         Arguments.of(
-            new Job(1, ConfigType.RESET_CONNECTION, null, null, null, null, null, 13, 37), Optional.empty()),
+            new Job(1, ConfigType.RESET_CONNECTION, null, null, null, null, null, 13, 37, true), Optional.empty()),
         Arguments.of(
             new Job(1, ConfigType.REFRESH, null, new JobConfig()
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
                     List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.config.StreamDescriptor().withName("test"))))),
-                null, null, null, 13, 37),
+                null, null, null, 13, 37, true),
             Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))),
         Arguments.of(
             new Job(1, ConfigType.REFRESH, null, new JobConfig()
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
                     List.of(new RefreshStream().withStreamDescriptor(null)))),
-                null, null, null, 13, 37),
+                null, null, null, 13, 37, true),
             Optional.empty()));
   }
 
@@ -320,7 +320,8 @@ class JobConverterTest {
           JobStatus.SUCCEEDED,
           CREATED_AT,
           CREATED_AT,
-          CREATED_AT);
+          CREATED_AT,
+          true);
 
       final ResetConfig expectedResetConfig = new ResetConfig().streamsToReset(List.of(
           new StreamDescriptor().name(USERS),
@@ -342,7 +343,8 @@ class JobConverterTest {
           JobStatus.SUCCEEDED,
           CREATED_AT,
           CREATED_AT,
-          CREATED_AT);
+          CREATED_AT,
+          true);
 
       assertNull(jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
     }

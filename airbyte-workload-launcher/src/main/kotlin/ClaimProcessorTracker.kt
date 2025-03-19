@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher
 
 import com.google.common.annotations.VisibleForTesting
@@ -28,7 +32,7 @@ class ClaimProcessorTracker(
 
   fun trackNumberOfClaimsToResume(n: Int) {
     if (n <= parallelism) {
-      repeat(parallelism - n) {
+      repeat(parallelism - n) { _ ->
         latch.countDown()
       }
     } else {

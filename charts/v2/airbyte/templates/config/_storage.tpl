@@ -10,9 +10,9 @@ Renders the storage secret name
 */}}
 {{- define "airbyte.storage.secretName" }}
 {{- if .Values.global.storage.secretName }}
-    {{- .Values.global.storage.secretName | quote }}
+    {{- .Values.global.storage.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -246,7 +246,7 @@ Renders the storage.gcs.credentialsJson environment variable
 Renders the global.storage.gcs.credentialsJsonPath value
 */}}
 {{- define "airbyte.storage.gcs.credentialsJsonPath" }}
-    {{- .Values.global.storage.gcs.credentialsJsonPath }}
+    {{- .Values.global.storage.gcs.credentialsJsonPath | default "/secrets/gcp-creds/gcp.json" }}
 {{- end }}
 
 {{/*
@@ -258,17 +258,6 @@ Renders the storage.gcs.credentialsJsonPath environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: GOOGLE_APPLICATION_CREDENTIALS
-{{- end }}
-
-{{/*
-Renders the storage.containerOrchestrator.secretMountPath environment variable
-*/}}
-{{- define "airbyte.storage.containerOrchestrator.secretMountPath.env" }}
-- name: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
 {{- end }}
 
 {{/*
@@ -325,7 +314,7 @@ Renders the storage.minio.secretAccessKey environment variable
 Renders the global.storage.minio.endpoint value
 */}}
 {{- define "airbyte.storage.minio.endpoint" }}
-    {{- .Values.global.storage.minio.endpoint | default "http://airbyte-minio-svc:9000" }}
+    {{- .Values.global.storage.minio.endpoint | default (printf "http://airbyte-minio-svc.%s:9000" .Release.Namespace) }}
 {{- end }}
 
 {{/*
@@ -375,7 +364,6 @@ Renders the set of all storage environment variables
 {{- if eq $opt "gcs" }}
 {{- include "airbyte.storage.gcs.credentialsJson.env" . }}
 {{- include "airbyte.storage.gcs.credentialsJsonPath.env" . }}
-{{- include "airbyte.storage.containerOrchestrator.secretMountPath.env" . }}
 {{- end }}
 
 {{- if eq $opt "minio" }}
@@ -410,7 +398,6 @@ STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ include "airbyte.storage.bucket.workloadOutpu
 
 {{- if eq $opt "gcs" }}
 GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | quote }}
-CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ "/secrets/gcs-log-creds" | quote }}
 {{- end }}
 
 {{- if eq $opt "minio" }}

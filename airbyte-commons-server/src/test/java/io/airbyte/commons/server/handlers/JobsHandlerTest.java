@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -45,6 +45,7 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncMode;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
@@ -76,6 +77,7 @@ public class JobsHandlerTest {
   private JobCreationAndStatusUpdateHelper helper;
   private JobErrorReporter jobErrorReporter;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private MetricClient metricClient;
 
   private static final long JOB_ID = 12;
   private static final int ATTEMPT_NUMBER = 1;
@@ -104,9 +106,10 @@ public class JobsHandlerTest {
     jobNotifier = mock(JobNotifier.class);
     jobErrorReporter = mock(JobErrorReporter.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
+    metricClient = mock(MetricClient.class);
 
     helper = mock(JobCreationAndStatusUpdateHelper.class);
-    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper);
+    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper, metricClient);
   }
 
   @Test
@@ -118,7 +121,7 @@ public class JobsHandlerTest {
         .standardSyncOutput(standardSyncOutput);
 
     final Job job =
-        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -136,7 +139,7 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
-    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -13,7 +13,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
@@ -30,6 +29,7 @@ import io.airbyte.config.ReleaseCandidatesSource;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.RolloutConfiguration;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
@@ -64,8 +64,8 @@ class ConnectorRegistryConvertersTest {
   private static final ConnectorSpecification SPEC = new ConnectorSpecification().withConnectionSpecification(
       Jsons.jsonNode(ImmutableMap.of("key", "val"))).withProtocolVersion(PROTOCOL_VERSION);
   private static final AllowedHosts ALLOWED_HOSTS = new AllowedHosts().withHosts(List.of("host1", "host2"));
-  private static final ActorDefinitionResourceRequirements RESOURCE_REQUIREMENTS =
-      new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2"));
+  private static final ScopedResourceRequirements RESOURCE_REQUIREMENTS =
+      new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2"));
 
   private static final BreakingChangeScope breakingChangeScope = new BreakingChangeScope()
       .withScopeType(ScopeType.STREAM)
@@ -112,7 +112,7 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
-        .withAbInternal(new AbInternal().withSl(200L))
+        .withAbInternal(new AbInternal().withSl(200L).withIsEnterprise(true))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion("doesnt matter")
@@ -128,6 +128,7 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withEnterprise(true)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withMaxSecondsBetweenMessages(10L);
 
@@ -189,7 +190,7 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
-        .withAbInternal(new AbInternal().withSl(200L))
+        .withAbInternal(new AbInternal().withSl(200L).withIsEnterprise(true))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -204,6 +205,7 @@ class ConnectorRegistryConvertersTest {
         .withName(CONNECTOR_NAME)
         .withTombstone(false)
         .withPublic(true)
+        .withEnterprise(true)
         .withCustom(false)
         .withResourceRequirements(RESOURCE_REQUIREMENTS);
 

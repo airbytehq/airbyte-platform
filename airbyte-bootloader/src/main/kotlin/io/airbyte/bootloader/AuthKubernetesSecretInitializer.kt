@@ -1,14 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.bootloader
 
+import io.airbyte.commons.random.randomAlphanumeric
 import io.fabric8.kubernetes.api.model.SecretBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.env.Environment
 import jakarta.inject.Singleton
-import org.apache.commons.lang3.RandomStringUtils
 import java.util.Base64
 import java.util.UUID
 
@@ -17,7 +20,6 @@ private val logger = KotlinLogging.logger {}
 const val SECRET_LENGTH = 32
 
 @Singleton
-@Requires(env = [Environment.KUBERNETES])
 @Requires(property = "airbyte.auth.kubernetes-secret.creation-enabled", value = "true")
 class AuthKubernetesSecretInitializer(
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
@@ -51,7 +53,7 @@ class AuthKubernetesSecretInitializer(
       getOrCreateSecretEncodedValue(
         secretKeysConfig.instanceAdminPasswordSecretKey,
         providedSecretValuesConfig.instanceAdminPassword,
-        RandomStringUtils.randomAlphanumeric(SECRET_LENGTH),
+        randomAlphanumeric(SECRET_LENGTH),
       )
     val clientIdValue =
       getOrCreateSecretEncodedValue(
@@ -63,13 +65,13 @@ class AuthKubernetesSecretInitializer(
       getOrCreateSecretEncodedValue(
         secretKeysConfig.instanceAdminClientSecretSecretKey,
         providedSecretValuesConfig.instanceAdminClientSecret,
-        RandomStringUtils.randomAlphanumeric(SECRET_LENGTH),
+        randomAlphanumeric(SECRET_LENGTH),
       )
     val jwtSignatureValue =
       getOrCreateSecretEncodedValue(
         secretKeysConfig.jwtSignatureSecretKey,
         providedSecretValuesConfig.jwtSignatureSecret,
-        RandomStringUtils.randomAlphanumeric(SECRET_LENGTH),
+        randomAlphanumeric(SECRET_LENGTH),
       )
     return mapOf(
       secretKeysConfig.instanceAdminPasswordSecretKey!! to passwordValue,

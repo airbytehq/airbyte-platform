@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.license
 
 import io.airbyte.commons.json.Jsons
@@ -12,6 +13,7 @@ import java.nio.charset.Charset
 import java.sql.Date
 import java.time.Instant
 import java.util.Base64
+import java.util.UUID
 
 @Singleton
 @RequiresAirbyteProEnabled
@@ -26,12 +28,14 @@ class AirbyteLicenseReader(
     val body = fragments[1]
     val jsonContent = String(Base64.getDecoder().decode(body), Charset.defaultCharset())
     val jwt = Jsons.deserialize(jsonContent, LicenseJwt::class.java)
+
     if (jwt.license != null && jwt.exp != null) {
       return AirbyteLicense(
         jwt.license,
         Date.from(Instant.ofEpochMilli(jwt.exp)),
         jwt.maxNodes,
         jwt.maxEditors,
+        jwt.enterpriseConnectorIds?.map { UUID.fromString(it) }?.toSet() ?: emptySet(),
       )
     }
     return INVALID_LICENSE
@@ -45,5 +49,6 @@ private data class LicenseJwt(
   val license: LicenseType?,
   val maxNodes: Int?,
   val maxEditors: Int?,
+  val enterpriseConnectorIds: List<String>?,
   val exp: Long?,
 )

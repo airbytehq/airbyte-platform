@@ -70,6 +70,7 @@ export const ConnectionTitleBlock = () => {
       {connectionStatus === ConnectionStatus.deprecated && (
         <Message type="warning" text={<FormattedMessage id="connection.connectionDeletedView" />} />
       )}
+
       <FlexContainer alignItems="center" justifyContent="space-between" wrap="wrap">
         <FlexContainer alignItems="center" className={styles.titleContainer}>
           <ConnectionStatusIndicator status={status} withBox />
@@ -101,6 +102,19 @@ export const ConnectionTitleBlock = () => {
           </FlexContainer>
         </FlexContainer>
         <ConnectionHeaderControls />
+        {(source.isEntitled === false || destination.isEntitled === false) && (
+          <Message
+            type="error"
+            text={
+              <FormattedMessage
+                id="connector.unlicensedConnector"
+                values={{
+                  connectorName: source.isEntitled === false ? sourceDefinition.name : destinationDefinition.name,
+                }}
+              />
+            }
+          />
+        )}
       </FlexContainer>
     </>
   );

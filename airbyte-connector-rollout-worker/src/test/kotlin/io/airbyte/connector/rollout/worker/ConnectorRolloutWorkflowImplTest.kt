@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
@@ -11,7 +15,6 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputF
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityOutputVerifyDefaultVersion
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
@@ -30,7 +33,6 @@ import io.temporal.client.WorkflowException
 import io.temporal.client.WorkflowFailedException
 import io.temporal.client.WorkflowOptions
 import io.temporal.client.WorkflowStub
-import io.temporal.client.WorkflowUpdateException
 import io.temporal.failure.ApplicationFailure
 import io.temporal.failure.TimeoutFailure
 import io.temporal.testing.TestEnvironmentOptions
@@ -120,12 +122,11 @@ class ConnectorRolloutWorkflowImplTest {
     private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
 
     @JvmStatic
-    fun exceptionProvider(): Stream<Arguments> {
-      return Stream.of(
+    fun exceptionProvider(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(ApplicationFailure::class.java, "Simulated ApplicationFailure"),
         Arguments.of(IllegalArgumentException::class.java, "Simulated IllegalArgumentException"),
       )
-    }
   }
 
   @BeforeEach
@@ -205,6 +206,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(0),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(insufficientDataConnectorRolloutOutput)
 
     // Run workflow
@@ -223,6 +227,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
@@ -268,6 +273,9 @@ class ConnectorRolloutWorkflowImplTest {
         actorSelectionInfo = successActorSelectionInfo,
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(successConnectorRolloutOutput)
     `when`(verifyDefaultVersionActivity.getAndVerifyDefaultVersion(MockitoHelper.anyObject()))
       .thenReturn(ConnectorRolloutActivityOutputVerifyDefaultVersion(true))
@@ -282,6 +290,7 @@ class ConnectorRolloutWorkflowImplTest {
     val result = workflowById.getResult(String::class.java)
     assertEquals(ConnectorEnumRolloutState.SUCCEEDED.toString(), result)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
@@ -344,6 +353,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(1),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     `when`(getRolloutActivity.getRollout(MockitoHelper.anyObject())).thenReturn(failureConnectorRolloutOutput)
     `when`(pauseRolloutActivity.pauseRollout(MockitoHelper.anyObject())).thenReturn(pausedConnectorRolloutOutput)
 
@@ -363,6 +375,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
     verify(pauseRolloutActivity).pauseRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
@@ -412,6 +425,9 @@ class ConnectorRolloutWorkflowImplTest {
             .numActorsEligibleOrAlreadyPinned(1),
       )
 
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     if (exceptionType == ApplicationFailure::class.java) {
       `when`(doRolloutActivity.doRollout(MockitoHelper.anyObject()))
         .thenThrow(ApplicationFailure.newFailure("Simulated ApplicationFailure", "TestFailure"))
@@ -437,6 +453,7 @@ class ConnectorRolloutWorkflowImplTest {
     }
     assertNotNull(failure)
 
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(pauseRolloutActivity).pauseRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
@@ -446,6 +463,10 @@ class ConnectorRolloutWorkflowImplTest {
   @ParameterizedTest
   @EnumSource(ConnectorRolloutFinalState::class)
   fun `test ConnectorRolloutWorkflow state for manual rollout`(finalState: ConnectorRolloutFinalState) {
+    `when`(
+      startRolloutActivity.startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject()),
+    ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
+
     // Start workflow asynchronously so we can send in `update` commands
     WorkflowClient.start(
       workflowStub::run,
@@ -467,8 +488,6 @@ class ConnectorRolloutWorkflowImplTest {
       ),
     )
 
-    `when`(startRolloutActivity.startRollout(Mockito.anyString(), MockitoHelper.anyObject()))
-      .thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     if (finalState != ConnectorRolloutFinalState.CANCELED) {
       `when`(
         promoteOrRollbackActivity.promoteOrRollback(MockitoHelper.anyObject()),
@@ -480,17 +499,6 @@ class ConnectorRolloutWorkflowImplTest {
       finalizeRolloutActivity.finalizeRollout(MockitoHelper.anyObject()),
     ).thenReturn(getMockOutput(ConnectorEnumRolloutState.fromValue(finalState.value())))
 
-    // Send a request to the startRollout `update` handler
-    workflowStub.startRollout(
-      ConnectorRolloutActivityInputStart(
-        DOCKER_REPOSITORY,
-        DOCKER_IMAGE_TAG,
-        ACTOR_DEFINITION_ID,
-        ROLLOUT_ID,
-        USER_ID,
-        ROLLOUT_STRATEGY,
-      ),
-    )
     workflowStub.finalizeRollout(
       ConnectorRolloutActivityInputFinalize(
         DOCKER_REPOSITORY,
@@ -511,7 +519,7 @@ class ConnectorRolloutWorkflowImplTest {
     val result = workflowById.getResult(String::class.java)
     assertEquals(finalState.toString(), result)
 
-    verify(startRolloutActivity).startRollout(Mockito.anyString(), MockitoHelper.anyObject())
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     if (finalState != ConnectorRolloutFinalState.CANCELED) {
       verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
     }
@@ -520,26 +528,6 @@ class ConnectorRolloutWorkflowImplTest {
 
   @Test
   fun `test startRollout fails causes workflow failure and calls cleanup activity`() {
-    testEnv =
-      TestWorkflowEnvironment.newInstance(
-        TestEnvironmentOptions
-          .newBuilder()
-          .setWorkflowClientOptions(
-            WorkflowClientOptions
-              .newBuilder()
-              .setDataConverter(
-                AirbyteTemporalDataConverter(),
-              ).build(),
-          ).build(),
-      )
-    worker = testEnv.newWorker(TEST_TASK_QUEUE)
-    worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
-
-    val startRolloutActivity: StartRolloutActivity =
-      Mockito.mock(
-        StartRolloutActivity::class.java,
-        Mockito.withSettings().withoutAnnotations(),
-      )
     `when`(
       startRolloutActivity.startRollout(
         Mockito.anyString(),
@@ -548,82 +536,36 @@ class ConnectorRolloutWorkflowImplTest {
     ).thenThrow(RuntimeException("Simulated failure in startRollout"))
     doNothing().`when`(cleanupActivity).cleanup(MockitoHelper.anyObject())
 
-    worker.registerActivitiesImplementations(
-      cleanupActivity,
-      doRolloutActivity,
-      finalizeRolloutActivity,
-      findRolloutActivity,
-      getRolloutActivity,
-      promoteOrRollbackActivity,
-      startRolloutActivity,
-      verifyDefaultVersionActivity,
-    )
-
-    workflowClient = testEnv.workflowClient
-    workflowStub =
-      workflowClient.newWorkflowStub(
-        ConnectorRolloutWorkflow::class.java,
-        WorkflowOptions.newBuilder().setTaskQueue(TEST_TASK_QUEUE).build(),
-      )
-    testEnv.start()
-
-    // Get a workflow stub using the same task queue the worker uses.
-    val workflowOptions =
-      WorkflowOptions
-        .newBuilder()
-        .setTaskQueue(TEST_TASK_QUEUE)
-        .setWorkflowId(WORKFLOW_ID)
-        .build()
-
-    val workflow: ConnectorRolloutWorkflow =
-      testEnv
-        .workflowClient
-        .newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowOptions)
-
-    // Start workflow asynchronously so we can send in `update` commands
-    val workflowStarted =
-      WorkflowClient.start(
-        workflow::run,
-        ConnectorRolloutWorkflowInput(
-          DOCKER_REPOSITORY,
-          DOCKER_IMAGE_TAG,
-          ACTOR_DEFINITION_ID,
-          ROLLOUT_ID,
-          USER_ID,
-          ROLLOUT_STRATEGY,
-          null,
-          null,
-          null,
-          null,
-          true,
-          1,
-          1,
-          1,
-        ),
-      )
-    assertEquals(workflowStarted.workflowId, WORKFLOW_ID)
-
-    assertThrows(WorkflowUpdateException::class.java) {
-      workflow.startRollout(
-        ConnectorRolloutActivityInputStart(
-          DOCKER_REPOSITORY,
-          DOCKER_IMAGE_TAG,
-          ACTOR_DEFINITION_ID,
-          ROLLOUT_ID,
-          USER_ID,
-          ROLLOUT_STRATEGY,
-        ),
-      )
-    }
     val workflowById: WorkflowStub = testEnv.workflowClient.newUntypedWorkflowStub(WORKFLOW_ID)
 
-    // Verify that the cleanup activity was called
-    verify(cleanupActivity).cleanup(MockitoHelper.anyObject())
+    // Start workflow asynchronously so we can send in `update` commands
+    WorkflowClient.start(
+      workflowStub::run,
+      ConnectorRolloutWorkflowInput(
+        DOCKER_REPOSITORY,
+        DOCKER_IMAGE_TAG,
+        ACTOR_DEFINITION_ID,
+        ROLLOUT_ID,
+        USER_ID,
+        ROLLOUT_STRATEGY,
+        null,
+        null,
+        null,
+        null,
+        true,
+        1,
+        1,
+        1,
+      ),
+    )
 
     // Verify that the exception causes the workflow to fail
     assertThrows(WorkflowFailedException::class.java) {
       workflowById.getResult(String::class.java)
     }
+
+    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
+    verify(cleanupActivity).cleanup(MockitoHelper.anyObject())
   }
 
   @Test

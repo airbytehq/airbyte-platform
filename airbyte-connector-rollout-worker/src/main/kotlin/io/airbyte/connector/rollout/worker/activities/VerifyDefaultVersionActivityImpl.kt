@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.worker.activities
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -15,7 +19,9 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class VerifyDefaultVersionActivityImpl(private val airbyteApiClient: AirbyteApiClient) : VerifyDefaultVersionActivity {
+class VerifyDefaultVersionActivityImpl(
+  private val airbyteApiClient: AirbyteApiClient,
+) : VerifyDefaultVersionActivity {
   init {
     logger.info { "Initialized VerifyDefaultVersionActivityImpl" }
   }

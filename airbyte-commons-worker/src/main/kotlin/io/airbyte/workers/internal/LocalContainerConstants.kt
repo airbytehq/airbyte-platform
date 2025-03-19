@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal
@@ -17,6 +17,8 @@ object LocalContainerConstants {
     listOf(AirbyteMessage.Type.RECORD, AirbyteMessage.Type.STATE, AirbyteMessage.Type.TRACE, AirbyteMessage.Type.CONTROL)
   val IGNORED_EXIT_CODES = setOf(NORMAL_EXIT, SIGTERM)
   val LOCAL_CONTAINER_RETRY_POLICY: RetryPolicy<Any> =
-    RetryPolicy.builder<Any>()
-      .withBackoff(Duration.ofSeconds(10), KubeConstants.POD_READY_TIMEOUT).build()
+    RetryPolicy
+      .builder<Any>()
+      .withBackoff(Duration.ofSeconds(10), KubeConstants.POD_READY_TIMEOUT)
+      .build()
 }

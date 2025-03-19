@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
@@ -75,8 +78,8 @@ class PromoteOrRollbackActivityImplTest {
     verify { anyConstructed<OkHttpClient>().newCall(any()) }
   }
 
-  private fun getMockConnectorRolloutResponse(): ConnectorRolloutResponse {
-    return ConnectorRolloutResponse(
+  private fun getMockConnectorRolloutResponse(): ConnectorRolloutResponse =
+    ConnectorRolloutResponse(
       ConnectorRolloutRead(
         id = UUID.randomUUID(),
         dockerRepository = DOCKER_REPOSITORY,
@@ -87,5 +90,4 @@ class PromoteOrRollbackActivityImplTest {
         state = ConnectorRolloutState.IN_PROGRESS,
       ),
     )
-  }
 }

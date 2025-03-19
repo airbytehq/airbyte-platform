@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.MapperOperationName.ROW_FILTERING
@@ -13,16 +17,12 @@ class RowFilteringMapper : FilteredRecordsMapper<RowFilteringMapperConfig>() {
   override val name: String
     get() = ROW_FILTERING
 
-  override fun spec(): MapperSpec<RowFilteringMapperConfig> {
-    return rowFilteringMapperSpec
-  }
+  override fun spec(): MapperSpec<RowFilteringMapperConfig> = rowFilteringMapperSpec
 
   override fun schema(
     config: RowFilteringMapperConfig,
     slimStream: SlimStream,
-  ): SlimStream {
-    return slimStream
-  }
+  ): SlimStream = slimStream
 
   override fun mapForNonDiscardedRecords(
     config: RowFilteringMapperConfig,

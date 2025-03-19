@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
-import ch.qos.logback.classic.boolex.JaninoEventEvaluator
 import ch.qos.logback.classic.sift.SiftingAppender
 import ch.qos.logback.classic.spi.Configurator
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -59,6 +58,9 @@ class AirbyteLogbackCustomConfigurer :
       isAdditive = true
       appenders.forEach { addAppender(it) }
     }
+
+    // Disable noise from Jooq. https://github.com/jOOQ/jOOQ/issues/4019
+    loggerContext.getLogger("org.jooq.Constants").level = Level.OFF
 
     // Do not allow any other configurators to run after this.
     // This prevents Logback from creating the default console appender for the root logger.
@@ -148,7 +150,12 @@ class AirbyteLogbackCustomConfigurer :
   internal fun createPlatformAppender(loggerContext: LoggerContext): ConsoleAppender<ILoggingEvent> =
     ConsoleAppender<ILoggingEvent>().apply {
       context = loggerContext
-      encoder = createUnstructuredEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
+      encoder =
+        if (EnvVar.PLATFORM_LOG_FORMAT.fetchNotNull().lowercase() == "json") {
+          AirbyteLogEventEncoder().apply { start() }
+        } else {
+          createUnstructuredEncoder(context = loggerContext, layout = AirbytePlatformLogbackMessageLayout())
+        }
       name = PLATFORM_LOGGER_NAME
       start()
     }
@@ -202,9 +209,8 @@ class AirbyteLogbackCustomConfigurer :
     contextKey: String,
     loggerContext: LoggerContext,
   ): EventEvaluator<ILoggingEvent> =
-    JaninoEventEvaluator().apply {
+    AirbyteMdcEvaluator(contextKey = contextKey).apply {
       context = loggerContext
-      expression = """mdc.get("$contextKey") == null || mdc.get("$contextKey") == """""
       start()
     }
 
@@ -272,7 +278,7 @@ class AirbyteLogbackCustomConfigurer :
     val shutdownHook = DefaultShutdownHook().apply { context = loggerContext }
     Runtime.getRuntime().addShutdownHook(
       Thread {
-        stopAirbyteCloudStorageAppenderExecutorService()
+        AirbyteCloudStorageAppenderExecutorServiceHelper.stopAirbyteCloudStorageAppenderExecutorService()
         shutdownHook.run()
       },
     )

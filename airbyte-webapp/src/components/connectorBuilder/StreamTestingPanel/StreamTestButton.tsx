@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
@@ -9,8 +10,8 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 
 import styles from "./StreamTestButton.module.scss";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
-import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;
@@ -19,6 +20,7 @@ interface StreamTestButtonProps {
   hasResolveErrors: boolean;
   isStreamTestQueued: boolean;
   isStreamTestRunning: boolean;
+  className?: string;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -28,6 +30,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   hasResolveErrors,
   isStreamTestQueued,
   isStreamTestRunning,
+  className,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
@@ -62,7 +65,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestingValuesErrors) {
+  if ((mode === "ui" && hasErrors(relevantViews)) || (mode === "yaml" && hasTestingValuesErrors)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {
@@ -71,7 +74,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   }
 
   const executeTestRead = () => {
-    if (hasTestingValuesErrors) {
+    if (mode === "yaml" && hasTestingValuesErrors) {
       setTestingValuesInputOpen(true);
       return;
     }
@@ -85,7 +88,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const testButton = (
     <Button
-      className={styles.testButton}
+      className={classNames(styles.testButton, className)}
       size="sm"
       onClick={executeTestRead}
       disabled={buttonDisabled}

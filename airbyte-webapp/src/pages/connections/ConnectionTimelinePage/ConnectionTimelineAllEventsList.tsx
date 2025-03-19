@@ -15,17 +15,17 @@ import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEv
 import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 
+import { CatalogChangeEventItem } from "./components/CatalogChangeEventItem";
 import { ClearEventItem } from "./components/ClearEventItem";
 import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
 import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
 import { ConnectionSettingsUpdateEventItem } from "./components/ConnectionSettingsUpdateEventItem";
-import { DestinationConnectorUpdateEventItem } from "./components/DestinationConnectorUpdateEventItem";
+import { ConnectorUpdateEventItem } from "./components/ConnectorUpdateEventItem";
 import { JobStartEventItem } from "./components/JobStartEventItem";
 import { MappingEventItem } from "./components/MappingEventItem";
 import { RefreshEventItem } from "./components/RefreshEventItem";
 import { RunningJobItem } from "./components/RunningJobItem";
 import { SchemaUpdateEventItem } from "./components/SchemaUpdateEventItem";
-import { SourceConnectorUpdateEventItem } from "./components/SourceConnectorUpdateEventItem";
 import { SyncEventItem } from "./components/SyncEventItem";
 import { SyncFailEventItem } from "./components/SyncFailEventItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
@@ -35,14 +35,14 @@ import {
   connectionDisabledEventSchema,
   connectionEnabledEventSchema,
   connectionSettingsUpdateEventSchema,
-  destinationConnectorUpdateEventSchema,
+  connectorUpdateEventSchema,
   generalEventSchema,
   jobRunningSchema,
   jobStartedEventSchema,
   mappingEventSchema,
   refreshEventSchema,
+  schemaConfigUpdateEventSchema,
   schemaUpdateEventSchema,
-  sourceConnectorUpdateEventSchema,
   syncEventSchema,
   syncFailEventSchema,
 } from "./types";
@@ -59,9 +59,9 @@ type AllSchemaEventTypes =
   | InferType<typeof connectionDisabledEventSchema>
   | InferType<typeof connectionSettingsUpdateEventSchema>
   | InferType<typeof schemaUpdateEventSchema>
-  | InferType<typeof sourceConnectorUpdateEventSchema>
-  | InferType<typeof destinationConnectorUpdateEventSchema>
   | InferType<typeof schemaUpdateEventSchema>
+  | InferType<typeof connectorUpdateEventSchema>
+  | InferType<typeof schemaConfigUpdateEventSchema>
   | InferType<typeof mappingEventSchema>;
 
 interface EventSchemaComponentMapItem<T> {
@@ -80,8 +80,8 @@ const eventSchemaComponentMap = [
   { schema: connectionDisabledEventSchema, component: ConnectionDisabledEventItem },
   { schema: connectionSettingsUpdateEventSchema, component: ConnectionSettingsUpdateEventItem },
   { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
-  { schema: sourceConnectorUpdateEventSchema, component: SourceConnectorUpdateEventItem },
-  { schema: destinationConnectorUpdateEventSchema, component: DestinationConnectorUpdateEventItem },
+  { schema: connectorUpdateEventSchema, component: ConnectorUpdateEventItem },
+  { schema: schemaConfigUpdateEventSchema, component: CatalogChangeEventItem },
   { schema: mappingEventSchema, component: MappingEventItem },
 ] as Array<EventSchemaComponentMapItem<AllSchemaEventTypes>>;
 

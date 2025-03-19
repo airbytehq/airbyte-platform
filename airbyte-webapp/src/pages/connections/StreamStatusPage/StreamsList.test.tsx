@@ -4,7 +4,7 @@ import { VirtuosoMockContext } from "react-virtuoso";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-import { TestWrapper } from "test-utils";
+import { TestWrapper, mocked } from "test-utils";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
@@ -68,6 +68,7 @@ describe("StreamsList", () => {
       mockStates: [
         {
           streamName: "test-stream-1",
+          streamNameWithPrefix: "test-stream-1",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Synced,
           isLoadingHistoricalData: false,
@@ -77,6 +78,7 @@ describe("StreamsList", () => {
         },
         {
           streamName: "test-stream-2",
+          streamNameWithPrefix: "test-stream-2",
           streamNamespace: "test-namespace",
           status: StreamStatusType.QueuedForNextSync,
           isLoadingHistoricalData: false,
@@ -93,6 +95,7 @@ describe("StreamsList", () => {
       mockStates: [
         {
           streamName: "test-stream-1",
+          streamNameWithPrefix: "test-stream-1",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Queued,
           isLoadingHistoricalData: false,
@@ -101,6 +104,7 @@ describe("StreamsList", () => {
         },
         {
           streamName: "test-stream-2",
+          streamNameWithPrefix: "test-stream-2",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Syncing,
           isLoadingHistoricalData: false,
@@ -119,6 +123,7 @@ describe("StreamsList", () => {
       mockStates: [
         {
           streamName: "test-stream-1",
+          streamNameWithPrefix: "test-stream-1",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Queued,
           isLoadingHistoricalData: true,
@@ -127,6 +132,7 @@ describe("StreamsList", () => {
         },
         {
           streamName: "test-stream-2",
+          streamNameWithPrefix: "test-stream-2",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Syncing,
           isLoadingHistoricalData: true,
@@ -145,6 +151,7 @@ describe("StreamsList", () => {
       mockStates: [
         {
           streamName: "test-stream-1",
+          streamNameWithPrefix: "test-stream-1",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Paused,
           isLoadingHistoricalData: true,
@@ -154,6 +161,7 @@ describe("StreamsList", () => {
         },
         {
           streamName: "test-stream-2",
+          streamNameWithPrefix: "test-stream-2",
           streamNamespace: "test-namespace",
           status: StreamStatusType.Paused,
           isLoadingHistoricalData: true,
@@ -178,18 +186,30 @@ describe("StreamsList", () => {
       expectedFreshness,
       expectedLoadingAttributes,
     }) => {
-      (useConnectionEditService as jest.Mock).mockReturnValue({
-        connection: { connectionId: "test-connection-id" },
+      mocked(useConnectionEditService).mockReturnValue({
+        connection: mockConnection,
+        setConnection: jest.fn(),
+        schemaHasBeenRefreshed: false,
+        connectionUpdating: false,
+        schemaRefreshing: false,
+        updateConnection: jest.fn(),
+        updateConnectionStatus: jest.fn(),
+        discardRefreshedSchema: jest.fn(),
+        streamsByRefreshType: {
+          streamsSupportingMergeRefresh: [],
+          streamsSupportingTruncateRefresh: [],
+        },
       });
 
-      (useConnectionStatus as jest.Mock).mockReturnValue({
+      mocked(useConnectionStatus).mockReturnValue({
         status: ConnectionSyncStatus.running,
         nextSync: Math.floor(Date.now() / 1000),
         recordsExtracted: 1000,
         recordsLoaded: 900,
+        lastSuccessfulSync: Math.floor(Date.now() / 1000) - 360_000,
       });
 
-      (useUiStreamStates as jest.Mock).mockReturnValue(mockStates);
+      mocked(useUiStreamStates).mockReturnValue(mockStates);
 
       renderStreamsList();
 

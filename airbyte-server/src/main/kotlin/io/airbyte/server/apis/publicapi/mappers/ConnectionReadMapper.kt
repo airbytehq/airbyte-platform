@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.model.generated.Tag
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -43,26 +44,27 @@ object ConnectionReadMapper {
       connectionRead.syncCatalog?.let { catalog ->
         StreamConfigurations(
           streams =
-            catalog.streams.map { streamAndConfiguration ->
-              assert(streamAndConfiguration.config != null)
-              val connectionSyncMode: ConnectionSyncModeEnum? =
-                syncModesToConnectionSyncModeEnum(
-                  streamAndConfiguration.config!!.syncMode,
-                  streamAndConfiguration.config!!.destinationSyncMode,
+            catalog.streams
+              .map { streamAndConfiguration ->
+                assert(streamAndConfiguration.config != null)
+                val connectionSyncMode: ConnectionSyncModeEnum? =
+                  syncModesToConnectionSyncModeEnum(
+                    streamAndConfiguration.config!!.syncMode,
+                    streamAndConfiguration.config!!.destinationSyncMode,
+                  )
+                val selectedFields: List<SelectedFieldInfo>? =
+                  streamAndConfiguration.config!!.selectedFields?.map {
+                    selectedFieldInfoConverter(it)
+                  }
+                StreamConfiguration(
+                  name = streamAndConfiguration.stream.name,
+                  primaryKey = streamAndConfiguration.config.primaryKey,
+                  cursorField = streamAndConfiguration.config.cursorField,
+                  mappers = convertMappers(streamAndConfiguration.config.mappers),
+                  syncMode = connectionSyncMode,
+                  selectedFields = selectedFields,
                 )
-              val selectedFields: List<SelectedFieldInfo>? =
-                streamAndConfiguration.config!!.selectedFields?.map {
-                  selectedFieldInfoConverter(it)
-                }
-              StreamConfiguration(
-                name = streamAndConfiguration.stream.name,
-                primaryKey = streamAndConfiguration.config.primaryKey,
-                cursorField = streamAndConfiguration.config.cursorField,
-                mappers = convertMappers(streamAndConfiguration.config.mappers),
-                syncMode = connectionSyncMode,
-                selectedFields = selectedFields,
-              )
-            }.toList(),
+              }.toList(),
         )
       } ?: StreamConfigurations()
 
@@ -95,11 +97,12 @@ object ConnectionReadMapper {
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,
       createdAt = connectionRead.createdAt,
+      tags = connectionRead.tags?.let { t -> convertTags(t) } ?: emptyList(),
     )
   }
 
-  private fun getScheduleType(connectionRead: ConnectionRead): ScheduleTypeWithBasicEnum {
-    return if (connectionRead.schedule != null) {
+  private fun getScheduleType(connectionRead: ConnectionRead): ScheduleTypeWithBasicEnum =
+    if (connectionRead.schedule != null) {
       ScheduleTypeWithBasicEnum.BASIC
     } else if (connectionRead.schedule != null && connectionRead.scheduleType == null) {
       ScheduleTypeWithBasicEnum.MANUAL
@@ -112,42 +115,47 @@ object ConnectionReadMapper {
     } else {
       ScheduleTypeWithBasicEnum.BASIC
     }
-  }
 
-  private fun convertNamespaceDefinitionType(namespaceDefinitionType: NamespaceDefinitionType): NamespaceDefinitionEnum {
-    return if (namespaceDefinitionType == NamespaceDefinitionType.CUSTOMFORMAT) {
+  private fun convertNamespaceDefinitionType(namespaceDefinitionType: NamespaceDefinitionType): NamespaceDefinitionEnum =
+    if (namespaceDefinitionType == NamespaceDefinitionType.CUSTOMFORMAT) {
       NamespaceDefinitionEnum.CUSTOM_FORMAT
     } else {
       NamespaceDefinitionEnum.valueOf(namespaceDefinitionType.toString().uppercase())
     }
-  }
 
-  private fun convertNonBreakingChangesPreference(nonBreakingChangesPreference: NonBreakingChangesPreference?): NonBreakingSchemaUpdatesBehaviorEnum {
-    return if (nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE) {
+  private fun convertNonBreakingChangesPreference(nonBreakingChangesPreference: NonBreakingChangesPreference?): NonBreakingSchemaUpdatesBehaviorEnum =
+    if (nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE) {
       NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION
     } else {
       NonBreakingSchemaUpdatesBehaviorEnum.valueOf(nonBreakingChangesPreference.toString().uppercase())
     }
-  }
 
-  private fun convertMappers(mappers: List<ConfiguredStreamMapper>?): List<io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper>? {
-    return mappers?.map { mapper ->
+  private fun convertMappers(mappers: List<ConfiguredStreamMapper>?): List<io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper>? =
+    mappers?.map { mapper ->
       io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper(
         id = mapper.id,
         type = StreamMapperType.decode(mapper.type.toString()) ?: throw IllegalArgumentException("Invalid stream mapper type"),
         mapperConfiguration = mapper.mapperConfiguration,
       )
     }
-  }
+
+  private fun convertTags(tags: List<Tag>): List<io.airbyte.publicApi.server.generated.models.Tag> =
+    tags.map {
+      io.airbyte.publicApi.server.generated.models.Tag(
+        tagId = it.tagId,
+        name = it.name,
+        color = it.color,
+        workspaceId = it.workspaceId,
+      )
+    }
 
   /**
    * Convert selected fields from airbyte_api model to public_api model
    * */
-  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.model.generated.SelectedFieldInfo): SelectedFieldInfo {
-    return SelectedFieldInfo(
+  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.model.generated.SelectedFieldInfo): SelectedFieldInfo =
+    SelectedFieldInfo(
       fieldPath = selectedField.fieldPath,
     )
-  }
 
   /**
    * Map sync modes to combined sync modes.
@@ -171,6 +179,10 @@ object ConnectionReadMapper {
             Pair(
               DestinationSyncMode.APPEND,
               ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
+            ),
+            Pair(
+              DestinationSyncMode.OVERWRITE_DEDUP,
+              ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
             ),
           ),
         SyncMode.INCREMENTAL to

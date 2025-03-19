@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.temporal.scheduling.retries
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import org.apache.commons.lang3.time.DurationFormatUtils
+import io.airbyte.commons.duration.formatMilli
 import java.time.Duration
 
 private const val DEFAULT_FAILURES = 0
@@ -121,5 +122,5 @@ data class RetryManager(
    * @return backoff duration as a human-readable string.
    */
   val backoffString: String
-    get() = DurationFormatUtils.formatDurationWords(backoff.toMillis(), true, true)
+    get() = formatMilli(backoff.toMillis())
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.logging
 
 import ch.qos.logback.classic.pattern.ThrowableProxyConverter
@@ -28,15 +32,12 @@ class LogUtils {
    * @param throwable The [Throwable] object
    * @return A stack trace representation of the throwable.
    */
-  fun convertThrowableToStackTrace(throwable: Throwable?): String? {
-    return throwable?.let {
+  fun convertThrowableToStackTrace(throwable: Throwable?): String? =
+    throwable?.let { t ->
       val loggingEvent =
         object : LoggingEvent() {
-          override fun getThrowableProxy(): IThrowableProxy {
-            return ThrowableProxy(throwable)
-          }
+          override fun getThrowableProxy(): IThrowableProxy = ThrowableProxy(t)
         }
       throwableConverter.convert(loggingEvent)
     }
-  }
 }

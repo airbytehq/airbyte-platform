@@ -1,13 +1,18 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
+import dev.failsafe.function.CheckedSupplier
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.UseCustomK8sInitCheck
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
@@ -47,27 +52,25 @@ class KubePodLauncher(
   private val featureFlagClient: FeatureFlagClient,
   @Property(name = "airbyte.data-plane-name") private val dataPlaneName: String?,
 ) {
-  fun create(pod: Pod): Pod {
-    return runKubeCommand(
+  fun create(pod: Pod): Pod =
+    runKubeCommand(
       {
-        kubernetesClient.pods()
+        kubernetesClient
+          .pods()
           .inNamespace(namespace)
           .resource(pod)
           .serverSideApply()
       },
       "pod_create",
     )
-  }
 
   fun waitForPodInitStartup(
     pod: Pod,
     waitDuration: Duration,
-  ) {
-    return if (shouldUseCustomK8sInitCheck()) {
-      waitForPodInitCustomCheck(pod, waitDuration)
-    } else {
-      waitForPodInitDefaultCheck(pod, waitDuration)
-    }
+  ) = if (shouldUseCustomK8sInitCheck()) {
+    waitForPodInitCustomCheck(pod, waitDuration)
+  } else {
+    waitForPodInitDefaultCheck(pod, waitDuration)
   }
 
   fun waitForPodInitComplete(
@@ -83,7 +86,8 @@ class KubePodLauncher(
               { p: Pod? ->
                 p?.let {
                   p.status.initContainerStatuses.isNotEmpty() &&
-                    p.status.initContainerStatuses[0].state.terminated != null
+                    p.status.initContainerStatuses[0]
+                      .state.terminated != null
                 } ?: false
               },
               waitDuration.toMinutes(),
@@ -162,7 +166,8 @@ class KubePodLauncher(
               { p: Pod ->
                 (
                   p.status.initContainerStatuses.isNotEmpty() &&
-                    p.status.initContainerStatuses[0].state.waiting == null
+                    p.status.initContainerStatuses[0]
+                      .state.waiting == null
                 )
               },
               waitDuration.toMinutes(),
@@ -192,7 +197,8 @@ class KubePodLauncher(
   ) {
     runKubeCommand(
       {
-        kubernetesClient.pods()
+        kubernetesClient
+          .pods()
           .inNamespace(namespace)
           .withLabels(labels)
           .waitUntilCondition(
@@ -233,7 +239,8 @@ class KubePodLauncher(
     try {
       return runKubeCommand(
         {
-          kubernetesClient.pods()
+          kubernetesClient
+            .pods()
             .inNamespace(namespace)
             .withLabels(labels)
             .list()
@@ -259,7 +266,8 @@ class KubePodLauncher(
             .list()
             .items
             .flatMap { p ->
-              kubernetesClient.pods()
+              kubernetesClient
+                .pods()
                 .inNamespace(namespace)
                 .resource(p)
                 .withPropagationPolicy(DeletionPropagation.FOREGROUND)
@@ -308,7 +316,8 @@ class KubePodLauncher(
   }
 
   private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {
-    return kubernetesClient.pods()
+    return kubernetesClient
+      .pods()
       .inNamespace(namespace)
       .withLabels(labels)
       .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
@@ -319,11 +328,15 @@ class KubePodLauncher(
     commandName: String,
   ): T {
     try {
-      return Failsafe.with(kubernetesClientRetryPolicy).get { -> kubeCommand() }
+      return Failsafe.with(kubernetesClientRetryPolicy).get(
+        object : CheckedSupplier<T> {
+          override fun get(): T = kubeCommand()
+        },
+      )
     } catch (e: Exception) {
       val attributes: List<MetricAttribute> = listOf(MetricAttribute("operation", commandName))
       val attributesArray = attributes.toTypedArray<MetricAttribute>()
-      metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, 1, *attributesArray)
+      metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, attributes = attributesArray)
 
       throw e
     }
@@ -333,6 +346,7 @@ class KubePodLauncher(
     // Wait why is this named like this?
     // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
     const val KUBECTL_COMPLETED_VALUE = "Succeeded"
+    const val KUBECTL_RUNNING_VALUE = "Running"
 
     // Explanation: Unlike Kubectl, Fabric8 shows and uses "Completed" for termination reasons
     const val FABRIC8_COMPLETED_REASON_VALUE = "Completed"

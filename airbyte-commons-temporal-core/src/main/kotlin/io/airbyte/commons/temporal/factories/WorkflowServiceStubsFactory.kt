@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.factories
 
 import com.uber.m3.tally.RootScopeBuilder
 import com.uber.m3.tally.StatsReporter
-import io.airbyte.metrics.lib.MetricClientFactory
+import io.micrometer.core.instrument.MeterRegistry
 import io.temporal.common.reporter.MicrometerClientStatsReporter
 import io.temporal.serviceclient.SimpleSslContextBuilder
 import io.temporal.serviceclient.WorkflowServiceStubs
@@ -59,6 +63,7 @@ class WorkflowServiceStubsFactory(
   private val temporalCloudConfig: TemporalCloudConfig,
   private val temporalSelfHostedConfig: TemporalSelfHostedConfig,
   private val temporalCloudEnabled: Boolean,
+  private val meterRegistry: MeterRegistry?,
 ) {
   companion object {
     private val log = LoggerFactory.getLogger(WorkflowServiceStubsOptions::class.java)
@@ -70,13 +75,12 @@ class WorkflowServiceStubsFactory(
     return WorkflowServiceStubs.newConnectedServiceStubs(options, timeoutOptions.maxTimeToConnect)
   }
 
-  fun createWorkflowServiceStubsOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
-    return if (temporalCloudEnabled) {
+  fun createWorkflowServiceStubsOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions =
+    if (temporalCloudEnabled) {
       createTemporalCloudOptions(timeoutOptions)
     } else {
       createTemporalSelfHostedOptions(timeoutOptions)
     }
-  }
 
   private fun createTemporalCloudOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
     val clientCert: InputStream = ByteArrayInputStream(temporalCloudConfig.clientCert.orEmpty().toByteArray(StandardCharsets.UTF_8))
@@ -91,7 +95,8 @@ class WorkflowServiceStubsFactory(
       }
 
     val optionBuilder =
-      WorkflowServiceStubsOptions.newBuilder()
+      WorkflowServiceStubsOptions
+        .newBuilder()
         .setRpcTimeout(timeoutOptions.rpcTimeout)
         .setRpcLongPollTimeout(timeoutOptions.rpcLongPollTimeout)
         .setRpcQueryTimeout(timeoutOptions.rpcQueryTimeout)
@@ -104,22 +109,25 @@ class WorkflowServiceStubsFactory(
   }
 
   private fun configureTemporalMeterRegistry(optionBuilder: WorkflowServiceStubsOptions.Builder) {
-    MetricClientFactory.getMeterRegistry()?.let {
+    meterRegistry?.let {
       val reporter: StatsReporter = MicrometerClientStatsReporter(it)
       optionBuilder.setMetricsScope(
         RootScopeBuilder()
           .reporter(reporter)
-          .reportEvery(com.uber.m3.util.Duration.ofSeconds(REPORT_INTERVAL_SECONDS)),
+          .reportEvery(
+            com.uber.m3.util.Duration
+              .ofSeconds(REPORT_INTERVAL_SECONDS),
+          ),
       )
     }
   }
 
-  private fun createTemporalSelfHostedOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions {
-    return WorkflowServiceStubsOptions.newBuilder()
+  private fun createTemporalSelfHostedOptions(timeoutOptions: WorkflowServiceStubsTimeouts): WorkflowServiceStubsOptions =
+    WorkflowServiceStubsOptions
+      .newBuilder()
       .setRpcTimeout(timeoutOptions.rpcTimeout)
       .setRpcLongPollTimeout(timeoutOptions.rpcLongPollTimeout)
       .setRpcQueryTimeout(timeoutOptions.rpcQueryTimeout)
       .setTarget(temporalSelfHostedConfig.host)
       .build()
-  }
 }

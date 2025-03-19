@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -693,6 +693,30 @@ public class Jsons {
     }
 
     return mainNode;
+  }
+
+  /**
+   * Converts a JsonNode containing a list of strings into a single string with each element separated
+   * by the specified separator.
+   *
+   * @param node the JsonNode containing the list of strings to be joined
+   * @param separator the string to be used as the separator between each element
+   * @return a single string with each element from the list separated by the specified separator
+   */
+  public static String stringListToJoinedString(final JsonNode node, final String separator) {
+    return String.join(separator, Jsons.deserializeToStringList(node));
+  }
+
+  /**
+   * Sets a value in a JSON node for a given key.
+   *
+   * @param <T> the type of the object to set in the JSON node
+   * @param mainNode the main JSON node where the key-value pair will be set
+   * @param key the key for which the value will be set
+   * @param object the value to set for the given key
+   */
+  public static <T> void setNode(final JsonNode mainNode, final String key, final T object) {
+    ((ObjectNode) mainNode).set(key, jsonNode(object));
   }
 
   /**

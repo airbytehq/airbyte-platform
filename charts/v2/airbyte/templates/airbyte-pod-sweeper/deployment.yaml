@@ -1,12 +1,15 @@
+{{- if .Values.podSweeper.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-pod-sweeper
-  namespace: {{ .Values.podSweeper.namespace | default .Release.Namespace }}
+  namespace: {{ include "airbyte.workloads.namespace" . }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
-    namespace: {{ .Values.podSweeper.namespace | default .Release.Namespace }}
+    namespace: {{ include "airbyte.workloads.namespace" . }}
+  annotations:
+    {{ toYaml .Values.podSweeper.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.podSweeper.replicaCount }}
   selector:
@@ -17,22 +20,22 @@ spec:
       labels:
         {{- include "airbyte.selectorLabels" . | nindent 8 }}
         {{- if .Values.podSweeper.podLabels}}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.podSweeper.podLabels "context" $) | nindent 8 }}
         {{- end }}
       annotations:
       {{- if .Values.podSweeper.podAnnotations }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.podSweeper.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- if .Values.podSweeper.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.nodeSelector "context" $) | nindent 6 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.podSweeper.nodeSelector "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.podSweeper.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.tolerations "context" $) | nindent 6 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.podSweeper.tolerations "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.podSweeper.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.podSweeper.affinity "context" $) | nindent  6 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.podSweeper.affinity "context" $) | nindent  6 }}
       {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -61,7 +64,6 @@ spec:
         volumeMounts:
         - mountPath: /.kube
           name: kube-config
-        command: ["/bin/bash", "-c", /script/sweep-pod.sh]
         {{- if .Values.podSweeper.resources }}
         resources: {{- toYaml .Values.podSweeper.resources | nindent 10 }}
         {{- end }}
@@ -95,3 +97,4 @@ spec:
       volumes:
       - name: kube-config
         emptyDir: {}
+{{- end }}

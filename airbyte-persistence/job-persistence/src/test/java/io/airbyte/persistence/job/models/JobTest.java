@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.models;
@@ -33,7 +33,7 @@ class JobTest {
   }
 
   private static Job jobWithStatus(final JobStatus jobStatus) {
-    return new Job(1L, null, null, null, null, jobStatus, 0L, 0L, 0L);
+    return new Job(1L, null, null, null, null, jobStatus, 0L, 0L, 0L, true);
   }
 
   @Test
@@ -49,7 +49,7 @@ class JobTest {
     final List<Attempt> attempts = IntStream.range(0, attemptStatuses.length)
         .mapToObj(idx -> new Attempt(idx + 1, 1L, null, null, null, attemptStatuses[idx], null, null, idx, 0L, null))
         .collect(Collectors.toList());
-    return new Job(1L, null, null, null, attempts, null, 0L, 0L, 0L);
+    return new Job(1L, null, null, null, attempts, null, 0L, 0L, 0L, true);
   }
 
   @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.filters
@@ -21,8 +21,7 @@ class JobsFilter(
   offset: Int? = 0,
   val jobType: JobTypeEnum?,
   private val status: JobStatusEnum?,
-) :
-  BaseFilter(createdAtStart, createdAtEnd, updatedAtStart, updatedAtEnd, limit, offset) {
+) : BaseFilter(createdAtStart, createdAtEnd, updatedAtStart, updatedAtEnd, limit, offset) {
   /**
    * Convert Airbyte API job status to config API job status.
    */

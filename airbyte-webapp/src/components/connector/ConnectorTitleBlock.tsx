@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
@@ -66,6 +67,12 @@ export const ConnectorTitleBlock = <T extends Connector>({
               ? connectorDefinition.sourceDefinitionId
               : connectorDefinition.destinationDefinitionId
           }
+        />
+      )}
+      {connector?.isEntitled === false && (
+        <Message
+          type="error"
+          text={<FormattedMessage id="connector.unlicensedConnector" values={{ connectorName: connector.name }} />}
         />
       )}
     </FlexContainer>

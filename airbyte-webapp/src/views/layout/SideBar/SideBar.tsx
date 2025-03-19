@@ -8,7 +8,6 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
-import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList";
 
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
@@ -22,7 +21,6 @@ import { NavItem } from "./components/NavItem";
 import styles from "./SideBar.module.scss";
 
 interface SideBarProps {
-  workspaceFetcher: WorkspaceFetcher;
   bottomSlot?: React.ReactNode;
   settingHighlight?: boolean;
 }
@@ -31,11 +29,7 @@ const HIDDEN_SIDEBAR_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
 ];
 
-export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
-  workspaceFetcher,
-  bottomSlot,
-  settingHighlight,
-}) => {
+export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot, settingHighlight }) => {
   const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
@@ -56,7 +50,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
         <AdminWorkspaceWarning />
       </IfFeatureEnabled>
       <IfFeatureEnabled feature={FeatureItem.MultiWorkspaceUI}>
-        <WorkspacesPicker useFetchWorkspaces={workspaceFetcher} />
+        <WorkspacesPicker />
       </IfFeatureEnabled>
       <FlexContainer className={styles.sidebar__menuItems} direction="column" justifyContent="space-between">
         <MenuContent data-testid="navMainItems">

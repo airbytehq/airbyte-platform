@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -79,7 +79,11 @@ public interface JobPersistence {
    * @return job id
    * @throws IOException exception due to interaction with persistence
    */
+  @Deprecated // Use the enqueueJob method with an explicit isScheduled parameter instead.
+  // We shouldn't relay on the default value of isScheduled.
   Optional<Long> enqueueJob(String scope, JobConfig jobConfig) throws IOException;
+
+  Optional<Long> enqueueJob(String scope, JobConfig jobConfig, boolean isScheduled) throws IOException;
 
   /**
    * Set job status from current status to PENDING. Throws {@link IllegalStateException} if the job is
@@ -377,6 +381,8 @@ public interface JobPersistence {
       throws IOException;
 
   Optional<Job> getLastReplicationJob(UUID connectionId) throws IOException;
+
+  Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException;
 
   Optional<Job> getLastSyncJob(UUID connectionId) throws IOException;
 

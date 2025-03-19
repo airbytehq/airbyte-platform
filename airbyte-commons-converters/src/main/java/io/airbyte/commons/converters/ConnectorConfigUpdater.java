@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.converters;
@@ -52,7 +52,8 @@ public class ConnectorConfigUpdater {
             sourceId,
             Jsons.jsonNode(config.getAdditionalProperties()),
             source.getName(),
-            null));
+            null,
+            source.getResourceAllocation()));
 
     LOGGER.info("Persisted updated configuration for source {}. New config hash: {}.", sourceId,
         Hashing.sha256().hashString(updatedSource.getConnectionConfiguration().asText(), StandardCharsets.UTF_8));
@@ -69,7 +70,8 @@ public class ConnectorConfigUpdater {
     final DestinationRead updatedDestination = airbyteApiClient.getDestinationApi().updateDestination(new DestinationUpdate(
         destinationId,
         Jsons.jsonNode(config.getAdditionalProperties()),
-        destination.getName()));
+        destination.getName(),
+        destination.getResourceAllocation()));
 
     LOGGER.info("Persisted updated configuration for destination {}. New config hash: {}.", destinationId,
         Hashing.sha256().hashString(updatedDestination.getConnectionConfiguration().asText(), StandardCharsets.UTF_8));

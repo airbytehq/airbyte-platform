@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling;
@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.constants.WorkerConstants;
@@ -25,6 +26,7 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener;
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent;
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -35,6 +37,8 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
+import io.airbyte.workers.temporal.activities.GetConnectionContextOutput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogOutput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
@@ -199,6 +203,13 @@ class ConnectionManagerWorkflowTest {
     // default is to wait "forever"
     when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
         Duration.ofDays(100 * 365)));
+
+    // default is to not back off
+    when(mConfigFetchActivity.getLoadShedBackoff(Mockito.any())).thenReturn(new GetLoadShedBackoffOutput(
+        Duration.ZERO));
+
+    when(mConfigFetchActivity.getConnectionContext(Mockito.any())).thenReturn(new GetConnectionContextOutput(
+        new ConnectionContext()));
 
     when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
         .thenReturn(new JobCreationOutput(
@@ -469,6 +480,10 @@ class ConnectionManagerWorkflowTest {
       testEnv.sleep(Duration.ofSeconds(30L));
 
       reset(mConfigFetchActivity);
+      when(mConfigFetchActivity.getConnectionContext(Mockito.any())).thenReturn(new GetConnectionContextOutput(
+          new ConnectionContext()));
+      when(mConfigFetchActivity.getLoadShedBackoff(Mockito.any())).thenReturn(new GetLoadShedBackoffOutput(
+          Duration.ZERO));
       when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
           Duration.ofDays(100 * 365)));
       workflow.connectionUpdated();
@@ -613,7 +628,7 @@ class ConnectionManagerWorkflowTest {
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofSeconds(30L));
 
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(1)).ensureCleanJobState(Mockito.any());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, times(1)).ensureCleanJobState(Mockito.any());
     }
 
   }
@@ -1379,7 +1394,7 @@ class ConnectionManagerWorkflowTest {
       setupFailureCase(failureCase);
 
       final var captor = ArgumentCaptor.forClass(CheckRunProgressActivity.Input.class);
-      Mockito.verify(mCheckRunProgressActivity, Mockito.times(1)).checkProgress(captor.capture());
+      Mockito.verify(mCheckRunProgressActivity, times(1)).checkProgress(captor.capture());
       Assertions.assertThat(captor.getValue().getJobId()).isEqualTo(JOB_ID);
       Assertions.assertThat(captor.getValue().getAttemptNo()).isEqualTo(attemptNumber);
     }
@@ -1482,7 +1497,7 @@ class ConnectionManagerWorkflowTest {
       setupFailureCase(failureCase, input);
 
       Mockito.verify(mRetryStatePersistenceActivity, Mockito.never()).persistRetryState(Mockito.any());
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(retryLimit)).createNewAttemptNumber(Mockito.any());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, times(retryLimit)).createNewAttemptNumber(Mockito.any());
     }
 
     // Since we can't directly unit test the failure path, we enumerate the core failure cases as a
@@ -1683,7 +1698,7 @@ class ConnectionManagerWorkflowTest {
       setupSuccessfulWorkflow(input);
       testEnv.sleep(Duration.ofMinutes(1));
 
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(0)).jobFailure(Mockito.any());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, times(0)).jobFailure(Mockito.any());
     }
 
     private static Stream<Arguments> backoffJobFailureMatrix() {
@@ -1717,6 +1732,63 @@ class ConnectionManagerWorkflowTest {
       testEnv.sleep(Duration.ofSeconds(60));
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity).jobCancelledWithAttemptNumber(Mockito.any(JobCancelledInputWithAttemptNumber.class));
+    }
+
+  }
+
+  @DisplayName("Load shedding backoff loop")
+  @Nested
+  class LoadShedBackoff {
+
+    @BeforeEach
+    void setup() {
+      setupSimpleConnectionManagerWorkflow();
+    }
+
+    @Test
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Load shed backoff loop waits and exits")
+    void happyPath() throws Exception {
+      final var backoff = Duration.ofMinutes(10);
+      final var backoffOutput = new GetLoadShedBackoffOutput(backoff);
+      final var zeroBackoffOutput = new GetLoadShedBackoffOutput(Duration.ZERO);
+      final var zeroSchedulerOutput = new ScheduleRetrieverOutput(Duration.ZERO);
+
+      // back off 3 times, then unblock
+      when(mConfigFetchActivity.getLoadShedBackoff(Mockito.any()))
+          .thenReturn(backoffOutput, backoffOutput, backoffOutput, zeroBackoffOutput);
+
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(zeroSchedulerOutput);
+      when(mConfigFetchActivity.isWorkspaceTombstone(Mockito.any()))
+          .thenReturn(false);
+
+      final UUID testId = UUID.randomUUID();
+      final TestStateListener testStateListener = new TestStateListener();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+
+      final ConnectionUpdaterInput input = new ConnectionUpdaterInput(
+          UUID.randomUUID(),
+          JOB_ID,
+          ATTEMPT_ID,
+          false,
+          1,
+          workflowState,
+          false, false, false);
+
+      setupSuccessfulWorkflow(input);
+      // wait a sec til we get to the backoff step before calling verify
+      testEnv.sleep(Duration.ofMinutes(1));
+      Mockito.verify(mConfigFetchActivity, times(1)).getLoadShedBackoff(Mockito.any());
+      // we will check the load shed flag after each backoff
+      testEnv.sleep(backoff);
+      Mockito.verify(mConfigFetchActivity, times(2)).getLoadShedBackoff(Mockito.any());
+      testEnv.sleep(backoff);
+      Mockito.verify(mConfigFetchActivity, times(3)).getLoadShedBackoff(Mockito.any());
+      testEnv.sleep(backoff);
+      // verify we have exited the loop and will continue
+      Mockito.verify(mConfigFetchActivity, times(1)).getTimeToWait(any());
     }
 
   }

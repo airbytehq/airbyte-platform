@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.ANONYMOUS
@@ -85,10 +89,10 @@ data class ConnectorPodFactory(
     runtimeEnvVars: List<EnvVar>,
   ): Container {
     val configArgs =
-      connectorArgs.map {
-          (k, v) ->
-        "--$k $v"
-      }.joinToString(prefix = " ", separator = " ")
+      connectorArgs
+        .map { (k, v) ->
+          "--$k $v"
+        }.joinToString(prefix = " ", separator = " ")
 
     val mainCommand = ContainerCommandFactory.connectorOperation(operationCommand, configArgs)
 

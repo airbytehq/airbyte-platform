@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.client
@@ -8,7 +8,6 @@ import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.connector.rollout.worker.ConnectorRolloutWorkflow
@@ -39,16 +38,14 @@ class ConnectorRolloutClient
       name: String,
       version: String,
       actorDefinitionId: UUID,
-    ): String {
-      return "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
-    }
+    ): String = "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
 
     private fun <I, T> executeUpdate(
       input: I,
       workflowId: String,
       action: (ConnectorRolloutWorkflow, I) -> T,
-    ): T {
-      return try {
+    ): T =
+      try {
         val workflowStub = workflowClient.getClient().newWorkflowStub(ConnectorRolloutWorkflow::class.java, workflowId)
         logger.info { "Executing workflow action for $workflowId" }
         action(workflowStub, input)
@@ -56,47 +53,42 @@ class ConnectorRolloutClient
         logger.error { "Error executing workflow action: $e" }
         throw e
       }
-    }
 
-    fun startRollout(input: ConnectorRolloutWorkflowInput): ConnectorRolloutOutput {
+    fun startRollout(input: ConnectorRolloutWorkflowInput) {
       logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
-      if (input.rolloutId == null) {
-        throw RuntimeException("Rollout ID is required to start a rollout workflow")
-      }
 
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.connectorRollout!!.actorDefinitionId)
       val workflowStub =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
-          WorkflowOptions.newBuilder()
+          WorkflowOptions
+            .newBuilder()
             .setWorkflowId(workflowId)
             .setTaskQueue(Constants.TASK_QUEUE)
             .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_FAIL)
             .build(),
         )
 
-      val connectorRolloutActivityInputStart =
-        ConnectorRolloutActivityInputStart(
-          input.dockerRepository,
-          input.dockerImageTag,
-          input.actorDefinitionId,
-          input.rolloutId,
-          input.updatedBy,
-          input.rolloutStrategy,
-          input.migratePins,
-        )
-
       logger.info { "Starting workflow $workflowId" }
       val workflowExecution = WorkflowClient.start(workflowStub::run, input)
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
-      val startOutput = executeUpdate(connectorRolloutActivityInputStart, workflowId) { stub, i -> stub.startRollout(i) }
-      logger.info { "Rollout $workflowId started with ID: ${workflowExecution.workflowId}" }
-      return startOutput
     }
 
-    fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    fun doRollout(input: ConnectorRolloutActivityInputRollout) {
       val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
-      return executeUpdate(input, workflowId) { stub, i -> stub.progressRollout(i) }
+      val workflow =
+        workflowClient.getClient().newWorkflowStub(
+          ConnectorRolloutWorkflow::class.java,
+          workflowId,
+        )
+      logger.info { "Rollout $workflowId starting `doRollout` for workflow: $workflow" }
+      // Send the `update` request async so we don't block waiting for the actors to be pinned
+      WorkflowStub.fromTyped(workflow).startUpdate(
+        "progressRollout",
+        WorkflowUpdateStage.ACCEPTED,
+        ConnectorRolloutOutput::class.java,
+        input,
+      )
     }
 
     fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {

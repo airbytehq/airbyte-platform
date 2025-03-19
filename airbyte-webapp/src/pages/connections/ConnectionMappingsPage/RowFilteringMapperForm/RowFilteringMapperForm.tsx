@@ -16,7 +16,6 @@ import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "../Mapp
 import { MappingTypeListBox } from "../MappingTypeListBox";
 import { SelectTargetField } from "../SelectTargetField";
 import { StreamMapperWithId } from "../types";
-import { useGetFieldsInStream } from "../useGetFieldsInStream";
 
 export enum OperationType {
   equal = "EQUAL",
@@ -53,22 +52,29 @@ const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
 
 export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamDescriptorKey }) => {
   const { formatMessage } = useIntl();
-  const { updateLocalMapping, validateMappings } = useMappingContext();
-  const fieldsInStream = useGetFieldsInStream(streamDescriptorKey);
+  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
 
   const methods = useForm<RowFilteringMapperFormValues>({
     defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),
     resolver: autoSubmitResolver<RowFilteringMapperFormValues>(simpleSchema, (values) => {
       const mapperConfiguration = formValuesToMapperConfiguration(values);
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration });
-      validateMappings();
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger });
+    updateLocalMapping(streamDescriptorKey, mapping.id, { validationCallback: methods.trigger }, true);
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
+
+  useEffect(() => {
+    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
+      methods.setError("fieldName", { message: mapping.validationError.message });
+    } else {
+      methods.clearErrors("fieldName");
+    }
+  }, [mapping.validationError, methods]);
 
   if (!mapping) {
     return null;
@@ -78,18 +84,29 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
     <FormProvider {...methods}>
       <form>
         <MappingRowContent>
-          <MappingTypeListBox
-            selectedValue={StreamMapperType["row-filtering"]}
-            streamDescriptorKey={streamDescriptorKey}
-            mappingId={mapping.id}
-          />
-          <SelectFilterType />
+          <MappingRowItem>
+            <MappingTypeListBox
+              disabled={isStreamValidating}
+              selectedValue={StreamMapperType["row-filtering"]}
+              streamDescriptorKey={streamDescriptorKey}
+              mappingId={mapping.id}
+            />
+          </MappingRowItem>
+          <MappingRowItem>
+            <SelectFilterType disabled={isStreamValidating} />
+          </MappingRowItem>
           <MappingRowItem>
             <Text>
               <FormattedMessage id="connections.mappings.if" />
             </Text>
           </MappingRowItem>
-          <SelectTargetField<RowFilteringMapperFormValues> name="fieldName" targetFieldOptions={fieldsInStream} />
+          <SelectTargetField<RowFilteringMapperFormValues>
+            name="fieldName"
+            mappingId={mapping.id}
+            streamDescriptorKey={streamDescriptorKey}
+            shouldLimitTypes
+            disabled={isStreamValidating}
+          />
           <MappingRowItem>
             <Text>
               <FormattedMessage id="connections.mappings.equals" />
@@ -97,6 +114,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
           </MappingRowItem>
           <MappingRowItem>
             <MappingFormTextInput
+              disabled={isStreamValidating}
               placeholder={formatMessage({ id: "connections.mappings.value" })}
               name="comparisonValue"
               testId="comparisonValue"
@@ -104,12 +122,17 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
             <FormControlErrorMessage<RowFilteringMapperFormValues> name="comparisonValue" />
           </MappingRowItem>
         </MappingRowContent>
+        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
+          <Text italicized color="red">
+            {mapping.validationError.message}
+          </Text>
+        )}
       </form>
     </FormProvider>
   );
 };
 
-const SelectFilterType = () => {
+const SelectFilterType: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<RowFilteringMapperFormValues>();
 
   const { formatMessage } = useIntl();
@@ -120,6 +143,7 @@ const SelectFilterType = () => {
       control={control}
       render={({ field }) => (
         <ListBox<"IN" | "OUT">
+          isDisabled={disabled}
           selectedValue={field.value}
           options={[
             { label: formatMessage({ id: "connections.mappings.rowFilter.in" }), value: FilterCondition.IN },

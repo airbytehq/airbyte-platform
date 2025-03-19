@@ -2,6 +2,7 @@ import { AirbyteWebappConfig } from "./types";
 
 export const config: AirbyteWebappConfig = {
   keycloakBaseUrl: process.env.REACT_APP_KEYCLOAK_BASE_URL || window.location.origin,
+  hockeyStackApiKey: process.env.REACT_APP_HOCKEYSTACK_API_KEY,
   segmentToken: process.env.REACT_APP_SEGMENT_TOKEN,
   apiUrl: process.env.REACT_APP_API_URL ?? "/api",
   cloudApiUrl: process.env.REACT_APP_CLOUD_API_URL ?? "/cloud",

@@ -1,3 +1,4 @@
+{{- if .Values.minio.enabled }}
 {{- if (eq (lower (default "" .Values.global.storage.type)) "minio")}}
 apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: StatefulSet
@@ -145,4 +146,5 @@ spec:
       env:
         {{- include "airbyte.minio.envs" . | nindent 8 }}
         {{- include "airbyte.storage.minio.endpoint.env" . | nindent 8 }}
+{{- end }}
 {{- end }}

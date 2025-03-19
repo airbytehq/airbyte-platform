@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.license
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonValue
 import java.util.Date
+import java.util.UUID
 
 /**
  * An immutable representation of an Airbyte License.
@@ -15,6 +17,7 @@ data class AirbyteLicense(
   val expirationDate: Date? = null,
   val maxNodes: Int? = null,
   val maxEditors: Int? = null,
+  val enterpriseConnectorIds: Set<UUID> = emptySet(),
 ) {
   enum class LicenseType(
     @get:JsonValue val value: String,

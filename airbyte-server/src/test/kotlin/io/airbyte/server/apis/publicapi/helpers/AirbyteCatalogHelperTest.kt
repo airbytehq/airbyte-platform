@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.helpers
@@ -873,11 +873,34 @@ internal class AirbyteCatalogHelperTest {
     }
 
     @Test
-    fun `Should throw error if primary key(s) are not selected in dedup mode`() {
+    fun `Should throw error if primary key(s) are not selected in incremental_dedup mode`() {
       val streamConfiguration =
         StreamConfiguration(
           name = "testStream",
           syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+          selectedFields =
+            listOf(
+              // "f1" as primary key is missing
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("m1")),
+              io.airbyte.publicApi.server.generated.models
+                .SelectedFieldInfo(fieldPath = listOf("b1")),
+            ),
+        )
+      val throwable =
+        assertThrows(BadRequestProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Primary key fields are not selected properly"))
+    }
+
+    @Test
+    fun `Should throw error if primary key(s) are not selected in full_refresh_overwrite_deduped mode`() {
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
           selectedFields =
             listOf(
               // "f1" as primary key is missing
@@ -982,6 +1005,7 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> SyncMode.FULL_REFRESH
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> SyncMode.FULL_REFRESH
     }
 
   private fun getDestinationSyncMode(connectionSyncMode: ConnectionSyncModeEnum): DestinationSyncMode =
@@ -990,5 +1014,6 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> DestinationSyncMode.APPEND_DEDUP
+      ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> DestinationSyncMode.OVERWRITE_DEDUP
     }
 }

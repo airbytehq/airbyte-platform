@@ -4,7 +4,17 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon, IconColor } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { ConnectionEventType } from "core/api/types/AirbyteClient";
+import {
+  CatalogDiff,
+  ConnectionEventType,
+  FieldTransform,
+  FieldTransformTransformType,
+  StreamFieldStatusChanged,
+  StreamTransform,
+  StreamTransformTransformType,
+} from "core/api/types/AirbyteClient";
+
+import { CatalogConfigDiffExtended } from "./components/CatalogChangeEventItem";
 
 /**
  * GENERAL TIMELINE UTILITIES
@@ -245,4 +255,78 @@ export const isVersionUpgraded = (newVersion: string, oldVersion: string): boole
     }
   }
   return false;
+};
+
+/**
+ * Merge stream changes to avoid duplicate stream names
+ */
+const mergeStreamChanges = (changes: StreamFieldStatusChanged[]): StreamFieldStatusChanged[] => {
+  return Array.from(
+    changes
+      .reduce((acc, change) => {
+        const key = `${change.streamNamespace ?? ""}_${change.streamName}`;
+        if (!acc.has(key)) {
+          acc.set(key, { ...change });
+        } else {
+          const existing = acc.get(key)!;
+          existing.fields = [...new Set([...existing.fields!, ...change.fields!])];
+        }
+        return acc;
+      }, new Map<string, StreamFieldStatusChanged>())
+      .values()
+  );
+};
+
+/**
+ * Transform non-user changes from the catalog diff to the catalog config diff to be used in the CatalogConfigDiffModal
+ */
+export const transformCatalogDiffToCatalogConfigDiff = (catalogDiff: CatalogDiff): CatalogConfigDiffExtended => {
+  const changes = catalogDiff.transforms.reduce(
+    (acc, transform: StreamTransform) => {
+      const { streamDescriptor, transformType } = transform;
+      const baseChange = {
+        streamName: streamDescriptor.name,
+        streamNamespace: streamDescriptor.namespace,
+      };
+
+      switch (transformType) {
+        case StreamTransformTransformType.add_stream:
+          acc.streamsAdded.push(baseChange);
+          break;
+        case StreamTransformTransformType.remove_stream:
+          acc.streamsRemoved.push(baseChange);
+          break;
+        case StreamTransformTransformType.update_stream:
+          if (transform.updateStream) {
+            transform.updateStream.fieldTransforms.forEach((fieldTransform: FieldTransform) => {
+              const streamChange = {
+                ...baseChange,
+                fields: [fieldTransform.fieldName.join(".")],
+              };
+
+              if (fieldTransform.transformType === FieldTransformTransformType.add_field) {
+                acc.fieldsAdded.push(streamChange);
+              } else if (fieldTransform.transformType === FieldTransformTransformType.remove_field) {
+                acc.fieldsRemoved.push(streamChange);
+              }
+            });
+          }
+          break;
+      }
+      return acc;
+    },
+    {
+      streamsAdded: [] as StreamFieldStatusChanged[],
+      streamsRemoved: [] as StreamFieldStatusChanged[],
+      fieldsAdded: [] as StreamFieldStatusChanged[],
+      fieldsRemoved: [] as StreamFieldStatusChanged[],
+    }
+  );
+
+  return {
+    streamsAdded: changes.streamsAdded.length > 0 ? mergeStreamChanges(changes.streamsAdded) : [],
+    streamsRemoved: changes.streamsRemoved.length > 0 ? mergeStreamChanges(changes.streamsRemoved) : [],
+    fieldsAdded: changes.fieldsAdded.length > 0 ? mergeStreamChanges(changes.fieldsAdded) : [],
+    fieldsRemoved: changes.fieldsRemoved.length > 0 ? mergeStreamChanges(changes.fieldsRemoved) : [],
+  };
 };

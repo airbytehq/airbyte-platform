@@ -1,8 +1,14 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.domain.WorkloadQueueStats
 import jakarta.transaction.Transactional
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -39,6 +45,8 @@ interface WorkloadHandler {
     autoId: UUID,
     deadline: OffsetDateTime,
     signalInput: String?,
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
   )
 
   fun claimWorkload(
@@ -81,4 +89,17 @@ interface WorkloadHandler {
     workloadType: List<ApiWorkloadType>?,
     createdBefore: OffsetDateTime?,
   ): List<Workload>
+
+  fun pollWorkloadQueue(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+    quantity: Int,
+  ): List<Workload>
+
+  fun countWorkloadQueueDepth(
+    dataplaneGroup: String?,
+    priority: WorkloadPriority?,
+  ): Long
+
+  fun getWorkloadQueueStats(): List<WorkloadQueueStats>
 }

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.pod
 
 import io.airbyte.config.ResourceRequirements
@@ -86,19 +87,18 @@ class ResourceConversionUtilsTest {
 
   companion object {
     @JvmStatic
-    private fun kubeQuantityStringBytesMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun kubeQuantityStringBytesMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of("1G", 1000000000),
         Arguments.of("2Mi", 2097152),
         Arguments.of("5G", 5000000000),
         Arguments.of("10G", 10000000000),
         Arguments.of("87Ki", 89088),
       )
-    }
 
     @JvmStatic
-    private fun resourceMatrix(): Stream<Arguments> {
-      return Stream.of(
+    private fun resourceMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(
           ResourceRequirements()
             .withCpuRequest("0.5")
@@ -155,6 +155,5 @@ class ResourceConversionUtilsTest {
             .withEphemeralStorageLimit("1G"),
         ),
       )
-    }
   }
 }

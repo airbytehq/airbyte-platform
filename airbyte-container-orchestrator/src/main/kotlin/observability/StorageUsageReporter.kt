@@ -1,12 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.containerOrchestrator.observability
 
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ReportConnectorDiskUsage
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
@@ -60,7 +64,7 @@ class StorageUsageReporter(
 
     // conditionally record staging usage as separate metric
     stagingDir?.let {
-      val stagingMbUsed = measureDirMbViaProc(stagingDir)
+      val stagingMbUsed = measureDirMbViaProc(it)
       stagingMbUsed?.let {
         logger.debug { "Disk used by staging: $stagingMbUsed MB" }
 

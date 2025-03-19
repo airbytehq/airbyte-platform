@@ -22,6 +22,25 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 {{- end }}
+  
+{{/*
+Renders a value that contains template perhaps with scope if the scope is present.
+Usage:
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ ) }}
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ "scope" $app ) }}
+*/}}
+{{- define "airbyte.tplvalues.render" -}}
+{{- $value := typeIs "string" .value | ternary .value (.value | toYaml) }}
+{{- if contains "{{" (toJson .value) }}
+  {{- if .scope }}
+      {{- tpl (cat "{{- with $.RelativeScope -}}" $value "{{- end }}") (merge (dict "RelativeScope" .scope) .context) }}
+  {{- else }}
+    {{- tpl $value .context }}
+  {{- end }}
+{{- else }}
+    {{- $value }}
+{{- end }}
+{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.

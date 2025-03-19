@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.handlers
@@ -128,13 +132,12 @@ class ConnectorContributionHandler(
       .actorDefinitionId(UUID.fromString(contributionInfo.actorDefinitionId))
   }
 
-  private fun convertGithubExceptionToContributionException(e: HttpException): Exception {
-    return when (e.responseCode) {
+  private fun convertGithubExceptionToContributionException(e: HttpException): Exception =
+    when (e.responseCode) {
       401 -> InvalidGithubTokenProblem()
       409 -> InsufficientGithubTokenPermissionsProblem(e)
       else -> GithubContributionFailedProblem(GithubContributionProblemData().status(e.responseCode).message(e.message))
     }
-  }
 
   private fun convertToContributionException(e: Exception): Exception {
     logger.error(e) { "Failed to generate contribution" }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -49,7 +49,7 @@ import io.airbyte.data.services.StreamAttemptMetadataService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;

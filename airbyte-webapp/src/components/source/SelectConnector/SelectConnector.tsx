@@ -15,7 +15,7 @@ import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useCurrentWorkspace, useFilters, useEnterpriseSourceStubsList } from "core/api";
+import { useCurrentWorkspace, useFilters, useListEnterpriseStubsForWorkspace } from "core/api";
 import { EnterpriseSourceStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
@@ -74,7 +74,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   };
 
   // Fetch enterprise source stubs
-  const { enterpriseSourceDefinitions } = useEnterpriseSourceStubsList();
+  const { enterpriseSourceDefinitions } = useListEnterpriseStubsForWorkspace();
 
   const createLink = useCurrentWorkspaceLink();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
@@ -10,6 +10,7 @@ import datadog.trace.api.Tracer;
 import io.airbyte.commons.temporal.TemporalInitializationUtils;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.config.TemporalQueueConfiguration;
 import io.airbyte.config.MaxWorkersConfig;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
@@ -21,7 +22,6 @@ import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl;
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
 import io.airbyte.workers.tracing.TemporalSdkInterceptor;
-import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;
@@ -106,6 +106,10 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private TemporalUtils temporalUtils;
   @Inject
   private WorkerFactory workerFactory;
+
+  @Inject
+  private TemporalQueueConfiguration temporalQueueConfiguration;
+
   @Value("${airbyte.data.sync.task-queue}")
   private String syncTaskQueue;
 
@@ -114,9 +118,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
   @Value("${airbyte.data.discover.task-queue}")
   private String discoverTaskQueue;
-
-  @Property(name = "airbyte.temporal.queues.ui-commands")
-  private String uiCommandsQueue;
 
   @Override
   public void onApplicationEvent(final ServiceReadyEvent event) {
@@ -178,7 +179,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   }
 
   private void registerUiCommandsWorker(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfiguration) {
-    final Worker uiCommandsWorker = factory.newWorker(uiCommandsQueue, getWorkerOptions(maxWorkersConfiguration.getMaxCheckWorkers()));
+    final Worker uiCommandsWorker =
+        factory.newWorker(temporalQueueConfiguration.getUiCommandsQueue(), getWorkerOptions(maxWorkersConfiguration.getMaxCheckWorkers()));
     final WorkflowImplementationOptions workflowOptions = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
 

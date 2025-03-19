@@ -18,7 +18,6 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
     connection.destination.destinationId
   );
   const { registerNotification } = useNotificationService();
-
   const getStateType = useGetStateTypeQuery();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
@@ -33,7 +32,13 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
             ...streamWithConfig,
             config: {
               ...streamWithConfig.config,
-              mappers: updatedMappings[streamDescriptorKey],
+              mappers:
+                updatedMappings[streamDescriptorKey] && updatedMappings[streamDescriptorKey].length > 0
+                  ? updatedMappings[streamDescriptorKey]
+                  : undefined,
+              // We should explicitly remove hashedFields, since the mappers field is now the source of truth. The
+              // backend may re-populate hashedFields in the response, but we don't want to send conflicting information.
+              hashedFields: undefined,
             },
           };
         }
@@ -66,10 +71,9 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
               type: "error",
             });
           });
-      } else {
-        return Promise.reject();
+        return { success: true, skipped: false };
       }
-      return Promise.resolve();
+      return { success: false, skipped: true };
     }
 
     try {
@@ -80,15 +84,14 @@ export const useUpdateMappingsForCurrentConnection = (connectionId: string) => {
           size: "md",
           content: (props) => <ClearDataWarningModal {...props} stateType={stateType} />,
         });
-        await handleModalResult(result);
-      } else {
-        const result = await openModal<boolean>({
-          title: formatMessage({ id: "connection.refreshDataRecommended" }),
-          size: "md",
-          content: ({ onCancel, onComplete }) => <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />,
-        });
-        await handleModalResult(result);
+        return await handleModalResult(result);
       }
+      const result = await openModal<boolean>({
+        title: formatMessage({ id: "connection.refreshDataRecommended" }),
+        size: "md",
+        content: ({ onCancel, onComplete }) => <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />,
+      });
+      return await handleModalResult(result);
     } catch (e) {
       throw new Error(e);
     }

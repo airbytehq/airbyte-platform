@@ -1,15 +1,25 @@
 global:
   # -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  # -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
-  # -- Edition; "community" or "pro"
+  # -- Edition; "community" or "enterprise"
   edition: "community"
+
+  secretName: ""
 
   local: false
 
   cluster:
-    type: "control-plane" # or "data-plane"
+    type: "hybrid" # "control-plane" | "data-plane" | "hybrid"
+    secretName: ""
+
+    controlPlane: 
+      serviceAccounts: ""
+
+    dataPlane:
+      id: "local"
+      controlPlaneAuthEndpoint: ""
+      serviceAccountEmail: ""
+      serviceAccountCredentialsPath: ""
 
   enterprise:
     # -- Secret name where an Airbyte license key is stored
@@ -38,8 +48,6 @@ global:
 
     # -- Admin user configuration
     instanceAdmin:
-      # -- Secret name where the instanceAdmin configuration is stored
-      secretName: "airbyte-auth-secrets"
       # -- The first name of the initial user
       firstName: ""
       # -- The last name of the initial user
@@ -54,18 +62,18 @@ global:
       # -- Secret name where the OIDC configuration is stored
       secretName: ""
       # -- The identity provider type (e.g. oidc)
-      type: "oidc"
+      type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      oidc:
-        # -- OIDC application domain
-        domain: ""
-        # -- OIDC application name
-        appName: ""
-        # -- The key within `clientIdSecretName` where the OIDC client id is stored
-        clientIdSecretKey: ""
-        # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
-        clientSecretSecretKey: ""
+      oidc: {}
+      #  # -- OIDC application domain
+      #  domain: ""
+      #  # -- OIDC application name
+      #  appName: ""
+      #  # -- The key within `clientIdSecretName` where the OIDC client id is stored
+      #  clientIdSecretKey: ""
+      #  # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+      #  clientSecretSecretKey: ""
 
     # -- Security configuration
     security:
@@ -79,6 +87,9 @@ global:
   api:
     authHeaderName: "X-Airbyte-Auth"
     
+  cloudApi:
+    url: ""
+
   # -- Environment variables
   env_vars: {}
 
@@ -121,16 +132,14 @@ global:
       minimumFlywayMigrationVersion: ""
 
   storage:
+    secretName: ""
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
-    # -- Secret name where storage provider credentials are stored
-    #storageSecretName: "airbyte-config-secrets"
 
     # Minio
     minio:
       accessKeyId: minio 
       secretAccessKey: "minio123"
-      endpoint: "http://airbyte-minio-svc:9000"
 
     bucket: 
       log: airbyte-bucket
@@ -148,7 +157,8 @@ global:
     # GCS
     #gcs:
     #  projectId: <project-id>
-    #  credentialsJson: /secrets/gcs-log-creds/gcp.json
+    #  credentialsJson:  <base64-encoded>
+    #  credentialsJsonPath: /secrets/gcs-log-creds/gcp.json
 
     # Azure
     #azure:
@@ -191,39 +201,27 @@ global:
     httpAccessLogsEnabled: false
     log4jConfigFile: ""
 
-  email:
-    enabled: false
-    secretName: ""
-    client: "" # one of: sengrid
-
-    sendgrid:
-      apiKey: ""
-      apiKeySecretKey: ""
-
   connectorRegistry:
     seedProvider: "local"
 
   workloads:
     secretName: ""
+    namespace: "jobs"
 
     images:
       workloadInit: ""
       connectorSideCar: ""
       containerOrchestrator: ""
 
-    api:
-      bearerToken: "token"
-      bearerTokenSecretName: ""
-      bearerTokenSecretKey: ""
-
     containerOrchestrator:
-      javaOpts: []
-      secretMountPath: ""
+      dataPlane:
+        secretName: ""
+        secretMountPath: ""
 
     queues:
-      check: []
-      discover: []
-      sync: []
+      check: [CHECK_CONNECTION]
+      discover: [DISCOVER_SCHEMA]
+      sync: [SYNC]
 
     pubSub:
       enabled: false
@@ -266,12 +264,19 @@ global:
     opts: []
 
   metrics:
-    # -- The metric client to configure globally. Supports "otel"
-    metricClient: ""
+    enabled: "false"
+    step: ""
 
-    micrometer:
-      enabled: false
-      statsdFlavor: "datadog" # datadog
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
 
     otel:
       resourceAttributes: {}
@@ -285,10 +290,6 @@ global:
         timeout: "30000"
         metricExportInterval: "10000"
     
-    statsd:
-      host: ""
-      port: ""
-
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -331,10 +332,16 @@ global:
 
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       # -- image pull secret to use for job pod
-      main_container_image_pull_secret: ""
+      mainContainerImagePullSecret: ""
 
       localVolume:
         enabled: false
+
+    errors:
+      reportingStrategy: "logging" 
+
+      #sentry:
+      #  dsn: ""
 
   topology:
     nodeSelectorLabel: "airbyte/node-pool"
@@ -455,6 +462,8 @@ webapp:
     repository: airbyte/webapp
     # -- The pull policy to use for the airbyte webapp image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the webapp pods
   podAnnotations: {}
@@ -671,7 +680,7 @@ webapp:
 ## @section Pod Sweeper parameters
 
 podSweeper:
-  enabled: true
+  enabled: false
   image:
     # -- The image repository to use for the pod sweeper
     repository: airbyte/pod-sweeper
@@ -679,6 +688,8 @@ podSweeper:
     pullPolicy: IfNotPresent
 
   replicaCount: 1
+
+  annotations: {}
 
   # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
@@ -806,6 +817,8 @@ server:
     type: ClusterIP
     port: 8001
     annotations: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the server pods
   podAnnotations: {}
@@ -993,6 +1006,8 @@ worker:
     # -- the pull policy to use for the airbyte worker image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Add extra annotations to the worker pods
   podAnnotations: {}
 
@@ -1134,6 +1149,10 @@ workloadLauncher:
     # -- The pull policy to use for the airbyte workload launcher image
     pullPolicy: IfNotPresent
 
+  env_vars: {}
+
+  annotations: {}
+
   # -- Add extra annotations to the workload launcher pods
   podAnnotations: {}
 
@@ -1268,6 +1287,11 @@ workloadLauncher:
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
+  connectorProfiler:
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/async-profiler:{{ default .Chart.AppVersion .Values.global.image.tag }}"
+
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
@@ -1289,6 +1313,8 @@ connectorRolloutWorker:
     repository: airbyte/connector-rollout-worker
     # -- The pull policy to use for the airbyte connector rollout worker image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the connector rollout worker pods
   podAnnotations: {}
@@ -1435,6 +1461,8 @@ metrics:
     # -- The pull policy to use for the airbyte metrics-reporter image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Add extra annotations to the metrics-reporter pod
   podAnnotations: {}
 
@@ -1526,6 +1554,8 @@ airbyteBootloader:
     repository: airbyte/bootloader
     # -- The pull policy to use for the airbyte bootloader image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the bootloader pod
   podAnnotations: {}
@@ -1696,17 +1726,6 @@ temporal:
 
   host: ""
 
-  cli:
-    address: ""
-    namespace: ""
-    tlsCert: ""
-    tlsKey: ""
-
-  cloud: 
-    namespace: 
-    clientCert: ""
-    clientKey: ""
-  
   sdk:
     rpc:
       timeout: "120s"
@@ -1721,6 +1740,11 @@ temporal:
     type: ClusterIP
     # -- The temporal port and exposed kubernetes port
     port: 7233
+
+  prometheus:
+    endpoint: ""
+
+  annotations: {}
 
   # -- Add extra annotations to the temporal pod
   podAnnotations: {}
@@ -1973,6 +1997,7 @@ postgresql:
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
+
   # -- Airbyte Postgresql username
   postgresqlUsername: airbyte
   # -- Airbyte Postgresql password
@@ -2016,6 +2041,7 @@ postgresql:
   affinity: {}
 
 minio:
+  enabled: true
   secretName: ""
 
   image:
@@ -2068,6 +2094,8 @@ cron:
   ##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
   ##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
   workloadApi: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the cron pods
   podAnnotations: {}
@@ -2246,6 +2274,8 @@ connectorBuilderServer:
     # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2336,6 +2366,8 @@ connectorBuilderServer:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  aiAssistUrlBase: ""
 
 keycloak:
   enabled: true
@@ -2476,6 +2508,8 @@ keycloakSetup:
     repository: airbyte/keycloak-setup
     pullPolicy: IfNotPresent
 
+  annotations: {}
+
   # -- Security context for the container
   podSecurityContext:
     # gid=1000(airbyte)
@@ -2523,6 +2557,7 @@ workloadApiServer:
   enabled: true
 
   bearerToken: token
+  bearerTokenSecretName: ""
 
   # -- workload-api-server replicas
   replicaCount: 1
@@ -2532,6 +2567,8 @@ workloadApiServer:
     repository: airbyte/workload-api-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2617,7 +2654,7 @@ workloadApiServer:
 
   service:
     type: ClusterIP
-    port: 8007
+    port: 8001
     annotations: {}
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
@@ -2659,6 +2696,8 @@ featureflagServer:
     repository: airbyte/featureflag-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:

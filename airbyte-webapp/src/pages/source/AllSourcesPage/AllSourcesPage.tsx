@@ -19,10 +19,10 @@ import { Text } from "components/ui/Text";
 
 import { SourceLimitReachedModal } from "area/workspace/components/SourceLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useConnectionList, useCurrentWorkspace, useFilters, useSourceList } from "core/api";
+import { useConnectionList, useFilters, useSourceList } from "core/api";
 import { SourceRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllSourcesPage.module.scss";
@@ -31,8 +31,7 @@ import { SourcePaths } from "../../routePaths";
 const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) => {
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateSource = useIntent("CreateSource", { workspaceId });
+  const canCreateSource = useGeneratedIntent(Intent.CreateOrEditConnector);
   const connectionList = useConnectionList({ sourceId: sources.map(({ sourceId }) => sourceId) });
   const connections = connectionList?.connections ?? [];
   const data = getEntityTableData(sources, connections, "source");

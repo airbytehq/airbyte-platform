@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the logging secret name
-*/}}
-{{- define "airbyte.logging.secretName" }}
-{{- if .Values.global.logging.secretName }}
-    {{- .Values.global.logging.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.logging.level value
 */}}
 {{- define "airbyte.logging.level" }}

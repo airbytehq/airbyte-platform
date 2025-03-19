@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging
@@ -16,7 +16,9 @@ import java.time.format.DateTimeFormatter
  * that can be displayed.  It is analogous to a Logback [ch.qos.logback.core.Layout].
  */
 @Singleton
-class LogEventLayout(val logUtils: LogUtils) {
+class LogEventLayout(
+  val logUtils: LogUtils,
+) {
   /**
    * Converts the provided structured [LogEvent] into a string representation of the
    * data contained in the structured event.
@@ -25,8 +27,8 @@ class LogEventLayout(val logUtils: LogUtils) {
    * @return A string representation of the structured log event using formatting rules
    *  contained in this class.
    */
-  fun doLayout(logEvent: LogEvent): String {
-    return buildString {
+  fun doLayout(logEvent: LogEvent): String =
+    buildString {
       append(
         Instant.ofEpochMilli(logEvent.timestamp).atZone(UTC_ZONE_ID).format(EVENT_TIMESTAMP_FORMATTER),
       )
@@ -38,7 +40,6 @@ class LogEventLayout(val logUtils: LogUtils) {
       }
       append(LINE_SEPARATOR)
     }
-  }
 
   /**
    * Converts a [Throwable] to printable stack trace.
@@ -47,9 +48,7 @@ class LogEventLayout(val logUtils: LogUtils) {
    * @return A string representation of a stack trace derived from the provided throwable
    * @see [ThrowableProxyConverter.convert]
    */
-  fun generateStackTrace(throwable: Throwable): String? {
-    return logUtils.convertThrowableToStackTrace(throwable = throwable)
-  }
+  fun generateStackTrace(throwable: Throwable): String? = logUtils.convertThrowableToStackTrace(throwable = throwable)
 
   /**
    * Formats the log source by applying the appropriate ANSI color.
@@ -57,24 +56,23 @@ class LogEventLayout(val logUtils: LogUtils) {
    * @param logSource The log source associated with the event.
    * @return The formatted log source display name.
    */
-  fun formatLogSource(logSource: LogSource?): String {
-    return when (logSource) {
+  fun formatLogSource(logSource: LogSource?): String =
+    when (logSource) {
       LogSource.DESTINATION -> applyColor(Color.YELLOW, logSource.displayName)
       LogSource.PLATFORM -> applyColor(Color.CYAN, logSource.displayName)
       LogSource.REPLICATION_ORCHESTRATOR -> applyColor(Color.CYAN, logSource.displayName)
       LogSource.SOURCE -> applyColor(Color.BLUE, logSource.displayName)
       null -> applyColor(Color.CYAN, LogSource.PLATFORM.displayName)
     }
-  }
 
   private fun applyColor(
     color: Color,
     text: String,
-  ): String {
-    return "${color.code}$text$RESET"
-  }
+  ): String = "${color.code}$text$RESET"
 
-  enum class Color(val code: String) {
+  enum class Color(
+    val code: String,
+  ) {
     BLUE("\u001b[44m"),
     YELLOW("\u001b[43m"),
     CYAN("\u001b[46m"),

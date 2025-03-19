@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api.domain
 
 import io.airbyte.config.WorkloadPriority
@@ -17,4 +21,5 @@ data class WorkloadCreateRequest(
   var deadline: OffsetDateTime? = null,
   var priority: WorkloadPriority = WorkloadPriority.HIGH,
   var signalInput: String? = null,
+  var dataplaneGroup: String? = null,
 )

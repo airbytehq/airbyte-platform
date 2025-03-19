@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/mixins";
 
 .container {
   flex: 1;
@@ -74,4 +75,15 @@
 // specificity than a single class selector.
 .traceback.traceback {
   margin-bottom: 0;
+}
+
+.pulsateButton {
+  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+
+  & > * {
+    // keep content visible above the pulses
+    display: inline-block;
+    position: relative;
+    z-index: 1;
+  }
 }

@@ -14,12 +14,13 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { FeatureItem, useFeature } from "core/services/features";
 
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
 
 const NAME_GROUP_ID = "__name_group";
+export const DEFAULT_GROUP_ID = "default";
+export const ADVANCED_GROUP_ID = "advanced";
 
 export interface BuildFormHook {
   initialValues: ConnectorFormValues;
@@ -76,10 +77,10 @@ export function useBuildForm(
     | ConnectorDefinitionSpecificationRead
     | SourceDefinitionSpecificationDraft
     | undefined,
+  supportsResourceAllocation: boolean,
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
-  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
 
   const isDraft =
     selectedConnectorDefinitionSpecification &&
@@ -112,11 +113,63 @@ export function useBuildForm(
           order: Number.MIN_SAFE_INTEGER,
           group: NAME_GROUP_ID,
         },
+        ...(supportsResourceAllocation
+          ? {
+              resourceAllocation: {
+                type: "object",
+                title: formatMessage({ id: "form.resourceAllocation" }),
+                group: ADVANCED_GROUP_ID,
+                order: Number.MAX_SAFE_INTEGER - 1,
+                properties: {
+                  default: {
+                    type: "object",
+                    title: formatMessage({ id: "form.resourceAllocation.default" }),
+                    properties: {
+                      cpu: {
+                        type: "string",
+                        title: formatMessage({ id: "form.resourceAllocation.cpu" }),
+                      },
+                      memory: {
+                        type: "string",
+                        title: formatMessage({ id: "form.resourceAllocation.memory" }),
+                      },
+                    },
+                  },
+                  jobSpecific: {
+                    type: "array",
+                    title: formatMessage({ id: "form.resourceAllocation.jobSpecific" }),
+                    items: {
+                      type: "object",
+                      properties: {
+                        jobType: {
+                          type: "string",
+                          title: formatMessage({ id: "form.resourceAllocation.jobType" }),
+                        },
+                        resourceRequirements: {
+                          type: "object",
+                          properties: {
+                            cpu_request: {
+                              type: "string",
+                              title: formatMessage({ id: "form.resourceAllocation.cpuLimit" }),
+                            },
+                            memory_request: {
+                              type: "string",
+                              title: formatMessage({ id: "form.resourceAllocation.memoryLimit" }),
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            }
+          : {}),
         ...schema.properties,
       };
       schema.required = ["name", "connectionConfiguration"];
       return schema;
-    }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification]);
+    }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification, supportsResourceAllocation]);
 
     const formBlock = useMemo<FormBlock>(() => jsonSchemaToFormBlock(jsonSchema), [jsonSchema]);
 
@@ -133,6 +186,7 @@ export function useBuildForm(
       let baseValues = {
         name: "",
         connectionConfiguration: {},
+        resourceAllocation: { jobSpecific: [] },
         ...initialValues,
       };
 
@@ -159,14 +213,14 @@ export function useBuildForm(
       () =>
         formBlock.properties.flatMap((block) =>
           block._type === "formGroup" && block.fieldKey === "connectionConfiguration"
-            ? allowOAuthConnector && authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
+            ? authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
               ? // OAuth button needs to be rendered at root level, so keep around an empty FormGroup for it to be rendered in.
                 // Order it after name and before the rest of the fields.
                 [{ ...block, properties: [], order: Number.MIN_SAFE_INTEGER + 1 }, ...block.properties]
               : block.properties
             : block
         ),
-      [allowOAuthConnector, formBlock.properties, selectedConnectorDefinitionSpecification]
+      [formBlock.properties, selectedConnectorDefinitionSpecification]
     );
 
     const groups: GroupDetails[] = useMemo(() => {
@@ -174,8 +228,15 @@ export function useBuildForm(
       const baseGroups = [{ id: NAME_GROUP_ID }];
       const spec = selectedConnectorDefinitionSpecification?.connectionSpecification;
       if (!spec || typeof spec !== "object" || !("groups" in spec) || !Array.isArray(spec.groups)) {
-        return baseGroups;
+        return [
+          ...baseGroups,
+          { id: DEFAULT_GROUP_ID },
+          ...(supportsResourceAllocation
+            ? [{ id: ADVANCED_GROUP_ID, title: formatMessage({ id: "form.advanced" }) }]
+            : []),
+        ];
       }
+
       return [
         ...baseGroups,
         ...spec.groups.map(({ id, title }) => {
@@ -184,8 +245,11 @@ export function useBuildForm(
             title,
           };
         }),
+        ...(supportsResourceAllocation
+          ? [{ id: ADVANCED_GROUP_ID, title: formatMessage({ id: "form.advanced" }) }]
+          : []),
       ];
-    }, [selectedConnectorDefinitionSpecification]);
+    }, [formatMessage, selectedConnectorDefinitionSpecification?.connectionSpecification, supportsResourceAllocation]);
 
     return {
       initialValues: startValues,

@@ -14,7 +14,6 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.temporal)
-  implementation(libs.bundles.apache)
   implementation(libs.failsafe)
   implementation(libs.kotlin.logging)
 

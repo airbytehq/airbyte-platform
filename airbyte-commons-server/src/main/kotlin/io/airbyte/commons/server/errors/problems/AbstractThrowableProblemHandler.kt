@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.errors.problems
 
 import io.airbyte.api.problems.AbstractThrowableProblem
@@ -16,8 +20,7 @@ import org.slf4j.LoggerFactory
 @Produces
 @Singleton
 @Requires(classes = [AbstractThrowableProblem::class])
-class AbstractThrowableProblemHandler :
-  ExceptionHandler<AbstractThrowableProblem, HttpResponse<*>> {
+class AbstractThrowableProblemHandler : ExceptionHandler<AbstractThrowableProblem, HttpResponse<*>> {
   companion object {
     private val log = LoggerFactory.getLogger(AbstractThrowableProblemHandler::class.java)
   }
@@ -36,7 +39,8 @@ class AbstractThrowableProblemHandler :
         .body(Jsons.serialize(problem))
         .contentType(MediaType.APPLICATION_JSON_TYPE)
     }
-    return HttpResponse.status<Any>(HttpStatus.INTERNAL_SERVER_ERROR)
+    return HttpResponse
+      .status<Any>(HttpStatus.INTERNAL_SERVER_ERROR)
       .body(Jsons.serialize(mapOf("message" to "Internal Server Error when building response for exception.")))
       .contentType(MediaType.APPLICATION_JSON_TYPE)
   }
