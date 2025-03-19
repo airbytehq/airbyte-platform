@@ -262,7 +262,6 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars,
       isFileTransfer,
       workspaceId,
-      false,
     )
 
     fun createResetWithDefaults(

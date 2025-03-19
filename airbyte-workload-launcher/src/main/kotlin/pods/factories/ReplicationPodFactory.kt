@@ -48,13 +48,14 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
-    enableAsyncProfiler: Boolean,
+    enableAsyncProfiler: Boolean = false,
     singleConnectorTest: Boolean = false,
+    socketTest: Boolean = false,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler, socketTest)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =
@@ -83,7 +84,14 @@ data class ReplicationPodFactory(
 
     val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
 
-    val containers = if (singleConnectorTest) mutableListOf(orchContainer) else mutableListOf(orchContainer, sourceContainer, destContainer)
+    val containers =
+      if (singleConnectorTest) {
+        mutableListOf(orchContainer)
+      } else if (socketTest) {
+        mutableListOf(orchContainer, sourceContainer)
+      } else {
+        mutableListOf(orchContainer, sourceContainer, destContainer)
+      }
     if (enableAsyncProfiler) {
       containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
     }
@@ -137,7 +145,7 @@ data class ReplicationPodFactory(
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer, false)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer)
     val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
 
     val orchContainer =

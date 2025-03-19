@@ -73,6 +73,8 @@ object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.pro
 
 object SingleContainerTest : Temporary<Boolean>(key = "platform.single-container-test", default = false)
 
+object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
