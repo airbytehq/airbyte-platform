@@ -79,6 +79,15 @@ tolerations: []
 ##
 affinity: {}
 
+# extraInitContainers [array] Additional init containers
+# Example:
+# extraInitContainers:
+#   - name: sleepy
+#     image: alpine
+#     command: ['sleep', '60']
+
+extraInitContainers: []
+
 ##  metrics.extraEnv [array] Additional env vars for metrics-reporter pod(s).
 ## Example:
 ##
