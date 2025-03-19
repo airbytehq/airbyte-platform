@@ -745,10 +745,17 @@ export function builderAuthenticatorToManifest(
   if (authenticator.type === OAUTH_AUTHENTICATOR || authenticator.type === DeclarativeOAuthAuthenticatorType) {
     const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
     const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
+
+    const usesRefreshToken = authenticator.type !== DeclarativeOAuthAuthenticatorType || isRefreshTokenFlowEnabled;
+
     return {
-      ...omit(authenticator, "declarative", "type"),
+      ...omit(authenticator, "declarative", "type", "grant_type"),
       type: OAUTH_AUTHENTICATOR,
-      refresh_token: authenticator.grant_type === "client_credentials" ? undefined : authenticator.refresh_token,
+      grant_type: isRefreshTokenFlowEnabled && !usesRefreshToken ? "client_credentials" : authenticator.grant_type,
+      refresh_token:
+        authenticator.grant_type === "client_credentials" || !usesRefreshToken
+          ? undefined
+          : authenticator.refresh_token,
       refresh_token_updater:
         authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
           ? undefined
@@ -767,7 +774,7 @@ export function builderAuthenticatorToManifest(
               ],
               refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
             },
-      refresh_request_body: Object.fromEntries(authenticator.refresh_request_body),
+      refresh_request_body: !usesRefreshToken ? undefined : Object.fromEntries(authenticator.refresh_request_body),
     } satisfies OAuthAuthenticator;
   }
   if (authenticator.type === "ApiKeyAuthenticator") {
