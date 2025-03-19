@@ -9,6 +9,10 @@ import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.defaultDeadline
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.labelList1
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.labelList2
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.labelList3
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.labelList4
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
@@ -508,6 +512,10 @@ internal class WorkloadRepositoryTest {
 
     val result = workloadRepo.getPendingWorkloads(group, priority, 10)
 
+    // getPendingWorkloads doesn't hydrate labels yet, so we null these out
+    // we should either fix this, or remove this method
+    workloads.forEach { it.workloadLabels = null }
+
     assertWorkloadsEqual(workloads, result)
   }
 
@@ -542,6 +550,12 @@ internal class WorkloadRepositoryTest {
     val nullGroupExpected = workloads + differentGroup
     val nullPriorityExpected = workloads + differentPriority
     val allNullExpected = workloads + differentGroup + differentPriority
+
+    // getPendingWorkloads doesn't hydrate labels yet, so we null these out
+    // we should either fix this, or remove this method
+    nullGroupExpected.forEach { it.workloadLabels = null }
+    nullPriorityExpected.forEach { it.workloadLabels = null }
+    allNullExpected.forEach { it.workloadLabels = null }
 
     assertWorkloadsEqual(nullGroupExpected, nullGroupResult)
     assertWorkloadsEqual(nullPriorityExpected, nullPriorityResult)
@@ -827,6 +841,15 @@ internal class WorkloadRepositoryTest {
     const val WORKLOAD_ID = "test"
     val defaultDeadline: OffsetDateTime = OffsetDateTime.now()
 
+    val label1 = { WorkloadLabel(key = "key-1", value = "value-1") }
+    val label2 = { WorkloadLabel(key = "key-2", value = "value-2") }
+    val label3 = { WorkloadLabel(key = "key-3", value = "value-3") }
+
+    val labelList1 = { arrayListOf(label1(), label2()) }
+    val labelList2 = { arrayListOf(label1(), label2(), label3()) }
+    val labelList3 = { arrayListOf(label3()) }
+    val labelList4 = { arrayListOf(label3(), label2()) }
+
     fun workload(
       id: String = WORKLOAD_ID,
       dataplaneId: String? = null,
@@ -978,26 +1001,26 @@ internal class WorkloadRepositoryTest {
           "group-1",
           0,
           listOf(
-            Fixtures.workload(id = "1", dataplaneGroup = "group-1", priority = 0),
-            Fixtures.workload(id = "2", dataplaneGroup = "group-1", priority = 0),
-            Fixtures.workload(id = "3", dataplaneGroup = "group-1", priority = 0),
+            Fixtures.workload(id = "1", dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList1()),
+            Fixtures.workload(id = "2", dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList2()),
+            Fixtures.workload(id = "3", dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList3()),
           ),
         ),
         Arguments.of(
           "group-2",
           1,
           listOf(
-            Fixtures.workload(id = "1", dataplaneGroup = "group-2", priority = 1),
-            Fixtures.workload(id = "3", dataplaneGroup = "group-2", priority = 1),
+            Fixtures.workload(id = "12", dataplaneGroup = "group-2", priority = 1, workloadLabels = labelList4()),
+            Fixtures.workload(id = "32", dataplaneGroup = "group-2", priority = 1, workloadLabels = labelList2()),
           ),
         ),
-        Arguments.of("group-3", 0, listOf(Fixtures.workload(id = "4", dataplaneGroup = "group-3", priority = 0))),
+        Arguments.of("group-3", 0, listOf(Fixtures.workload(id = "43", dataplaneGroup = "group-3", priority = 0, workloadLabels = labelList3()))),
         Arguments.of(
           "group-1",
           1,
           listOf(
-            Fixtures.workload(id = "1", dataplaneGroup = "group-1", priority = 1),
-            Fixtures.workload(id = "2", dataplaneGroup = "group-1", priority = 1),
+            Fixtures.workload(id = "14", dataplaneGroup = "group-1", priority = 1, workloadLabels = labelList1()),
+            Fixtures.workload(id = "24", dataplaneGroup = "group-1", priority = 1, workloadLabels = labelList4()),
           ),
         ),
       )

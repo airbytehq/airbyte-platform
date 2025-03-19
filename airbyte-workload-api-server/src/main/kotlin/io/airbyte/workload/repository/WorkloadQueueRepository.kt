@@ -16,6 +16,37 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES)
 interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> {
+  /**
+   * This query explained:
+   *
+   * The first CTE `polled_q_ids` gets the enqueued workload ids from the workload_queue table.
+   *
+   * It leverages two PostgresQL features to this effect:
+   *    1) MATERIALIZED — this ensures the CTE is computed first and can be referenced by the
+   *       subsequent sub-queries.
+   *    2) FOR UPDATE SKIP LOCKED — this locks the selected rows immediately, preventing other
+   *       connections from seeing them. This guarantees exclusivity of the items and avoids
+   *       locking in application code.
+   *
+   * Additionally, it provides a couple of other features. Namely:
+   *    1) Re-delivery — the `now() > poll_deadline` limits exclusivity to the deadline window. Once
+   *       the window has elapsed, the subsequent poll will see this workload item. We set the
+   *       `poll_deadline` in the next CTE so stay tuned for the other half.
+   *    2) FIFO guarantees — sorting by ASC ensures first in first out.
+   *    3) Filtering acked messages.
+   *
+   * The second CTE, `workloads`, does the update to the workload_queue rows that sets the
+   * `poll_deadline`. This is what guarantees exclusivity. Subsequent polls within the `poll_deadline`
+   * window will not see these items.
+   *
+   * Additionally, it joins on the `workload` table "hydrating" the workload queue items with the
+   * backing workload.
+   *
+   * The final select propagates all the workload information and joins on the workload labels.
+   * The `workload_labels_` field aliases are a micronaut-data specific format that in concert with
+   * the @Join annotation allow micronaut-data to properly hydrate the labels on the returned Workload
+   * domain objects.
+   */
   @Join(value = "workloadLabels")
   @Query(
     """
