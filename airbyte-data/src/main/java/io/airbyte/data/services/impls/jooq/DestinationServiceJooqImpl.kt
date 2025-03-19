@@ -1,0 +1,990 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.data.services.impls.jooq
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.json.Jsons
+import io.airbyte.config.ActorDefinitionBreakingChange
+import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConnectorRegistryEntryMetrics
+import io.airbyte.config.DestinationConnection
+import io.airbyte.config.ScopedResourceRequirements
+import io.airbyte.config.StandardDestinationDefinition
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.SecretPersistenceConfigService
+import io.airbyte.data.services.shared.DestinationAndDefinition
+import io.airbyte.data.services.shared.ResourcesQueryPaginated
+import io.airbyte.db.ContextQueryFunction
+import io.airbyte.db.Database
+import io.airbyte.db.ExceptionWrappingDatabase
+import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
+import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionRecord
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorRecord
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseRuntimeSecretPersistence
+import io.airbyte.metrics.MetricClient
+import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.validation.json.JsonValidationException
+import jakarta.inject.Named
+import jakarta.inject.Singleton
+import org.jooq.Condition
+import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.JSONB
+import org.jooq.JoinType
+import org.jooq.Record
+import org.jooq.Record1
+import org.jooq.RecordMapper
+import org.jooq.Result
+import org.jooq.impl.DSL
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.IOException
+import java.lang.invoke.MethodHandles
+import java.time.OffsetDateTime
+import java.util.Map
+import java.util.Optional
+import java.util.UUID
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import java.util.stream.Stream
+
+@Singleton
+class DestinationServiceJooqImpl
+  @VisibleForTesting
+  constructor(
+    @Named("configDatabase") database: Database?,
+    featureFlagClient: FeatureFlagClient,
+    secretsRepositoryReader: SecretsRepositoryReader,
+    secretsRepositoryWriter: SecretsRepositoryWriter,
+    secretPersistenceConfigService: SecretPersistenceConfigService,
+    connectionService: ConnectionService,
+    actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
+    metricClient: MetricClient,
+  ) : DestinationService {
+    private val database: ExceptionWrappingDatabase
+    private val featureFlagClient: FeatureFlagClient
+    private val secretsRepositoryReader: SecretsRepositoryReader
+    private val secretsRepositoryWriter: SecretsRepositoryWriter
+    private val secretPersistenceConfigService: SecretPersistenceConfigService
+    private val connectionService: ConnectionService
+    private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
+    private val metricClient: MetricClient
+
+    init {
+      this.database = ExceptionWrappingDatabase(database)
+      this.connectionService = connectionService
+      this.featureFlagClient = featureFlagClient
+      this.secretsRepositoryReader = secretsRepositoryReader
+      this.secretsRepositoryWriter = secretsRepositoryWriter
+      this.secretPersistenceConfigService = secretPersistenceConfigService
+      this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
+      this.metricClient = metricClient
+    }
+
+    /**
+     * Get destination definition.
+     *
+     * @param destinationDefinitionId destination definition id
+     * @return destination definition
+     * @throws JsonValidationException - throws if returned sources are invalid
+     * @throws IOException - you never know when you IO
+     * @throws ConfigNotFoundException - throws if no source with that id can be found.
+     */
+    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+    override fun getStandardDestinationDefinition(destinationDefinitionId: UUID): StandardDestinationDefinition? =
+      destDefQuery(Optional.of<UUID?>(destinationDefinitionId), true)!!
+        .findFirst()
+        .orElseThrow<ConfigNotFoundException?>(
+          Supplier {
+            ConfigNotFoundException(
+              ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+              destinationDefinitionId,
+            )
+          },
+        )
+
+    /**
+     * Get destination definition form destination.
+     *
+     * @param destinationId destination id
+     * @return destination definition
+     */
+    override fun getDestinationDefinitionFromDestination(destinationId: UUID): StandardDestinationDefinition? {
+      try {
+        val destination = getDestinationConnection(destinationId)
+        return getStandardDestinationDefinition(destination.getDestinationDefinitionId())
+      } catch (e: Exception) {
+        throw RuntimeException(e)
+      }
+    }
+
+    /**
+     * Returns if a destination is active, i.e. the destination has at least one active or manual
+     * connection.
+     *
+     * @param destinationId - id of the destination
+     * @return boolean - if destination is active or not
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun isDestinationActive(destinationId: UUID?): Boolean? =
+      database.query<Boolean?>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          ctx!!.fetchExists(
+            DSL
+              .select()
+              .from(Tables.CONNECTION)
+              .where(Tables.CONNECTION.DESTINATION_ID.eq(destinationId))
+              .and(Tables.CONNECTION.STATUS.eq(StatusType.active)),
+          )
+        },
+      )
+
+    /**
+     * Get destination definition used by a connection.
+     *
+     * @param connectionId connection id
+     * @return destination definition
+     */
+    override fun getDestinationDefinitionFromConnection(connectionId: UUID?): StandardDestinationDefinition? {
+      try {
+        val sync = connectionService.getStandardSync(connectionId)
+        return getDestinationDefinitionFromDestination(sync.getDestinationId())
+      } catch (e: Exception) {
+        throw RuntimeException(e)
+      }
+    }
+
+    /**
+     * List standard destination definitions.
+     *
+     * @param includeTombstone include tombstoned destinations
+     * @return list destination definitions
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listStandardDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition?> =
+      destDefQuery(Optional.empty<UUID?>(), includeTombstone)!!.toList()
+
+    /**
+     * List public destination definitions.
+     *
+     * @param includeTombstone include tombstoned destinations
+     * @return public destination definitions
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listPublicDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition?> =
+      listStandardActorDefinitions<StandardDestinationDefinition?>(
+        ActorType.destination,
+        Function { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
+        includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
+        Tables.ACTOR_DEFINITION.PUBLIC.eq(true),
+      )
+
+    /**
+     * List granted destination definitions for workspace.
+     *
+     * @param workspaceId workspace id
+     * @param includeTombstones include tombstoned destinations
+     * @return list standard destination definitions
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listGrantedDestinationDefinitions(
+      workspaceId: UUID?,
+      includeTombstones: Boolean,
+    ): MutableList<StandardDestinationDefinition?> =
+      listActorDefinitionsJoinedWithGrants<StandardDestinationDefinition?>(
+        workspaceId,
+        ScopeType.workspace,
+        JoinType.JOIN,
+        ActorType.destination,
+        Function { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
+        includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
+      )
+
+    /**
+     * List destinations to which we can give a grant.
+     *
+     * @param workspaceId workspace id
+     * @param includeTombstones include tombstoned definitions
+     * @return list of pairs from destination definition and whether it can be granted
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listGrantableDestinationDefinitions(
+      workspaceId: UUID?,
+      includeTombstones: Boolean,
+    ): MutableList<MutableMap.MutableEntry<StandardDestinationDefinition?, Boolean?>?> =
+      listActorDefinitionsJoinedWithGrants<MutableMap.MutableEntry<StandardDestinationDefinition?, Boolean?>?>(
+        workspaceId,
+        ScopeType.workspace,
+        JoinType.LEFT_OUTER_JOIN,
+        ActorType.destination,
+        Function { record: Record? -> this.mapRecordToDestinationDefinitionWithGrantStatus(record!!) },
+        Tables.ACTOR_DEFINITION.CUSTOM.eq(false),
+        includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
+      )
+
+    private fun mapRecordToDestinationDefinitionWithGrantStatus(record: Record): MutableMap.MutableEntry<StandardDestinationDefinition?, Boolean?> =
+      actorDefinitionWithGrantStatus<StandardDestinationDefinition?>(
+        record,
+        Function { record: Record? ->
+          this.buildDestinationDefinition(
+            record!!,
+          )
+        },
+      )
+
+    private fun buildDestinationDefinition(record: Record): StandardDestinationDefinition? = DbConverter.buildStandardDestinationDefinition(record)
+
+    /**
+     * Update destination definition.
+     *
+     * @param destinationDefinition destination definition
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+    override fun updateStandardDestinationDefinition(destinationDefinition: StandardDestinationDefinition) {
+      // Check existence before updating
+      // TODO: split out write and update methods so that we don't need explicit checking
+      getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
+
+      database.transaction<Any?>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          Companion.writeStandardDestinationDefinition(mutableListOf<StandardDestinationDefinition?>(destinationDefinition), ctx!!)
+          null
+        },
+      )
+    }
+
+    /**
+     * Returns destination with a given id. Does not contain secrets.
+     *
+     * @param destinationId - id of destination to fetch.
+     * @return destinations
+     * @throws JsonValidationException - throws if returned destinations are invalid
+     * @throws IOException - you never know when you IO
+     * @throws ConfigNotFoundException - throws if no destination with that id can be found.
+     */
+    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+    override fun getDestinationConnection(destinationId: UUID): DestinationConnection =
+      listDestinationQuery(Optional.of<UUID?>(destinationId))
+        .findFirst()
+        .orElseThrow<ConfigNotFoundException?>(Supplier { ConfigNotFoundException(ConfigSchema.DESTINATION_CONNECTION, destinationId) })
+
+    /**
+     * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
+     *
+     *
+     * Write a DestinationConnection to the database. The configuration of the Destination will be a
+     * partial configuration (no secrets, just pointer to the secrets store).
+     *
+     * @param partialDestination - The configuration of the Destination will be a partial configuration
+     * (no secrets, just pointer to the secrets store)
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun writeDestinationConnectionNoSecrets(partialDestination: DestinationConnection?) {
+      database.transaction<Any?>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          writeDestinationConnection(mutableListOf<DestinationConnection?>(partialDestination), ctx!!)
+          null
+        },
+      )
+    }
+
+    /**
+     * Returns all destinations in the database. Does not contain secrets. To hydrate with secrets see
+     * { @link SecretsRepositoryReader#listDestinationConnectionWithSecrets() }.
+     *
+     * @return destinations
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listDestinationConnection(): MutableList<DestinationConnection?> = listDestinationQuery(Optional.empty<UUID?>()).toList()
+
+    /**
+     * Returns all destinations for a workspace. Does not contain secrets.
+     *
+     * @param workspaceId - id of the workspace
+     * @return destinations
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listWorkspaceDestinationConnection(workspaceId: UUID?): MutableList<DestinationConnection?> {
+      val result =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(DSL.asterisk())
+              .from(Tables.ACTOR)
+              .where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+              .and(Tables.ACTOR.WORKSPACE_ID.eq(workspaceId))
+              .andNot(Tables.ACTOR.TOMBSTONE)
+              .fetch()
+          },
+        )
+      return result
+        .stream()
+        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .collect(Collectors.toList())
+    }
+
+    /**
+     * Returns all destinations for a list of workspaces. Does not contain secrets.
+     *
+     * @param resourcesQueryPaginated - Includes all the things we might want to query
+     * @return destinations
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listWorkspacesDestinationConnections(resourcesQueryPaginated: ResourcesQueryPaginated): MutableList<DestinationConnection?> {
+      val result =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(DSL.asterisk())
+              .from(Tables.ACTOR)
+              .where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+              .and(Tables.ACTOR.WORKSPACE_ID.`in`(resourcesQueryPaginated.workspaceIds))
+              .and(if (resourcesQueryPaginated.includeDeleted) DSL.noCondition() else Tables.ACTOR.TOMBSTONE.notEqual(true))
+              .limit(resourcesQueryPaginated.pageSize)
+              .offset(resourcesQueryPaginated.rowOffset)
+              .fetch()
+          },
+        )
+      return result
+        .stream()
+        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .collect(Collectors.toList())
+    }
+
+    /**
+     * Returns all active destinations using a definition.
+     *
+     * @param definitionId - id for the definition
+     * @return destinations
+     * @throws IOException - exception while interacting with the db
+     */
+    @Throws(IOException::class)
+    override fun listDestinationsForDefinition(definitionId: UUID?): MutableList<DestinationConnection?> {
+      val result =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(DSL.asterisk())
+              .from(Tables.ACTOR)
+              .where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+              .and(Tables.ACTOR.ACTOR_DEFINITION_ID.eq(definitionId))
+              .andNot(Tables.ACTOR.TOMBSTONE)
+              .fetch()
+          },
+        )
+      return result
+        .stream()
+        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .collect(Collectors.toList())
+    }
+
+    /**
+     * Get destination and definition from destinations ids.
+     *
+     * @param destinationIds destination ids
+     * @return pair of destination and definition
+     * @throws IOException if there is an issue while interacting with db.
+     */
+    @Throws(IOException::class)
+    override fun getDestinationAndDefinitionsFromDestinationIds(destinationIds: MutableList<UUID?>?): MutableList<DestinationAndDefinition?> {
+      val records =
+        database.query<Result<Record>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(Tables.ACTOR.asterisk(), Tables.ACTOR_DEFINITION.asterisk())
+              .from(Tables.ACTOR)
+              .join(Tables.ACTOR_DEFINITION)
+              .on(Tables.ACTOR.ACTOR_DEFINITION_ID.eq(Tables.ACTOR_DEFINITION.ID))
+              .where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination), Tables.ACTOR.ID.`in`(destinationIds))
+              .fetch()
+          },
+        )
+
+      val destinationAndDefinitions: MutableList<DestinationAndDefinition?> = ArrayList<DestinationAndDefinition?>()
+
+      for (record in records) {
+        val destination = DbConverter.buildDestinationConnection(record)
+        val definition = DbConverter.buildStandardDestinationDefinition(record)
+        destinationAndDefinitions.add(DestinationAndDefinition(destination, definition))
+      }
+
+      return destinationAndDefinitions
+    }
+
+    /**
+     * Write metadata for a custom destination: global metadata (destination definition) and versioned
+     * metadata (actor definition version for the version to use).
+     *
+     * @param destinationDefinition destination definition
+     * @param defaultVersion default actor definition version
+     * @param scopeId workspace or organization id
+     * @param scopeType enum of workspace or organization
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun writeCustomConnectorMetadata(
+      destinationDefinition: StandardDestinationDefinition,
+      defaultVersion: ActorDefinitionVersion,
+      scopeId: UUID?,
+      scopeType: io.airbyte.config.ScopeType,
+    ) {
+      database.transaction<Any?>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          writeConnectorMetadata(destinationDefinition, defaultVersion, listOf<ActorDefinitionBreakingChange>(), ctx!!)
+          writeActorDefinitionWorkspaceGrant(
+            destinationDefinition.getDestinationDefinitionId(),
+            scopeId,
+            ScopeType.valueOf(scopeType.toString()),
+            ctx,
+          )
+          null
+        },
+      )
+
+      actorDefinitionVersionUpdater.updateDestinationDefaultVersion(
+        destinationDefinition,
+        defaultVersion,
+        mutableListOf<ActorDefinitionBreakingChange>(),
+      )
+    }
+
+    /**
+     * Write metadata for a destination connector. Writes global metadata (destination definition) and
+     * versioned metadata (info for actor definition version to set as default). Sets the new version as
+     * the default version and updates actors accordingly, based on whether the upgrade will be breaking
+     * or not.
+     *
+     * @param destinationDefinition standard destination definition
+     * @param actorDefinitionVersion actor definition version
+     * @param breakingChangesForDefinition - list of breaking changes for the definition
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun writeConnectorMetadata(
+      destinationDefinition: StandardDestinationDefinition,
+      actorDefinitionVersion: ActorDefinitionVersion,
+      breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
+    ) {
+      database.transaction<Any?>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx!!)
+          null
+        },
+      )
+
+      // FIXME(pedro): this should be moved out of this service
+      actorDefinitionVersionUpdater.updateDestinationDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition)
+    }
+
+    @Throws(IOException::class)
+    override fun listDestinationsWithIds(destinationIds: MutableList<UUID?>?): MutableList<DestinationConnection?> {
+      val result =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(DSL.asterisk())
+              .from(Tables.ACTOR)
+              .where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+              .and(Tables.ACTOR.ID.`in`(destinationIds))
+              .andNot(Tables.ACTOR.TOMBSTONE)
+              .fetch()
+          },
+        )
+      return result.stream().map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }.toList()
+    }
+
+    private fun writeActorDefinitionWorkspaceGrant(
+      actorDefinitionId: UUID?,
+      scopeId: UUID?,
+      scopeType: ScopeType?,
+      ctx: DSLContext,
+    ): Int {
+      var insertStep =
+        ctx
+          .insertInto<ActorDefinitionWorkspaceGrantRecord?>(
+            Tables.ACTOR_DEFINITION_WORKSPACE_GRANT,
+          ).set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
+          .set<ScopeType?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
+          .set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId)
+      // todo remove when we drop the workspace_id column
+      if (scopeType == ScopeType.workspace) {
+        insertStep = insertStep.set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId)
+      }
+      return insertStep.execute()
+    }
+
+    private fun writeConnectorMetadata(
+      destinationDefinition: StandardDestinationDefinition?,
+      actorDefinitionVersion: ActorDefinitionVersion,
+      breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
+      ctx: DSLContext,
+    ) {
+      writeStandardDestinationDefinition(mutableListOf<StandardDestinationDefinition?>(destinationDefinition), ctx)
+      ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx)
+      ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx)
+    }
+
+    @Throws(IOException::class)
+    private fun destDefQuery(
+      destDefId: Optional<UUID>,
+      includeTombstone: Boolean,
+    ): Stream<StandardDestinationDefinition?>? =
+      database
+        .query<Result<Record?>?>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(Tables.ACTOR_DEFINITION.asterisk())
+              .from(Tables.ACTOR_DEFINITION)
+              .where(Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.destination))
+              .and(destDefId.map<Condition?>(Function { t: UUID? -> Tables.ACTOR_DEFINITION.ID.eq(t) }).orElse(DSL.noCondition()))
+              .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
+              .fetch()
+          },
+        ).stream()
+        .map<StandardDestinationDefinition?> { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) }
+
+    @Throws(IOException::class)
+    private fun <T> listStandardActorDefinitions(
+      actorType: ActorType?,
+      recordToActorDefinition: Function<Record?, T?>?,
+      vararg conditions: Condition?,
+    ): MutableList<T?> {
+      val records =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select(DSL.asterisk())
+              .from(Tables.ACTOR_DEFINITION)
+              .where(*conditions)
+              .and(Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType))
+              .fetch()
+          },
+        )
+
+      return records
+        .stream()
+        .map<T?>(recordToActorDefinition)
+        .toList()
+    }
+
+    @Throws(IOException::class)
+    private fun <T> listActorDefinitionsJoinedWithGrants(
+      scopeId: UUID?,
+      scopeType: ScopeType,
+      joinType: JoinType?,
+      actorType: ActorType?,
+      recordToReturnType: Function<Record?, T?>?,
+      vararg conditions: Condition?,
+    ): MutableList<T?> {
+      val records =
+        actorDefinitionsJoinedWithGrants(
+          scopeId,
+          scopeType,
+          joinType,
+          *ConditionsHelper.addAll(
+            conditions,
+            Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
+            Tables.ACTOR_DEFINITION.PUBLIC.eq(false),
+          ),
+        )
+
+      return records
+        .stream()
+        .map<T?>(recordToReturnType)
+        .toList()
+    }
+
+    @Throws(IOException::class)
+    private fun actorDefinitionsJoinedWithGrants(
+      scopeId: UUID?,
+      scopeType: ScopeType,
+      joinType: JoinType?,
+      vararg conditions: Condition?,
+    ): Result<Record?> {
+      var scopeConditional =
+        Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE
+          .eq(
+            ScopeType.valueOf(scopeType.toString()),
+          ).and(
+            Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId),
+          )
+
+      // if scope type is workspace, get organization id as well and add that into OR conditional
+      if (scopeType == ScopeType.workspace) {
+        val organizationId = getOrganizationIdFromWorkspaceId(scopeId)
+        if (organizationId.isPresent()) {
+          scopeConditional =
+            scopeConditional.or(
+              Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE
+                .eq(
+                  ScopeType.organization,
+                ).and(
+                  Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(organizationId.get()),
+                ),
+            )
+        }
+      }
+
+      val finalScopeConditional = scopeConditional
+      return database.query<Result<Record?>>(
+        ContextQueryFunction { ctx: DSLContext? ->
+          ctx!!
+            .select(DSL.asterisk())
+            .from(Tables.ACTOR_DEFINITION)
+            .join(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT, joinType)
+            .on(
+              Tables.ACTOR_DEFINITION.ID
+                .eq(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID)
+                .and(finalScopeConditional),
+            ).where(*conditions)
+            .fetch()
+        },
+      )
+    }
+
+    @Throws(IOException::class)
+    private fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
+      val optionalRecord =
+        database.query<Optional<Record1<UUID?>?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            ctx!!
+              .select<UUID?>(Tables.WORKSPACE.ORGANIZATION_ID)
+              .from(
+                Tables.WORKSPACE,
+              ).where(Tables.WORKSPACE.ID.eq(scopeId))
+              .fetchOptional()
+          },
+        )
+      return optionalRecord.map<UUID?>(Function { obj: Record1<UUID?>? -> obj!!.value1() })
+    }
+
+    private fun writeDestinationConnection(
+      configs: MutableList<DestinationConnection?>,
+      ctx: DSLContext,
+    ) {
+      val timestamp = OffsetDateTime.now()
+      configs.forEach(
+        Consumer { destinationConnection: DestinationConnection? ->
+          val isExistingConfig =
+            ctx.fetchExists(
+              DSL
+                .select()
+                .from(Tables.ACTOR)
+                .where(Tables.ACTOR.ID.eq(destinationConnection!!.getDestinationId())),
+            )
+          if (isExistingConfig) {
+            ctx
+              .update<ActorRecord?>(Tables.ACTOR)
+              .set<UUID?>(Tables.ACTOR.ID, destinationConnection.getDestinationId())
+              .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
+              .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.getDestinationDefinitionId())
+              .set<String?>(Tables.ACTOR.NAME, destinationConnection.getName())
+              .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(destinationConnection.getConfiguration())))
+              .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
+              .set<Boolean?>(Tables.ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
+              .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
+              .set<JSONB?>(
+                Tables.ACTOR.RESOURCE_REQUIREMENTS,
+                JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(destinationConnection.getResourceRequirements())),
+              ).where(Tables.ACTOR.ID.eq(destinationConnection.getDestinationId()))
+              .execute()
+          } else {
+            ctx
+              .insertInto<ActorRecord?>(Tables.ACTOR)
+              .set<UUID?>(Tables.ACTOR.ID, destinationConnection.getDestinationId())
+              .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
+              .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.getDestinationDefinitionId())
+              .set<String?>(Tables.ACTOR.NAME, destinationConnection.getName())
+              .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(destinationConnection.getConfiguration())))
+              .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
+              .set<Boolean?>(Tables.ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
+              .set<OffsetDateTime?>(Tables.ACTOR.CREATED_AT, timestamp)
+              .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
+              .set<JSONB?>(
+                Tables.ACTOR.RESOURCE_REQUIREMENTS,
+                JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(destinationConnection.getResourceRequirements())),
+              ).execute()
+          }
+        },
+      )
+    }
+
+    private fun includeTombstones(
+      tombstoneField: Field<Boolean?>,
+      includeTombstones: Boolean,
+    ): Condition {
+      if (includeTombstones) {
+        return DSL.trueCondition()
+      } else {
+        return tombstoneField.eq(false)
+      }
+    }
+
+    private fun <T> actorDefinitionWithGrantStatus(
+      outerJoinRecord: Record,
+      recordToActorDefinition: Function<Record?, T?>,
+    ): MutableMap.MutableEntry<T?, Boolean?> {
+      val actorDefinition = recordToActorDefinition.apply(outerJoinRecord)
+      val granted = outerJoinRecord.get<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null
+      return Map.entry<T?, Boolean?>(actorDefinition, granted)
+    }
+
+    @Throws(IOException::class)
+    private fun listDestinationQuery(configId: Optional<UUID>): Stream<DestinationConnection> {
+      val result =
+        database.query<Result<Record?>>(
+          ContextQueryFunction { ctx: DSLContext? ->
+            val query = ctx!!.select(DSL.asterisk()).from(Tables.ACTOR)
+            if (configId.isPresent) {
+              return@ContextQueryFunction query.where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination), Tables.ACTOR.ID.eq(configId.get())).fetch()
+            }
+            return@ContextQueryFunction query.where(Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination)).fetch()
+          },
+        )
+
+      return result.map<DestinationConnection?>(RecordMapper { record: Record? -> DbConverter.buildDestinationConnection(record) }).stream()
+    }
+
+    /**
+     * Get Destination with secrets.
+     *
+     * @param destinationId destination id
+     * @return destination with secrets
+     */
+    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+    override fun getDestinationConnectionWithSecrets(destinationId: UUID): DestinationConnection? {
+      val destination = getDestinationConnection(destinationId)
+      val organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId())
+      val hydratedConfig: JsonNode?
+      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
+        val secretPersistenceConfig =
+          secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
+        hydratedConfig =
+          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
+            destination.getConfiguration(),
+            RuntimeSecretPersistence(secretPersistenceConfig, metricClient),
+          )
+      } else {
+        hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration())
+      }
+      return Jsons.clone<DestinationConnection?>(destination).withConfiguration(hydratedConfig)
+    }
+
+    /**
+     * Delete destination: tombstone destination AND delete secrets
+     *
+     * @param name Destination name
+     * @param workspaceId workspace ID
+     * @param destinationId destination ID
+     * @param spec spec for the destination
+     * @throws JsonValidationException if the config is or contains invalid json
+     * @throws IOException if there is an issue while interacting with the secrets store or db.
+     */
+    @Throws(ConfigNotFoundException::class, JsonValidationException::class, IOException::class)
+    override fun tombstoneDestination(
+      name: String?,
+      workspaceId: UUID?,
+      destinationId: UUID,
+      spec: ConnectorSpecification,
+    ) {
+      // 1. Delete secrets from config
+      val destinationConnection = getDestinationConnection(destinationId)
+      val config = destinationConnection.getConfiguration()
+      val organizationId = getOrganizationIdFromWorkspaceId(workspaceId)
+      var secretPersistence: RuntimeSecretPersistence? = null
+      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
+        val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
+        secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+      }
+      secretsRepositoryWriter.deleteFromConfig(
+        config,
+        spec.getConnectionSpecification(),
+        secretPersistence,
+      )
+
+      // 2. Tombstone destination and void config
+      val newDestinationConnection =
+        DestinationConnection()
+          .withName(name)
+          .withDestinationDefinitionId(destinationConnection.getDestinationDefinitionId())
+          .withWorkspaceId(workspaceId)
+          .withDestinationId(destinationId)
+          .withConfiguration(null)
+          .withTombstone(true)
+      writeDestinationConnectionNoSecrets(newDestinationConnection)
+    }
+
+    /**
+     * Write a destination with its secrets to the appropriate persistence. Secrets go to secrets store
+     * and the rest of the object (with pointers to the secrets store) get saved in the db.
+     *
+     * @param destination to write
+     * @param connectorSpecification spec for the destination
+     * @throws JsonValidationException if the workspace is or contains invalid json
+     * @throws IOException if there is an issue while interacting with the secrets store or db.
+     */
+    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+    override fun writeDestinationConnectionWithSecrets(
+      destination: DestinationConnection,
+      connectorSpecification: ConnectorSpecification,
+    ) {
+      val previousDestinationConnection =
+        getDestinationIfExists(destination.getDestinationId()).map<JsonNode?>(Function { obj: DestinationConnection? -> obj!!.getConfiguration() })
+
+      val organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId())
+      var secretPersistence: RuntimeSecretPersistence? = null
+      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
+        val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
+        secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+      }
+
+      val partialConfig: JsonNode
+      if (previousDestinationConnection.isPresent()) {
+        partialConfig =
+          secretsRepositoryWriter.updateFromConfig(
+            destination.getWorkspaceId(),
+            previousDestinationConnection.get(),
+            destination.getConfiguration(),
+            connectorSpecification.getConnectionSpecification(),
+            secretPersistence,
+          )
+      } else {
+        partialConfig =
+          secretsRepositoryWriter.createFromConfig(
+            destination.getWorkspaceId(),
+            destination.getConfiguration(),
+            connectorSpecification.getConnectionSpecification(),
+            secretPersistence,
+          )
+      }
+
+      val partialSource = Jsons.clone<DestinationConnection?>(destination).withConfiguration(partialConfig)
+      writeDestinationConnectionNoSecrets(partialSource)
+    }
+
+    private fun getDestinationIfExists(destinationId: UUID): Optional<DestinationConnection> {
+      try {
+        return Optional.of(getDestinationConnection(destinationId))
+      } catch (e: ConfigNotFoundException) {
+        log.warn("Unable to find destination with ID {}", destinationId)
+        return Optional.empty()
+      } catch (e: JsonValidationException) {
+        log.warn("Unable to find destination with ID {}", destinationId)
+        return Optional.empty()
+      } catch (e: IOException) {
+        log.warn("Unable to find destination with ID {}", destinationId)
+        return Optional.empty()
+      }
+    }
+
+    companion object {
+      private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+
+      fun writeStandardDestinationDefinition(
+        configs: MutableList<StandardDestinationDefinition?>,
+        ctx: DSLContext,
+      ) {
+        val timestamp = OffsetDateTime.now()
+        configs.forEach(
+          Consumer { standardDestinationDefinition: StandardDestinationDefinition? ->
+            val isExistingConfig =
+              ctx.fetchExists(
+                DSL
+                  .select()
+                  .from(Tables.ACTOR_DEFINITION)
+                  .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition!!.getDestinationDefinitionId())),
+              )
+            if (isExistingConfig) {
+              ctx
+                .update<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
+                .set<UUID?>(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
+                .set<String?>(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
+                .set<String?>(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+                .set<String?>(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
+                .set<ActorType?>(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
+                .set<JSONB?>(
+                  Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
+                  if (standardDestinationDefinition.getResourceRequirements() == null) {
+                    null
+                  } else {
+                    JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(standardDestinationDefinition.getResourceRequirements()))
+                  },
+                ).set<JSONB?>(
+                  Tables.ACTOR_DEFINITION.METRICS,
+                  if (standardDestinationDefinition.getMetrics() == null) {
+                    null
+                  } else {
+                    JSONB.valueOf(Jsons.serialize<ConnectorRegistryEntryMetrics?>(standardDestinationDefinition.getMetrics()))
+                  },
+                ).set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+                .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition.getDestinationDefinitionId()))
+                .execute()
+            } else {
+              ctx
+                .insertInto<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
+                .set<UUID?>(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
+                .set<String?>(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
+                .set<String?>(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+                .set<String?>(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
+                .set<ActorType?>(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
+                .set<Boolean?>(
+                  Tables.ACTOR_DEFINITION.TOMBSTONE,
+                  standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone(),
+                ).set<Boolean?>(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+                .set<Boolean?>(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
+                .set<JSONB?>(
+                  Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
+                  if (standardDestinationDefinition.getResourceRequirements() == null) {
+                    null
+                  } else {
+                    JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(standardDestinationDefinition.getResourceRequirements()))
+                  },
+                ).set<JSONB?>(
+                  Tables.ACTOR_DEFINITION.METRICS,
+                  if (standardDestinationDefinition.getMetrics() == null) {
+                    null
+                  } else {
+                    JSONB.valueOf(Jsons.serialize<ConnectorRegistryEntryMetrics?>(standardDestinationDefinition.getMetrics()))
+                  },
+                ).set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
+                .set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+                .execute()
+            }
+          },
+        )
+      }
+    }
+  }

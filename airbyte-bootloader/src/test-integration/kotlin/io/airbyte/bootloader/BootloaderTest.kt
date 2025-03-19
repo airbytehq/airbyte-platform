@@ -168,7 +168,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
@@ -179,7 +179,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
@@ -371,7 +371,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
@@ -382,7 +382,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
@@ -715,7 +715,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
@@ -726,7 +726,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient,
+        featureFlagClient!!,
         Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
