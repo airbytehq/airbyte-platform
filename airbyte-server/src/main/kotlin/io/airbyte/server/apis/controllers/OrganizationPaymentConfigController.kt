@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationPaymentConfigApi
@@ -30,8 +34,8 @@ private val UTC = ZoneId.of("UTC")
 
 @Controller("/api/v1/organization_payment_config")
 open class OrganizationPaymentConfigController(
-  private val organizationService: OrganizationService,
-  private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
+  protected val organizationService: OrganizationService,
+  protected val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
 ) : OrganizationPaymentConfigApi {
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")

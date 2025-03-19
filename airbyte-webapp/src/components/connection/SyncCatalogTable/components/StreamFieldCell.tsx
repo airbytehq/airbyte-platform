@@ -41,6 +41,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
+  const isMappingsUIEnabled = useExperiment("connection.mappingsUI");
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const { formatMessage } = useIntl();
   const { mode } = useConnectionFormService();
@@ -146,7 +147,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
         )}
       </FlexContainer>
       <TextWithOverflowTooltip size="sm">
-        {isHashed ? (
+        {isHashed && !isMappingsUIEnabled ? (
           <>
             {getFieldPathDisplayName(field.path)}
             <Text as="span" bold>
@@ -157,9 +158,9 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
           <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
         )}
       </TextWithOverflowTooltip>
-      <Text size="sm" color="grey300" bold={isHashed}>
+      <Text size="sm" color="grey300" bold={isHashed && !isMappingsUIEnabled}>
         <FormattedMessage
-          id={isHashed ? "airbyte.datatype.string" : `${getDataType(field)}`}
+          id={isHashed && !isMappingsUIEnabled ? "airbyte.datatype.string" : `${getDataType(field)}`}
           defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
         />
       </Text>

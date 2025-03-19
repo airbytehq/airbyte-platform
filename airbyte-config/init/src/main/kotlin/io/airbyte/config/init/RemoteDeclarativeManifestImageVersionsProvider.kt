@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.init
 
 import io.airbyte.commons.json.Jsons
@@ -71,7 +75,5 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     return tagsAndShas
   }
 
-  private fun getMajorVersion(version: String): Int {
-    return version.split(".")[0].toInt()
-  }
+  private fun getMajorVersion(version: String): Int = version.split(".")[0].toInt()
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.limits
 
 import io.airbyte.config.ConfigResourceType
@@ -24,9 +28,13 @@ class ScopedConfigProductLimitsTest {
 
     val scopedConfigurations =
       listOf(
-        ScopedConfiguration().withId(UUID.randomUUID()).withKey(ProductLimitsKey.key)
-          .withScopeType(ConfigScopeType.ORGANIZATION).withScopeId(organizationId)
-          .withResourceType(ConfigResourceType.USER).withValue(expectedMaxUser.toString()),
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withKey(ProductLimitsKey.key)
+          .withScopeType(ConfigScopeType.ORGANIZATION)
+          .withScopeId(organizationId)
+          .withResourceType(ConfigResourceType.USER)
+          .withValue(expectedMaxUser.toString()),
       )
 
     every {
@@ -51,9 +59,13 @@ class ScopedConfigProductLimitsTest {
 
     val scopedConfigurations =
       listOf(
-        ScopedConfiguration().withId(UUID.randomUUID()).withKey(ProductLimitsKey.key)
-          .withScopeType(ConfigScopeType.ORGANIZATION).withScopeId(organizationId)
-          .withResourceType(ConfigResourceType.CONNECTION).withValue(expectedMaxUser.toString()),
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withKey(ProductLimitsKey.key)
+          .withScopeType(ConfigScopeType.ORGANIZATION)
+          .withScopeId(organizationId)
+          .withResourceType(ConfigResourceType.CONNECTION)
+          .withValue(expectedMaxUser.toString()),
       )
 
     every {

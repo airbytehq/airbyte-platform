@@ -16,16 +16,17 @@ import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAut
 import { AuthContext, AuthContextApi } from "./AuthContext";
 
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  const { auth, airbyteUrl } = useGetInstanceConfiguration();
+  const { auth } = useGetInstanceConfiguration();
 
   if (auth.mode !== AuthConfigurationMode.oidc || !auth.defaultRealm || !auth.clientId) {
     throw new Error(`Authentication is enabled, but the server returned an invalid auth configuration: ${auth}`);
   }
 
   const oidcConfig = {
-    authority: `${airbyteUrl}/auth/realms/${auth.defaultRealm}`,
+    authority: auth.authorizationServerUrl != null ? auth.authorizationServerUrl : "",
     client_id: auth.clientId,
     redirect_uri: createUriWithoutSsoParams(true), // creates redirect uri and adds `checkLicense=true` query param to trigger Enterprise license check.
+    scope: "openid profile email",
     onSigninCallback: () => {
       // Remove OIDC params from URL, but don't remove other params that might be present
       const searchParams = new URLSearchParams(window.location.search);

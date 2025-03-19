@@ -1,17 +1,22 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.limits
 
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ProductLimitsKey
+import jakarta.inject.Singleton
 import java.util.UUID
 
+@Singleton
 class ScopedConfigProductLimits(
   private val scopedConfigService: ScopedConfigurationService,
   private val defaultWorkspaceLimits: ProductLimitsProvider.WorkspaceLimits,
   private val defaultOrganizationLimits: ProductLimitsProvider.OrganizationLimits,
-) :
-  ProductLimitsProvider {
+) : ProductLimitsProvider {
   override fun getLimitForWorkspace(workspaceId: UUID): ProductLimitsProvider.WorkspaceLimits {
     val scopeConfigValue =
       scopedConfigService.getScopedConfiguration(

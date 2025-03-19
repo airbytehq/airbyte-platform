@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -24,12 +24,15 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
+import io.airbyte.api.model.generated.NotificationConfig;
+import io.airbyte.api.model.generated.NotificationsConfig;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.WebhookConfigRead;
 import io.airbyte.api.model.generated.WebhookConfigWrite;
+import io.airbyte.api.model.generated.WebhookNotificationConfig;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
@@ -45,6 +48,10 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.limits.ConsumptionService;
+import io.airbyte.commons.server.limits.ProductLimitsProvider;
+import io.airbyte.config.Configs;
+import io.airbyte.config.CustomerioNotificationConfiguration;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
@@ -63,10 +70,12 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -84,6 +93,7 @@ class WorkspacesHandlerTest {
   public static final String UPDATED = "updated";
   private static final String FAILURE_NOTIFICATION_WEBHOOK = "http://airbyte.notifications/failure";
   private static final String NEW_WORKSPACE = "new workspace";
+  private static final String NEW_WORKSPACE_SLUG = "new-workspace";
   private static final String TEST_NAME = "test-name";
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final String TEST_AUTH_TOKEN = "test-auth-token";
@@ -117,6 +127,9 @@ class WorkspacesHandlerTest {
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
   private TrackingClient trackingClient;
+  private ProductLimitsProvider limitsProvider;
+  private ConsumptionService consumptionService;
+  private FeatureFlagClient ffClient;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
@@ -133,6 +146,9 @@ class WorkspacesHandlerTest {
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
     trackingClient = mock(TrackingClient.class);
+    limitsProvider = mock(ProductLimitsProvider.class);
+    consumptionService = mock(ConsumptionService.class);
+    ffClient = mock(TestClient.class);
 
     workspace = generateWorkspace();
     workspacesHandler =
@@ -146,7 +162,11 @@ class WorkspacesHandlerTest {
             uuidSupplier,
             workspaceService,
             trackingClient,
-            apiPojoConverters);
+            apiPojoConverters,
+            limitsProvider,
+            consumptionService,
+            ffClient,
+            Configs.AirbyteEdition.COMMUNITY);
   }
 
   private StandardWorkspace generateWorkspace() {
@@ -187,7 +207,7 @@ class WorkspacesHandlerTest {
     return new NotificationSettings()
         .withSendOnFailure(
             new NotificationItem()
-                .withNotificationType(List.of(NotificationType.SLACK))
+                .withNotificationType(new ArrayList<>(List.of(NotificationType.SLACK)))
                 .withSlackConfiguration(new SlackNotificationConfiguration()
                     .withWebhook(FAILURE_NOTIFICATION_WEBHOOK)));
   }
@@ -277,7 +297,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -327,7 +347,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -618,6 +638,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .securityUpdates(false)
         .news(false)
+        .name(NEW_WORKSPACE)
         .initialSetupComplete(true)
         .displaySetupWizard(false)
         .notifications(List.of(apiNotification))
@@ -627,12 +648,13 @@ class WorkspacesHandlerTest {
 
     final Notification expectedNotification = generateNotification();
     expectedNotification.getSlackConfiguration().withWebhook(UPDATED);
+
     final StandardWorkspace expectedWorkspace = new StandardWorkspace()
         .withWorkspaceId(workspace.getWorkspaceId())
         .withCustomerId(workspace.getCustomerId())
         .withEmail(TEST_EMAIL)
-        .withName(TEST_WORKSPACE_NAME)
-        .withSlug(TEST_WORKSPACE_SLUG)
+        .withName(NEW_WORKSPACE)
+        .withSlug(NEW_WORKSPACE_SLUG)
         .withAnonymousDataCollection(true)
         .withSecurityUpdates(false)
         .withNews(false)
@@ -657,12 +679,13 @@ class WorkspacesHandlerTest {
 
     final io.airbyte.api.model.generated.Notification expectedNotificationRead = generateApiNotification();
     expectedNotificationRead.getSlackConfiguration().webhook(UPDATED);
+
     final WorkspaceRead expectedWorkspaceRead = new WorkspaceRead()
         .workspaceId(workspace.getWorkspaceId())
         .customerId(workspace.getCustomerId())
         .email(TEST_EMAIL)
-        .name(TEST_WORKSPACE_NAME)
-        .slug(TEST_WORKSPACE_SLUG)
+        .name(NEW_WORKSPACE)
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(true)
         .displaySetupWizard(false)
         .news(false)
@@ -679,8 +702,8 @@ class WorkspacesHandlerTest {
         .withWorkspaceId(workspace.getWorkspaceId())
         .withCustomerId(workspace.getCustomerId())
         .withEmail(TEST_EMAIL)
-        .withName(TEST_WORKSPACE_NAME)
-        .withSlug(TEST_WORKSPACE_SLUG)
+        .withName(NEW_WORKSPACE)
+        .withSlug(NEW_WORKSPACE_SLUG)
         .withAnonymousDataCollection(true)
         .withSecurityUpdates(false)
         .withNews(false)
@@ -833,11 +856,16 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .email(expectedNewEmail);
 
-    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true)
-        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs().withWebhookConfigs(Collections.emptyList())));
+    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace)
+        .withEmail(expectedNewEmail)
+        .withAnonymousDataCollection(true)
+        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs()
+            .withWebhookConfigs(Collections.emptyList())));
+
     when(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(workspace)
         .thenReturn(expectedWorkspace);
+
     // The same as the original workspace, with only the email and data collection flags changed.
     final WorkspaceRead expectedWorkspaceRead = new WorkspaceRead()
         .workspaceId(workspace.getWorkspaceId())
@@ -863,6 +891,56 @@ class WorkspacesHandlerTest {
   }
 
   @Test
+  void testWorkspacePatchUpdateWithPublicNotificationConfig() throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    // This is the workspace that exists before the update. It has a customerio notification for both
+    // success and failure,
+    // and a webhook ("slack") notification for failure.
+    //
+    // customerio notifications are not exposed via the public API, so part of this test is to show that
+    // an update
+    // from the public API leaves the internal customerio data unmodified.
+    final StandardWorkspace existingWorkspace = Jsons.clone(workspace).withNotificationSettings(new NotificationSettings()
+        .withSendOnSuccess(new NotificationItem()
+            .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+            .withNotificationType(new ArrayList<>(List.of(NotificationType.CUSTOMERIO))))
+        .withSendOnFailure(new NotificationItem()
+            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/failure"))
+            .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+            .withNotificationType(new ArrayList<>(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK)))));
+
+    // The update from the public API adds a webhook ("slack") notification for success,
+    // and disables the webhook ("slack") notification for failure.
+    final WorkspaceUpdate workspaceUpdate = new WorkspaceUpdate()
+        .workspaceId(existingWorkspace.getWorkspaceId())
+        .notificationsConfig(new NotificationsConfig()
+            .success(new NotificationConfig()
+                .webhook(new WebhookNotificationConfig().enabled(true).url("http://foo.bar/success")))
+            .failure(new NotificationConfig()
+                .webhook(new WebhookNotificationConfig().enabled(false))));
+
+    final StandardWorkspace expectedWorkspace = Jsons.clone(existingWorkspace)
+        .withNotificationSettings(new NotificationSettings()
+            .withSendOnSuccess(new NotificationItem()
+                .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/success"))
+                .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+                .withNotificationType(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK)))
+            .withSendOnFailure(new NotificationItem()
+                .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/failure"))
+                .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+                .withNotificationType(List.of(NotificationType.CUSTOMERIO))))
+        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs()
+            .withWebhookConfigs(Collections.emptyList())));
+
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+        .thenReturn(existingWorkspace)
+        .thenReturn(expectedWorkspace);
+
+    workspacesHandler.updateWorkspace(workspaceUpdate);
+    verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace);
+  }
+
+  @Test
   void testSetFeedbackDone() throws JsonValidationException, ConfigNotFoundException, IOException {
     final WorkspaceGiveFeedback workspaceGiveFeedback = new WorkspaceGiveFeedback()
         .workspaceId(UUID.randomUUID());
@@ -879,7 +957,8 @@ class WorkspacesHandlerTest {
     workspacesHandler =
         new WorkspacesHandler(workspacePersistence, organizationPersistence,
             secretsRepositoryWriter, permissionPersistence, connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters);
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters,
+            limitsProvider, consumptionService, ffClient, Configs.AirbyteEdition.COMMUNITY);
 
     final UUID uuid = UUID.randomUUID();
     when(uuidSupplier.get()).thenReturn(uuid);
@@ -901,7 +980,7 @@ class WorkspacesHandlerTest {
         .customerId(uuid)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug("new-workspace")
+        .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)

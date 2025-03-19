@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal
@@ -43,7 +43,8 @@ class LocalContainerAirbyteDestination(
     const val CALLER = "airbyte-destination"
 
     val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope.Builder()
+      MdcScope
+        .Builder()
         .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
   }
 
@@ -119,7 +120,7 @@ class LocalContainerAirbyteDestination(
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null
     m?.let {
-      messageMetricsTracker.trackDestRead(m.type)
+      messageMetricsTracker.trackDestRead(it.type)
     }
     return Optional.ofNullable(m)
   }

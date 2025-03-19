@@ -24,14 +24,6 @@ export const intentToRbacQuery = {
   CreateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
   UpdateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
 
-  // source
-  CreateSource: { resourceType: "WORKSPACE", role: "EDITOR" },
-  EditSource: { resourceType: "WORKSPACE", role: "EDITOR" },
-
-  // destination
-  CreateDestination: { resourceType: "WORKSPACE", role: "EDITOR" },
-  EditDestination: { resourceType: "WORKSPACE", role: "EDITOR" },
-
   // connection
   CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },

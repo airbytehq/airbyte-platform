@@ -18,4 +18,4 @@ airbyte:
   worker:
     job:
       kube:
-        serviceAccount: airbyte-admin # TODO - update this once we know how to separate cloud and SME
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin}

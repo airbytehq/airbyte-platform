@@ -66,9 +66,10 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(project(":oss:airbyte-json-validation"))
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(libs.jakarta.ws.rs.api)
+  testImplementation(libs.kubernetes.mock.server)
+
 }
 
 airbyte {
@@ -79,8 +80,8 @@ airbyte {
       mapOf(
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test"
-      )
+        "MICRONAUT_ENVIRONMENTS" to "test",
+      ),
     )
   }
   docker {

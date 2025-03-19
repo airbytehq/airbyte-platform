@@ -35,11 +35,10 @@ $default-padding: variables.$spacing-xl;
 }
 
 .container {
-  @include mixins.shadow;
-
   width: auto;
   background: colors.$foreground;
-  border-radius: variables.$border-radius-lg;
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
 
   &:has(.cardBody:empty) .cardHeader {
     // apply the bottom border to the header only if it has a rendered sibling (the card content)
@@ -50,10 +49,6 @@ $default-padding: variables.$spacing-xl;
   &:has(.cardBody:empty) .cardBody {
     // same here, don't show empty card body
     padding: 0;
-  }
-
-  &.inset {
-    @include mixins.shadow-inset;
   }
 }
 

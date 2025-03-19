@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.client
@@ -8,7 +8,6 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadRunningRequest
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
@@ -24,6 +23,9 @@ import org.junit.jupiter.api.Test
 import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
+private const val APPLICATION_NAME = "airbyte-workload-launcher"
+private const val DATA_PLANE_ID = "data-plane-id"
+
 internal class WorkloadApiClientTest {
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var workloadApi: WorkloadApi
@@ -33,7 +35,7 @@ internal class WorkloadApiClientTest {
   internal fun setup() {
     workloadApi = mockk()
     internalWorkloadApiClient = mockk()
-    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, DATA_PLANE_ID)
+    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, DATA_PLANE_ID, APPLICATION_NAME)
 
     every { internalWorkloadApiClient.workloadApi } returns workloadApi
   }
@@ -91,30 +93,13 @@ internal class WorkloadApiClientTest {
   }
 
   @Test
-  internal fun `test reporting a running status to the workload API`() {
-    val workloadId = "workload-id"
-    val requestCapture = slot<WorkloadRunningRequest>()
-
-    every { workloadApi.workloadRunning(any()) } returns Unit
-
-    workloadApiClient.updateStatusToRunning(workloadId)
-
-    verify(exactly = 1) { workloadApi.workloadRunning(capture(requestCapture)) }
-    assertEquals(workloadId, requestCapture.captured.workloadId)
-  }
-
-  @Test
   internal fun `test reporting a failed status to the workload API`() {
     val workloadId = "workload-id"
     val requestCapture = slot<WorkloadFailureRequest>()
 
-    val launcherInput = mockk<LauncherInput>()
-    every { launcherInput.workloadId } returns workloadId
-    val io = mockk<StageIO>()
-    every { io.msg } returns launcherInput
     every { workloadApi.workloadFailure(any()) } returns Unit
 
-    workloadApiClient.updateStatusToFailed(StageError(io, StageName.CLAIM, RuntimeException("Cause")))
+    workloadApiClient.updateStatusToFailed(workloadId, "Cause")
 
     verify(exactly = 1) { workloadApi.workloadFailure(capture(requestCapture)) }
     assertEquals(workloadId, requestCapture.captured.workloadId)
@@ -144,9 +129,5 @@ internal class WorkloadApiClientTest {
 
     verify(exactly = 1) { workloadApi.workloadClaim(any()) }
     assertEquals(false, claimResult)
-  }
-
-  companion object {
-    const val DATA_PLANE_ID = "data-plane-id"
   }
 }

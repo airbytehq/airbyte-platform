@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.converters
 
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -109,8 +113,8 @@ private fun EncryptionMapperRSAConfiguration.toInternal(): EncryptionConfig =
     fieldNameSuffix = this.fieldNameSuffix,
   )
 
-private fun operationJsonToInternal(operationJson: ObjectNode): Operation {
-  return when (val type = operationJson.get("type")!!.textValue()) {
+private fun operationJsonToInternal(operationJson: ObjectNode): Operation =
+  when (val type = operationJson.get("type")!!.textValue()) {
     RowFilteringOperationType.EQUAL.toString() -> {
       val apiOperation = Jsons.convertValue(operationJson, RowFilteringOperationEqual::class.java)
       EqualOperation(
@@ -128,11 +132,11 @@ private fun operationJsonToInternal(operationJson: ObjectNode): Operation {
     }
     else -> throw IllegalArgumentException("Unsupported operation type: $type")
   }
-}
 
-private fun nestedConditionsToInternal(operation: ObjectNode): List<Operation> {
-  return operation.get("conditions")!!.toList().map { operationJsonToInternal(it as ObjectNode) }
-}
+private fun nestedConditionsToInternal(operation: ObjectNode): List<Operation> =
+  operation.get("conditions")!!.toList().map {
+    operationJsonToInternal(it as ObjectNode)
+  }
 
 fun ConfiguredStreamMapper.toInternal(): MapperConfig =
   try {

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
@@ -47,7 +51,7 @@ class ClaimedProcessorTest {
       ClaimedProcessor(
         apiClient = apiClient,
         pipe = launchPipeline,
-        metricPublisher = mockk(relaxed = true),
+        metricClient = mockk(relaxed = true),
         dataplaneId = "dataplane1",
         parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,
@@ -94,17 +98,17 @@ class ClaimedProcessorTest {
   fun `test retrieve and process recovers after network issues`() {
     every { workloadApi.workloadList(any()) }
       .throwsMany(
-        (1..5).flatMap {
-          listOf(
-            ServerException("oops", 500),
-            ServerException("oops", 502),
-            SocketException(),
-            ConnectException(),
-            SocketTimeoutException(),
-          )
-        }.toList(),
-      )
-      .andThenAnswer {
+        (1..5)
+          .flatMap {
+            listOf(
+              ServerException("oops", 500),
+              ServerException("oops", 502),
+              SocketException(),
+              ConnectException(),
+              SocketTimeoutException(),
+            )
+          }.toList(),
+      ).andThenAnswer {
         WorkloadListResponse(
           listOf(
             Workload("1", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),

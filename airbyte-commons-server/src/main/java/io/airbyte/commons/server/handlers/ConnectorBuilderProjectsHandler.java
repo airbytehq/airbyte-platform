@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse;
 import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest;
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
+import io.airbyte.api.model.generated.ConnectorBuilderAuxiliaryRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
@@ -25,7 +26,6 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
@@ -47,6 +47,7 @@ import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
@@ -64,10 +65,12 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.AuxiliaryRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -79,6 +82,7 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
@@ -129,6 +133,7 @@ public class ConnectorBuilderProjectsHandler {
   private final ActorDefinitionService actorDefinitionService;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final OAuthImplementationFactory oAuthImplementationFactory;
+  private final MetricClient metricClient;
 
   public static final String SPEC_FIELD = "spec";
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
@@ -149,7 +154,8 @@ public class ConnectorBuilderProjectsHandler {
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient,
                                          final ActorDefinitionService actorDefinitionService,
                                          final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                         @Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory) {
+                                         @Named("oauthImplementationFactory") final OAuthImplementationFactory oauthImplementationFactory,
+                                         final MetricClient metricClient) {
     this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
@@ -166,16 +172,19 @@ public class ConnectorBuilderProjectsHandler {
     this.actorDefinitionService = actorDefinitionService;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.oAuthImplementationFactory = oauthImplementationFactory;
+    this.metricClient = metricClient;
   }
 
   private ConnectorBuilderProjectDetailsRead getProjectDetailsWithoutBaseAdvInfo(final ConnectorBuilderProject project) {
     final ConnectorBuilderProjectDetailsRead detailsRead = new ConnectorBuilderProjectDetailsRead()
         .name(project.getName())
+        .updatedAt(project.getUpdatedAt())
         .builderProjectId(project.getBuilderProjectId())
         .sourceDefinitionId(project.getActorDefinitionId())
         .activeDeclarativeManifestVersion(
             project.getActiveDeclarativeManifestVersion())
-        .hasDraft(project.getHasDraft());
+        .hasDraft(project.getHasDraft())
+        .componentsFileContent(project.getComponentsFileContent());
 
     if (project.getContributionPullRequestUrl() != null) {
       detailsRead.setContributionInfo(new ContributionInfo().pullRequestUrl(project.getContributionPullRequestUrl())
@@ -266,6 +275,7 @@ public class ConnectorBuilderProjectsHandler {
 
     connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
+        projectCreate.getBuilderProject().getComponentsFileContent(),
         projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
         projectCreate.getBuilderProject().getContributionActorDefinitionId());
 
@@ -341,6 +351,7 @@ public class ConnectorBuilderProjectsHandler {
           .manifest(declarativeManifest.getManifest())
           .version(declarativeManifest.getVersion())
           .description(declarativeManifest.getDescription()));
+      response.getBuilderProject().setComponentsFileContent(declarativeManifest.getComponentsFileContent());
       response.setTestingValues(maskSecrets(project.getTestingValues(), declarativeManifest.getManifest()));
     }
     return response;
@@ -353,7 +364,8 @@ public class ConnectorBuilderProjectsHandler {
             .name(project.getName())
             .hasDraft(project.getHasDraft())
             .activeDeclarativeManifestVersion(project.getActiveDeclarativeManifestVersion())
-            .sourceDefinitionId(project.getSourceDefinitionId()))
+            .sourceDefinitionId(project.getSourceDefinitionId())
+            .componentsFileContent(project.getComponentsFileContent()))
         .declarativeManifest(new DeclarativeManifestRead()
             .isDraft(false)
             .manifest(project.getManifest())
@@ -387,18 +399,23 @@ public class ConnectorBuilderProjectsHandler {
     validateProjectUnderRightWorkspace(connectorBuilderPublishRequestBody.getBuilderProjectId(), connectorBuilderPublishRequestBody.getWorkspaceId());
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
+    final String componentsFileContent = connectorBuilderPublishRequestBody.getComponentsFileContent();
+
     manifestInjector.addInjectedDeclarativeManifest(spec);
     final UUID actorDefinitionId = createActorDefinition(connectorBuilderPublishRequestBody.getName(),
         connectorBuilderPublishRequestBody.getWorkspaceId(),
         manifest,
-        spec);
+        spec,
+        componentsFileContent);
 
     final DeclarativeManifest declarativeManifest = new DeclarativeManifest()
         .withActorDefinitionId(actorDefinitionId)
         .withVersion(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getVersion())
         .withDescription(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription())
         .withManifest(manifest)
-        .withSpec(spec);
+        .withSpec(spec)
+        .withComponentsFileContent(componentsFileContent);
+
     connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
     connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(),
         actorDefinitionId);
@@ -407,7 +424,12 @@ public class ConnectorBuilderProjectsHandler {
     return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
   }
 
-  private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
+  private UUID createActorDefinition(final String name,
+                                     final UUID workspaceId,
+                                     final JsonNode manifest,
+                                     final JsonNode spec,
+                                     final String componentFileContent)
+      throws IOException {
     final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
     final UUID actorDefinitionId = uuidSupplier.get();
     final StandardSourceDefinition source = new StandardSourceDefinition()
@@ -430,8 +452,10 @@ public class ConnectorBuilderProjectsHandler {
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
     sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
-    connectorBuilderService
-        .writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
+
+    final List<ActorDefinitionConfigInjection> configInjectionsToCreate =
+        manifestInjector.getManifestConnectorInjections(source.getSourceDefinitionId(), manifest, componentFileContent);
+    connectorBuilderService.writeActorDefinitionConfigInjectionsForPath(configInjectionsToCreate);
 
     return source.getSourceDefinitionId();
   }
@@ -508,31 +532,134 @@ public class ConnectorBuilderProjectsHandler {
     return new BuilderProjectForDefinitionResponse().builderProjectId(builderProjectId.orElse(null));
   }
 
+  /**
+   * Converts the provided {@code StreamRead} object into a {@code ConnectorBuilderProjectStreamRead}
+   * object.
+   * <p>
+   * This method maps various properties from the {@code streamRead} instance including logs, slices,
+   * auxiliary requests, inferred schema, and inferred datetime formats. It also transfers the test
+   * read limit flag.
+   *
+   * @param streamRead the {@code StreamRead} instance containing the original data to be converted.
+   * @return a new {@code ConnectorBuilderProjectStreamRead} instance populated with the mapped values
+   *         from {@code streamRead}.
+   */
   private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
-        .logs(streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
-            .message(log.getMessage())
-            .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
-            .internalMessage(log.getInternalMessage())
-            .stacktrace(log.getStacktrace())).toList())
-        .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
-            .sliceDescriptor(slice.getSliceDescriptor())
-            .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
-            .pages(slice.getPages().stream().map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
+        .logs(mapStreamReadLogs(streamRead))
+        .slices(mapStreamReadSlices(streamRead))
+        .testReadLimitReached(streamRead.getTestReadLimitReached())
+        .auxiliaryRequests(mapGlobalAuxiliaryRequests(streamRead))
+        .inferredSchema(streamRead.getInferredSchema())
+        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+  }
+
+  /**
+   * Converts the logs contained within a {@code StreamRead} object into a list of
+   * {@code ConnectorBuilderProjectStreamReadLogsInner} instances.
+   *
+   * <p>
+   * Each log entry in the provided {@code streamRead} is transformed by mapping its message, level
+   * (converted via {@code LevelEnum.fromString}), internal message, and stacktrace.
+   * </p>
+   *
+   * @param streamRead the {@code StreamRead} instance containing the logs to be mapped
+   * @return a list of {@code ConnectorBuilderProjectStreamReadLogsInner} objects representing the
+   *         mapped log entries
+   */
+  private List<ConnectorBuilderProjectStreamReadLogsInner> mapStreamReadLogs(final StreamRead streamRead) {
+    return streamRead.getLogs().stream().map(log -> new ConnectorBuilderProjectStreamReadLogsInner()
+        .message(log.getMessage())
+        .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.getLevel().getValue()))
+        .internalMessage(log.getInternalMessage())
+        .stacktrace(log.getStacktrace()))
+        .toList();
+  }
+
+  /**
+   * Maps the slices from the given StreamRead instance into a list of
+   * ConnectorBuilderProjectStreamReadSlicesInner objects.
+   *
+   * <p>
+   * This method iterates through each slice in the provided StreamRead, creating a corresponding
+   * ConnectorBuilderProjectStreamReadSlicesInner for each slice. For each slice, it:
+   * <ul>
+   * <li>Sets the slice descriptor.</li>
+   * <li>Ensures the state list is not empty; otherwise, it uses an empty list.</li>
+   * <li>Converts each page by mapping records and transforming both the HTTP request and
+   * response.</li>
+   * <li>Processes auxiliary requests specific to the slice.</li>
+   * </ul>
+   *
+   * @param streamRead the StreamRead instance containing slices to be mapped.
+   * @return a list of ConnectorBuilderProjectStreamReadSlicesInner objects constructed from the
+   *         StreamRead slices.
+   */
+  private List<ConnectorBuilderProjectStreamReadSlicesInner> mapStreamReadSlices(final StreamRead streamRead) {
+    return streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
+        .sliceDescriptor(slice.getSliceDescriptor())
+        .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
+        .pages(slice.getPages().stream()
+            .map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
                 .records(page.getRecords())
                 .request(convertHttpRequest(page.getRequest()))
-                .response(convertHttpResponse(page.getResponse()))).toList()))
+                .response(convertHttpResponse(page.getResponse())))
             .toList())
-        .testReadLimitReached(streamRead.getTestReadLimitReached())
-        .auxiliaryRequests(CollectionUtils.isNotEmpty(streamRead.getAuxiliaryRequests())
-            ? streamRead.getAuxiliaryRequests().stream().map(auxRequest -> new ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner()
+        .auxiliaryRequests(mapSliceAuxiliaryRequests(slice)))
+        .toList();
+  }
+
+  /**
+   * Converts a list of AuxiliaryRequest objects into a list of ConnectorBuilderAuxiliaryRequest
+   * objects.
+   *
+   * <p>
+   * This method first checks if the provided list is not empty. If it is not empty, it streams over
+   * the list, mapping each AuxiliaryRequest into a ConnectorBuilderAuxiliaryRequest by copying the
+   * description, title, and converting the HTTP request and response fields as well as mapping the
+   * type using the TypeEnum. If the input list is empty, it returns an empty list.
+   *
+   * @param auxiliaryRequests the list of AuxiliaryRequest objects to be converted
+   * @return a list of converted ConnectorBuilderAuxiliaryRequest objects, or an empty list if the
+   *         input is empty
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapAuxiliaryRequests(List<AuxiliaryRequest> auxiliaryRequests) {
+    return CollectionUtils.isNotEmpty(auxiliaryRequests)
+        ? auxiliaryRequests.stream()
+            .map(auxRequest -> new ConnectorBuilderAuxiliaryRequest()
                 .description(auxRequest.getDescription())
                 .request(convertHttpRequest(auxRequest.getRequest()))
                 .response(convertHttpResponse(auxRequest.getResponse()))
-                .title(auxRequest.getTitle())).toList()
-            : List.of())
-        .inferredSchema(streamRead.getInferredSchema())
-        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+                .title(auxRequest.getTitle())
+                .type(ConnectorBuilderAuxiliaryRequest.TypeEnum.fromString(auxRequest.getType().getValue())))
+            .toList()
+        : List.of();
+  }
+
+  /**
+   * Maps the global auxiliary requests from the provided StreamRead instance.
+   *
+   * <p>
+   * This method retrieves the auxiliary requests from the StreamRead object and delegates the mapping
+   * to the mapAuxiliaryRequests method.
+   *
+   * @param streamRead the StreamRead instance that contains the auxiliary requests
+   * @return a list of ConnectorBuilderAuxiliaryRequest objects generated from the auxiliary requests
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapGlobalAuxiliaryRequests(final StreamRead streamRead) {
+    return mapAuxiliaryRequests(streamRead.getAuxiliaryRequests());
+  }
+
+  /**
+   * Maps the auxiliary requests from the given slice into a list of ConnectorBuilderAuxiliaryRequest
+   * instances.
+   *
+   * @param slice the input slice containing auxiliary request data
+   * @return a list of ConnectorBuilderAuxiliaryRequest objects mapped from the slice's auxiliary
+   *         requests
+   */
+  private List<ConnectorBuilderAuxiliaryRequest> mapSliceAuxiliaryRequests(final StreamReadSlicesInner slice) {
+    return mapAuxiliaryRequests(slice.getAuxiliaryRequests());
   }
 
   private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable final HttpRequest request) {
@@ -561,7 +688,7 @@ public class ConnectorBuilderProjectsHandler {
                                                    final Optional<SecretPersistenceConfig> secretPersistenceConfig)
       throws JsonValidationException {
 
-    final var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
+    final var secretPersistence = secretPersistenceConfig.map(c -> new RuntimeSecretPersistence(c, metricClient)).orElse(null);
     if (existingTestingValues.isPresent()) {
       return secretsRepositoryWriter.updateFromConfig(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }
@@ -588,7 +715,7 @@ public class ConnectorBuilderProjectsHandler {
     return testingValues.isPresent()
         ? secretPersistenceConfigOptional.isPresent()
             ? Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(testingValues.get(),
-                new RuntimeSecretPersistence(secretPersistenceConfigOptional.get())))
+                new RuntimeSecretPersistence(secretPersistenceConfigOptional.get(), metricClient)))
             : Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(project.getTestingValues()))
         : Optional.empty();
   }
@@ -618,8 +745,13 @@ public class ConnectorBuilderProjectsHandler {
           log.error(errorMessage);
           throw new NotFoundException(errorMessage);
         });
+
+    final String customComponentsContent =
+        remoteDefinitionsProvider.getConnectorCustomComponents(defaultVersion.getDockerRepository(), defaultVersion.getDockerImageTag())
+            .orElse(null);
+
     final ConnectorBuilderProjectDetails projectDetails = new ConnectorBuilderProjectDetails().name(sourceDefinition.getName())
-        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest);
+        .baseActorDefinitionVersionId(defaultVersion.getVersionId()).draftManifest(manifest).componentsFileContent(customComponentsContent);
     return createConnectorBuilderProject(
         new ConnectorBuilderProjectWithWorkspaceId().workspaceId(requestBody.getWorkspaceId()).builderProject(projectDetails));
   }

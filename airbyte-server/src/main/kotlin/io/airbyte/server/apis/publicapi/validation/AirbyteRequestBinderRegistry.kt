@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.validation
@@ -17,8 +17,10 @@ import jakarta.inject.Singleton
  */
 @Singleton
 @Replaces(DefaultRequestBinderRegistry::class)
-class AirbyteRequestBinderRegistry(conversionService: ConversionService?, binders: List<RequestArgumentBinder<*>?>?) :
-  DefaultRequestBinderRegistry(conversionService, binders) {
+class AirbyteRequestBinderRegistry(
+  conversionService: ConversionService?,
+  binders: List<RequestArgumentBinder<*>?>?,
+) : DefaultRequestBinderRegistry(conversionService, binders) {
   init {
     addArgumentBinder(QueryValueBinder<Any>(conversionService))
   }

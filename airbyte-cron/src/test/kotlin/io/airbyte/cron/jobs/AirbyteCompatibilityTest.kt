@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs
@@ -24,9 +24,11 @@ import java.util.UUID
 @MicronautTest(environments = [Environment.TEST])
 @Property(name = "airbyte.version", value = "1.2.0")
 @Property(name = "airbyte.workspace.root", value = "./build/tmp/workspace")
-@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "COMMUNITY")
 @Requires(env = ["internal"])
-class AirbyteCompatibilityTest(private val airbyteCompatibilityValidator: AirbyteCompatibleConnectorsValidator) {
+class AirbyteCompatibilityTest(
+  private val airbyteCompatibilityValidator: AirbyteCompatibleConnectorsValidator,
+) {
   @Test
   internal fun testPlatformCompatibility() {
     val connectorId = "8e6cf9b5-07da-4cae-b943-144c5bd73840"

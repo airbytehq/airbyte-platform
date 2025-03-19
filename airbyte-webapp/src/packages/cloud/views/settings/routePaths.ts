@@ -9,11 +9,10 @@ export const CloudSettingsRoutePaths = {
   Advanced: SettingsRoutePaths.Advanced,
   Source: SettingsRoutePaths.Source,
   Destination: SettingsRoutePaths.Destination,
-  DataResidency: SettingsRoutePaths.DataResidency,
   Workspace: SettingsRoutePaths.Workspace,
+  WorkspaceMembers: SettingsRoutePaths.WorkspaceMembers,
   Organization: SettingsRoutePaths.Organization,
   OrganizationMembers: SettingsRoutePaths.OrganizationMembers,
-  AccessManagement: SettingsRoutePaths.AccessManagement,
   DbtCloud: "dbt-cloud",
   Applications: SettingsRoutePaths.Applications,
 } as const;

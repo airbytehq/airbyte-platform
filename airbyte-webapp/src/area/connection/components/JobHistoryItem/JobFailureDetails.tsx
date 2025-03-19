@@ -1,7 +1,8 @@
 import classNames from "classnames";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -11,14 +12,26 @@ import { FailureUiDetails } from "core/utils/errorStatusMessage";
 
 import styles from "./JobFailureDetails.module.scss";
 
-export const JobFailureDetails: React.FC<{ failureUiDetails: FailureUiDetails }> = ({ failureUiDetails }) => {
+interface JobFailureDetailsProps {
+  failureUiDetails: FailureUiDetails;
+}
+
+export const JobFailureDetails: React.FC<JobFailureDetailsProps> = ({ failureUiDetails }) => {
   const [isSecondaryMessageExpanded, setIsSecondaryMessageExpanded] = useState(false);
+  const [isMessageTruncated, setIsMessageTruncated] = useState(false);
+  const messageRef = useRef<HTMLDivElement>(null);
   const { formatMessage } = useIntl();
 
+  useEffect(() => {
+    if (messageRef.current) {
+      setIsMessageTruncated(messageRef.current.scrollWidth > messageRef.current.clientWidth);
+    }
+  }, [failureUiDetails.message]);
+
   return (
-    <>
+    <Box pt="xs" className={styles.details}>
       <FlexContainer gap="xs" alignItems="flex-end">
-        <Text color="grey500" size="sm" className={styles.failedMessage}>
+        <Text color="grey500" size="sm" className={styles.failedMessage} ref={messageRef}>
           {formatMessage(
             { id: "failureMessage.label" },
             {
@@ -32,7 +45,7 @@ export const JobFailureDetails: React.FC<{ failureUiDetails: FailureUiDetails }>
           )}
         </Text>
 
-        {failureUiDetails?.secondaryMessage && (
+        {(failureUiDetails?.secondaryMessage || isMessageTruncated) && (
           <Text color="grey500" size="sm" as="span">
             &nbsp;
             <Button
@@ -52,16 +65,24 @@ export const JobFailureDetails: React.FC<{ failureUiDetails: FailureUiDetails }>
         )}
       </FlexContainer>
       {isSecondaryMessageExpanded && (
-        <Text
-          size="sm"
-          className={classNames(styles.secondaryMessage, {
-            [styles.errorMessage]: failureUiDetails.type === "error",
-            [styles.warningMessage]: failureUiDetails.type === "warning",
-          })}
-        >
-          {failureUiDetails.secondaryMessage}
-        </Text>
+        <FlexContainer direction="column" gap="md" className={styles.expandedMessage}>
+          {isMessageTruncated && (
+            <Text
+              size="sm"
+              className={classNames({
+                [styles.errorMessage]: failureUiDetails.type === "error",
+                [styles.warningMessage]: failureUiDetails.type === "warning",
+              })}
+            >
+              {failureUiDetails.message}
+            </Text>
+          )}
+
+          <Text color="grey500" size="sm" className={styles.secondaryMessage}>
+            {failureUiDetails.secondaryMessage}
+          </Text>
+        </FlexContainer>
       )}
-    </>
+    </Box>
   );
 };

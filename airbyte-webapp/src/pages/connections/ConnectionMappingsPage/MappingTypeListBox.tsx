@@ -16,12 +16,14 @@ interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;
   streamDescriptorKey: string;
   mappingId: string;
+  disabled: boolean;
 }
 
 export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
   selectedValue,
   streamDescriptorKey,
   mappingId,
+  disabled,
 }) => {
   const { updateLocalMapping } = useMappingContext();
 
@@ -55,7 +57,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
     value: type,
   }));
 
-  const ControlButton: React.FC<ListBoxControlButtonProps<StreamMapperType>> = ({ selectedOption }) => {
+  const ControlButton: React.FC<ListBoxControlButtonProps<StreamMapperType>> = ({ selectedOption, isDisabled }) => {
     if (!selectedOption) {
       return (
         <Text color="grey" as="span">
@@ -66,7 +68,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
 
     return (
       <FlexContainer alignItems="center" gap="none" as="span">
-        <Text as="span">
+        <Text as="span" color={isDisabled ? "grey300" : "darkBlue"}>
           <FormattedMessage id={mappingTypeLabels[selectedOption.value].title} />
         </Text>
         <Icon type="caretDown" color="disabled" />
@@ -74,13 +76,13 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
     );
   };
 
-  // todo: support partial/empty config!
   return (
     <ListBox
       options={supportedMappingsOptions}
       selectedValue={selectedValue}
       controlButton={ControlButton}
       buttonClassName={styles.controlButton}
+      isDisabled={disabled}
       onSelect={(value) => {
         if (value !== selectedValue) {
           let validConfiguration: StreamMapperWithId<MapperConfiguration>;
@@ -121,12 +123,10 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
                 id: mappingId,
                 validationCallback: () => Promise.reject(false),
                 mapperConfiguration: {
-                  algorithm: "AES",
-                  targetField: "",
-                  key: "",
+                  algorithm: "RSA",
+                  publicKey: "",
                   fieldNameSuffix: "_encrypted",
-                  mode: "CBC",
-                  padding: "PKCS5Padding",
+                  targetField: "",
                 },
               };
               break;

@@ -94,6 +94,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           { token: "number", foreground: cssCustomPropToHex(colorValues[styles.number]) },
           { token: "delimiter", foreground: cssCustomPropToHex(colorValues[styles.delimiter]) },
           { token: "keyword", foreground: cssCustomPropToHex(colorValues[styles.keyword]) },
+          { token: "keyword.python", foreground: cssCustomPropToHex(colorValues[styles.keywordPython]) },
+          { token: "tag", foreground: cssCustomPropToHex(colorValues[styles.tag]) },
           { token: "comment", foreground: cssCustomPropToHex(colorValues[styles.comment]) },
           { token: NON_JINJA_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.string]) },
           { token: JINJA_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },

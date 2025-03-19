@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.OrganizationEmailDomain
@@ -7,8 +11,9 @@ import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import jakarta.inject.Singleton
 
 @Singleton
-class OrganizationEmailDomainServiceDataImpl(private val repository: OrganizationEmailDomainRepository) : OrganizationEmailDomainService {
-  override fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain> {
-    return repository.findByEmailDomain(emailDomain).map { it.toConfigModel() }
-  }
+class OrganizationEmailDomainServiceDataImpl(
+  private val repository: OrganizationEmailDomainRepository,
+) : OrganizationEmailDomainService {
+  override fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain> =
+    repository.findByEmailDomain(emailDomain).map { it.toConfigModel() }
 }

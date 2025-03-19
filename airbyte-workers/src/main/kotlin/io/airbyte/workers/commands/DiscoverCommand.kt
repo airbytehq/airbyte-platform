@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -99,8 +103,12 @@ class DiscoverCommand(
           WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
           WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, attemptNumber.toString()),
           WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
-          WorkloadLabel(Metadata.ACTOR_TYPE, ActorType.SOURCE.toString().toString()),
-          WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, input.discoverCatalogInput.actorContext.actorId.toString()),
+          WorkloadLabel(Metadata.ACTOR_TYPE, ActorType.SOURCE.toString()),
+          WorkloadLabel(
+            Metadata.ACTOR_ID_LABEL_KEY,
+            input.discoverCatalogInput.actorContext.actorId
+              .toString(),
+          ),
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),

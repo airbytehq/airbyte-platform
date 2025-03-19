@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
@@ -524,7 +524,8 @@ abstract class MetricRepositoryTest {
                                        {
                                         "sync": {
                                            "sourceDockerImage": "airbyte/source-postgres-1.1.0",
-                                           "destinationDockerImage": "airbyte/destination-s3-1.4.0"
+                                           "destinationDockerImage": "airbyte/destination-s3-1.4.0",
+                                           "workspaceId": "81249e08-f71c-4743-98da-ed3c6c893132"
                                          }
                                        }
                                        """);

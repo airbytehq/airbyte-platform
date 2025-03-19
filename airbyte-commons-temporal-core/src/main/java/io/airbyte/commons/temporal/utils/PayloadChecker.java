@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.utils;
@@ -7,9 +7,9 @@ package io.airbyte.commons.temporal.utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.exception.SizeLimitException;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -62,7 +62,7 @@ public class PayloadChecker {
     final String serializedData = Jsons.serialize(data);
     if (serializedData.length() > MAX_PAYLOAD_SIZE_BYTES) {
       emitInspectionLog(data);
-      metricClient.count(OssMetricsRegistry.PAYLOAD_SIZE_EXCEEDED, 1, attrs);
+      metricClient.count(OssMetricsRegistry.PAYLOAD_SIZE_EXCEEDED, attrs);
       throw new SizeLimitException(String.format("Complete result exceeds size limit (%s of %s)", serializedData.length(), MAX_PAYLOAD_SIZE_BYTES));
     }
     return data;

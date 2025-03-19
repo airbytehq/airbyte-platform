@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.config
 
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
@@ -14,14 +18,10 @@ class ApplicationServiceConfig {
   @RequiresAirbyteProEnabled
   @Named("access-token-expiration-time")
   @Primary
-  fun getProAccessTokenExpirationTime(): Duration {
-    return Duration.ofHours(24)
-  }
+  fun getProAccessTokenExpirationTime(): Duration = Duration.ofHours(24)
 
   @Singleton
   @Secondary
   @Named("access-token-expiration-time")
-  fun getAccessTokenExpirationTime(): Duration {
-    return Duration.ofMinutes(3)
-  }
+  fun getAccessTokenExpirationTime(): Duration = Duration.ofMinutes(3)
 }

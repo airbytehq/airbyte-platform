@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.featureflag.FeatureFlagClient
@@ -35,8 +39,8 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       CHECK_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -53,7 +57,6 @@ class PodFactoryBeanFactory {
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("discoverPodFactory")
@@ -69,8 +72,8 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -87,7 +90,6 @@ class PodFactoryBeanFactory {
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 
   @Singleton
   @Named("specPodFactory")
@@ -103,8 +105,8 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
-  ): ConnectorPodFactory {
-    return ConnectorPodFactory(
+  ): ConnectorPodFactory =
+    ConnectorPodFactory(
       SPEC_OPERATION_NAME,
       featureFlagClient,
       tolerations,
@@ -119,5 +121,4 @@ class PodFactoryBeanFactory {
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
     )
-  }
 }

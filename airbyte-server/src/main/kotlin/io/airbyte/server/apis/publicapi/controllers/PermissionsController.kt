@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -150,7 +150,7 @@ open class PermissionsController(
     organizationId: String?,
   ): Response {
     val currentUserId: UUID = currentUserService.currentUser.userId
-    val permissionUserId = userId?.let { UUID.fromString(userId) } ?: currentUserId // if userId is not provided, then use current user ID by default
+    val permissionUserId = userId?.let { UUID.fromString(it) } ?: currentUserId // if userId is not provided, then use current user ID by default
     val permissionsResponse: PermissionsResponse
     // get someone else's permissions
     if (currentUserId != permissionUserId) {

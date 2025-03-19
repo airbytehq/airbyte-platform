@@ -18,16 +18,16 @@ You can build the webapp using Gradle in the root of the repository:
 
 ## Developing the webapp
 
-For an instruction how to develop on the webapp, please refer to our [documentation](https://docs.airbyte.com/contributing-to-airbyte/resources/developing-locally/#develop-on-airbyte-webapp).
+For an instruction how to develop on the webapp, please refer to our [documentation](https://docs.airbyte.com/contributing-to-airbyte/developing-locally/#webapp-contributions).
 
 Please also check our [styleguide](./STYLEGUIDE.md) for details around code styling and best-practises.
 
 ### Folder Structure
 
 > 💡 Please note that this isn't representing the current state yet, but rather the targeted structure
-we're trying to move towards.
+> we're trying to move towards.
 
-**Services** folders are containing "services" which are usually React Context implementations 
+**Services** folders are containing "services" which are usually React Context implementations
 (including their corresponding hooks to access them) or similar singleton type services.
 
 **Utils** folders are containing any form of static utility functions or hooks not related to any service (otherwise they should go together with that service into a services folder).
@@ -66,23 +66,28 @@ src/
 
 ### Entrypoints
 
-* `src/App.tsx` is the entrypoint into the OSS version of the webapp.
-* `src/packages/cloud/App.tsx` is the entrypoint into the Cloud version of the webapp.
+- `src/App.tsx` is the entrypoint into the OSS version of the webapp.
+- `src/packages/cloud/App.tsx` is the entrypoint into the Cloud version of the webapp.
 
 ## Testing the webapp
+
 ### Unit tests with Jest
+
 To run unit tests interactively, use `pnpm test`. To start a one-off headless run, use
 `pnpm test:ci` instead. Unit test files are located in the same directory as the module
 they're testing, using the `.test.ts` extension.
 
 ### End-to-end (e2e) tests with Cypress
+
 There are two separate e2e test suites: one for the open-source build of Airbyte (located
 in `cypress/e2e/`), and one for Airbyte Cloud (located in `cypress/cloud-e2e/`). The
 Airbyte Cloud e2e tests are open-source, but due to their proprietary nature can only be
 run successfully from within the private Airbyte VPN.
 
 #### Using local k8s and `make` (recommended)
+
 ##### Running an interactive Cypress session
+
 The most useful way to run tests locally is with the `cypress open` command. It opens a
 dispatcher window that lets you select which tests and browser to run; the Electron
 browser (whose devtools will be very familiar to chrome users) opens a child window, and
@@ -94,16 +99,16 @@ state present at the end of the last test; you can click around, "inspect elemen
 interact with the page however you wish, which makes it easy to incrementally develop
 tests.
 
-1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
-2) Run `make test.e2e.oss.open`.  This will take care off all dependencies, start Cypress, and launch the interactive GUI.
-3) Launch the tests in Electron browser (Chrome is not able to properly connect to the Cypress server in this case, and Electron is what we use on CI anyways!)
+1. Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2. Run `make test.e2e.oss.open`. This will take care off all dependencies, start Cypress, and launch the interactive GUI.
+3. Launch the tests in Electron browser (Chrome is not able to properly connect to the Cypress server in this case, and Electron is what we use on CI anyways!)
 
 ##### Reproducing CI test results
-This triggers headless runs: you won't have a live browser to interact with, just terminal output.  This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode.  This will print the same output you would see on CI.
 
-1) Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
-2) Run `make test.e2e.oss`.  This will take care of running dependency scripts to spin up a source and destination db and dummy API, and finally run `npm run cypress:ci` to begin the tests.
+This triggers headless runs: you won't have a live browser to interact with, just terminal output. This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode. This will print the same output you would see on CI.
 
+1. Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
+2. Run `make test.e2e.oss`. This will take care of running dependency scripts to spin up a source and destination db and dummy API, and finally run `npm run cypress:ci` to begin the tests.
 
 #### Test setup
 
@@ -121,18 +126,21 @@ Airbyte from the frontend, so other components of the platform (scheduler, worke
 connector builder server) are also tested in a rudimentary way.
 
 #### Cloud e2e tests
+
 :rotating_light::construction:The Airbyte Cloud e2e tests will only run successfully from
 within the private Airbyte VPN.:construction::rotating_light:
 
 The e2e tests can be run against either a local cloud UI or a full-stack Cloud deployment.
 
 ##### Test setup
+
 Pre-configured credentials in dev/stage cloud environments can be found in Lastpass,
 `Integration Test Airbyte Login`. To make these credentials (or any others) visible to the
 test suite, they can be assigned to shell variables prefixed with `CYPRESS_`—so, for
 example, to log in with the email `readme-contrived-example@email-client.biz`, you would
 put a line like the following in your shell config:
-``` sh
+
+```sh
 export CYPRESS_TEST_USER_EMAIL="readme-contrived-example@email-client.biz"
 export CYPRESS_TEST_USER_PW="<contrived example password>"
 ```
@@ -143,14 +151,17 @@ not be committed.
 ##### Quickstart
 
 For interactive, visual browser-based testing, complete with "Inspect element":
-1) configure credentials for a test user in the `CYPRESS_TEST_USER_EMAIL` and `CYPRESS_TEST_USER_PW` environment variables
-2) `pnpm cloud-test:dev`
-3) in the cypress UI, select "E2E testing" and then your browser of choice to launch the test runner
-4) select a spec file to run its tests. Any edits to that spec file, or any cypress support file, will automatically rerun the tests.
+
+1. configure credentials for a test user in the `CYPRESS_TEST_USER_EMAIL` and `CYPRESS_TEST_USER_PW` environment variables
+2. `pnpm cloud-test:dev`
+3. in the cypress UI, select "E2E testing" and then your browser of choice to launch the test runner
+4. select a spec file to run its tests. Any edits to that spec file, or any cypress support file, will automatically rerun the tests.
 
 For headless, CI-style testing:
-1) `pnpm cloud-test` (see caveat #1, however)
+
+1. `pnpm cloud-test` (see caveat #1, however)
 
 ##### Caveats
-1) due to an upstream bug with `vite preview` dev servers, running headless tests against an optimized, pre-bundled frontend build will always signal failure with a non-zero exit code, even if all tests pass
-2) one early tester reported some cross-browser instability, where tests run with `pnpm test:dev` failed on Chrome but not Electron
+
+1. due to an upstream bug with `vite preview` dev servers, running headless tests against an optimized, pre-bundled frontend build will always signal failure with a non-zero exit code, even if all tests pass
+2. one early tester reported some cross-browser instability, where tests run with `pnpm test:dev` failed on Chrome but not Electron

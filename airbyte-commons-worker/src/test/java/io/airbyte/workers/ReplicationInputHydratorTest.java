@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
@@ -60,7 +60,7 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
@@ -185,6 +185,8 @@ class ReplicationInputHydratorTest {
       1L,
       "icon",
       false,
+      true,
+      null,
       null,
       null,
       null);
@@ -445,18 +447,20 @@ class ReplicationInputHydratorTest {
     if (withRefresh) {
       when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
-              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null));
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
+              null));
     } else {
       when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
-              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null));
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
+              null));
     }
   }
 
   private void mockRefresh() throws IOException {
     when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),
@@ -469,7 +473,7 @@ class ReplicationInputHydratorTest {
   private void mockNonRefresh() throws IOException {
     when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),

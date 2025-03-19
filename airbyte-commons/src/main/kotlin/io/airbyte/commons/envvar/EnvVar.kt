@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.envvar
 
 /**
@@ -8,6 +12,8 @@ package io.airbyte.commons.envvar
  * These are defined in alphabetical order for findability/readability reasons.
  */
 enum class EnvVar {
+  AIRBYTE_ALLOW_CUSTOM_CODE,
+  AIRBYTE_EDITION,
   AIRBYTE_ROLE,
   AIRBYTE_VERSION,
   ATTEMPT_ID,
@@ -34,7 +40,6 @@ enum class EnvVar {
   DD_SERVICE,
   DD_VERSION,
   DEPLOYMENT_ENV,
-  DEPLOYMENT_MODE,
   DOCKER_HOST,
   DOCKER_NETWORK,
 
@@ -71,14 +76,12 @@ enum class EnvVar {
   LOG_IDLE_ROUTE_TTL,
   LOG_LEVEL,
 
-  METRIC_CLIENT,
   MINIO_ENDPOINT,
 
   OPERATION_TYPE,
-  OTEL_COLLECTOR_ENDPOINT,
 
   PATH_TO_CONNECTORS,
-
+  PLATFORM_LOG_FORMAT,
   PUBLISH_METRICS,
   PUB_SUB_ENABLED,
   PUB_SUB_TOPIC_NAME,

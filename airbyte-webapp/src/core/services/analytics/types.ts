@@ -56,6 +56,7 @@ export const enum Action {
   API_URL_CREATE = "ApiUrlCreated",
   AUTHENTICATION_METHOD_SELECT = "AuthenticationMethodSelect",
   GLOBAL_CONFIGURATION_SELECT = "GlobalConfigurationSelect",
+  COMPONENTS_SELECT = "ComponentsSelect",
   USER_INPUTS_SELECT = "UserInputsSelect",
   USER_INPUT_CREATE = "UserInputCreate",
   USER_INPUT_EDIT = "UserInputEdit",

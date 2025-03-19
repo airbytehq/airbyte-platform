@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -7,10 +11,10 @@ import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionOutput
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
@@ -83,14 +87,18 @@ class CheckCommand(
             StandardCheckConnectionOutput()
               .withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage(failureReason.externalMessage),
-          )
-          .withFailureReason(failureReason)
+          ).withFailureReason(failureReason)
       }
 
     metricClient.count(
-      OssMetricsRegistry.SIDECAR_CHECK,
-      1,
-      MetricAttribute(MetricTags.STATUS, if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success"),
+      metric = OssMetricsRegistry.SIDECAR_CHECK,
+      attributes =
+        arrayOf(
+          MetricAttribute(
+            MetricTags.STATUS,
+            if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success",
+          ),
+        ),
     )
 
     return output

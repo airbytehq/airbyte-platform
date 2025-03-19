@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.tracker;
@@ -533,7 +533,7 @@ class JobTrackerTest {
     final String jobId = "shouldBeLong";
     final int attemptId = 2;
     final ConfigType configType = ConfigType.REFRESH;
-    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L);
+    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L, true);
 
     final Map<String, Object> metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of(previousJob));
     assertEquals(jobId, metadata.get("job_id"));

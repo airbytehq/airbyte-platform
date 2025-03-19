@@ -1,22 +1,21 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
 
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
+import static io.airbyte.metrics.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
+import static io.airbyte.metrics.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -47,8 +46,8 @@ class DestinationTimeoutMonitorTest {
       }
     })));
 
-    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
-    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
   }
 
   @Test
@@ -73,8 +72,8 @@ class DestinationTimeoutMonitorTest {
           }
         })));
 
-    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), eq(1L), any(MetricAttribute.class));
-    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
   }
 
   @Test
@@ -99,8 +98,8 @@ class DestinationTimeoutMonitorTest {
           }
         })));
 
-    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
-    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
   }
 
   @Test
@@ -124,8 +123,8 @@ class DestinationTimeoutMonitorTest {
           }
         })));
 
-    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), eq(1L), any(MetricAttribute.class));
-    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
   }
 
 }

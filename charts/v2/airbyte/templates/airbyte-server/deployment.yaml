@@ -1,3 +1,4 @@
+{{- if .Values.server.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +9,8 @@ metadata:
     {{- if .Values.server.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.server.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.server.annotations | nindent 4 }}
 spec:
   minReadySeconds: 30
   replicas: {{ .Values.server.replicaCount }}
@@ -27,11 +30,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.server.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.server.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.server.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.server.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.server.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -42,13 +45,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.server.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.server.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.server.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.server.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.server.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.server.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.server.extraInitContainers }}
       initContainers:
@@ -64,11 +67,14 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
+        {{- end}}
 
-        {{- include "airbyte.common.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.security.envs" . | nindent 8 }} 
+        {{- include "airbyte.common.envs" . | nindent 8 }} 
+        {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
@@ -89,9 +95,16 @@ spec:
         {{- include "airbyte.keycloak.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
-        {{- else }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
+        {{- else if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }} 
+        {{- else }}
+        {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
+        {{- include "airbyte.orb.envs" . | nindent 8 -}}
+        {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end}}
 
         # Values from secret
@@ -156,19 +169,11 @@ spec:
         securityContext: {{- toYaml .Values.server.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-      {{- if eq .Values.global.deploymentMode "oss" }}
-        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: /secrets/gcs-log-creds
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
           readOnly: true
         {{- end }}
-        {{- if .Values.global.airbyteYml }}
-        - name: airbyte-yml-volume
-          mountPath: /app/configs/airbyte.yml
-          subPath: fileContents
-          readOnly: true
-        {{- end }}
-      {{- end }}
 
         {{- if .Values.server.extraVolumeMounts }}
           {{ toYaml .Values.server.extraVolumeMounts | nindent 8 }}
@@ -184,11 +189,13 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
       volumes:
-    {{- if eq .Values.global.deploymentMode "oss" }}
-      {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+          secretName: {{ include "airbyte.storage.secretName" }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
       {{- end }}
 
       {{- if .Values.global.airbyteYml }}
@@ -196,7 +203,7 @@ spec:
         secret:
           secretName: {{ .Release.Name }}-airbyte-yml
       {{- end }}
-    {{- end }}
       {{- if .Values.server.extraVolumes }}
-{{ toYaml .Values.server.extraVolumes | nindent 6 }}
+      {{ toYaml .Values.server.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

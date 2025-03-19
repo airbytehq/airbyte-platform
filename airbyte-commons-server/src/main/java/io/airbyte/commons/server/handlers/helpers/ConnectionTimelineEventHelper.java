@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -45,6 +45,7 @@ import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -350,11 +351,15 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  public boolean jobAssociatedUserIsAirbyteSupport(final JobRead job, final ConnectionEvent.Type eventType) {
-    // 1. Find timeline event associated with the job, and then get the associated user_id
-    final UUID userId = connectionTimelineEventService.findAssociatedUserForAJob(job, eventType);
-    // 2. Check if the user is Airbyte user
-    return isAirbyteUser(userId);
+  public Optional<User> getUserAssociatedWithJobTimelineEventType(final JobRead job, final ConnectionEvent.Type eventType) {
+    final Optional<UUID> userId = Optional.ofNullable(connectionTimelineEventService.findAssociatedUserForAJob(job, eventType));
+    return userId.flatMap(id -> {
+      try {
+        return userPersistence.getUser(id);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
 }

@@ -237,6 +237,29 @@ components:
       type: "string"
       format: "uuid"
       x-speakeasy-component: true
+    TagId:
+      type: "string"
+      format: "uuid"
+      x-speakeasy-component: true
+    Tag:
+      description: "A tag that can be associated with a connection. Useful for grouping\
+        \ and organizing connections in a workspace."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "tagId"
+      - "workspaceId"
+      - "name"
+      - "color"
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: "string"
+        color:
+          type: "string"
     OrganizationId:
       type: "string"
       format: "uuid"
@@ -435,6 +458,7 @@ components:
           EQUAL: "#/components/schemas/RowFilteringOperationEqual"
           NOT: "#/components/schemas/RowFilteringOperationNot"
       x-speakeasy-component: true
+      x-airbyte-circular-ref: true
     RowFilteringMapperConfiguration:
       title: "Row Filtering"
       type: "object"
@@ -710,10 +734,15 @@ components:
           description: "Prefix that will be prepended to the name of each stream when\
             \ it is written to the destination (ex. “airbyte_” causes “projects” =>\
             \ “airbyte_projects”)."
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -747,6 +776,10 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -847,6 +880,33 @@ components:
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
+    TagCreateRequest:
+      required:
+      - "name"
+      - "color"
+      - "workspaceId"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        color:
+          type: "string"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
+    TagPatchRequest:
+      required:
+      - "name"
+      - "color"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        color:
+          type: "string"
+      x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
     ConnectionResponse:
       title: "Root Type for ConnectionResponse"
       description: "Provides details of a single connection."
@@ -862,6 +922,7 @@ components:
       - "dataResidency"
       - "configurations"
       - "createdAt"
+      - "tags"
       properties:
         connectionId:
           format: "UUID"
@@ -896,6 +957,10 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        tags:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tag"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1105,6 +1170,31 @@ components:
       - "source"
       - "destination"
       x-speakeasy-component: true
+    TagResponse:
+      title: "Root Type for TagResponse"
+      description: "Provides details of a single tag."
+      type: "object"
+      required:
+      - "tagId"
+      - "name"
+      - "color"
+      - "workspaceId"
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        name:
+          type: "string"
+        color:
+          description: "A hexadecimal color value"
+          type: "string"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      example:
+        tagId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
+        name: "Analytics Team"
+        color: "FF5733"
+        workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
+      x-speakeasy-component: true
     DestinationCreateRequest:
       required:
       - "name"
@@ -1166,17 +1256,19 @@ components:
           description: "ID of organization to add workspace to."
           format: "uuid"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
-      required:
-      - "name"
       type: "object"
       properties:
         name:
           description: "Name of the workspace"
           type: "string"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1188,6 +1280,7 @@ components:
       - "workspaceId"
       - "name"
       - "dataResidency"
+      - "notifications"
       properties:
         workspaceId:
           format: "UUID"
@@ -1196,6 +1289,58 @@ components:
           type: "string"
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationsConfig:
+      description: "Configures workspace notifications."
+      type: "object"
+      properties:
+        failure:
+          $ref: "#/components/schemas/NotificationConfig"
+        success:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdate:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabled:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabledWarning:
+          $ref: "#/components/schemas/NotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationConfig:
+      description: "Configures a notification."
+      type: "object"
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationConfig"
+        webhook:
+          $ref: "#/components/schemas/WebhookNotificationConfig"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    WebhookNotificationConfig:
+      description: "Configures a webhook notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
+        url:
+          type: "string"
+      x-speakeasy-entity: "Workspace"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    EmailNotificationConfig:
+      description: "Configures an email notification."
+      type: "object"
+      properties:
+        enabled:
+          type: "boolean"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1471,6 +1616,18 @@ components:
           name: "Acme Company"
           dataResidency: "auto"
       x-speakeasy-component: true
+    TagsResponse:
+      title: "Root Type for TagsResponse"
+      description: ""
+      required:
+      - "data"
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TagResponse"
+      x-speakeasy-component: true
     StreamConfiguration:
       description: "Configurations for a single stream."
       type: "object"
@@ -1514,6 +1671,7 @@ components:
       properties:
         streams:
           type: "array"
+          format: "set"
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-speakeasy-component: true
@@ -1555,6 +1713,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
       - "full_refresh_overwrite"
+      - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
       - "incremental_append"
       - "incremental_deduped_history"
@@ -1971,13 +2130,11 @@ components:
           title: "Client Id"
           description: "The Client ID for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
         client_secret:
           title: "Client Secret"
           description: "The Client Secret for your Oauth application"
           airbyte_secret: true
-          airbyte_hidden: true
           type: "string"
       title: "Source Instagram"
     snowflake:
@@ -2075,17 +2232,23 @@ components:
       title: "Microsoft Teams Spec"
     amazon-seller-partner:
       properties:
+        app_id:
+          title: "Application ID"
+          description: "Your Amazon Application ID."
+          order: 4
+          airbyte_secret: true
+          type: "string"
         lwa_app_id:
           title: "LWA Client Id"
           description: "Your Login with Amazon Client ID."
-          order: 4
+          order: 5
           airbyte_secret: true
           type: "string"
         lwa_client_secret:
           title: "LWA Client Secret"
           description: "Your Login with Amazon Client Secret."
           airbyte_secret: true
-          order: 5
+          order: 6
           type: "string"
       title: "Amazon Seller Partner Spec"
     pinterest:
@@ -2151,21 +2314,6 @@ components:
               airbyte_secret: true
               order: 2
       title: "Google Analytics (Data API) Spec"
-    intercom:
-      properties:
-        client_id:
-          title: "Client Id"
-          type: "string"
-          description: "Client Id for your Intercom application."
-          airbyte_secret: true
-          order: 1
-        client_secret:
-          title: "Client Secret"
-          type: "string"
-          description: "Client Secret for your Intercom application."
-          airbyte_secret: true
-          order: 2
-      title: "Source Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -2241,10 +2389,10 @@ components:
               airbyte_secret: true
             client_secret:
               type: "string"
-              title: "Client secret"
-              description: "The client secret the Airtable developer application."
+              title: "Client Secret"
+              description: "The client secret of the Airtable developer application."
               airbyte_secret: true
-      title: "Airtable Source Spec"
+      title: null
     OAuthCredentialsConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
@@ -2285,8 +2433,6 @@ components:
           $ref: "#/components/schemas/hubspot"
         - title: instagram
           $ref: "#/components/schemas/instagram"
-        - title: intercom
-          $ref: "#/components/schemas/intercom"
         - title: lever-hiring
           $ref: "#/components/schemas/lever-hiring"
         - title: linkedin-ads
@@ -2403,7 +2549,6 @@ components:
         - google-sheets
         - hubspot
         - instagram
-        - intercom
         - lever-hiring
         - linkedin-ads
         - mailchimp

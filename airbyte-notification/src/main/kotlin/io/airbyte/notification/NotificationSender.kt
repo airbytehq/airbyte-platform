@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.notification
 
 import jakarta.inject.Named
@@ -35,7 +39,8 @@ class WebhookNotificationSender(
     val requestBody: RequestBody = """{"text": "$message"}""".toRequestBody("application/json".toMediaType())
 
     val request: okhttp3.Request =
-      okhttp3.Request.Builder()
+      okhttp3.Request
+        .Builder()
         .url(config.webhookUrl)
         .post(requestBody)
         .build()
@@ -49,7 +54,5 @@ class WebhookNotificationSender(
     }
   }
 
-  override fun notificationType(): NotificationType {
-    return NotificationType.WEBHOOK
-  }
+  override fun notificationType(): NotificationType = NotificationType.WEBHOOK
 }

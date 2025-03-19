@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker
@@ -38,7 +38,6 @@ import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
 import io.temporal.failure.ApplicationFailure
 import io.temporal.workflow.Workflow
-import java.lang.reflect.Field
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -97,11 +96,11 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private val verifyActivityOptions =
-    defaultActivityOptions.toBuilder()
+    defaultActivityOptions
+      .toBuilder()
       .setHeartbeatTimeout(
         Duration.ofSeconds(Constants.VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS.toLong()),
-      )
-      .setStartToCloseTimeout(
+      ).setStartToCloseTimeout(
         Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
       ).build()
 
@@ -123,12 +122,12 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       defaultActivityOptions,
     )
 
-  private var startRolloutFailed = false
   private var isPaused = false
+  private var workflowId: String? = null
   private var connectorRollout: ConnectorRolloutOutput? = null
 
   override fun run(input: ConnectorRolloutWorkflowInput): ConnectorEnumRolloutState {
-    val workflowId = Workflow.getInfo().workflowId
+    workflowId = Workflow.getInfo().workflowId
 
     // Checkpoint to record the workflow version
     Workflow.getVersion("ChangedActivityInputStart", Workflow.DEFAULT_VERSION, 1)
@@ -136,10 +135,22 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     // Set the rollout's initial state
     setRollout(input)
 
+    startRollout(
+      ConnectorRolloutActivityInputStart(
+        input.dockerRepository,
+        input.dockerImageTag,
+        input.actorDefinitionId,
+        input.rolloutId,
+        input.updatedBy,
+        input.rolloutStrategy,
+        input.migratePins,
+      ),
+    )
+
     return if (input.rolloutStrategy == ConnectorEnumRolloutStrategy.AUTOMATED) {
       logger.info { "Running an automated workflow for $workflowId" }
       try {
-        runAutomated(workflowId, input)
+        runAutomated(workflowId!!, input)
       } catch (e: Exception) {
         connectorRollout =
           pauseRollout(
@@ -157,20 +168,14 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         getRolloutState()
       }
     } else {
-      runManual(workflowId)
+      runManual(workflowId!!)
     }
   }
 
   @VisibleForTesting
   fun runManual(workflowId: String): ConnectorEnumRolloutState {
     // End the workflow if we were unable to start the rollout, or we've reached a terminal state
-    Workflow.await { startRolloutFailed || rolloutStateIsTerminal() }
-    if (startRolloutFailed) {
-      throw ApplicationFailure.newFailure(
-        "Failure starting rollout for $workflowId",
-        ConnectorEnumRolloutState.CANCELED.value(),
-      )
-    }
+    Workflow.await { rolloutStateIsTerminal() }
     logger.info { "Rollout for $workflowId has reached a terminal state: ${connectorRollout?.state}" }
 
     return getRolloutState()
@@ -289,9 +294,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     return e.cause?.message?.contains(ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse().type) ?: false
   }
 
-  private fun getCurrentTimeMilli(): Instant {
-    return Instant.ofEpochMilli(Workflow.currentTimeMillis())
-  }
+  private fun getCurrentTimeMilli(): Instant = Instant.ofEpochMilli(Workflow.currentTimeMillis())
 
   private fun doNext(
     decision: Decision,
@@ -382,23 +385,19 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       )
   }
 
-  private fun getOffset(timestamp: Long?): OffsetDateTime? {
-    return if (timestamp == null) {
+  private fun getOffset(timestamp: Long?): OffsetDateTime? =
+    if (timestamp == null) {
       null
     } else {
       Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC)
     }
-  }
 
-  private fun getRolloutState(): ConnectorEnumRolloutState {
-    return connectorRollout?.state ?: ConnectorEnumRolloutState.WORKFLOW_STARTED
-  }
+  private fun getRolloutState(): ConnectorEnumRolloutState = connectorRollout?.state ?: ConnectorEnumRolloutState.WORKFLOW_STARTED
 
-  private fun rolloutStateIsTerminal(): Boolean {
-    return ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
-  }
+  private fun rolloutStateIsTerminal(): Boolean = ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
 
-  override fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
+  @VisibleForTesting
+  internal fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
     logger.info { "startRollout: calling startRolloutActivity" }
     val workflowRunId = Workflow.getInfo().firstExecutionRunId
     return try {
@@ -421,15 +420,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           rolloutStrategy = input.rolloutStrategy,
         ),
       )
-      startRolloutFailed = true
-      throw e
-    }
-  }
-
-  override fun startRolloutValidator(input: ConnectorRolloutActivityInputStart) {
-    logger.info { "startRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot start rollout; invalid input: ${mapAttributesToString(input)}"
+      throw ApplicationFailure.newFailure(
+        "Failure starting rollout for $workflowId",
+        ConnectorEnumRolloutState.CANCELED.value(),
+      )
     }
   }
 
@@ -442,9 +436,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun findRolloutValidator(input: ConnectorRolloutActivityInputFind) {
     logger.info { "findRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null)) {
-      "Cannot find rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
@@ -456,9 +447,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun getRolloutValidator(input: ConnectorRolloutActivityInputGet) {
     logger.info { "getRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot get rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
@@ -472,9 +460,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun pauseRolloutValidator(input: ConnectorRolloutActivityInputPause) {
     logger.info { "pauseRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot pause rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun progressRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
@@ -487,9 +472,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun progressRolloutValidator(input: ConnectorRolloutActivityInputRollout) {
     logger.info { "progressRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
@@ -551,35 +533,5 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun finalizeRolloutValidator(input: ConnectorRolloutActivityInputFinalize) {
     logger.info { "finalizeRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(
-      !(
-        input.dockerRepository == null ||
-          input.dockerImageTag == null ||
-          input.actorDefinitionId == null ||
-          input.rolloutId == null ||
-          input.result == null
-      ),
-    ) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
-  }
-
-  companion object {
-    fun mapAttributesToString(obj: Any): String {
-      val result = StringBuilder()
-      val fields: Array<Field> = obj.javaClass.declaredFields
-      for (field in fields) {
-        try {
-          val value = field.get(obj)
-          result
-            .append("${field.name}=")
-            .append(value?.toString() ?: "null")
-            .append(" ")
-        } catch (e: IllegalAccessException) {
-          logger.error(e) { "Error mapping attributes to string: ${e.message}" }
-        }
-      }
-      return result.toString().trim()
-    }
   }
 }

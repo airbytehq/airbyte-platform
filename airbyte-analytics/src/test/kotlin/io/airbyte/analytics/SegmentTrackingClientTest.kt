@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -30,7 +30,7 @@ class SegmentTrackingClientTest {
   private val deploymentMetadata: DeploymentMetadataRead =
     DeploymentMetadataRead(
       id = deploymentId,
-      mode = Configs.DeploymentMode.OSS.name,
+      mode = Configs.AirbyteEdition.COMMUNITY.name,
       version = airbyteVersion.serialize(),
     )
   private val deployment: Deployment = Deployment(deploymentMetadata)

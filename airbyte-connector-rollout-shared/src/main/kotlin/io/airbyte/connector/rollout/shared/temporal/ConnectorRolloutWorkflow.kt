@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker
@@ -10,7 +10,6 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputF
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.temporal.workflow.UpdateMethod
@@ -22,12 +21,6 @@ import io.temporal.workflow.WorkflowMethod
 interface ConnectorRolloutWorkflow {
   @WorkflowMethod
   fun run(input: ConnectorRolloutWorkflowInput): ConnectorEnumRolloutState
-
-  @UpdateMethod
-  fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput
-
-  @UpdateValidatorMethod(updateName = "startRollout")
-  fun startRolloutValidator(input: ConnectorRolloutActivityInputStart)
 
   @UpdateMethod
   fun findRollout(input: ConnectorRolloutActivityInputFind): List<ConnectorRolloutOutput>

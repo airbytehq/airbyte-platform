@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.helpers;
@@ -9,6 +9,8 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,18 +28,26 @@ public class DestinationHelpers {
   }
 
   public static DestinationConnection generateDestination(final UUID destinationDefinitionId) throws IOException {
-    return generateDestination(destinationDefinitionId, "my default dest name", false);
+    return generateDestination(destinationDefinitionId, "my default dest name", false, null);
   }
 
   public static DestinationConnection generateDestination(final UUID destinationDefinitionId, final String name) throws IOException {
-    return generateDestination(destinationDefinitionId, name, false);
+    return generateDestination(destinationDefinitionId, name, false, null);
   }
 
   public static DestinationConnection generateDestination(final UUID destinationDefinitionId, final boolean tombstone) throws IOException {
-    return generateDestination(destinationDefinitionId, "my default dest name", tombstone);
+    return generateDestination(destinationDefinitionId, "my default dest name", tombstone, null);
   }
 
-  public static DestinationConnection generateDestination(final UUID destinationDefinitionId, final String name, final boolean tombstone)
+  public static DestinationConnection generateDestination(final UUID destinationDefinitionId, final ScopedResourceRequirements resourceRequirements)
+      throws IOException {
+    return generateDestination(destinationDefinitionId, "my default dest name", false, resourceRequirements);
+  }
+
+  public static DestinationConnection generateDestination(final UUID destinationDefinitionId,
+                                                          final String name,
+                                                          final boolean tombstone,
+                                                          final ScopedResourceRequirements resourceRequirements)
       throws IOException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
@@ -50,20 +60,27 @@ public class DestinationHelpers {
         .withDestinationDefinitionId(destinationDefinitionId)
         .withDestinationId(destinationId)
         .withConfiguration(implementationJson)
-        .withTombstone(tombstone);
+        .withTombstone(tombstone)
+        .withResourceRequirements(resourceRequirements);
+  }
+
+  public static ScopedResourceRequirements getResourceRequirementsForDestination() {
+    return new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2").withMemoryRequest("2"));
   }
 
   public static DestinationRead getDestinationRead(final DestinationConnection destination,
                                                    final StandardDestinationDefinition standardDestinationDefinition) {
     // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
     // if you want to override them.
-    return getDestinationRead(destination, standardDestinationDefinition, false, SupportState.SUPPORTED);
+    return getDestinationRead(destination, standardDestinationDefinition, false, true, SupportState.SUPPORTED, null);
   }
 
   public static DestinationRead getDestinationRead(final DestinationConnection destination,
                                                    final StandardDestinationDefinition standardDestinationDefinition,
                                                    final boolean isVersionOverrideApplied,
-                                                   final SupportState supportState) {
+                                                   final boolean isEntitled,
+                                                   final SupportState supportState,
+                                                   final io.airbyte.api.model.generated.ScopedResourceRequirements resourceAllocation) {
 
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -75,7 +92,9 @@ public class DestinationHelpers {
         .destinationName(standardDestinationDefinition.getName())
         .icon(standardDestinationDefinition.getIconUrl())
         .isVersionOverrideApplied(isVersionOverrideApplied)
-        .supportState(supportState);
+        .isEntitled(isEntitled)
+        .supportState(supportState)
+        .resourceAllocation(resourceAllocation);
   }
 
 }

@@ -95,7 +95,7 @@ describe("Feature Service", () => {
 
     it("does not render its children if the given feature is disabled", () => {
       const { queryByTestId } = render(
-        <IfFeatureEnabled feature={FeatureItem.AllowOAuthConnector}>
+        <IfFeatureEnabled feature={FeatureItem.AllowUpdateConnectors}>
           <span data-testid="content" />
         </IfFeatureEnabled>,
         { wrapper }
@@ -106,15 +106,15 @@ describe("Feature Service", () => {
     it("allows changing features and rerenders correctly", () => {
       const { queryByTestId, rerender } = render(
         <FeatureService features={[FeatureItem.AllowDBTCloudIntegration]}>
-          <IfFeatureEnabled feature={FeatureItem.AllowOAuthConnector}>
+          <IfFeatureEnabled feature={FeatureItem.AllowUpdateConnectors}>
             <span data-testid="content" />
           </IfFeatureEnabled>
         </FeatureService>
       );
       expect(queryByTestId("content")).toBeFalsy();
       rerender(
-        <FeatureService features={[FeatureItem.AllowOAuthConnector]}>
-          <IfFeatureEnabled feature={FeatureItem.AllowOAuthConnector}>
+        <FeatureService features={[FeatureItem.AllowUpdateConnectors]}>
+          <IfFeatureEnabled feature={FeatureItem.AllowUpdateConnectors}>
             <span data-testid="content" />
           </IfFeatureEnabled>
         </FeatureService>

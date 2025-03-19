@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.mapper.configs
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -23,21 +27,13 @@ data class TestMapperConfig(
   @field:NotNull
   val config: TestConfig,
 ) : MapperConfig {
-  override fun name(): String {
-    return name
-  }
+  override fun name(): String = name
 
-  override fun id(): UUID? {
-    return id
-  }
+  override fun id(): UUID? = id
 
-  override fun documentationUrl(): String? {
-    return documentationUrl
-  }
+  override fun documentationUrl(): String? = documentationUrl
 
-  override fun config(): Any {
-    return config
-  }
+  override fun config(): Any = config
 }
 
 data class TestConfig(
@@ -60,7 +56,9 @@ data class TestConfig(
   val field2: String,
 )
 
-enum class TestEnums(private val value: String) {
+enum class TestEnums(
+  private val value: String,
+) {
   ONE("ONE"),
   TWO("TWO"),
   ;

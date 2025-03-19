@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.config
 
 import io.micronaut.context.annotation.Property
@@ -10,7 +14,7 @@ import javax.inject.Inject
 
 @MicronautTest
 @Property(name = "airbyte.version", value = "1.0.0")
-@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "COMMUNITY")
 @Property(name = "airbyte.internal-api.base-path", value = "http://localhost/")
 @Property(name = "airbyte.internal-api.connect-timeout-seconds", value = "10")
 @Property(name = "airbyte.internal-api.read-timeout-seconds", value = "10")

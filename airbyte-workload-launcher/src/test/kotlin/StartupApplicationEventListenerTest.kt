@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.LauncherShutdownHelper
 import io.airbyte.workload.launcher.StartupApplicationEventListener
@@ -20,7 +24,7 @@ class StartupApplicationEventListenerTest {
       StartupApplicationEventListener(
         claimedProcessor = claimedProcessor,
         claimProcessorTracker = mockk(relaxed = true),
-        customMetricPublisher = mockk(relaxed = true),
+        metricClient = mockk(relaxed = true),
         temporalWorkerController = mockk(relaxed = true),
         launcherShutdownHelper = launcherShutdownHelper,
       )

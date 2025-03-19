@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.discover.catalog
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -7,7 +11,7 @@ import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogRequest
 import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogResult
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.CatalogDiffConverter
 import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogOutput

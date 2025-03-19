@@ -5,18 +5,17 @@ import styles from "./ButtonTab.module.scss";
 import { Badge } from "../Badge";
 import { Text } from "../Text";
 
-// TODO: add generic type to restrict using the same exact id: "id:T" and "onSelect(id: T)"
-// issue: https://github.com/airbytehq/airbyte-internal-issues/issues/7520
-interface ButtonTabProps {
-  id: string;
+interface ButtonTabProps<T extends string = string> {
+  id: T;
   name: string | React.ReactNode;
   isActive: boolean;
   disabled?: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: T) => void;
   badge?: string;
+  className?: string;
 }
 
-export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSelect, disabled, badge }) => {
+export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSelect, disabled, badge, className }) => {
   const onItemClickItem = useCallback(() => onSelect?.(id), [id, onSelect]);
 
   return (
@@ -24,10 +23,14 @@ export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSele
       type="button"
       disabled={!onSelect || disabled}
       onClick={onItemClickItem}
-      className={classNames(styles.tabContainer, {
-        [styles["tabContainer--active"]]: isActive,
-        [styles["tabContainer--inactive"]]: !isActive,
-      })}
+      className={classNames(
+        styles.tabContainer,
+        {
+          [styles["tabContainer--active"]]: isActive,
+          [styles["tabContainer--inactive"]]: !isActive,
+        },
+        className
+      )}
       data-id={`${id.toLowerCase()}-step`}
     >
       <Text color={isActive ? "darkBlue" : "grey"} className={styles.text} size="lg">

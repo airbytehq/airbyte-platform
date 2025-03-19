@@ -1,13 +1,16 @@
 import classNames from "classnames";
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { ComboBox, OptionsConfig, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
+import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
@@ -21,7 +24,7 @@ import { useConnectorBuilderFormManagementState } from "services/connectorBuilde
 import styles from "./BuilderField.module.scss";
 import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useWatchWithPreview } from "../preview";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface EnumFieldProps {
   options: string[] | Array<{ label: string; value: string }>;
@@ -86,6 +89,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
+    | { type: "graphql"; onChange?: (newValue: string) => void }
     | {
         type: "enum";
         onChange?: (newValue: string) => void;
@@ -93,6 +97,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[]; optionsConfig?: OptionsConfig }
     | { type: "multicombobox"; onChange?: (newValue: string[]) => void; options: Option[] }
+    | { type: "secret"; onChange?: (newValue: string) => void }
   );
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, disabled, ...props }) => {
@@ -160,14 +165,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
 
   const hasError = !!fieldState.error;
 
-  const { label, tooltip } = getLabelAndTooltip(
-    props.label,
-    props.tooltip,
-    manifestPath,
-    path,
-    false,
-    manifestOptionPaths
-  );
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, false, manifestOptionPaths);
 
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -256,11 +254,19 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <Input
           {...field}
           onChange={(e) => {
-            setValue(e.target.value);
+            const val =
+              e.target.value === ""
+                ? props.type === "string"
+                  ? e.target.value
+                  : undefined
+                : props.type === "number" || props.type === "integer"
+                ? Number(e.target.value)
+                : e.target.value;
+            setValue(val);
           }}
           placeholder={props.placeholder}
           className={props.className}
-          type={props.type}
+          type={props.type === "integer" ? "number" : props.type}
           value={(fieldValue as string | number | undefined) ?? ""}
           error={hasError}
           readOnly={readOnly}
@@ -372,6 +378,35 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           disabled={isDisabled}
         />
       )}
+      {props.type === "secret" && (
+        <SecretField
+          name={path}
+          value={fieldValue as string}
+          onUpdate={(val) => {
+            // Remove the value instead of setting it to the empty string, as secret persistence
+            // gets mad at empty secrets
+            setValue(val || undefined);
+          }}
+          disabled={isDisabled}
+          error={hasError}
+        />
+      )}
+      {props.type === "graphql" && (
+        <div className={classNames(props.className, styles.graphqlEditor)}>
+          <GraphQLEditor
+            key={path}
+            value={fieldValue || ""}
+            onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
+              setValue(val);
+            }}
+            disabled={isDisabled}
+            paddingTop
+          />
+        </div>
+      )}
       {hasError && (
         <Text className={styles.error}>
           <FormattedMessage
@@ -384,6 +419,84 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       )}
       {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
     </ControlLabels>
+  );
+};
+
+interface SecretFieldProps {
+  name: string;
+  value: string;
+  onUpdate: (value: string) => void;
+  disabled?: boolean;
+  error?: boolean;
+}
+const SecretField: React.FC<SecretFieldProps> = ({ name, value, onUpdate, disabled, error }) => {
+  const [editingValue, setEditingValue] = useState<string | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const pushUpdate = useCallback(() => {
+    onUpdate(editingValue ?? "");
+    setEditingValue(undefined);
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  }, [editingValue, onUpdate]);
+
+  const isDisabled = disabled || (!!value && editingValue === undefined);
+  return (
+    <FlexContainer gap="sm">
+      <Input
+        ref={inputRef}
+        name={name}
+        onChange={(e) => {
+          setEditingValue(e.target.value);
+        }}
+        type="password"
+        value={editingValue ?? value}
+        error={error}
+        readOnly={isDisabled}
+        disabled={isDisabled}
+        onBlur={(e) => {
+          if (e.target.parentElement?.parentElement?.contains(e.relatedTarget)) {
+            return;
+          }
+          if (editingValue === undefined) {
+            return;
+          }
+          if (!value) {
+            onUpdate(editingValue);
+          }
+          setEditingValue(undefined);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            pushUpdate();
+          }
+        }}
+      />
+      {value && editingValue === undefined && (
+        <Button size="sm" className={styles.secretButton} variant="secondary" onClick={() => setEditingValue("")}>
+          <FormattedMessage id="form.edit" />
+        </Button>
+      )}
+      {value && editingValue !== undefined && (
+        <>
+          <Button type="button" size="sm" variant="secondary" onClick={() => setEditingValue(undefined)}>
+            <FormattedMessage id="form.cancel" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              onUpdate(editingValue ?? "");
+              setEditingValue(undefined);
+            }}
+          >
+            <FormattedMessage id="form.done" />
+          </Button>
+        </>
+      )}
+    </FlexContainer>
   );
 };
 

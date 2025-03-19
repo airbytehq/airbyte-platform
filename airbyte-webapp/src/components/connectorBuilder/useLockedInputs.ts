@@ -5,6 +5,7 @@ import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  DeclarativeOAuthAuthenticatorType,
   BuilderFormAuthenticator,
   BuilderFormInput,
   BuilderFormValues,
@@ -14,16 +15,17 @@ import {
   SESSION_TOKEN_AUTHENTICATOR,
   extractInterpolatedConfigKey,
   isYamlString,
-  useBuilderWatch,
+  JWT_AUTHENTICATOR,
 } from "./types";
+import { useBuilderWatch } from "./useBuilderWatch";
 
 export const useUpdateLockedInputs = () => {
   const formValues = useBuilderWatch("formValues");
-  const { setValue } = useFormContext();
+  const testingValues = useBuilderWatch("testingValues");
+  const { setValue, trigger } = useFormContext();
 
   useEffect(() => {
     const keyToDesiredLockedInput = getKeyToDesiredLockedInput(formValues.global.authenticator, formValues.streams);
-
     const existingLockedInputKeys = formValues.inputs.filter((input) => input.isLocked).map((input) => input.key);
     const lockedInputKeysToCreate = Object.keys(keyToDesiredLockedInput).filter(
       (key) => !existingLockedInputKeys.includes(key)
@@ -42,7 +44,15 @@ export const useUpdateLockedInputs = () => {
       });
     });
     setValue("formValues.inputs", updatedInputs);
-  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue]);
+
+    // create a new testingValues object with each of the keys in lockedInputKeysToDelete removed
+    const newTestingValues = { ...testingValues };
+    lockedInputKeysToDelete.forEach((key) => {
+      delete newTestingValues[key];
+    });
+    setValue("testingValues", newTestingValues);
+    trigger("testingValues");
+  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue, testingValues, trigger]);
 };
 
 export const useGetUniqueKey = () => {
@@ -69,10 +79,10 @@ export const useGetUniqueKey = () => {
       }
     }
 
-    const existingKeys = builderInputs.map((input) => input.key);
+    const existingNonLockedKeys = builderInputs.filter((input) => !input.isLocked).map((input) => input.key);
     let key = desiredKey;
     let i = 2;
-    while (existingKeys.includes(key)) {
+    while (existingNonLockedKeys.includes(key)) {
       key = `${desiredKey}_${i}`;
       i++;
     }
@@ -146,28 +156,72 @@ export function getAuthKeyToDesiredLockedInput(
         }),
       };
 
-    case OAUTH_AUTHENTICATOR:
+    case JWT_AUTHENTICATOR:
+      const secretKey = extractInterpolatedConfigKey(authenticator.secret_key);
+
+      return {
+        ...(secretKey && {
+          [secretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].secret_key,
+        }),
+      };
+
+    case OAUTH_AUTHENTICATOR: {
       const clientIdKey = extractInterpolatedConfigKey(authenticator.client_id);
       const clientSecretKey = extractInterpolatedConfigKey(authenticator.client_secret);
       const refreshTokenKey = extractInterpolatedConfigKey(authenticator.refresh_token);
       const accessTokenKey = extractInterpolatedConfigKey(authenticator.refresh_token_updater?.access_token);
       const tokenExpiryDateKey = extractInterpolatedConfigKey(authenticator.refresh_token_updater?.token_expiry_date);
+
       return {
-        [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_id,
-        [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_secret,
+        ...(clientIdKey && {
+          [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_id,
+        }),
+        ...(clientSecretKey && {
+          [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].client_secret,
+        }),
         ...(refreshTokenKey && {
-          [refreshTokenKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token,
+          [refreshTokenKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].refresh_token,
         }),
         ...(accessTokenKey && {
           [accessTokenKey]:
-            LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token_updater.access_token_config_path,
+            LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].refresh_token_updater.access_token_config_path,
         }),
         ...(tokenExpiryDateKey && {
           [tokenExpiryDateKey]:
-            LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token_updater
+            LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type].refresh_token_updater
               .token_expiry_date_config_path,
         }),
       };
+    }
+
+    case DeclarativeOAuthAuthenticatorType: {
+      const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
+
+      const clientIdKey = extractInterpolatedConfigKey(authenticator.client_id);
+      const clientSecretKey = extractInterpolatedConfigKey(authenticator.client_secret);
+      const refreshTokenKey = extractInterpolatedConfigKey(authenticator.refresh_token);
+      const accessTokenKey = extractInterpolatedConfigKey(authenticator.access_token_value);
+
+      return {
+        ...(clientIdKey && {
+          [clientIdKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_id,
+        }),
+        ...(clientSecretKey && {
+          [clientSecretKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].client_secret,
+        }),
+        ...(isRefreshTokenFlowEnabled && refreshTokenKey
+          ? {
+              [refreshTokenKey]:
+                LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].refresh_token,
+            }
+          : {}),
+        ...(!isRefreshTokenFlowEnabled && accessTokenKey
+          ? {
+              [accessTokenKey]: LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[DeclarativeOAuthAuthenticatorType].access_token,
+            }
+          : {}),
+      };
+    }
 
     case SESSION_TOKEN_AUTHENTICATOR:
       const loginRequesterAuthenticator = authenticator.login_requester.authenticator;
@@ -222,6 +276,27 @@ export const LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE = {
       },
     },
   },
+  [JWT_AUTHENTICATOR]: {
+    secret_key: {
+      key: "secret_key",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Secret Key",
+        airbyte_secret: true,
+      },
+    },
+    algorithm: {
+      key: "algorithm",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Algorithm",
+        always_show: true,
+        airbyte_secret: false,
+      },
+    },
+  },
   [OAUTH_AUTHENTICATOR]: {
     client_id: {
       key: "client_id",
@@ -271,6 +346,72 @@ export const LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE = {
           format: "date-time",
           description:
             "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
+        },
+      },
+    },
+  },
+  [DeclarativeOAuthAuthenticatorType]: {
+    client_id: {
+      key: "client_id",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Client ID",
+        airbyte_secret: true,
+      },
+    },
+    client_secret: {
+      key: "client_secret",
+      required: true,
+      definition: {
+        type: "string" as const,
+        title: "Client secret",
+        airbyte_secret: true,
+      },
+    },
+    refresh_token: {
+      key: "client_refresh_token",
+      required: false,
+      definition: {
+        type: "string" as const,
+        title: "Refresh token",
+        airbyte_secret: true,
+        airbyte_hidden: true,
+      },
+    },
+    access_token: {
+      key: "client_access_token",
+      required: false,
+      definition: {
+        type: "string" as const,
+        title: "Access token",
+        airbyte_secret: true,
+        airbyte_hidden: true,
+      },
+    },
+    refresh_token_updater: {
+      access_token_config_path: {
+        key: "oauth_access_token",
+        required: false,
+        definition: {
+          type: "string" as const,
+          title: "Access token",
+          airbyte_secret: true,
+          airbyte_hidden: true,
+          description:
+            "The current access token. This field might be overridden by the connector based on the token refresh endpoint response.",
+        },
+      },
+      token_expiry_date_config_path: {
+        key: "oauth_token_expiry_date",
+        required: false,
+        definition: {
+          type: "string" as const,
+          title: "Token expiry date",
+          format: "date-time",
+          description:
+            "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
+          airbyte_hidden: true,
         },
       },
     },

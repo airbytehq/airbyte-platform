@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.apiTracking
@@ -10,7 +10,6 @@ import io.airbyte.config.ScopeType
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
-import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.Callable
 
@@ -21,11 +20,11 @@ import java.util.concurrent.Callable
 class TrackingHelper(
   private val trackingClient: TrackingClient,
 ) {
-  private fun trackSuccess(
+  private fun trackSuccessInternal(
     endpointPath: String,
     httpOperation: String,
     userId: UUID,
-    workspaceId: Optional<UUID>,
+    workspaceId: UUID?,
   ) {
     val statusCode = Response.Status.OK.statusCode
     track(
@@ -45,7 +44,7 @@ class TrackingHelper(
     httpOperation: String?,
     userId: UUID?,
   ) {
-    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.empty())
+    trackSuccessInternal(endpointPath!!, httpOperation!!, userId!!, null)
   }
 
   /**
@@ -57,7 +56,7 @@ class TrackingHelper(
     userId: UUID?,
     workspaceId: UUID?,
   ) {
-    trackSuccess(endpointPath!!, httpOperation!!, userId!!, Optional.ofNullable(workspaceId))
+    trackSuccessInternal(endpointPath!!, httpOperation!!, userId!!, workspaceId)
   }
 
   /**
@@ -84,7 +83,7 @@ class TrackingHelper(
         endpointPath,
         httpOperation,
         statusCode,
-        Optional.empty(),
+        null,
       )
     }
   }
@@ -118,7 +117,7 @@ class TrackingHelper(
     endpointPath: String?,
     httpOperation: String?,
     httpStatusCode: Int,
-    workspaceId: Optional<UUID>,
+    workspaceId: UUID?,
   ) {
     val payload =
       mutableMapOf(
@@ -127,8 +126,8 @@ class TrackingHelper(
         Pair(OPERATION, httpOperation),
         Pair(STATUS_CODE, httpStatusCode),
       )
-    if (workspaceId.isPresent) {
-      payload[WORKSPACE] = workspaceId.get().toString()
+    if (workspaceId != null) {
+      payload[WORKSPACE] = workspaceId.toString()
     }
     trackingClient.track(
       userId,

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.amazonaws.internal.ExceptionUtils
@@ -9,6 +13,7 @@ import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionRead
 import io.airbyte.api.client.model.generated.SourceRead
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
@@ -55,7 +60,7 @@ class StateCheckSumErrorReporterTest {
   private lateinit var stateCheckSumErrorReporter: StateCheckSumErrorReporter
 
   private val airbyteVersion = "0.1.0"
-  private val deploymentMode = "CLOUD"
+  private val airbyteEdition = Configs.AirbyteEdition.CLOUD
 
   @BeforeEach
   fun setup() {
@@ -64,16 +69,18 @@ class StateCheckSumErrorReporterTest {
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
         airbyteVersion,
-        deploymentMode,
+        airbyteEdition,
         airbyteApiClient,
         webUrlHelper,
       )
     stateMessage =
-      AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      AirbyteStateMessage()
+        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
         .withStream(
           AirbyteStreamState().withStreamState(Jsons.emptyObject()).withStreamDescriptor(
             StreamDescriptor()
-              .withNamespace("namespace").withName("name"),
+              .withNamespace("namespace")
+              .withName("name"),
           ),
         )
   }
@@ -116,8 +123,15 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(any()) } returns sourceDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
-      exception, stateMessage,
+      workspaceId,
+      connectionId,
+      jobId,
+      attemptNumber,
+      origin,
+      internalMessage,
+      externalMessage,
+      exception,
+      stateMessage,
     )
 
     verify(
@@ -167,8 +181,15 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(any()) } returns destinationDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
-      exception, stateMessage,
+      workspaceId,
+      connectionId,
+      jobId,
+      attemptNumber,
+      origin,
+      internalMessage,
+      externalMessage,
+      exception,
+      stateMessage,
     )
 
     verify(
@@ -189,7 +210,7 @@ class StateCheckSumErrorReporterTest {
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
         airbyteVersion,
-        deploymentMode,
+        airbyteEdition,
         airbyteApiClient,
         webUrlHelper,
       )
@@ -244,7 +265,7 @@ class StateCheckSumErrorReporterTest {
     val metadata = stateCheckSumErrorReporter.airbyteMetadata()
 
     assert(metadata[JobErrorReporter.AIRBYTE_VERSION_META_KEY] == airbyteVersion)
-    assert(metadata[JobErrorReporter.DEPLOYMENT_MODE_META_KEY] == deploymentMode)
+    assert(metadata[JobErrorReporter.AIRBYTE_EDITION_META_KEY] == airbyteEdition.name)
   }
 
   @Test

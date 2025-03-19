@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -17,7 +17,7 @@ import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

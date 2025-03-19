@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.activities
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -10,7 +14,6 @@ data class ReportRunTimeActivityInput(
   val startTime: Long,
   val refreshSchemaEndTime: Long,
   val replicationEndTime: Long,
-  val shouldRefreshSchema: Boolean,
 ) {
   class Builder
     @JvmOverloads
@@ -20,17 +23,14 @@ data class ReportRunTimeActivityInput(
       private val startTime: Long? = null,
       private val refreshSchemaEndTime: Long? = null,
       private val replicationEndTime: Long? = null,
-      private val shouldRefreshSchema: Boolean? = null,
     ) {
-      fun build(): ReportRunTimeActivityInput {
-        return ReportRunTimeActivityInput(
+      fun build(): ReportRunTimeActivityInput =
+        ReportRunTimeActivityInput(
           connectionId!!,
           sourceDefinitionId!!,
           startTime!!,
           refreshSchemaEndTime!!,
           replicationEndTime!!,
-          shouldRefreshSchema!!,
         )
-      }
     }
 }

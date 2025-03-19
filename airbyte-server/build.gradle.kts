@@ -48,6 +48,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-micronaut-security"))
@@ -98,6 +99,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.kotest)
@@ -128,7 +130,7 @@ tasks.named("assemble") {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.server.Application"
+    mainClass = "io.airbyte.server.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

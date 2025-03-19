@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.converters
 
 import io.airbyte.api.model.generated.ConfiguredStreamMapper
@@ -233,7 +237,11 @@ class MapperConvertersTest {
   fun testMissingRequiredFields() {
     val invalidJson = Jsons.jsonNode(mapOf("config_key" to "config_value"))
     assertThrows<MapperValidationMissingRequiredParamProblem> {
-      ConfiguredStreamMapper().id(MAPPER_ID).type(StreamMapperType.HASHING).mapperConfiguration(invalidJson).toInternal()
+      ConfiguredStreamMapper()
+        .id(MAPPER_ID)
+        .type(StreamMapperType.HASHING)
+        .mapperConfiguration(invalidJson)
+        .toInternal()
     }
   }
 
@@ -241,7 +249,11 @@ class MapperConvertersTest {
   fun testInvalidValues() {
     val invalidJson = Jsons.jsonNode(mapOf("method" to "some_invalid_method"))
     assertThrows<MapperValidationInvalidConfigProblem> {
-      ConfiguredStreamMapper().id(MAPPER_ID).type(StreamMapperType.HASHING).mapperConfiguration(invalidJson).toInternal()
+      ConfiguredStreamMapper()
+        .id(MAPPER_ID)
+        .type(StreamMapperType.HASHING)
+        .mapperConfiguration(invalidJson)
+        .toInternal()
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -15,9 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
@@ -74,12 +76,17 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
+import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -90,6 +97,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -108,8 +116,10 @@ import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
@@ -176,6 +186,7 @@ import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGen
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperErrorType;
 import io.airbyte.mappers.transformations.HashingMapper;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -207,6 +218,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -286,10 +299,13 @@ class ConnectionsHandlerTest {
   private ConnectionService connectionService;
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private ConnectionScheduleHelper connectionSchedulerHelper;
+  private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ContextBuilder contextBuilder;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
+  private MetricClient metricClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -306,10 +322,12 @@ class ConnectionsHandlerTest {
     otherOperationId = UUID.randomUUID();
     source = new SourceConnection()
         .withSourceId(sourceId)
+        .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(workspaceId)
         .withName("presto");
     destination = new DestinationConnection()
         .withDestinationId(destinationId)
+        .withDestinationDefinitionId(destinationDefinitionId)
         .withWorkspaceId(workspaceId)
         .withName("hudi")
         .withConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "123-abc")));
@@ -402,8 +420,11 @@ class ConnectionsHandlerTest {
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     statePersistence = mock(StatePersistence.class);
     mapperSecretHelper = mock(MapperSecretHelper.class);
+    licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    contextBuilder = mock(ContextBuilder.class);
 
     featureFlagClient = mock(TestClient.class);
+    metricClient = mock(MetricClient.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -417,7 +438,10 @@ class ConnectionsHandlerTest {
             destinationService,
             actorDefinitionHandlerHelper,
             actorDefinitionVersionUpdater,
-            apiPojoConverters);
+            apiPojoConverters,
+            workspaceHelper,
+            licenseEntitlementChecker,
+            Configs.AirbyteEdition.COMMUNITY);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -431,11 +455,15 @@ class ConnectionsHandlerTest {
         featureFlagClient,
         sourceService,
         workspaceService,
+        workspaceHelper,
         secretPersistenceConfigService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
+        licenseEntitlementChecker,
         catalogConverter,
-        apiPojoConverters);
+        apiPojoConverters,
+        metricClient,
+        Configs.AirbyteEdition.COMMUNITY);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =
@@ -494,7 +522,10 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper);
+          mapperSecretHelper,
+          metricClient,
+          licenseEntitlementChecker,
+          contextBuilder);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -542,7 +573,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
@@ -578,7 +610,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
@@ -614,7 +647,8 @@ class ConnectionsHandlerTest {
           null,
           null,
           0,
-          0));
+          0,
+          true));
       final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
@@ -670,9 +704,9 @@ class ConnectionsHandlerTest {
 
     @Test
     void testListConnectionsByActorDefinition() throws IOException {
-      when(connectionService.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
+      when(connectionService.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false, true))
           .thenReturn(Lists.newArrayList(standardSync));
-      when(connectionService.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
+      when(connectionService.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false, true))
           .thenReturn(Lists.newArrayList(standardSync2));
 
       final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
@@ -968,6 +1002,29 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead
             .notifySchemaChangesByEmail(null),
             connectionsHandler.createConnection(connectionCreate));
+      }
+
+      @ParameterizedTest
+      @ValueSource(strings = {"SOURCE_CONNECTOR", "DESTINATION_CONNECTOR"})
+      void testCreateConnectionWithUnentitledSourceShouldThrow(final Entitlement entitlement)
+          throws JsonValidationException, ConfigNotFoundException, IOException {
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withDefaultGeography(Geography.EU);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        doThrow(new LicenseEntitlementProblem())
+            .when(licenseEntitlementChecker)
+            .ensureEntitled(any(), eq(entitlement), any());
+
+        assertThrows(LicenseEntitlementProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+
+        verifyNoInteractions(connectionService);
       }
 
       @Test
@@ -1276,7 +1333,8 @@ class ConnectionsHandlerTest {
             .prefix(PRESTO_TO_HUDI_PREFIX)
             .status(ConnectionStatus.ACTIVE)
             .schedule(ConnectionHelpers.generateBasicConnectionSchedule())
-            .syncCatalog(catalog);
+            .syncCatalog(catalog)
+            .tags(Collections.emptyList());
 
         assertThrows(ConfigNotFoundException.class, () -> connectionsHandler.createConnection(connectionCreateBadDestination));
       }
@@ -1414,6 +1472,22 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalog);
 
         assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate, null, false));
+      }
+
+      @ParameterizedTest
+      @ValueSource(strings = {"SOURCE_CONNECTOR", "DESTINATION_CONNECTOR"})
+      void testUpdateConnectionWithUnentitledConnectorThrows(final Entitlement entitlement) {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        doThrow(new LicenseEntitlementProblem())
+            .when(licenseEntitlementChecker)
+            .ensureEntitled(any(), eq(entitlement), any());
+
+        assertThrows(LicenseEntitlementProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
       }
 
       @Test
@@ -1788,7 +1862,8 @@ class ConnectionsHandlerTest {
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
-            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
+            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class),
+            standardSync.getTags().stream().map(apiPojoConverters::toApiTag).toList())
             .status(ConnectionStatus.INACTIVE)
             .scheduleType(ConnectionScheduleType.MANUAL)
             .scheduleData(null)
@@ -1797,6 +1872,36 @@ class ConnectionsHandlerTest {
             .resourceRequirements(resourceRequirements);
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
+        verify(connectionService).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchTags() throws Exception {
+        final UUID workspaceId = UUID.randomUUID();
+        final Tag apiTag1 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag1").color("ABC123");
+        final Tag apiTag2 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag2").color("000000");
+        final Tag apiTag3 = new Tag().tagId(UUID.randomUUID()).workspaceId(workspaceId).name("tag3").color("FFFFFF");
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .tags(List.of(apiTag1, apiTag2, apiTag3));
+
+        final io.airbyte.config.Tag configTag1 = apiPojoConverters.toInternalTag(apiTag1);
+        final io.airbyte.config.Tag configTag2 = apiPojoConverters.toInternalTag(apiTag2);
+        final io.airbyte.config.Tag configTag3 = apiPojoConverters.toInternalTag(apiTag3);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withTags(List.of(configTag1, configTag2, configTag3));
+
+        when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
       }
@@ -1883,7 +1988,9 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
+          metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -1907,7 +2014,7 @@ class ConnectionsHandlerTest {
     }
 
     private Job generateMockJob(final UUID connectionId, final Attempt attempt) {
-      return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L);
+      return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L, true);
     }
 
     @Nested
@@ -1921,8 +2028,8 @@ class ConnectionsHandlerTest {
         final long jobOneId = 1L;
         final long jobTwoId = 2L;
 
-        final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
-        final Job jobTwo = new Job(2, ConfigType.REFRESH, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L);
+        final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
+        final Job jobTwo = new Job(2, ConfigType.REFRESH, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L, true);
 
         when(jobPersistence.listJobs(
             Job.SYNC_REPLICATION_TYPES,
@@ -2120,7 +2227,9 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
+          metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test
@@ -2534,9 +2643,9 @@ class ConnectionsHandlerTest {
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
       final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
-          new Job(2L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L, true),
+          new Job(2L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2557,8 +2666,8 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2577,7 +2686,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2598,7 +2707,7 @@ class ConnectionsHandlerTest {
           .withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2617,7 +2726,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2636,7 +2745,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2671,8 +2780,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
-              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2691,8 +2800,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(attempt),
-              JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2711,8 +2820,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
-              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2731,8 +2840,8 @@ class ConnectionsHandlerTest {
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.CLEAR, connectionId.toString(), null, List.of(attempt),
-              JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2752,8 +2861,9 @@ class ConnectionsHandlerTest {
       final Attempt successAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.RESET_CONNECTION, connectionId.toString(), null, List.of(resetAttempt),
-              JobStatus.CANCELLED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(successAttempt), JobStatus.SUCCEEDED, 801L, 800L, 802L));
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(successAttempt), JobStatus.SUCCEEDED, 801L, 800L, 802L,
+              true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2771,8 +2881,8 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 1001L, 1000L, 1002L),
-          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.FAILED, 1001L, 1000L, 1002L, true),
+          new Job(1L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2791,7 +2901,7 @@ class ConnectionsHandlerTest {
       final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt),
-              JobStatus.CANCELLED, 1001L, 1000L, 1002L));
+              JobStatus.CANCELLED, 1001L, 1000L, 1002L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2809,7 +2919,7 @@ class ConnectionsHandlerTest {
       final UUID connectionId = standardSync.getConnectionId();
       final Attempt attempt = new Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L);
       final List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 1001L, 1000L, 1002L));
+          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.SUCCEEDED, 1001L, 1000L, 1002L, true));
       when(jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(), 10))
               .thenReturn(jobs);
@@ -2894,12 +3004,17 @@ class ConnectionsHandlerTest {
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
 
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+          .withSourceDefinitionId(UUID.randomUUID());
+
       when(catalogService.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(source);
       when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(WORKSPACE);
-      when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(
-          new StandardDestinationDefinition().withDestinationDefinitionId(DESTINATION_DEFINITION_ID));
+      when(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(destinationDefinition);
+      when(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID)).thenReturn(sourceDefinition);
       when(connectorDefinitionSpecificationHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId()
           .workspaceId(WORKSPACE_ID).destinationDefinitionId(DESTINATION_DEFINITION_ID)))
               .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
@@ -2932,7 +3047,8 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test
@@ -3058,7 +3174,46 @@ class ConnectionsHandlerTest {
 
       verify(notificationHelper).notifySchemaDiffToApply(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
           apiPojoConverters.internalToConnectionRead(originalSync),
-          source, EMAIL);
+          source, EMAIL, false);
+    }
+
+    @Test
+    void testSendingNotificationToManuallyApplySchemaChangeWithPropagationDisabled()
+        throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException,
+        io.airbyte.config.persistence.ConfigNotFoundException {
+      // Override the non-breaking changes preference to DISABLE so that the changes are not
+      // auto-propagated, but needs to be manually applied.
+      standardSync.setNonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+      when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      final StandardSync originalSync = Jsons.clone(standardSync);
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+              Field.of(SKU, JsonSchemaType.STRING),
+              newField),
+          SOURCE_VERSION);
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
+
+      verify(notificationHelper).notifySchemaDiffToApply(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source, EMAIL, true);
     }
 
     @Test
@@ -3183,6 +3338,23 @@ class ConnectionsHandlerTest {
       assertEquals(propagatedDiff, result.getAppliedDiff());
     }
 
+    @Test
+    void getConnectionContextReturnsConnectionContext() {
+      final var connectionId = UUID.randomUUID();
+      final var context = new ConnectionContext()
+          .withConnectionId(connectionId)
+          .withSourceId(UUID.randomUUID())
+          .withDestinationId(UUID.randomUUID())
+          .withSourceDefinitionId(UUID.randomUUID())
+          .withDestinationDefinitionId(UUID.randomUUID())
+          .withWorkspaceId(UUID.randomUUID())
+          .withOrganizationId(UUID.randomUUID());
+      doReturn(context).when(contextBuilder).fromConnectionId(connectionId);
+      final var result = connectionsHandler.getConnectionContext(connectionId);
+      final var expected = CommonConvertersKt.toServerApi(context);
+      assertEquals(expected, result);
+    }
+
   }
 
   @Nested
@@ -3219,7 +3391,9 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper);
+          mapperSecretHelper, metricClient,
+          licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test
@@ -3264,7 +3438,8 @@ class ConnectionsHandlerTest {
           jobStatus,
           startedAt.toEpochMilli(),
           createdAt.toEpochMilli(),
-          updatedAt.toEpochMilli());
+          updatedAt.toEpochMilli(),
+          true);
       final List<Job> jobList = List.of(job);
       final JobRead jobRead = new JobRead()
           .id(job.getId())

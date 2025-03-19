@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.tracker;
@@ -91,21 +91,21 @@ class TrackingMetadataTest {
     assertTrue(TrackingMetadata.generateJobAttemptMetadata(null).isEmpty());
 
     // There is a job, but it has no attempts.
-    final Job jobWithNoAttempts = new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(), JobStatus.PENDING, 0L, 0, 0);
+    final Job jobWithNoAttempts = new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(), JobStatus.PENDING, 0L, 0, 0, true);
     assertTrue(TrackingMetadata.generateJobAttemptMetadata(jobWithNoAttempts).isEmpty());
 
     // There is a job, and it has an attempt, but the attempt has null output.
     final Attempt mockAttemptWithNullOutput = mock(Attempt.class);
     when(mockAttemptWithNullOutput.getOutput()).thenReturn(null);
     final Job jobWithNullOutput =
-        new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0);
+        new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0, true);
     assertTrue(TrackingMetadata.generateJobAttemptMetadata(jobWithNullOutput).isEmpty());
 
     // There is a job, and it has an attempt, but the attempt has empty output.
     final Attempt mockAttemptWithEmptyOutput = mock(Attempt.class);
     when(mockAttemptWithEmptyOutput.getOutput()).thenReturn(Optional.empty());
     final Job jobWithEmptyOutput =
-        new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0);
+        new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0, true);
     assertTrue(TrackingMetadata.generateJobAttemptMetadata(jobWithEmptyOutput).isEmpty());
 
     // There is a job, and it has an attempt, and the attempt has output, but the output has no sync
@@ -114,7 +114,8 @@ class TrackingMetadataTest {
     final JobOutput mockJobOutputWithoutSync = mock(JobOutput.class);
     when(mockAttemptWithOutput.getOutput()).thenReturn(Optional.of(mockJobOutputWithoutSync));
     when(mockJobOutputWithoutSync.getSync()).thenReturn(null);
-    final Job jobWithoutSyncInfo = new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithOutput), JobStatus.PENDING, 0L, 0, 0);
+    final Job jobWithoutSyncInfo =
+        new Job(1, JobConfig.ConfigType.SYNC, UNUSED, null, List.of(mockAttemptWithOutput), JobStatus.PENDING, 0L, 0, 0, true);
     assertTrue(TrackingMetadata.generateJobAttemptMetadata(jobWithoutSyncInfo).isEmpty());
   }
 

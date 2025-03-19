@@ -18,7 +18,7 @@ fun registerTestSuite(name: String, includeTags: Array<String> = emptyArray()) {
 
       sources {
         java {
-          setSrcDirs(listOf("src/test-acceptance/java"))
+          setSrcDirs(listOf("src/test-acceptance/java", "src/test-acceptance/kotlin"))
         }
         resources {
           setSrcDirs(listOf("src/test-acceptance/resources"))
@@ -68,6 +68,7 @@ configurations.configureEach {
 
 dependencies {
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
@@ -95,6 +96,7 @@ dependencies {
   testImplementation("com.airbyte:api:0.39.2")
 
   testImplementation(libs.bundles.junit)
+  testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -42,7 +42,7 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivit
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivityImpl;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.workflows.MockConnectorCommandWorkflow;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityCancellationType;
@@ -60,7 +60,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +80,6 @@ class SyncWorkflowTest {
   private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
   private WorkloadStatusCheckActivity workloadStatusCheckActivity;
   private InvokeOperationsActivity invokeOperationsActivity;
-  private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
   private ReportRunTimeActivity reportRunTimeActivity;
 
@@ -133,9 +131,9 @@ class SyncWorkflowTest {
     syncWorker = testEnv.newWorker(SYNC_QUEUE);
     client = testEnv.getWorkflowClient();
 
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
-    sync = syncPair.getKey();
-    syncInput = syncPair.getValue().withSourceId(SOURCE_ID);
+    final var syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
+    sync = syncPair.getFirst();
+    syncInput = syncPair.getSecond().withSourceId(SOURCE_ID);
 
     syncStats = new SyncStats().withRecordsCommitted(10L);
     standardSyncSummary = new StandardSyncSummary().withTotalStats(syncStats);
@@ -146,14 +144,12 @@ class SyncWorkflowTest {
     discoverCatalogHelperActivity = mock(DiscoverCatalogHelperActivityImpl.class);
     workloadStatusCheckActivity = mock(WorkloadStatusCheckActivityImpl.class);
     invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
-    refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
 
     when(discoverCatalogHelperActivity.postprocess(any())).thenReturn(PostprocessCatalogOutput.Companion.success(null));
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
-    when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
     when(configFetchActivity.getStatus(sync.getConnectionId())).thenReturn(Optional.of(ConnectionStatus.ACTIVE));
     when(configFetchActivity.getSourceConfig(SOURCE_ID)).thenReturn(Jsons.emptyObject());
 
@@ -236,7 +232,6 @@ class SyncWorkflowTest {
         discoverCatalogHelperActivity,
         workloadStatusCheckActivity,
         invokeOperationsActivity,
-        refreshSchemaActivity,
         configFetchActivity,
         reportRunTimeActivity);
     testEnv.start();
@@ -332,7 +327,6 @@ class SyncWorkflowTest {
 
   @Test
   void testGetProperFailureIfRefreshFails() throws Exception {
-    when(refreshSchemaActivity.shouldRefreshSchema(any())).thenReturn(true);
     doThrow(new RuntimeException())
         .when(discoverCatalogHelperActivity).postprocess(any());
     final StandardSyncOutput output = execute();

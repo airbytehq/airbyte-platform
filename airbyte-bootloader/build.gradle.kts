@@ -13,11 +13,10 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.flyway)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
-  implementation(libs.guava)
-  implementation(libs.apache.commons.lang)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -60,7 +59,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.bootloader.Application"
+    mainClass = "io.airbyte.bootloader.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

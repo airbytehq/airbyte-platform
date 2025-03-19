@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.license
 
 import io.airbyte.commons.license.AirbyteLicense.LicenseType
@@ -17,5 +18,5 @@ class ActiveAirbyteLicense {
   var license: AirbyteLicense? = null
 
   val isPro: Boolean
-    get() = license?.takeIf { it.type == LicenseType.PRO }?.let { true } ?: false
+    get() = license?.takeIf { it.type == LicenseType.PRO }?.let { _ -> true } ?: false
 }

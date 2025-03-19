@@ -15,6 +15,7 @@ import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const SettingsPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { trackingStrategy } = useGetInstanceConfiguration();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
@@ -25,7 +26,6 @@ export const SettingsPage: React.FC = () => {
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
-  const { formatMessage } = useIntl();
   const showLicenseUi = licenseUi && canViewLicenseSettings;
 
   return (
@@ -45,48 +45,51 @@ export const SettingsPage: React.FC = () => {
             />
           )}
         </SettingsNavigationBlock>
-        {canViewWorkspaceSettings && (
-          <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
-            {multiWorkspaceUI && (
-              <SettingsLink
-                iconType="community"
-                name={formatMessage({
-                  id: "settings.general",
-                })}
-                to={SettingsRoutePaths.Workspace}
-              />
-            )}
-            {!multiWorkspaceUI && (
-              <>
-                <SettingsLink
-                  iconType="source"
-                  count={countNewSourceVersion}
-                  name={formatMessage({ id: "tables.sources" })}
-                  to={SettingsRoutePaths.Source}
-                />
-
-                <SettingsLink
-                  iconType="destination"
-                  count={countNewDestinationVersion}
-                  name={formatMessage({ id: "tables.destinations" })}
-                  to={SettingsRoutePaths.Destination}
-                />
-              </>
-            )}
+        <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
+          <SettingsLink
+            iconType="gear"
+            name={formatMessage({
+              id: "settings.general",
+            })}
+            to={SettingsRoutePaths.Workspace}
+          />
+          {multiWorkspaceUI && canViewWorkspaceSettings && (
             <SettingsLink
-              iconType="bell"
-              name={formatMessage({ id: "settings.notifications" })}
-              to={SettingsRoutePaths.Notifications}
+              iconType="community"
+              name={formatMessage({ id: "settings.members" })}
+              to={SettingsRoutePaths.WorkspaceMembers}
             />
-            {trackingStrategy === InstanceConfigurationResponseTrackingStrategy.segment && (
+          )}
+          {canViewWorkspaceSettings && !multiWorkspaceUI && (
+            <>
               <SettingsLink
-                iconType="chart"
-                name={formatMessage({ id: "settings.metrics" })}
-                to={SettingsRoutePaths.Metrics}
+                iconType="source"
+                count={countNewSourceVersion}
+                name={formatMessage({ id: "tables.sources" })}
+                to={SettingsRoutePaths.Source}
               />
-            )}
-          </SettingsNavigationBlock>
-        )}
+
+              <SettingsLink
+                iconType="destination"
+                count={countNewDestinationVersion}
+                name={formatMessage({ id: "tables.destinations" })}
+                to={SettingsRoutePaths.Destination}
+              />
+            </>
+          )}
+          <SettingsLink
+            iconType="bell"
+            name={formatMessage({ id: "settings.notifications" })}
+            to={SettingsRoutePaths.Notifications}
+          />
+          {canViewWorkspaceSettings && trackingStrategy === InstanceConfigurationResponseTrackingStrategy.segment && (
+            <SettingsLink
+              iconType="chart"
+              name={formatMessage({ id: "settings.metrics" })}
+              to={SettingsRoutePaths.Metrics}
+            />
+          )}
+        </SettingsNavigationBlock>
         {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
             {canViewOrganizationSettings && (

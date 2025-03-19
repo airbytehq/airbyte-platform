@@ -86,9 +86,22 @@ export const InvoiceGrid: React.FC<InvoiceGridProps> = ({ invoices, hasMore }) =
 
             <div className={styles.invoiceGrid__open}>
               <Text>
-                <ExternalLink href={invoice.invoiceUrl} opensInNewTab className={styles.invoiceGrid__openLink}>
+                <ExternalLink
+                  href={invoice.invoiceUrl}
+                  opensInNewTab
+                  className={styles.invoiceGrid__openLink}
+                  {...(invoice.status === "open" && {
+                    variant: "primary",
+                  })}
+                >
                   <FlexContainer alignItems="center" gap="sm">
-                    <FormattedMessage id="settings.organization.billing.invoices.viewInvoice" />
+                    <FormattedMessage
+                      id={
+                        invoice.status === "open"
+                          ? "settings.organization.billing.invoices.payNow"
+                          : "settings.organization.billing.invoices.viewInvoice"
+                      }
+                    />
                   </FlexContainer>
                 </ExternalLink>
               </Text>

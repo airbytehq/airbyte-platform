@@ -23,7 +23,9 @@ import { getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
 import { MappingRow } from "./MappingRow";
 
 export const StreamMappingsCard: React.FC<{ streamDescriptorKey: string }> = ({ streamDescriptorKey }) => {
-  const { streamsWithMappings, reorderMappings, addMappingForStream } = useMappingContext();
+  const { streamsWithMappings, reorderMappings, addMappingForStream, validatingStreams } = useMappingContext();
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+
   const mappingsForStream = streamsWithMappings[streamDescriptorKey];
   const { name: streamName } = getStreamDescriptorForKey(streamDescriptorKey);
   const sensors = useSensors(
@@ -55,7 +57,14 @@ export const StreamMappingsCard: React.FC<{ streamDescriptorKey: string }> = ({ 
             {mappingsForStream.map((mapping) => (
               <MappingRow key={mapping.id} id={mapping.id} streamDescriptorKey={streamDescriptorKey} />
             ))}
-            <Button onClick={() => addMappingForStream(streamDescriptorKey)} variant="secondary" size="sm" width={125}>
+            <Button
+              onClick={() => addMappingForStream(streamDescriptorKey)}
+              data-testid="add-mapping-for-stream"
+              variant="secondary"
+              size="sm"
+              width={125}
+              disabled={isStreamValidating}
+            >
               <FormattedMessage id="connections.mappings.addMapping" />
             </Button>
           </FlexContainer>

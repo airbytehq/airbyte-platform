@@ -2,7 +2,7 @@ import { load } from "js-yaml";
 import { JSONSchema7 } from "json-schema";
 import isString from "lodash/isString";
 import merge from "lodash/merge";
-import { FieldPath, useWatch } from "react-hook-form";
+import omit from "lodash/omit";
 import semver from "semver";
 import { match } from "ts-pattern";
 
@@ -47,6 +47,7 @@ import {
   NoAuthType,
   HttpRequester,
   OAuthAuthenticatorRefreshTokenUpdater,
+  OAuthConfigSpecificationOauthConnectorInputSpecification,
   RecordSelector,
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
@@ -57,8 +58,12 @@ import {
   WaitTimeFromHeader,
   SimpleRetrieverDecoder,
   XmlDecoderType,
+  JwtAuthenticator,
+  JwtAuthenticatorType,
+  RequestOptionType,
 } from "core/api/types/ConnectorManifest";
 
+import { DecoderTypeConfig } from "./Builder/DecoderConfig";
 import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
@@ -69,7 +74,8 @@ export interface BuilderState {
   formValues: BuilderFormValues;
   previewValues?: BuilderFormValues;
   yaml: string;
-  view: "global" | "inputs" | number;
+  customComponentsCode?: string;
+  view: "global" | "inputs" | "components" | number;
   testStreamIndex: number;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
@@ -88,8 +94,75 @@ export interface BuilderFormInput {
 
 type BuilderHttpMethod = "GET" | "POST";
 
-export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "gzip JSON"] as const;
-export type BuilderDecoder = (typeof BUILDER_DECODER_TYPES)[number];
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "CSV"] as const;
+
+export type ManifestDecoderType = "JsonDecoder" | "XmlDecoder" | "JsonlDecoder" | "IterableDecoder" | "CsvDecoder";
+
+interface JSONDecoderConfig {
+  type: "JSON";
+}
+
+interface XMLDecoderConfig {
+  type: "XML";
+}
+
+interface JSONLinesDecoderConfig {
+  type: "JSON Lines";
+}
+
+interface IterableDecoderConfig {
+  type: "Iterable";
+}
+
+interface CSVDecoderConfig {
+  type: "CSV";
+  delimiter?: string;
+  encoding?: string;
+}
+
+export type BuilderDecoderConfig =
+  | JSONDecoderConfig
+  | XMLDecoderConfig
+  | JSONLinesDecoderConfig
+  | IterableDecoderConfig
+  | CSVDecoderConfig;
+
+// Intermediary mapping of builder -> manifest decoder types
+// TODO: find a way to abstract/simplify the decoder manifest -> UI typing so we don't have so many places to update when adding new decoders
+const DECODER_TYPE_MAP: Record<(typeof BUILDER_DECODER_TYPES)[number], ManifestDecoderType> = {
+  JSON: "JsonDecoder",
+  XML: "XmlDecoder",
+  "JSON Lines": "JsonlDecoder",
+  Iterable: "IterableDecoder",
+  CSV: "CsvDecoder",
+} as const;
+
+// Registry of decoder configurations. Additional configurations can be added here as more decoders are supported.
+export const DECODER_CONFIGS: Partial<Record<(typeof BUILDER_DECODER_TYPES)[number], DecoderTypeConfig>> = {
+  CSV: {
+    title: "connectorBuilder.decoder.csvDecoder.label",
+    fields: [
+      {
+        key: "delimiter",
+        type: "string",
+        label: "connectorBuilder.decoder.csvDecoder.delimiter.label",
+        tooltip: "connectorBuilder.decoder.csvDecoder.delimiter.tooltip",
+        manifestPath: "CsvDecoder.properties.delimiter",
+        placeholder: ",",
+        optional: true,
+      },
+      {
+        key: "encoding",
+        type: "string",
+        label: "connectorBuilder.decoder.csvDecoder.encoding.label",
+        tooltip: "connectorBuilder.decoder.csvDecoder.encoding.tooltip",
+        manifestPath: "CsvDecoder.properties.encoding",
+        placeholder: "utf-8",
+        optional: true,
+      },
+    ],
+  },
+};
 
 interface BuilderRequestOptions {
   requestParameters: Array<[string, string]>;
@@ -112,15 +185,37 @@ export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "
 export type BuilderFormAuthenticator =
   | NoAuth
   | BuilderFormOAuthAuthenticator
+  | BuilderFormDeclarativeOAuthAuthenticator
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
+  | BuilderJwtAuthenticator
   | BuilderSessionTokenAuthenticator;
+
+export type BuilderJwtAuthenticator = Omit<JwtAuthenticator, "additional_jwt_headers" | "additional_jwt_headers"> & {
+  additional_jwt_headers?: Array<[string, string]>;
+  additional_jwt_payload?: Array<[string, string]>;
+};
+
+export const DeclarativeOAuthAuthenticatorType = "DeclarativeOAuthAuthenticator" as const;
+
+export type BuilderFormDeclarativeOAuthAuthenticator = Omit<BuilderFormOAuthAuthenticator, "type"> & {
+  type: typeof DeclarativeOAuthAuthenticatorType;
+  declarative: Omit<OAuthConfigSpecificationOauthConnectorInputSpecification, "extract_output"> & {
+    access_token_key: string; // extract_output is partially generated from this
+  };
+};
+
+const isAuthenticatorDeclarativeOAuth = (
+  authenticator: BuilderFormValues["global"]["authenticator"]
+): authenticator is BuilderFormDeclarativeOAuthAuthenticator =>
+  typeof authenticator === "object" && authenticator.type === DeclarativeOAuthAuthenticatorType;
 
 export type BuilderFormOAuthAuthenticator = Omit<
   OAuthAuthenticator,
-  "refresh_request_body" | "refresh_token_updater"
+  "type" | "refresh_request_body" | "refresh_token_updater"
 > & {
+  type: OAuthAuthenticatorType | typeof DeclarativeOAuthAuthenticatorType;
   refresh_request_body: Array<[string, string]>;
   refresh_token_updater?: Omit<
     OAuthAuthenticatorRefreshTokenUpdater,
@@ -253,6 +348,10 @@ export type BuilderRequestBody =
   | {
       type: "string_freeform";
       value: string;
+    }
+  | {
+      type: "graphql";
+      value: string;
     };
 
 export interface BuilderRecordSelector {
@@ -270,7 +369,7 @@ export interface BuilderStream {
   urlPath: string;
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
-  decoder: BuilderDecoder;
+  decoder: BuilderDecoderConfig;
   requestOptions: BuilderRequestOptions;
   recordSelector?: BuilderRecordSelector | YamlString;
   paginator?: BuilderPaginator | YamlString;
@@ -382,7 +481,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   urlPath: "",
   primaryKey: [],
   httpMethod: "GET",
-  decoder: "JSON",
+  decoder: { type: "JSON" },
   schema: DEFAULT_SCHEMA,
   requestOptions: {
     requestParameters: [],
@@ -406,6 +505,7 @@ export const NO_AUTH: NoAuthType = "NoAuth";
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
 export const BEARER_AUTHENTICATOR: BearerAuthenticatorType = "BearerAuthenticator";
 export const BASIC_AUTHENTICATOR: BasicHttpAuthenticatorType = "BasicHttpAuthenticator";
+export const JWT_AUTHENTICATOR: JwtAuthenticatorType = "JwtAuthenticator";
 export const OAUTH_AUTHENTICATOR: OAuthAuthenticatorType = "OAuthAuthenticator";
 export const SESSION_TOKEN_AUTHENTICATOR: SessionTokenAuthenticatorType = "SessionTokenAuthenticator";
 export const SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR: SessionTokenRequestApiKeyAuthenticatorType = "ApiKey";
@@ -497,14 +597,21 @@ export function builderAuthenticatorToManifest(
   if (authenticator.type === "NoAuth") {
     return undefined;
   }
-  if (authenticator.type === "OAuthAuthenticator") {
+  if (authenticator.type === OAUTH_AUTHENTICATOR || authenticator.type === DeclarativeOAuthAuthenticatorType) {
+    const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
     const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
     return {
-      ...authenticator,
+      ...omit(authenticator, "declarative", "type"),
+      type: OAUTH_AUTHENTICATOR,
       refresh_token: authenticator.grant_type === "client_credentials" ? undefined : authenticator.refresh_token,
       refresh_token_updater:
         authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
           ? undefined
+          : authenticator.type === DeclarativeOAuthAuthenticatorType && isRefreshTokenFlowEnabled
+          ? {
+              ...refresh_token_updater,
+              refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
+            }
           : {
               ...refresh_token_updater,
               access_token_config_path: [
@@ -516,13 +623,18 @@ export function builderAuthenticatorToManifest(
               refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
             },
       refresh_request_body: Object.fromEntries(authenticator.refresh_request_body),
-    };
+    } satisfies OAuthAuthenticator;
   }
   if (authenticator.type === "ApiKeyAuthenticator") {
+    const convertedInjectInto = authenticator.inject_into
+      ? convertRequestOptionFieldPathToLegacyFieldName(authenticator.inject_into)
+      : undefined;
+
     return {
       ...authenticator,
       header: undefined,
       api_token: authenticator.api_token,
+      inject_into: convertedInjectInto,
     };
   }
   if (authenticator.type === "BearerAuthenticator") {
@@ -536,6 +648,14 @@ export function builderAuthenticatorToManifest(
       ...authenticator,
       username: authenticator.username,
       password: authenticator.password,
+    };
+  }
+  if (authenticator.type === "JwtAuthenticator") {
+    return {
+      ...authenticator,
+      secret_key: authenticator.secret_key,
+      additional_jwt_headers: fromEntriesOrUndefined(authenticator.additional_jwt_headers ?? []),
+      additional_jwt_payload: fromEntriesOrUndefined(authenticator.additional_jwt_payload ?? []),
     };
   }
   if (authenticator.type === "SessionTokenAuthenticator") {
@@ -611,17 +731,45 @@ export function builderPaginatorToManifest(
   } else if (paginator?.pageTokenOption.inject_into === "path") {
     pageTokenOption = { type: "RequestPath" };
   } else {
-    pageTokenOption = {
-      type: "RequestOption",
-      inject_into: paginator.pageTokenOption.inject_into,
-      field_name: paginator.pageTokenOption.field_name,
-    };
+    pageTokenOption = convertRequestOptionFieldPathToLegacyFieldName(paginator.pageTokenOption);
   }
+
+  let pageSizeOption: RequestOption | undefined;
+  if (paginator.strategy.page_size && paginator.pageSizeOption) {
+    pageSizeOption = convertRequestOptionFieldPathToLegacyFieldName(paginator.pageSizeOption);
+  }
+
   return {
     type: "DefaultPaginator",
     page_token_option: pageTokenOption,
-    page_size_option: paginator.strategy.page_size ? paginator.pageSizeOption : undefined,
+    page_size_option: pageSizeOption,
     pagination_strategy: builderPaginationStrategyToManifest(paginator.strategy),
+  };
+}
+
+function convertRequestOptionFieldPathToLegacyFieldName(option: RequestOptionOrPathInject): RequestOption {
+  // We are introducing a field_path field (type: string[]) to the RequestOption type, to support nested field injection.
+  // Eventually, we should deprecate the existing field_name field (type: string), since field_path is more flexible.
+  // However, because existing builder projects already use field_name and we trigger stream change warnings on any schema change,
+  // we need to support both fields for now to avoid triggering unnecessary and potentially confusing warnings.
+
+  // This function converts a single-element field_path in the UI to field_name in the YAML manifest:
+  // RequestOption.field_path: ['page_size'] -> RequestOption.field_name: 'page_size'
+  // TODO: Remove this function once we are ready to fully deprecate RequestOption.field_name
+  if ("inject_into" in option && option.inject_into === "path") {
+    throw new Error("Cannot convert path injection to manifest");
+  }
+
+  if (option.field_path && option.field_path.length === 1) {
+    return {
+      type: RequestOptionType.RequestOption,
+      inject_into: option.inject_into,
+      field_name: option.field_path[0],
+    };
+  }
+  return {
+    type: RequestOptionType.RequestOption,
+    ...option,
   };
 }
 
@@ -643,6 +791,12 @@ export function builderIncrementalSyncToManifest(
     datetime_format,
     ...regularFields
   } = formValues;
+
+  const startTimeOption = start_time_option
+    ? convertRequestOptionFieldPathToLegacyFieldName(start_time_option)
+    : undefined;
+  const endTimeOption = end_time_option ? convertRequestOptionFieldPathToLegacyFieldName(end_time_option) : undefined;
+
   const startDatetime = {
     type: "MinMaxDatetime" as const,
     datetime: start_datetime.value,
@@ -659,8 +813,8 @@ export function builderIncrementalSyncToManifest(
   if (filter_mode === "range") {
     return {
       ...manifestIncrementalSync,
-      start_time_option,
-      end_time_option,
+      start_time_option: startTimeOption,
+      end_time_option: endTimeOption,
       end_datetime: {
         type: "MinMaxDatetime",
         datetime:
@@ -676,7 +830,7 @@ export function builderIncrementalSyncToManifest(
   if (filter_mode === "start") {
     return {
       ...manifestIncrementalSync,
-      start_time_option,
+      start_time_option: startTimeOption,
     };
   }
   return {
@@ -693,10 +847,16 @@ export function builderParameterizedRequestsToManifest(
   }
 
   return parameterizedRequests.map((parameterizedRequest) => {
-    return {
+    const request = {
       ...parameterizedRequest,
       values: parameterizedRequest.values.value,
     };
+
+    if (request.request_option) {
+      request.request_option = convertRequestOptionFieldPathToLegacyFieldName(request.request_option);
+    }
+
+    return request;
   });
 }
 
@@ -720,7 +880,9 @@ export function builderParentStreamsToManifest(
           {
             type: "ParentStreamConfig",
             parent_key: parentStreamConfiguration.parent_key,
-            request_option: parentStreamConfiguration.request_option,
+            request_option: parentStreamConfiguration.request_option
+              ? convertRequestOptionFieldPathToLegacyFieldName(parentStreamConfiguration.request_option)
+              : undefined,
             partition_field: parentStreamConfiguration.partition_field,
             stream: streamRef(parentStream.name),
             incremental_dependency: parentStreamConfiguration.incremental_dependency ? true : undefined,
@@ -844,6 +1006,8 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
             : Object.keys(parsedJson).length > 0
             ? parsedJson
             : undefined
+          : builderRequestBody.type === "graphql"
+          ? { query: builderRequestBody.value.replace(/\s+/g, " ").trim() }
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
@@ -885,20 +1049,29 @@ export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSel
   });
 }
 
-const builderDecoderToManifest = (decoder: BuilderDecoder): SimpleRetrieverDecoder | undefined => {
-  switch (decoder) {
-    case "JSON":
-      // JSON is the default decoder, so don't specify it to keep manifests lean
-      return undefined;
-    case "XML":
-      return { type: "XmlDecoder" };
-    case "JSON Lines":
-      return { type: "JsonlDecoder" };
-    case "Iterable":
-      return { type: "IterableDecoder" };
-    case "gzip JSON":
-      return { type: "GzipJsonDecoder" };
+const builderDecoderToManifest = (decoder: BuilderDecoderConfig): SimpleRetrieverDecoder | undefined => {
+  // No decoder is specified for JSON responses
+  if (decoder.type === "JSON") {
+    return undefined;
   }
+
+  if (decoder.type === "CSV") {
+    const result: SimpleRetrieverDecoder = {
+      type: "CsvDecoder" as const,
+    };
+
+    if (decoder.delimiter) {
+      result.delimiter = decoder.delimiter;
+    }
+
+    if (decoder.encoding) {
+      result.encoding = decoder.encoding;
+    }
+
+    return result;
+  }
+
+  return { type: DECODER_TYPE_MAP[decoder.type] };
 };
 
 type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
@@ -993,6 +1166,88 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   };
 };
 
+export const addDeclarativeOAuthAuthenticatorToSpec = (
+  spec: Spec,
+  authenticator: BuilderFormDeclarativeOAuthAuthenticator
+): Spec => {
+  const updatedSpec = structuredClone(spec);
+
+  const isRefreshTokenFlowEnabled = !!authenticator.refresh_token_updater;
+  const accessTokenKey = authenticator.declarative.access_token_key;
+
+  const accessTokenConfigPath = extractInterpolatedConfigKey(authenticator.access_token_value);
+  const refreshTokenConfigPath = extractInterpolatedConfigKey(authenticator.refresh_token);
+
+  updatedSpec.advanced_auth = {
+    auth_flow_type: "oauth2.0",
+    oauth_config_specification: {
+      oauth_connector_input_specification: {
+        ...omit(authenticator.declarative, [
+          "access_token_key",
+          "access_token_headers",
+          "access_token_params",
+          "state",
+        ]),
+        extract_output: isRefreshTokenFlowEnabled
+          ? [authenticator.declarative.access_token_key, "refresh_token"]
+          : [authenticator.declarative.access_token_key],
+        state: authenticator.declarative.state ? JSON.parse(authenticator.declarative.state) : undefined,
+
+        access_token_headers: authenticator.declarative.access_token_headers
+          ? Object.fromEntries(authenticator.declarative.access_token_headers)
+          : undefined,
+
+        access_token_params: authenticator.declarative.access_token_params
+          ? Object.fromEntries(authenticator.declarative.access_token_params)
+          : undefined,
+      } as OAuthConfigSpecificationOauthConnectorInputSpecification,
+      complete_oauth_output_specification: {
+        required: isRefreshTokenFlowEnabled ? [accessTokenKey, "refresh_token"] : [accessTokenKey],
+        properties: {
+          [accessTokenKey]: {
+            type: "string",
+            path_in_connector_config: [accessTokenConfigPath],
+          },
+          ...(isRefreshTokenFlowEnabled
+            ? {
+                refresh_token: {
+                  type: "string",
+                  path_in_connector_config: [refreshTokenConfigPath],
+                },
+              }
+            : {}),
+        },
+      },
+      complete_oauth_server_input_specification: {
+        required: ["client_id", "client_secret"],
+        properties: {
+          client_id: {
+            type: "string",
+          },
+          client_secret: {
+            type: "string",
+          },
+        },
+      },
+      complete_oauth_server_output_specification: {
+        required: ["client_id", "client_secret"],
+        properties: {
+          client_id: {
+            type: "string",
+            path_in_connector_config: ["client_id"],
+          },
+          client_secret: {
+            type: "string",
+            path_in_connector_config: ["client_secret"],
+          },
+        },
+      },
+    },
+  };
+
+  return updatedSpec;
+};
+
 export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -1044,6 +1299,11 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     authenticator: convertOrLoadYamlString(values.global.authenticator, builderAuthenticatorToManifest),
   };
 
+  let spec = builderInputsToSpec(values.inputs);
+  if (isAuthenticatorDeclarativeOAuth(values.global.authenticator)) {
+    spec = addDeclarativeOAuthAuthenticatorToSpec(spec, values.global.authenticator);
+  }
+
   return {
     version: CDK_VERSION,
     type: "DeclarativeSource",
@@ -1057,7 +1317,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: streamRefs,
     schemas: streamNameToSchema,
-    spec: builderInputsToSpec(values.inputs),
+    spec,
     metadata: builderFormValuesToMetadata(values),
     description: values.description,
   };
@@ -1090,11 +1350,6 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   },
   primary_key: undefined,
 };
-
-export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
-  useWatch<BuilderState, TPath>({ name: path, ...options });
-
-export type BuilderPathFn = <TPath extends FieldPath<BuilderState>>(fieldPath: string) => TPath;
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
 

@@ -3,6 +3,7 @@ import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
@@ -41,12 +42,10 @@ export const FrequencyCell: ColumnDefTemplate<
   }
 
   return (
-    <Link
-      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
-      variant="primary"
-      className={styles.cellContent}
-    >
-      {body}
-    </Link>
+    <Box px="lg" py="md">
+      <Link to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)} variant="primary">
+        {body}
+      </Link>
+    </Box>
   );
 };

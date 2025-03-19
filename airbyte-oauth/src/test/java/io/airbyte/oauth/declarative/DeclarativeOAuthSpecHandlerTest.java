@@ -1,13 +1,11 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.declarative;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -72,24 +70,9 @@ class DeclarativeOAuthSpecHandlerTest {
   @Test
   void testRenderStringTemplate() throws IOException {
     final Map<String, String> templateValues = Map.of("key", "value");
-    final String templateString = "This is a {key}";
-    final String expected = "This is a value";
+    final String templateString = "{{ key }}";
+    final String expected = "value";
     assertEquals(expected, handler.renderStringTemplate(templateValues, templateString));
-  }
-
-  @Test
-  void testCheckContext() {
-    final String templateString = "This string contains a valid variable {test}";
-    assertDoesNotThrow(() -> handler.checkContext(templateString));
-  }
-
-  @Test
-  void testCheckContextRestricted() {
-    final String restrictedString = "This string contains a restricted variable {env:test_value}";
-    IOException exception = assertThrows(IOException.class, () -> handler.checkContext(restrictedString));
-    final String expected = "DeclarativeOAuthSpecHandler(): the `env:` usage in "
-        + "`This string contains a restricted variable {env:test_value}` is not allowed for string interpolation.";
-    assertEquals(expected, exception.getMessage());
   }
 
   @Test
@@ -106,9 +89,10 @@ class DeclarativeOAuthSpecHandlerTest {
   void testRenderCompleteOAuthHeaders() throws IOException {
     final JsonNode userConfig = Jsons.jsonNode(
         Map.of(
-            DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY, Map.of("header_key", "header_value")));
+            DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY,
+            Map.of("{{ key }}", "{{ value }}")));
 
-    final Map<String, String> templateValues = Map.of("key", "value");
+    final Map<String, String> templateValues = Map.of("key", "header_key", "value", "header_value");
     final Map<String, String> headers = handler.renderCompleteOAuthHeaders(templateValues, userConfig);
     assertEquals("header_value", headers.get("header_key"));
   }

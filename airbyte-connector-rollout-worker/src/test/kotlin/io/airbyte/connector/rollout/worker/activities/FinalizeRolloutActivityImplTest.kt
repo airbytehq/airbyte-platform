@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
@@ -59,8 +62,8 @@ class FinalizeRolloutActivityImplTest {
     verify { connectorRolloutApi.finalizeConnectorRollout(any()) }
   }
 
-  private fun getMockConnectorRolloutFinalizeResponse(): ConnectorRolloutFinalizeResponse {
-    return ConnectorRolloutFinalizeResponse(
+  private fun getMockConnectorRolloutFinalizeResponse(): ConnectorRolloutFinalizeResponse =
+    ConnectorRolloutFinalizeResponse(
       ConnectorRolloutRead(
         id = UUID.randomUUID(),
         dockerRepository = DOCKER_REPOSITORY,
@@ -71,5 +74,4 @@ class FinalizeRolloutActivityImplTest {
         state = ConnectorRolloutState.SUCCEEDED,
       ),
     )
-  }
 }

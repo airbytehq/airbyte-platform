@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -64,6 +64,7 @@ private val buckets =
     workloadOutput = "workload",
     activityPayload = "payload",
     auditLogging = null,
+    profilerOutput = null,
   )
 
 internal class DocumentTypeTest {
@@ -279,6 +280,7 @@ internal class GcsStorageClientTest {
     every { gcsClient.get(blobId) } returns
       mockk<Blob> {
         every { exists() } returns true
+        every { getBlobId() } returns blobId
       }
     every { gcsClient.readAllBytes(blobId) } returns DOC1.toByteArray()
 
@@ -437,6 +439,7 @@ internal class LocalStorageClientTest {
         activityPayload = "activity-payload",
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
+        profilerOutput = null,
       )
     val localStorageConfig =
       LocalStorageConfig(
@@ -462,6 +465,7 @@ internal class LocalStorageClientTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val localStorageConfig =
       LocalStorageConfig(

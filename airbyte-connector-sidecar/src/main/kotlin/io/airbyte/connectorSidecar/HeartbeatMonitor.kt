@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar
 
 import io.airbyte.workers.models.SidecarInput
@@ -27,9 +31,7 @@ class HeartbeatMonitor(
   private val abort = AtomicBoolean(false)
   private val heartbeatStarted = AtomicBoolean(false)
 
-  fun shouldAbort(): Boolean {
-    return abort.get()
-  }
+  fun shouldAbort(): Boolean = abort.get()
 
   fun startHeartbeatThread(sidecarInput: SidecarInput) {
     if (heartbeatStarted.getAndSet(true)) {

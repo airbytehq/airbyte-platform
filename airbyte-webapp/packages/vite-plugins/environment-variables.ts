@@ -17,9 +17,20 @@ export function environmentVariables(): Plugin {
     name: "airbyte/environment-variables",
     config: (_config, { command, mode }) => {
       // Load any cloud-specific .env files
-      let cloudEnvVariables = {};
+      let additionalVariables = {};
+      const envPath = process.env.WEBAPP_ENV_PATH;
+
+      if (envPath) {
+        if (!fs.existsSync(envPath)) {
+          throw new Error(`Could not find .env file at ${envPath}. Are you sure this file exists?`);
+        }
+        console.log(`Using custom env file at ${chalk.green(envPath)}\n`);
+        additionalVariables = { ...loadEnv(mode, path.dirname(envPath), ["REACT_APP_"]) };
+      }
+
       const cloudEnv = process.env.WEBAPP_BUILD_CLOUD_ENV;
-      if (cloudEnv) {
+
+      if (cloudEnv && !envPath) {
         console.log(`☁️ Getting env file for cloud environment ${chalk.green(cloudEnv)}\n`);
         const envDirPath = path.join(ROOT_PATH, `../../cloud/cloud-webapp/envs/`, cloudEnv);
 
@@ -30,7 +41,7 @@ export function environmentVariables(): Plugin {
           );
         }
 
-        cloudEnvVariables = { REACT_APP_CLOUD: "true", ...loadEnv(mode, envDirPath, ["REACT_APP_"]) };
+        additionalVariables = { REACT_APP_CLOUD: "true", ...loadEnv(mode, envDirPath, ["REACT_APP_"]) };
       }
 
       // Environment variables that should be available in the frontend
@@ -46,8 +57,8 @@ export function environmentVariables(): Plugin {
         "process.env.REACT_APP_VERSION": version,
         "process.env.NODE_ENV": JSON.stringify(mode),
         ...Object.fromEntries([
-          // Any cloud .env files should overwrite OSS .env files
-          ...Object.entries({ ...frontendEnvVariables, ...cloudEnvVariables }).map(([key, value]) => [
+          // Only use frontendEnvVariables if envPath is undefined
+          ...Object.entries({ ...frontendEnvVariables, ...additionalVariables }).map(([key, value]) => [
             `process.env.${key}`,
             JSON.stringify(value),
           ]),
@@ -61,7 +72,7 @@ export function environmentVariables(): Plugin {
       return {
         define: {
           ...processEnv,
-          // This lets us set the verison in a meta tag in index.html
+          // This lets us set the version in a meta tag in index.html
           "import.meta.env.VERSION": version,
         },
       };

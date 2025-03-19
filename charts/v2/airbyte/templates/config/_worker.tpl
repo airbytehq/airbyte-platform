@@ -60,6 +60,13 @@ Renders the worker.activityMaxDelayBetweenAttemptsSeconds environment variable
 {{- end }}
 
 {{/*
+Renders the worker.configRoot value
+*/}}
+{{- define "airbyte.worker.configRoot" }}
+    {{- .Values.worker.configRoot | default "/configs" }}
+{{- end }}
+
+{{/*
 Renders the worker.configRoot environment variable
 */}}
 {{- define "airbyte.worker.configRoot.env" }}
@@ -99,11 +106,11 @@ Renders the worker.maxSyncWorkers value
 Renders the worker.maxSyncWorkers environment variable
 */}}
 {{- define "airbyte.worker.maxSyncWorkers.env" }}
-- name: MAX_SYNC_WORKER
+- name: MAX_SYNC_WORKERS
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: MAX_SYNC_WORKER
+      key: MAX_SYNC_WORKERS
 {{- end }}
 
 {{/*
@@ -251,6 +258,13 @@ Renders the worker.workspaceRoot environment variable
 {{- end }}
 
 {{/*
+Renders the worker.environment value
+*/}}
+{{- define "airbyte.worker.environment" }}
+    {{- "kubernetes" }}
+{{- end }}
+
+{{/*
 Renders the worker.environment environment variable
 */}}
 {{- define "airbyte.worker.environment.env" }}
@@ -289,9 +303,9 @@ Renders the set of all worker config map variables
 ACTIVITY_MAX_ATTEMPT: {{ include "airbyte.worker.activityMaxAttempt" . | quote }}
 ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds" . | quote }}
 ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds" . | quote }}
-CONFIG_ROOT: {{ "/configs" | quote }}
+CONFIG_ROOT: {{ include "airbyte.worker.configRoot" . | quote }}
 MAX_NOTIFY_WORKERS: {{ include "airbyte.worker.maxNotifyWorkers" . | quote }}
-MAX_SYNC_WORKER: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}
+MAX_SYNC_WORKERS: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}
 SHOULD_RUN_NOTIFY_WORKFLOWS: {{ include "airbyte.worker.shouldRunNotifyWorkflows" . | quote }}
 SYNC_JOB_MAX_ATTEMPTS: {{ include "airbyte.worker.syncJobMaxAttempts" . | quote }}
 SYNC_JOB_MAX_TIMEOUT_DAYS: {{ include "airbyte.worker.syncJobMaxTimeoutDays" . | quote }}
@@ -300,5 +314,5 @@ USE_STREAM_CAPABLE_STATE: {{ include "airbyte.worker.useStreamCapableState" . | 
 WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: {{ include "airbyte.worker.workflowFailureRestartDelaySeconds" . | quote }}
 WORKSPACE_DOCKER_MOUNT: {{ include "airbyte.worker.workspaceDockerMount" . | quote }}
 WORKSPACE_ROOT: {{ include "airbyte.worker.workspaceRoot" . | quote }}
-WORKER_ENVIRONMENT: {{ "kubernetes" | quote }}
+WORKER_ENVIRONMENT: {{ include "airbyte.worker.environment" . | quote }}
 {{- end }}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.shared
@@ -18,8 +18,8 @@ typealias ModelConnectorRolloutActorSelectionInfo = io.airbyte.api.model.generat
 typealias ModelActorSyncInfo = io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 
 object ConnectorRolloutActivityHelpers {
-  fun mapToConnectorRollout(rolloutRead: ConnectorRolloutRead): ConnectorRolloutOutput {
-    return ConnectorRolloutOutput(
+  fun mapToConnectorRollout(rolloutRead: ConnectorRolloutRead): ConnectorRolloutOutput =
+    ConnectorRolloutOutput(
       id = rolloutRead.id,
       workflowRunId = rolloutRead.workflowRunId,
       actorDefinitionId = rolloutRead.actorDefinitionId,
@@ -42,10 +42,9 @@ object ConnectorRolloutActivityHelpers {
       actorSelectionInfo = mapActorSelectionInfo(rolloutRead.actorSelectionInfo),
       actorSyncs = mapActorSyncs(rolloutRead.actorSyncs),
     )
-  }
 
-  private fun mapActorSelectionInfo(actorSelectionInfo: ConnectorRolloutActorSelectionInfo?): ModelConnectorRolloutActorSelectionInfo? {
-    return if (actorSelectionInfo == null) {
+  private fun mapActorSelectionInfo(actorSelectionInfo: ConnectorRolloutActorSelectionInfo?): ModelConnectorRolloutActorSelectionInfo? =
+    if (actorSelectionInfo == null) {
       null
     } else {
       ModelConnectorRolloutActorSelectionInfo()
@@ -53,24 +52,22 @@ object ConnectorRolloutActivityHelpers {
         .numPinnedToConnectorRollout(actorSelectionInfo.numPinnedToConnectorRollout)
         .numActorsEligibleOrAlreadyPinned((actorSelectionInfo.numActorsEligibleOrAlreadyPinned))
     }
-  }
 
-  private fun mapActorSyncs(actorSyncs: Map<String, ConnectorRolloutActorSyncInfo>?): Map<UUID, ModelActorSyncInfo>? {
-    return actorSyncs?.map {
-      UUID.fromString(it.key) to
-        ModelActorSyncInfo()
-          .actorId(it.value.actorId)
-          .numFailed(it.value.numFailed)
-          .numSucceeded(it.value.numSucceeded)
-          .numConnections(it.value.numConnections)
-    }?.toMap()
-  }
+  private fun mapActorSyncs(actorSyncs: Map<String, ConnectorRolloutActorSyncInfo>?): Map<UUID, ModelActorSyncInfo>? =
+    actorSyncs
+      ?.map {
+        UUID.fromString(it.key) to
+          ModelActorSyncInfo()
+            .actorId(it.value.actorId)
+            .numFailed(it.value.numFailed)
+            .numSucceeded(it.value.numSucceeded)
+            .numConnections(it.value.numConnections)
+      }?.toMap()
 
-  private fun mapState(state: ConnectorRolloutState): ConnectorEnumRolloutState {
-    return state.let { ConnectorEnumRolloutState.valueOf(it.name) }
-  }
+  private fun mapState(state: ConnectorRolloutState): ConnectorEnumRolloutState = state.let { ConnectorEnumRolloutState.valueOf(it.name) }
 
-  private fun mapRolloutStrategy(strategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy? {
-    return strategy?.let { ConnectorEnumRolloutStrategy.valueOf(it.name) }
-  }
+  private fun mapRolloutStrategy(strategy: ConnectorRolloutStrategy?): ConnectorEnumRolloutStrategy? =
+    strategy?.let {
+      ConnectorEnumRolloutStrategy.valueOf(it.name)
+    }
 }

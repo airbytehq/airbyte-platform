@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -48,8 +52,7 @@ class SpecCommand(
   }
 
   override fun getOutput(id: String): ConnectorJobOutput =
-    workloadClient.getConnectorJobOutput(workloadId = id) {
-        failureReason: FailureReason ->
+    workloadClient.getConnectorJobOutput(workloadId = id) { failureReason: FailureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.SPEC)
         .withSpec(null)

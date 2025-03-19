@@ -261,10 +261,11 @@ components:
                       description: The RECORD AirbyteMessages coming from the read operation for this page
                       items:
                         type: object
-                        # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteRecordMessage"
                     request:
+                      description: The data request that produced the records
                       $ref: "#/components/schemas/HttpRequest"
                     response:
+                      description: The data response from which the records were produced
                       $ref: "#/components/schemas/HttpResponse"
               slice_descriptor:
                 type: object
@@ -273,27 +274,19 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/AirbyteStateMessage"
+              auxiliary_requests:
+                type: array
+                description: Non-data requests made at the slice level, e.g. creation / polling requests for async stream slices
+                items:
+                  $ref: "#/components/schemas/AuxiliaryRequest"
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
         auxiliary_requests:
           type: array
+          description: Non-data requests made at the stream level, e.g. authentication, parent streams
           items:
-            type: object
-            required:
-              - description
-              - request
-              - response
-              - title
-            properties:
-              description:
-                type: string
-              request:
-                $ref: "#/components/schemas/HttpRequest"
-              response:
-                $ref: "#/components/schemas/HttpResponse"
-              title:
-                type: string
+            $ref: "#/components/schemas/AuxiliaryRequest"
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
@@ -303,6 +296,35 @@ components:
         latest_config_update:
           type: object
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
+    AuxiliaryRequest:
+      type: object
+      required:
+        - description
+        - request
+        - response
+        - title
+        - type
+      properties:
+        description:
+          type: string
+        request:
+          $ref: "#/components/schemas/HttpRequest"
+        response:
+          $ref: "#/components/schemas/HttpResponse"
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            [
+              "HTTP",
+              "AUTH",
+              "PARENT_STREAM",
+              "ASYNC_CREATE",
+              "ASYNC_POLL",
+              "ASYNC_ABORT",
+              "ASYNC_DELETE",
+            ]
     StreamReadRequestBody:
       type: object
       required:

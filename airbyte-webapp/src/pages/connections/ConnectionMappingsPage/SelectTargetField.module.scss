@@ -4,10 +4,12 @@
 
 .comboboxInput {
   height: variables.$form-input-height;
-  padding: variables.$spacing-md;
-  border-radius: variables.$border-radius-xs;
-  font-size: variables.$font-size-md;
-  cursor: pointer;
+
+  // will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
+  // for now setting this as a one off
+  &.disabled {
+    cursor: default;
+  }
 
   &:focus {
     &::placeholder {
@@ -25,9 +27,14 @@
   height: 100%;
   background-color: transparent;
   border: none;
-  cursor: pointer;
   color: colors.$grey-300;
   padding-inline: 8px;
+
+  // will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
+  // for now setting this as a one off
+  &:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 .comboboxOptions {
@@ -36,7 +43,6 @@
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-raised;
   padding: 0;
-  margin-top: variables.$spacing-sm;
   width: variables.$width-extra-wide-menu;
   max-height: variables.$height-long-listbox-options-list;
   list-style-type: none;
@@ -48,8 +54,8 @@
   cursor: pointer;
   word-break: break-all;
 
-  &:hover,
-  &:focus-within {
+  &:not(.disabled):hover,
+  &:not(.disabled):focus-within {
     background-color: colors.$grey-50;
     height: 100%;
     width: 100%;
@@ -58,4 +64,10 @@
 
 .selected {
   background-color: colors.$blue-50;
+}
+
+.disabled {
+  p {
+    color: colors.$grey-300;
+  }
 }

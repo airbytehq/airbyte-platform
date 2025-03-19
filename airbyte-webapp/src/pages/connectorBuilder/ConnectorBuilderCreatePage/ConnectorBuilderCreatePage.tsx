@@ -243,7 +243,7 @@ const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, butt
           {image}
         </FlexContainer>
         <FlexContainer direction="column" alignItems="center" gap="md" className={styles.tileText}>
-          <Heading as="h2" size="sm" centered>
+          <Heading as="h2" size="sm">
             <FormattedMessage id={title} />
           </Heading>
           <FlexContainer direction="column" justifyContent="center" className={styles.tileDescription}>

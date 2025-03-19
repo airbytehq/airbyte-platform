@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -10,12 +10,13 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -54,8 +55,8 @@ internal class SecretsRepositoryWriterTest {
 
   @Test
   fun testDeleteSecrets() {
-    every { metricClient.count(any(), any()) } returns Unit
-    every { metricClient.count(any(), any(), any()) } returns Unit
+    every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
     val secret = "test-secret"
     val coordinate = "existing_coordinate_v1"
     secretPersistence.write(SecretCoordinate.fromFullCoordinate(coordinate), secret)
@@ -74,8 +75,8 @@ internal class SecretsRepositoryWriterTest {
   inner class TestUpdateSecrets {
     @BeforeEach
     fun setup() {
-      every { metricClient.count(any(), any()) } returns Unit
-      every { metricClient.count(any(), any(), any()) } returns Unit
+      every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
+      every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
       every { featureFlagClient.boolVariation(any(), any()) } returns true
     }
 
@@ -391,9 +392,7 @@ internal class SecretsRepositoryWriterTest {
 //  }
 
   // this only works if the secrets store has one secret.
-  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate {
-    return secretPersistence.map.keys.first()
-  }
+  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate = secretPersistence.map.keys.first()
 
 //  @Test
 //  @Throws(JsonValidationException::class, IOException::class)
@@ -473,8 +472,7 @@ internal class SecretsRepositoryWriterTest {
     private const val TEST_WEBHOOK_NAME = "test-webhook-name"
     private const val TEST_AUTH_TOKEN = "test-auth-token"
 
-    private fun injectCoordinate(coordinate: String): JsonNode {
-      return Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
-    }
+    private fun injectCoordinate(coordinate: String): JsonNode =
+      Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -26,7 +26,10 @@ import java.util.Objects
  * This coordinate system was designed to work well with Google Secrets Manager but should work with
  * other secret storage backends as well.
  */
-class SecretCoordinate(val coordinateBase: String, val version: Long) {
+class SecretCoordinate(
+  val coordinateBase: String,
+  val version: Long,
+) {
   val fullCoordinate: String
     get() = coordinateBase + "_v" + version
 
@@ -45,9 +48,7 @@ class SecretCoordinate(val coordinateBase: String, val version: Long) {
    * The hash code is computed using the [SecretCoordinate.fullCoordinate] because the full
    * secret coordinate should be a valid unique representation of the secret coordinate.
    */
-  override fun hashCode(): Int {
-    return Objects.hash(fullCoordinate)
-  }
+  override fun hashCode(): Int = Objects.hash(fullCoordinate)
 
   companion object {
     /**

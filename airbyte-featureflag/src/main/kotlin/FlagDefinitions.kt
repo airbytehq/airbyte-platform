@@ -1,9 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
- */
-
-/**
- * Feature-Flag definitions are defined in this file.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.featureflag
@@ -73,6 +69,8 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
+object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
@@ -132,6 +130,8 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
+object UseAllowCustomCode : Temporary<Boolean>(key = "platform.use-allow-custom-code", default = false)
+
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
@@ -172,10 +172,24 @@ object ReportConnectorDiskUsage : Temporary<Boolean>(key = "platform.report-conn
 
 object PlatformInitContainerImage : Temporary<String>(key = "platform.init-container-image", default = "")
 
-object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = false)
+object SubOneHourSyncSchedules : Permanent<Boolean>(key = "platform.allow-sub-one-hour-sync-frequency", default = true)
 
 object AllowMappersDefaultSecretPersistence : Permanent<Boolean>(key = "platform.allow-mappers-default-secret-persistence", default = false)
 
 object RunDeclarativeSourcesUpdater : Permanent<Boolean>(key = "platform.run-declarative-sources-updater", default = true)
 
 object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instances", default = false)
+
+object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
+
+object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
+
+object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable-temporal-ingestion", default = false)
+
+object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
+
+object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
+
+object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
+
+object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)

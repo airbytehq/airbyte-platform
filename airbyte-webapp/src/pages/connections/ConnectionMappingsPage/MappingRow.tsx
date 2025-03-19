@@ -1,5 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import classNames from "classnames";
 import { PropsWithChildren, useMemo } from "react";
 import { FieldValues, Path, get, useFormContext, useFormState } from "react-hook-form";
 
@@ -20,8 +21,9 @@ export const MappingRow: React.FC<{
   streamDescriptorKey: string;
   id: string;
 }> = ({ streamDescriptorKey, id }) => {
-  const { removeMapping, streamsWithMappings } = useMappingContext();
+  const { removeMapping, streamsWithMappings, validatingStreams } = useMappingContext();
   const mapping = streamsWithMappings[streamDescriptorKey].find((m) => m.id === id);
+  const isStreamValidating = validatingStreams.has(streamDescriptorKey);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -57,10 +59,10 @@ export const MappingRow: React.FC<{
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-testid={`${streamDescriptorKey}-mapper-${mapping.id}`}>
       <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.row}>
         <FlexContainer direction="row" alignItems="center">
-          <Button type="button" variant="clear" {...listeners} {...attributes}>
+          <Button type="button" variant="clear" {...listeners} {...attributes} disabled={isStreamValidating}>
             <Icon color="disabled" type="drag" />
           </Button>
           {RowContent}
@@ -70,6 +72,7 @@ export const MappingRow: React.FC<{
           variant="clear"
           type="button"
           onClick={() => removeMapping(streamDescriptorKey, mapping.id)}
+          disabled={isStreamValidating}
         >
           <Icon color="disabled" type="trash" />
         </Button>
@@ -90,20 +93,31 @@ export const MappingRowItem: React.FC<PropsWithChildren> = ({ children }) => {
   return <div className={styles.row__contentItem}>{children}</div>;
 };
 
-interface MappingTypeListBoxProps<TFormValues> {
+interface MappingFormTextInputProps<TFormValues> {
   name: Path<TFormValues>;
   placeholder: string;
   testId?: string;
+  disabled: boolean;
 }
 
 export const MappingFormTextInput = <TFormValues extends FieldValues>({
   name,
   placeholder,
   testId,
-}: MappingTypeListBoxProps<TFormValues>) => {
+  disabled,
+}: MappingFormTextInputProps<TFormValues>) => {
   const { register } = useFormContext();
   const { errors } = useFormState<TFormValues>({ name });
   const error = get(errors, name);
 
-  return <Input error={!!error} placeholder={placeholder} {...register(name)} data-testid={testId} />;
+  return (
+    <Input
+      error={!!error}
+      placeholder={placeholder}
+      {...register(name)}
+      data-testid={testId}
+      disabled={disabled}
+      containerClassName={classNames({ [styles.disabled]: disabled })}
+    />
+  );
 };

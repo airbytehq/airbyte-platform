@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.specs;
@@ -13,12 +13,12 @@ import static org.mockito.Mockito.when;
 
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
-import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,9 +38,9 @@ class GcsBucketSpecFetcherTest {
   private Blob defaultSpecBlob;
   private Blob cloudSpecBlob;
   private final ConnectorSpecification defaultSpec = new ConnectorSpecification()
-      .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo", "bar", "mode", "oss")));
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("foo", "bar", "mode", "oss")));
   private final ConnectorSpecification cloudSpec = new ConnectorSpecification()
-      .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo", "bar", "mode", "cloud")));
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("foo", "bar", "mode", "cloud")));
 
   @BeforeEach
   void setup() {
@@ -99,17 +99,22 @@ class GcsBucketSpecFetcherTest {
         defaultBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG));
 
     // under OSS deployment mode, cloud spec file will be ignored even when it exists
-    final GcsBucketSpecFetcher ossBucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME, DeploymentMode.OSS);
+    final GcsBucketSpecFetcher ossBucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME, Configs.AirbyteEdition.COMMUNITY);
     assertEquals(Optional.of(defaultSpecBlob),
         ossBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG));
 
-    final GcsBucketSpecFetcher cloudBucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME, DeploymentMode.CLOUD);
+    final GcsBucketSpecFetcher enterpriseBucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME, Configs.AirbyteEdition.ENTERPRISE);
+    assertEquals(Optional.of(defaultSpecBlob),
+        enterpriseBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG));
+
+    final GcsBucketSpecFetcher cloudBucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME, Configs.AirbyteEdition.CLOUD);
     assertEquals(Optional.of(cloudSpecBlob),
         cloudBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG));
   }
 
   /**
-   * Test {@link GcsBucketSpecFetcher#getSpecAsBlob(String, String, String, DeploymentMode)}.
+   * Test
+   * {@link GcsBucketSpecFetcher#getSpecAsBlob(String, String, String, io.airbyte.config.Configs.AirbyteEdition)}.
    */
   @Test
   void testBasicGetSpecAsBlob() {
@@ -118,9 +123,11 @@ class GcsBucketSpecFetcherTest {
 
     final GcsBucketSpecFetcher bucketSpecFetcher = new GcsBucketSpecFetcher(storage, BUCKET_NAME);
     assertEquals(Optional.of(defaultSpecBlob),
-        bucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG, DEFAULT_SPEC_FILE, DeploymentMode.OSS));
+        bucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG, DEFAULT_SPEC_FILE, Configs.AirbyteEdition.COMMUNITY));
+    assertEquals(Optional.of(defaultSpecBlob),
+        bucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG, DEFAULT_SPEC_FILE, Configs.AirbyteEdition.ENTERPRISE));
     assertEquals(Optional.of(cloudSpecBlob),
-        bucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG, CLOUD_SPEC_FILE, DeploymentMode.OSS));
+        bucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG, CLOUD_SPEC_FILE, Configs.AirbyteEdition.CLOUD));
   }
 
 }

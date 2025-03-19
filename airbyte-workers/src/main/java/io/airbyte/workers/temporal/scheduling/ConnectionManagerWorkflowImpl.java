@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling;
@@ -27,6 +27,7 @@ import io.airbyte.commons.temporal.scheduling.state.WorkflowInternalState;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.temporal.scheduling.state.listener.NoopStateListener;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureType;
@@ -36,16 +37,18 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.WorkloadPriority;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.helpers.ContextConversionHelper;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
+import io.airbyte.workers.temporal.activities.GetConnectionContextInput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogInput;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogLevel;
@@ -118,6 +121,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final String CHECK_WORKSPACE_TOMBSTONE_TAG = "check_workspace_tombstone";
   private static final int CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION = 1;
+  private static final String LOAD_SHED_BACK_OFF_TAG = "load_shed_back_off";
+  private static final int LOAD_SHED_BACK_OFF_CURRENT_VERSION = 1;
   private static final String PASS_DEST_REQS_TO_CHECK_TAG = "pass_dest_reqs_to_check";
   private static final int PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION = 1;
 
@@ -159,6 +164,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private RetryManager retryManager;
 
+  private ConnectionContext connectionContext;
+
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
@@ -167,6 +174,18 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       if (isTombstone(connectionUpdaterInput.getConnectionId())) {
         return;
       }
+
+      /*
+       * Hydrate the connection context (workspace, org, source, dest, etc. ids) as soon as possible.
+       */
+      final var hydratedContext = runMandatoryActivityWithOutput(configFetchActivity::getConnectionContext,
+          new GetConnectionContextInput(connectionUpdaterInput.getConnectionId()));
+      setConnectionContext(hydratedContext.getConnectionContext());
+
+      /*
+       * Sleep and periodically check in a loop until we're no longer load shed.
+       */
+      backoffIfLoadShedEnabled(hydratedContext.getConnectionContext());
 
       /*
        * Always ensure that the connection ID is set from the input before performing any additional work.
@@ -237,6 +256,21 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     return configFetchActivity.isWorkspaceTombstone(connectionId);
+  }
+
+  private void backoffIfLoadShedEnabled(final ConnectionContext connectionContext) {
+    final int version =
+        Workflow.getVersion(LOAD_SHED_BACK_OFF_TAG, Workflow.DEFAULT_VERSION, LOAD_SHED_BACK_OFF_CURRENT_VERSION);
+    if (version == Workflow.DEFAULT_VERSION || connectionContext == null) {
+      return;
+    }
+
+    final var scheduleRetrieverInput = new GetLoadShedBackoffInput(connectionContext);
+    var backoff = configFetchActivity.getLoadShedBackoff(scheduleRetrieverInput);
+    while (backoff.getDuration().isPositive()) {
+      Workflow.sleep(backoff.getDuration());
+      backoff = configFetchActivity.getLoadShedBackoff(scheduleRetrieverInput);
+    }
   }
 
   @SuppressWarnings("PMD.UnusedLocalVariable")
@@ -660,6 +694,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   public void deleteConnection() {
     traceConnectionId();
     workflowState.setDeleted(true);
+    log.info("Set as deleted and canceling job for connection {}", connectionId);
     cancelJob();
   }
 
@@ -866,7 +901,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     final JobCreationOutput jobCreationOutput =
         runMandatoryActivityWithOutput(
             jobCreationAndStatusUpdateActivity::createNewJob,
-            new JobCreationInput(connectionUpdaterInput.getConnectionId()));
+            new JobCreationInput(connectionUpdaterInput.getConnectionId(), !workflowState.isSkipScheduling()));
     connectionUpdaterInput.setJobId(jobCreationOutput.getJobId());
 
     return jobCreationOutput.getJobId();
@@ -1081,6 +1116,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void setConnectionId(final ConnectionUpdaterInput connectionUpdaterInput) {
     connectionId = Objects.requireNonNull(connectionUpdaterInput.getConnectionId());
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
+  }
+
+  private void setConnectionContext(final ConnectionContext ctx) {
+    connectionContext = Objects.requireNonNull(ctx);
   }
 
   private boolean useAttemptCountRetries() {

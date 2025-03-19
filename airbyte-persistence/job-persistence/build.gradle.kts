@@ -13,8 +13,6 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
-  implementation(libs.commons.io)
-  implementation(libs.bundles.apache)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-protocol"))
@@ -41,7 +39,6 @@ dependencies {
   implementation("io.opentelemetry:opentelemetry-api")
   implementation("io.opentelemetry:opentelemetry-sdk")
   implementation("io.opentelemetry:opentelemetry-exporter-otlp")
-  implementation(libs.apache.commons.collections)
   implementation(libs.datadog.statsd.client)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)

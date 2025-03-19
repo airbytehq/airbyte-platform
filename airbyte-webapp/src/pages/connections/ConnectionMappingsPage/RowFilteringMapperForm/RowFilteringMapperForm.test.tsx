@@ -17,7 +17,7 @@ const mockstreamDescriptorKey = "undefined-pokemon";
 const mockRowFilteringMapperConfiguration: RowFilteringMapperConfiguration = {
   conditions: {
     type: "EQUAL",
-    fieldName: "name",
+    fieldName: "originalField",
     comparisonValue: "comparisonValue",
   },
 };
@@ -29,8 +29,22 @@ const mockMapper: StreamMapperWithId<RowFilteringMapperConfiguration> = {
   type: "row-filtering",
 };
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
+jest.mock("../useGetFieldsInStream", () => ({
+  useGetFieldsForMapping: () => {
+    return [
+      { name: "field1", type: "STRING" },
+      { name: "field2", type: "NUMBER" },
+    ];
+  },
+}));
+
 jest.mock("core/api", () => ({
   useCurrentConnection: () => mockConnection,
+  useCurrentWorkspace: () => ({}),
 }));
 
 jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
@@ -47,6 +61,7 @@ jest.mock("../MappingContext", () => {
     useMappingContext: () => ({
       updateLocalMapping: mockUpdateLocalMapping,
       validateMappings: jest.fn(),
+      validatingStreams: new Set(),
     }),
   };
 });
@@ -71,7 +86,7 @@ describe(`${RowFilteringMapperForm.name}`, () => {
     await render(<RowFilteringMapperForm mapping={mockMapper} streamDescriptorKey={mockstreamDescriptorKey} />);
 
     const targetFieldInput = screen.getByPlaceholderText(messages["connections.mappings.selectField"]);
-    const newTargetFieldName = "location_area_encounters";
+    const newTargetFieldName = "field2";
     await userEvent.click(targetFieldInput);
     await userEvent.click(screen.getByText(newTargetFieldName));
 

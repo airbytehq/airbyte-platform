@@ -8,6 +8,7 @@ required:
   - name
   - builderProjectId
   - workspaceId
+  - updatedAt
 additionalProperties: true
 properties:
   name:
@@ -18,6 +19,9 @@ properties:
   workspaceId:
     type: string
     format: uuid
+  updatedAt:
+    type: integer
+    format: int64
   actorDefinitionId:
     type: string
     format: uuid
@@ -31,6 +35,9 @@ properties:
     description: Integration specific blob. Must be a valid JSON string.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  componentsFileContent:
+    description: Content of the optional components file
+    type: string
   testingValues:
     description: Integration specific blob. Must be a valid JSON string.
     type: object

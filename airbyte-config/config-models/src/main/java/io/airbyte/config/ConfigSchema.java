@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -116,7 +116,10 @@ public enum ConfigSchema implements AirbyteConfig {
 
   SCOPED_CONFIGURATION("ScopedConfiguration.yaml", ScopedConfiguration.class),
   CONNECTOR_ROLLOUT("ConnectorRollout.yaml", ConnectorRollout.class),
-  USER_INVITATION("UserInvitation.yaml", UserInvitation.class);
+  USER_INVITATION("UserInvitation.yaml", UserInvitation.class),
+  TAG("Tag.yaml", Tag.class),
+  DATAPLANE_GROUP("DataplaneGroup.yaml", DataplaneGroup.class),
+  DATAPLANE("Dataplane.yaml", Dataplane.class);
 
   static final Path KNOWN_SCHEMAS_ROOT = JsonSchemas.prepareSchemas("types", ConfigSchema.class);
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.temporal.queue
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -13,7 +17,9 @@ import io.temporal.workflow.WorkflowMethod
  * We wrap the actual message to be able to pass metadata around.
  */
 @JsonDeserialize(builder = Message.Builder::class)
-class Message<T : Any>(data: T) {
+class Message<T : Any>(
+  data: T,
+) {
   // TODO this should be a data class, however, need to make the JsonTypeInfo annotation work
 
   // This enables passing T around
@@ -31,7 +37,9 @@ class Message<T : Any>(data: T) {
    */
   class Builder<T : Any>
     @JvmOverloads
-    constructor(data: T? = null) {
+    constructor(
+      data: T? = null,
+    ) {
       @JsonTypeInfo(include = JsonTypeInfo.As.WRAPPER_ARRAY, use = JsonTypeInfo.Id.CLASS, property = "@bodyClass")
       var data: T?
 
@@ -53,9 +61,7 @@ class Message<T : Any>(data: T) {
     return data == other.data
   }
 
-  override fun hashCode(): Int {
-    return data.hashCode()
-  }
+  override fun hashCode(): Int = data.hashCode()
 }
 
 /**
@@ -82,7 +88,9 @@ interface QueueWorkflow<T : Any> {
 /**
  * Generic temporal queue activity implementation.
  */
-class QueueActivityImpl<T : Any>(private val messageConsumer: MessageConsumer<T>) : QueueActivity<T> {
+class QueueActivityImpl<T : Any>(
+  private val messageConsumer: MessageConsumer<T>,
+) : QueueActivity<T> {
   override fun consume(message: Message<T>) {
     messageConsumer.consume(message.data)
   }

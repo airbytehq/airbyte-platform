@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging.logback
@@ -8,6 +8,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.Context
+import ch.qos.logback.core.status.ErrorStatus
 import ch.qos.logback.core.status.Status
 import ch.qos.logback.core.status.StatusManager
 import io.airbyte.commons.envvar.EnvVar
@@ -25,6 +26,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -206,6 +208,63 @@ private class AirbyteCloudStorageAppenderTest {
     Thread.sleep(TimeUnit.SECONDS.toMillis(period * 2))
 
     verify(exactly = 1) { storageClient.write(any<String>(), any<String>()) }
+  }
+
+  @Test
+  fun testStorageUploadException() {
+    val baseStorageId = "/path/to/logs"
+    val storageClient =
+      mockk<StorageClient> {
+        every { write(any<String>(), any<String>()) } throws IOException("test")
+      }
+    val className = "io.airbyte.TestClass"
+    val context = emptyMap<String, String>()
+    val methodName = "testMethod"
+    val fileName = "TestClass.kt"
+    val lineNumber = 12345
+    val logLevel = Level.ERROR
+    val logMessage = "test message"
+    val logThreadName = "Test Thread"
+    val exception = RuntimeException("test", NullPointerException("root"))
+    val timestamp = 0L
+    val event =
+      mockk<ILoggingEvent> {
+        every { callerData } returns arrayOf(StackTraceElement(className, methodName, fileName, lineNumber))
+        every { formattedMessage } returns logMessage
+        every { level } returns logLevel
+        every { loggerName } returns PLATFORM_LOGGER_NAME
+        every { mdcPropertyMap } returns context
+        every { threadName } returns logThreadName
+        every { throwableProxy } returns ThrowableProxy(exception)
+        every { timeStamp } returns timestamp
+      }
+    val period = 1L
+    val statusManager =
+      mockk<StatusManager> {
+        every { add(any<Status>()) } returns Unit
+      }
+    val loggingContext =
+      mockk<Context> {
+        every { getStatusManager() } returns statusManager
+      }
+
+    val appender =
+      AirbyteCloudStorageAppender(
+        documentType = DocumentType.LOGS,
+        storageClient = storageClient,
+        baseStorageId = baseStorageId,
+        period = period,
+        unit = TimeUnit.SECONDS,
+      )
+    appender.context = loggingContext
+    appender.start()
+
+    appender.doAppend(event)
+
+    Thread.sleep(TimeUnit.SECONDS.toMillis(period * 2))
+
+    verify(exactly = 1) { storageClient.write(any<String>(), any<String>()) }
+    verify(exactly = 1) { statusManager.add(any<ErrorStatus>()) }
   }
 
   @Test

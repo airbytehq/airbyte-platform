@@ -87,6 +87,25 @@ components:
             detail:
               type: string
               default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
+    LicenseEntitlementProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: error:license/entitlement
+            title:
+              type: string
+              default: License Entitlement Error
+            detail:
+              type: string
+              default: The license for this organization is not entitled to use the requested feature.
     UserAlreadyExistsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -879,6 +898,149 @@ components:
               default: Not enough actors are eligible for the progressive rollout.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    DataplaneGroupNameAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:dataplane-group-name-already-exists
+            title:
+              type: string
+              default: Data plane group name already exists
+            detail:
+              type: string
+              default: A data plane group with this name already exists for this organization.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    DataplaneNameAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:dataplane-name-already-exists
+            title:
+              type: string
+              default: Data plane name already exists
+            detail:
+              type: string
+              default: A data plane with this name already exists for the data plane group.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:tag-already-exists
+            title:
+              type: string
+              default: Tag already exists
+            detail:
+              type: string
+              default: A tag with this name already exists in this workspace.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagInvalidHexColorProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-invalid-hex-color
+            title:
+              type: string
+              default: Invalid hex color
+            detail:
+              type: string
+              default: The hex color provided is invalid.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagNameTooLongProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-name-too-long
+            title:
+              type: string
+              default: Tag name too long
+            detail:
+              type: string
+              default: The tag name can be maximum 30 characters.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TagLimitForWorkspaceReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:tag-limit-for-workspace-reached
+            title:
+              type: string
+              default: Tag limit for workspace reached
+            detail:
+              type: string
+              default: The workspace has reached the maximum number of tags.
+    RequestTimeoutExceededProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 408
+            type:
+              type: string
+              default: error:request-timeout-exceeded
+            title:
+              type: string
+              default: Request timeout exceeded
+            detail:
+              type: string
+              default: The request has exceeded the timeout associated with this endpoint.
     ProblemCronData:
       type: object
       properties:
@@ -989,6 +1151,15 @@ components:
       properties:
         value:
           type: string
+    ProblemLicenseEntitlementData:
+      type: object
+      required:
+        - entitlement
+      properties:
+        entitlement:
+          type: string
+        resourceId:
+          type: string
     DbtCloudIntegrationData:
       type: object
       required:
@@ -1041,3 +1212,45 @@ components:
       properties:
         currentBalance:
           type: string
+    NotificationRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:notification/config/required
+            title:
+              type: string
+              default: Notification required
+            detail:
+              type: string
+              default: The notification is required and can't be disabled.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    NotificationMissingUrlProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:notification/config/missing-url
+            title:
+              type: string
+              default: Notification missing URL
+            detail:
+              type: string
+              default: The notification is missing a URL.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"

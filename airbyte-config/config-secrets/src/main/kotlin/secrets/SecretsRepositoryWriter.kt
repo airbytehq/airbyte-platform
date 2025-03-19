@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -9,10 +9,12 @@ import io.airbyte.commons.json.JsonPaths
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags.SECRET_COORDINATES_UPDATED
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -84,13 +86,19 @@ open class SecretsRepositoryWriter(
           logger.info { "Deleting: ${secretCoord.fullCoordinate}" }
           try {
             (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
-            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true"))
+            metricClient.count(
+              metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
+              attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "true")),
+            )
           } catch (e: Exception) {
             // Multiple versions within one secret is a legacy concern. This is no longer
             // possible moving forward. Catch the exception to best-effort disable other secret versions.
             // The other reason to catch this is propagating the exception prevents the database
             // from being updated with the new coordinates.
-            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false"))
+            metricClient.count(
+              metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
+              attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "false")),
+            )
             logger.error(e) { "Error deleting secret: ${secretCoord.fullCoordinate}" }
           }
         }
@@ -129,11 +137,16 @@ open class SecretsRepositoryWriter(
     val updatedSplitConfig: SplitSecretConfig =
       SecretsHelpers.splitAndUpdateConfig(workspaceId, oldPartialConfig, fullConfig, spec, secretPersistence)
 
-    updatedSplitConfig.getCoordinateToPayload()
+    updatedSplitConfig
+      .getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
-        metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
+        metricClient.count(metric = OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE)
       }
+    updatedSplitConfig.getCoordinateToPayload().map { it.key }.let {
+      ApmTraceUtils.addTagsToTrace(mapOf(SECRET_COORDINATES_UPDATED to it))
+    }
+
     // Delete old secrets.
     deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
 

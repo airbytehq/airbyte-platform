@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -20,18 +20,21 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionBreakingChange;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
@@ -82,6 +85,7 @@ public class SourceDefinitionsHandler {
   private final ActorDefinitionService actorDefinitionService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
+  private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final ApiPojoConverters apiPojoConverters;
 
   @Inject
@@ -96,6 +100,7 @@ public class SourceDefinitionsHandler {
                                   final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator,
                                   final SourceService sourceService,
                                   final WorkspaceService workspaceService,
+                                  final LicenseEntitlementChecker licenseEntitlementChecker,
                                   final ApiPojoConverters apiPojoConverters) {
     this.actorDefinitionService = actorDefinitionService;
     this.uuidSupplier = uuidSupplier;
@@ -108,6 +113,7 @@ public class SourceDefinitionsHandler {
     this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
+    this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.apiPojoConverters = apiPojoConverters;
   }
 
@@ -139,7 +145,8 @@ public class SourceDefinitionsHandler {
           .cdkVersion(sourceVersion.getCdkVersion())
           .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
-          .resourceRequirements(apiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
+          .enterprise(standardSourceDefinition.getEnterprise())
+          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages())
           .language(sourceVersion.getLanguage());
 
@@ -199,9 +206,21 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+
+    final List<StandardSourceDefinition> publicSourceDefs = sourceService.listPublicSourceDefinitions(false);
+
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), true);
+    final Map<UUID, Boolean> publicSourceEntitlements = licenseEntitlementChecker.checkEntitlements(
+        workspace.getOrganizationId(),
+        Entitlement.SOURCE_CONNECTOR,
+        publicSourceDefs.stream().map(StandardSourceDefinition::getSourceDefinitionId).toList());
+
+    final Stream<StandardSourceDefinition> entitledPublicSourceDefs = publicSourceDefs.stream()
+        .filter(s -> publicSourceEntitlements.get(s.getSourceDefinitionId()));
+
     final List<StandardSourceDefinition> sourceDefs = Stream.concat(
-        sourceService.listPublicSourceDefinitions(false).stream(),
+        entitledPublicSourceDefs,
         sourceService.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
 
     // Hide source definitions from the list via feature flag
@@ -283,7 +302,7 @@ public class SourceDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
@@ -331,8 +350,8 @@ public class SourceDefinitionsHandler {
   @VisibleForTesting
   StandardSourceDefinition buildSourceDefinitionUpdate(final StandardSourceDefinition currentSourceDefinition,
                                                        final SourceDefinitionUpdate sourceDefinitionUpdate) {
-    final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
-        ? apiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
+    final ScopedResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
+        ? apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
 
     final StandardSourceDefinition newSource = new StandardSourceDefinition()

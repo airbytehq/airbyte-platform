@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -24,6 +24,7 @@ internal class S3StorageConfigTest {
         activityPayload = "activity-payload",
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
+        profilerOutput = null,
       )
     val s3StorageConfig =
       S3StorageConfig(
@@ -56,6 +57,7 @@ internal class S3StorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val s3StorageConfig =
       S3StorageConfig(
@@ -87,6 +89,7 @@ internal class S3StorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val s3StorageConfig =
       S3StorageConfig(
@@ -120,6 +123,7 @@ internal class S3StorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val s3StorageConfig =
       S3StorageConfig(
