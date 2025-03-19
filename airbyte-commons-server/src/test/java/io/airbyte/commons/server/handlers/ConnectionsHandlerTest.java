@@ -222,6 +222,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
@@ -531,7 +532,8 @@ class ConnectionsHandlerTest {
           mapperSecretHelper,
           metricClient,
           licenseEntitlementChecker,
-          contextBuilder);
+          contextBuilder,
+          Configs.AirbyteEdition.COMMUNITY);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1513,6 +1515,149 @@ class ConnectionsHandlerTest {
         verify(eventRunner).update(connectionUpdate.getConnectionId());
       }
 
+      @ParameterizedTest
+      @EnumSource(Configs.AirbyteEdition.class)
+      void testUpdateConnectionPatchGeographyByAirbyteEdition(final Configs.AirbyteEdition airbyteEdition) throws Exception {
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .name("newName")
+            .geography(io.airbyte.api.model.generated.Geography.AUTO);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withName("newName")
+            .withGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO);
+
+        new ConnectionsHandler(
+            streamRefreshesHandler,
+            jobPersistence,
+            catalogService,
+            uuidGenerator,
+            workspaceHelper,
+            trackingClient,
+            eventRunner,
+            connectionHelper,
+            featureFlagClient,
+            actorDefinitionVersionHelper,
+            connectorDefinitionSpecificationHandler,
+            streamGenerationRepository,
+            catalogGenerationSetter,
+            catalogValidator,
+            notificationHelper,
+            streamStatusesService,
+            connectionTimelineEventService,
+            connectionTimelineEventHelper,
+            statePersistence,
+            sourceService,
+            destinationService,
+            connectionService,
+            workspaceService,
+            destinationCatalogGenerator,
+            catalogConverter,
+            applySchemaChangeHelper,
+            apiPojoConverters,
+            connectionSchedulerHelper,
+            mapperSecretHelper,
+            metricClient,
+            licenseEntitlementChecker,
+            contextBuilder,
+            airbyteEdition).applyPatchToStandardSync(standardSync, connectionUpdate, UUID.randomUUID());
+
+        assertEquals(expectedPersistedSync, standardSync);
+      }
+
+      @ParameterizedTest
+      @EnumSource(Configs.AirbyteEdition.class)
+      void testGetGeographyFromConnectionCreateOrWorkspace(final Configs.AirbyteEdition airbyteEdition) throws Exception {
+        final ConnectionCreate connectionCreate = new ConnectionCreate()
+            .name("newName")
+            .geography(io.airbyte.api.model.generated.Geography.AUTO);
+
+        final Geography geography = new ConnectionsHandler(
+            streamRefreshesHandler,
+            jobPersistence,
+            catalogService,
+            uuidGenerator,
+            workspaceHelper,
+            trackingClient,
+            eventRunner,
+            connectionHelper,
+            featureFlagClient,
+            actorDefinitionVersionHelper,
+            connectorDefinitionSpecificationHandler,
+            streamGenerationRepository,
+            catalogGenerationSetter,
+            catalogValidator,
+            notificationHelper,
+            streamStatusesService,
+            connectionTimelineEventService,
+            connectionTimelineEventHelper,
+            statePersistence,
+            sourceService,
+            destinationService,
+            connectionService,
+            workspaceService,
+            destinationCatalogGenerator,
+            catalogConverter,
+            applySchemaChangeHelper,
+            apiPojoConverters,
+            connectionSchedulerHelper,
+            mapperSecretHelper,
+            metricClient,
+            licenseEntitlementChecker,
+            contextBuilder,
+            airbyteEdition).getGeographyFromConnectionCreateOrWorkspace(connectionCreate);
+
+        assertEquals(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO, geography);
+      }
+
+      @ParameterizedTest
+      @EnumSource(Configs.AirbyteEdition.class)
+      void testGetGeographyFromConnectionCreateOrWorkspaceNoConnectionGeography(final Configs.AirbyteEdition airbyteEdition) throws Exception {
+        final ConnectionCreate connectionCreate = new ConnectionCreate()
+            .name("newName");
+
+        when(workspaceService.getStandardWorkspaceNoSecrets(any(), eq(true))).thenReturn(new StandardWorkspace()
+            .withWorkspaceId(UUID.randomUUID())
+            .withDefaultGeography(Geography.AUTO));
+
+        final Geography geography = new ConnectionsHandler(
+            streamRefreshesHandler,
+            jobPersistence,
+            catalogService,
+            uuidGenerator,
+            workspaceHelper,
+            trackingClient,
+            eventRunner,
+            connectionHelper,
+            featureFlagClient,
+            actorDefinitionVersionHelper,
+            connectorDefinitionSpecificationHandler,
+            streamGenerationRepository,
+            catalogGenerationSetter,
+            catalogValidator,
+            notificationHelper,
+            streamStatusesService,
+            connectionTimelineEventService,
+            connectionTimelineEventHelper,
+            statePersistence,
+            sourceService,
+            destinationService,
+            connectionService,
+            workspaceService,
+            destinationCatalogGenerator,
+            catalogConverter,
+            applySchemaChangeHelper,
+            apiPojoConverters,
+            connectionSchedulerHelper,
+            mapperSecretHelper,
+            metricClient,
+            licenseEntitlementChecker,
+            contextBuilder,
+            airbyteEdition).getGeographyFromConnectionCreateOrWorkspace(connectionCreate);
+
+        assertEquals(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO, geography);
+      }
+
       @Test
       void testUpdateConnectionPatchScheduleToManual() throws Exception {
         final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
@@ -2135,7 +2280,8 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
           metricClient, licenseEntitlementChecker,
-          contextBuilder);
+          contextBuilder,
+          Configs.AirbyteEdition.COMMUNITY);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2374,7 +2520,8 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
           metricClient, licenseEntitlementChecker,
-          contextBuilder);
+          contextBuilder,
+          Configs.AirbyteEdition.COMMUNITY);
     }
 
     @Test
@@ -3193,7 +3340,8 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
-          contextBuilder);
+          contextBuilder,
+          Configs.AirbyteEdition.COMMUNITY);
     }
 
     @Test
@@ -3538,7 +3686,8 @@ class ConnectionsHandlerTest {
           connectionSchedulerHelper,
           mapperSecretHelper, metricClient,
           licenseEntitlementChecker,
-          contextBuilder);
+          contextBuilder,
+          Configs.AirbyteEdition.COMMUNITY);
     }
 
     @Test

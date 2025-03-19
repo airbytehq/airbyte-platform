@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.EmailNotificationConfig;
+import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
@@ -39,7 +40,6 @@ import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem;
 import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.random.RandomKt;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -149,7 +149,7 @@ public class WorkspacesHandler {
     final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
         .id(uuidSupplier.get())
         .organizationId(workspaceCreate.getOrganizationId())
-        .defaultGeography(workspaceCreate.getDefaultGeography())
+        .defaultGeography(getDefaultGeographyForAirbyteEdition(workspaceCreate.getDefaultGeography()))
         .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
         .name(workspaceCreate.getName())
         .notifications(workspaceCreate.getNotifications())
@@ -180,9 +180,9 @@ public class WorkspacesHandler {
     final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.config.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
-        ? Enums.convertTo(workspaceCreateWithId.getDefaultGeography(), io.airbyte.config.Geography.class)
-        : io.airbyte.config.Geography.AUTO;
+    final io.airbyte.api.model.generated.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
+        ? workspaceCreateWithId.getDefaultGeography()
+        : io.airbyte.api.model.generated.Geography.AUTO;
 
     // NotificationSettings from input will be patched with default values.
     final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
@@ -200,7 +200,7 @@ public class WorkspacesHandler {
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
-        .withDefaultGeography(defaultGeography)
+        .withDefaultGeography(apiPojoConverters.toPersistenceGeography(getDefaultGeographyForAirbyteEdition(defaultGeography)))
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
         .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
@@ -623,7 +623,8 @@ public class WorkspacesHandler {
     }
 
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(
+          getDefaultGeographyForAirbyteEdition(workspacePatch.getDefaultGeography())));
     }
     if (workspacePatch.getName() != null) {
       workspace.setName(workspacePatch.getName());
@@ -724,6 +725,13 @@ public class WorkspacesHandler {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     workspaceService.writeWorkspaceWithSecrets(workspace);
     return WorkspaceConverter.domainToApiModel(workspace);
+  }
+
+  private Geography getDefaultGeographyForAirbyteEdition(final Geography geography) {
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && geography == Geography.AUTO) {
+      return Geography.US;
+    }
+    return geography;
   }
 
 }

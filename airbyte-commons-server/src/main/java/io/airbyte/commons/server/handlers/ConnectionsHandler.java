@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -101,6 +102,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -239,6 +241,7 @@ public class ConnectionsHandler {
 
   private final ConnectionScheduleHelper connectionScheduleHelper;
   private final MetricClient metricClient;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
@@ -273,7 +276,8 @@ public class ConnectionsHandler {
                             final MapperSecretHelper mapperSecretHelper,
                             final MetricClient metricClient,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
-                            final ContextBuilder contextBuilder) {
+                            final ContextBuilder contextBuilder,
+                            final Configs.AirbyteEdition airbyteEdition) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -306,13 +310,15 @@ public class ConnectionsHandler {
     this.metricClient = metricClient;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.contextBuilder = contextBuilder;
+    this.airbyteEdition = airbyteEdition;
   }
 
   /**
    * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
    * patch. Any fields that are null in the patch will be left unchanged.
    */
-  private void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
+  @VisibleForTesting
+  void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
       throws JsonValidationException, ConfigNotFoundException {
     // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
     // the helper to ensure both fields
@@ -372,7 +378,11 @@ public class ConnectionsHandler {
     }
 
     if (patch.getGeography() != null) {
-      sync.setGeography(apiPojoConverters.toPersistenceGeography(patch.getGeography()));
+      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && patch.getGeography().equals(io.airbyte.api.model.generated.Geography.AUTO)) {
+        sync.setGeography(apiPojoConverters.toPersistenceGeography(io.airbyte.api.model.generated.Geography.US));
+      } else {
+        sync.setGeography(apiPojoConverters.toPersistenceGeography(patch.getGeography()));
+      }
     }
 
     if (patch.getBreakingChange() != null) {
@@ -633,23 +643,32 @@ public class ConnectionsHandler {
     return buildConnectionRead(connectionId);
   }
 
-  private Geography getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
+  @VisibleForTesting
+  Geography getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
+    Geography geography;
+
     if (connectionCreate.getGeography() != null) {
-      return apiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
+      geography = apiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
+    } else {
+      // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
+      final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
+      final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
+
+      if (workspace.getDefaultGeography() != null) {
+        geography = workspace.getDefaultGeography();
+      } else {
+        // if the workspace doesn't have a default geography, default to 'auto'
+        geography = Geography.AUTO;
+      }
     }
 
-    // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
-    final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
-    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
-
-    if (workspace.getDefaultGeography() != null) {
-      return workspace.getDefaultGeography();
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && geography.equals(Geography.AUTO)) {
+      geography = Geography.US;
     }
 
-    // if the workspace doesn't have a default geography, default to 'auto'
-    return Geography.AUTO;
+    return geography;
   }
 
   private void populateSyncFromLegacySchedule(final StandardSync standardSync, final ConnectionCreate connectionCreate) {

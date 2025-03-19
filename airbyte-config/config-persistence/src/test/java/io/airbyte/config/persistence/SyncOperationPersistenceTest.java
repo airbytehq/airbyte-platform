@@ -21,6 +21,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;

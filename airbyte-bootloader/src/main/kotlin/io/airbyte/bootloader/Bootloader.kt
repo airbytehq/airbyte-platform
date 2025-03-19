@@ -8,12 +8,16 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
+import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Geography
 import io.airbyte.config.SsoConfig
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
+import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.init.DatabaseInitializer
 import io.airbyte.db.instance.DatabaseMigrator
@@ -44,6 +48,8 @@ class Bootloader(
   @param:Value("\${airbyte.bootloader.run-migration-on-startup}") private val runMigrationOnStartup: Boolean,
   @param:Value("\${airbyte.auth.default-realm}") private val defaultRealm: String,
   private val postLoadExecution: PostLoadExecutor?,
+  private val dataplaneGroupService: DataplaneGroupService,
+  val airbyteEdition: AirbyteEdition,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -71,6 +77,9 @@ class Bootloader(
 
     log.info { "Running database migrations..." }
     runFlywayMigration(runMigrationOnStartup, configsDatabaseMigrator, jobsDatabaseMigrator)
+
+    log.info { "Creating dataplane group (if none exists)..." }
+    createDataplaneGroupIfNoneExists(dataplaneGroupService, airbyteEdition)
 
     log.info { "Creating workspace (if none exists)..." }
     createWorkspaceIfNoneExists(workspaceService)
@@ -179,11 +188,60 @@ class Bootloader(
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO) // attach this new workspace to the Default Organization which should always exist at this point.
+        .withDefaultGeography(if (airbyteEdition == AirbyteEdition.CLOUD) Geography.US else Geography.AUTO)
+        // attach this new workspace to the Default Organization which should always exist at this point.
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+  }
+
+  private fun createDataplaneGroupIfNoneExists(
+    dataplaneGroupService: DataplaneGroupService,
+    airbyteEdition: AirbyteEdition,
+  ) {
+    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      if (!dataplaneGroups.any { it.name == "US" }) {
+        log.info { "Creating US dataplane group." }
+        val dataplaneGroupId = UUID.randomUUID()
+        val dataplaneGroup =
+          DataplaneGroup()
+            .withId(dataplaneGroupId)
+            .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+            .withName(Geography.US.name)
+            .withEnabled(true)
+            .withTombstone(false)
+        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
+      }
+      if (!dataplaneGroups.any { it.name == "EU" }) {
+        log.info { "Creating EU dataplane group." }
+        val dataplaneGroupId = UUID.randomUUID()
+        val dataplaneGroup =
+          DataplaneGroup()
+            .withId(dataplaneGroupId)
+            .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+            .withName(Geography.EU.name)
+            .withEnabled(true)
+            .withTombstone(false)
+        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
+      }
+      return
+    } else if (dataplaneGroups.isNotEmpty()) {
+      log.info { "Dataplane group already exists for the deployment." }
+      return
+    }
+
+    val dataplaneGroupId = UUID.randomUUID()
+    val dataplaneGroup =
+      DataplaneGroup()
+        .withId(dataplaneGroupId)
+        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withName(Geography.AUTO.name)
+        .withEnabled(true)
+        .withTombstone(false)
+    dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
   }
 
   private fun initializeDatabases() {

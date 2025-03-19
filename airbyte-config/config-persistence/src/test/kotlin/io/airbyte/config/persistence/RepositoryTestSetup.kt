@@ -16,6 +16,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl

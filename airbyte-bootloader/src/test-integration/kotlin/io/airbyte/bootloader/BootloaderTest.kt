@@ -8,9 +8,8 @@ import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
-import io.airbyte.config.Configs
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
-import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Geography
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.ApplyDefinitionsHelper
@@ -28,14 +27,13 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.config.specs.LocalDefinitionsProvider
-import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ConnectorRolloutService
-import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SecretPersistenceConfigService
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
@@ -61,8 +59,9 @@ import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.testcontainers.containers.PostgreSQLContainer
@@ -70,7 +69,6 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 import uk.org.webcompere.systemstubs.jupiter.SystemStub
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension
 import java.util.Optional
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
@@ -113,8 +111,9 @@ internal class BootloaderTest {
   @SystemStub
   private val environmentVariables: EnvironmentVariables? = null
 
-  @Test
-  fun testBootloaderAppBlankDb() {
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  fun testBootloaderAppBlankDb(airbyteEdition: AirbyteEdition) {
     val currentAirbyteVersion = AirbyteVersion(VERSION_0330_ALPHA)
     // The protocol version range should contain our default protocol version since many definitions we
     // load don't provide a protocol version.
@@ -133,15 +132,6 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
-    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    Mockito
-      .`when`(
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
-          DEFAULT_ORGANIZATION_ID,
-          Geography.AUTO,
-        ),
-      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
-
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
     val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
@@ -150,6 +140,8 @@ internal class BootloaderTest {
       Mockito.mock(
         SecretPersistenceConfigService::class.java,
       )
+    val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
+
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
@@ -236,7 +228,7 @@ internal class BootloaderTest {
         actorDefinitionService,
         sourceService,
         destinationService,
-        Configs.AirbyteEdition.COMMUNITY,
+        airbyteEdition,
         breakingChangeHelper,
         breakingChangeNotificationHelper,
         featureFlagClient!!,
@@ -303,6 +295,8 @@ internal class BootloaderTest {
         runMigrationOnStartup,
         DEFAULT_REALM,
         postLoadExecutor,
+        dataplaneGroupService,
+        airbyteEdition,
       )
     bootloader.load()
 
@@ -311,6 +305,10 @@ internal class BootloaderTest {
 
     val configsMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
     Assertions.assertEquals(getMigrationVersion(CURRENT_CONFIGS_MIGRATION), configsMigrator.latestMigration.version.version)
+
+    val workspaces = workspaceService.listStandardWorkspaces(false)
+    Assertions.assertEquals(workspaces.size, 1)
+    Assertions.assertEquals(workspaces[0].defaultGeography, if (airbyteEdition == AirbyteEdition.CLOUD) Geography.US else Geography.AUTO)
 
     Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.version.get())
     Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.airbyteProtocolVersionMin.get())
@@ -324,8 +322,9 @@ internal class BootloaderTest {
     )
   }
 
-  @Test
-  fun testRequiredVersionUpgradePredicate() {
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  fun testRequiredVersionUpgradePredicate(airbyteEdition: AirbyteEdition) {
     val currentAirbyteVersion = AirbyteVersion(VERSION_0330_ALPHA)
     val airbyteProtocolRange =
       AirbyteProtocolVersionRange(
@@ -342,17 +341,9 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
-    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    Mockito
-      .`when`(
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
-          DEFAULT_ORGANIZATION_ID,
-          Geography.AUTO,
-        ),
-      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
-
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
+    val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
@@ -430,7 +421,7 @@ internal class BootloaderTest {
         actorDefinitionService,
         sourceService,
         destinationService,
-        Configs.AirbyteEdition.COMMUNITY,
+        airbyteEdition,
         breakingChangesHelper,
         breakingChangeNotificationHelper,
         featureFlagClient!!,
@@ -499,6 +490,8 @@ internal class BootloaderTest {
         runMigrationOnStartup,
         DEFAULT_REALM,
         postLoadExecutor,
+        dataplaneGroupService,
+        airbyteEdition,
       )
 
     // starting from no previous version is always legal.
@@ -651,8 +644,9 @@ internal class BootloaderTest {
     )
   }
 
-  @Test
-  fun testPostLoadExecutionExecutes() {
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  fun testPostLoadExecutionExecutes(airbyteEdition: AirbyteEdition) {
     val testTriggered = AtomicBoolean()
     val currentAirbyteVersion = AirbyteVersion(VERSION_0330_ALPHA)
     val airbyteProtocolRange =
@@ -670,17 +664,9 @@ internal class BootloaderTest {
     val configsFlyway = createConfigsFlyway(configsDataSource)
     val jobsFlyway = createJobsFlyway(jobsDataSource)
 
-    val dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    Mockito
-      .`when`(
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(
-          DEFAULT_ORGANIZATION_ID,
-          Geography.AUTO,
-        ),
-      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()).withName("US"))
-
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
+    val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
@@ -783,6 +769,8 @@ internal class BootloaderTest {
         runMigrationOnStartup,
         DEFAULT_REALM,
         postLoadExecutor,
+        dataplaneGroupService,
+        airbyteEdition,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())
