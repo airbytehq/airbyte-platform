@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -119,6 +120,37 @@ internal class SecretsRepositoryWriterTest {
       verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
       assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
       verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
+    }
+
+    @Test
+    fun testUpdateConfigWithNewSecret() {
+      val secret = "secret-1"
+      val oldCoordinate = "existing_coordinate_v1"
+      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), secret)
+
+      val updatedFullConfigWithNewSecret =
+        Jsons.deserialize(
+          """
+          { "username": "airbyte1", "password": "$secret", "password2": "$secret"}
+          """.trimIndent(),
+        )
+
+      val oldPartialConfig = injectCoordinate(oldCoordinate)
+      val newConfig = Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": \"$secret\", \"password2\": \"$secret\"}")
+
+      val customSecretPrefix = "airbyte_custom_secret_"
+
+      val updatedPartialConfig =
+        secretsRepositoryWriter.updateFromConfig(
+          WORKSPACE_ID,
+          oldPartialConfig,
+          newConfig,
+          SPEC_WITH_NEW_SECRET.connectionSpecification,
+          null,
+          customSecretPrefix,
+        )
+
+      Assertions.assertTrue(updatedPartialConfig["password2"]["_secret"].asText().startsWith(customSecretPrefix))
     }
 
     @Test
@@ -442,6 +474,15 @@ internal class SecretsRepositoryWriterTest {
           Jsons.deserialize(
             """
             { "properties": { "username": { "type": "string" }, "password": { "type": "string", "airbyte_secret": true } } }  
+            """.trimIndent(),
+          ),
+        )
+    private val SPEC_WITH_NEW_SECRET =
+      ConnectorSpecification()
+        .withConnectionSpecification(
+          Jsons.deserialize(
+            """
+            { "properties": { "username": { "type": "string" }, "password": { "type": "string", "airbyte_secret": true }, "password2": { "type": "string", "airbyte_secret": true } } }
             """.trimIndent(),
           ),
         )

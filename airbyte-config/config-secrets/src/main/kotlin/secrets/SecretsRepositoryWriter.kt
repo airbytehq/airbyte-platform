@@ -49,7 +49,7 @@ open class SecretsRepositoryWriter(
    *
    * Uses the environment secret persistence if needed.
    *
-   * @param workspaceId workspace id for the config
+   * @param workspaceId the workspace id for the config
    * @param fullConfig full config
    * @param connSpec connector specification
    * @param runtimeSecretPersistence to use as an override
@@ -60,9 +60,30 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ): JsonNode = createFromConfig(workspaceId, fullConfig, connSpec, runtimeSecretPersistence, SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX)
+
+  /**
+   * Detects secrets in the configuration. Writes them to the secrets store. It returns the config
+   * stripped of secrets (replaced with pointers to the secrets store).
+   *
+   * Uses the environment secret persistence if needed.
+   *
+   * @param secretBaseId the id for the config
+   * @param fullConfig full config
+   * @param connSpec connector specification
+   * @param runtimeSecretPersistence to use as an override
+   * @param secretBasePrefix the base prefix of the secret (airbyte_workspace_ by default)
+   * @return partial config
+   */
+  fun createFromConfig(
+    secretBaseId: UUID,
+    fullConfig: JsonNode,
+    connSpec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    secretBasePrefix: String = SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
   ): JsonNode {
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
-    return splitSecretConfig(workspaceId, fullConfig, connSpec, activePersistence)
+    return splitSecretConfig(secretBaseId, secretBasePrefix, fullConfig, connSpec, activePersistence)
   }
 
   /**
@@ -117,7 +138,7 @@ open class SecretsRepositoryWriter(
    *
    * Uses the environment secret persistence if needed.
    *
-   * @param workspaceId workspace id for the config
+   * @param workspaceId the workspace id for the config
    * @param oldPartialConfig old partial config (no secrets)
    * @param fullConfig new full config (with secrets)
    * @param spec connector specification
@@ -131,11 +152,47 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ): JsonNode =
+    updateFromConfig(
+      workspaceId,
+      oldPartialConfig,
+      fullConfig,
+      spec,
+      runtimeSecretPersistence,
+      SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
+    )
+
+  /**
+   * This method merges an existing partial config with a new full config. It writes the secrets to the
+   * secrets store and returns the partial config with the secrets removed and replaced with secret coordinates.
+   *
+   * For simplicity, secrets are always written regardless of whether value change.
+   *
+   * Finally, delete the old secrets for cost and security considerations.
+   *
+   * Uses the environment secret persistence if needed.
+   *
+   * @param secretBaseId the id for the config
+   * @param oldPartialConfig old partial config (no secrets)
+   * @param fullConfig new full config (with secrets)
+   * @param spec connector specification
+   * @param runtimeSecretPersistence to use as an override
+   * @param secretBasePrefix the base prefix of the secret (airbyte_workspace_ by default). This value is only used if there when no existing coordinates
+   * @return partial config
+   */
+  @Throws(JsonValidationException::class)
+  fun updateFromConfig(
+    secretBaseId: UUID,
+    oldPartialConfig: JsonNode,
+    fullConfig: JsonNode,
+    spec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    secretBasePrefix: String = SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
   ): JsonNode {
     validator.ensure(spec, fullConfig)
 
     val updatedSplitConfig: SplitSecretConfig =
-      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldPartialConfig, fullConfig, spec, secretPersistence)
+      SecretsHelpers.splitAndUpdateConfig(secretBaseId, oldPartialConfig, fullConfig, spec, secretPersistence, secretBasePrefix)
 
     updatedSplitConfig
       .getCoordinateToPayload()
@@ -174,6 +231,7 @@ open class SecretsRepositoryWriter(
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
     return splitSecretConfig(
       NO_WORKSPACE,
+      SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
       fullConfig,
       connSpec,
       activePersistence,
@@ -182,7 +240,8 @@ open class SecretsRepositoryWriter(
   }
 
   private fun splitSecretConfig(
-    workspaceId: UUID,
+    secretBaseId: UUID,
+    secretBasePrefix: String,
     fullConfig: JsonNode,
     connSpec: JsonNode,
     secretPersistence: SecretPersistence,
@@ -190,10 +249,11 @@ open class SecretsRepositoryWriter(
   ): JsonNode {
     val splitSecretConfig: SplitSecretConfig =
       SecretsHelpers.splitConfig(
-        workspaceId,
+        secretBaseId,
         fullConfig,
         connSpec,
         secretPersistence,
+        secretBasePrefix,
       )
     // modify this to add expire time
     splitSecretConfig.getCoordinateToPayload().forEach { (coordinate: SecretCoordinate, payload: String) ->

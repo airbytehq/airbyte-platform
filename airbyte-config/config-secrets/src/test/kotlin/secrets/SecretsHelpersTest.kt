@@ -19,6 +19,7 @@ import io.airbyte.config.secrets.test.cases.PostgresSshKeyTestCase
 import io.airbyte.config.secrets.test.cases.SimpleTestCase
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import io.kotlintest.matchers.string.shouldStartWith
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -89,6 +90,30 @@ internal class SecretsHelpersTest {
           key.toString().length <= 255,
           "Key is too long: " + key.toString().length,
         )
+      },
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource(PROVIDE_TEST_CASES)
+  fun testSplitWithCustomSecretPrefix(testCase: SecretsTestCase) {
+    val uuidIterator = SecretsTestCase.UUIDS.iterator()
+    val inputConfig: JsonNode = testCase.fullConfig
+    val customSecretPrefix = "airbyte_custom_prefix_"
+    val splitConfig: SplitSecretConfig =
+      SecretsHelpers.splitConfig(
+        { uuidIterator.next() },
+        SecretsTestCase.WORKSPACE_ID,
+        inputConfig,
+        testCase.spec.connectionSpecification,
+        secretPresistence,
+        customSecretPrefix,
+      )
+
+    // check every key starts with the custom secret prefix
+    splitConfig.getCoordinateToPayload().keys.forEach(
+      Consumer { key: SecretCoordinate ->
+        key.fullCoordinate.shouldStartWith("$customSecretPrefix${SecretsTestCase.WORKSPACE_ID}")
       },
     )
   }

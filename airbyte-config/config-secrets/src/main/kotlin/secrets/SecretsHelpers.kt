@@ -47,31 +47,34 @@ private val logger = KotlinLogging.logger {}
  */
 object SecretsHelpers {
   private const val COORDINATE_FIELD = "_secret"
+  const val DEFAULT_SECRET_BASE_PREFIX = "airbyte_workspace_"
 
   /**
    * Used to separate secrets out of some configuration. This will output a partial config that
    * includes pointers to secrets instead of actual secret values and a map that can be used to update
    * a [SecretPersistence] at coordinates with values from the full config.
    *
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param fullConfig config including secrets
    * @param spec specification for the config
    * @param secretPersistence secret persistence to be used for r/w. Could be a runtime secret persistence.
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitConfig(
-    workspaceId: UUID,
+    secretBaseId: UUID,
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
+    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
-      workspaceId,
+      secretBaseId,
       secretPersistence,
       Jsons.emptyObject(),
       fullConfig,
       spec,
+      secretBasePrefix,
     )
 
   /**
@@ -81,25 +84,27 @@ object SecretsHelpers {
    *
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation.
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param fullConfig config including secrets
    * @param spec specification for the config
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
+    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       uuidSupplier,
-      workspaceId,
+      secretBaseId,
       secretPersistence,
       Jsons.emptyObject(),
       fullConfig,
       spec,
+      secretBasePrefix,
     )
 
   /**
@@ -109,7 +114,7 @@ object SecretsHelpers {
    * for this configuration is provided, this method attempts to use the same base coordinates to
    * refer to the same secret and increment the version of the coordinate used to reference a secret.
    *
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param oldPartialConfig previous partial config for this specific configuration
    * @param newFullConfig new config containing secrets that will be used to update the partial config
    * @param spec specification that should match both the previous partial config after filling in
@@ -119,19 +124,21 @@ object SecretsHelpers {
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitAndUpdateConfig(
-    workspaceId: UUID,
+    secretBaseId: UUID,
     oldPartialConfig: JsonNode?,
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
+    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
-      workspaceId,
+      secretBaseId,
       secretReader,
       oldPartialConfig,
       newFullConfig,
       spec,
+      secretBasePrefix,
     )
 
   /**
@@ -140,12 +147,14 @@ object SecretsHelpers {
   @VisibleForTesting
   fun splitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     oldPartialConfig: JsonNode?,
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
-  ): SplitSecretConfig = internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec)
+    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
+  ): SplitSecretConfig =
+    internalSplitAndUpdateConfig(uuidSupplier, secretBaseId, secretReader, oldPartialConfig, newFullConfig, spec, secretBasePrefix)
 
   /**
    * Replaces {"_secret": "full_coordinate"} objects in the partial config with the string secret
@@ -229,7 +238,7 @@ object SecretsHelpers {
    *
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation
-   * @param workspaceId workspace that will contain the source or destination this config will be
+   * @param secretBaseId base id that will contain the source or destination this config will be
    * stored for
    * @param secretReader provides a way to determine if a secret is the same or updated at a specific
    * location in a config
@@ -240,11 +249,12 @@ object SecretsHelpers {
    */
   private fun internalSplitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     secretReader: ReadOnlySecretPersistence,
     persistedPartialConfig: JsonNode?,
     newFullConfig: JsonNode,
     spec: JsonNode?,
+    secretBasePrefix: String,
   ): SplitSecretConfig {
     var fullConfigCopy = newFullConfig.deepCopy<JsonNode>()
     val secretMap: HashMap<SecretCoordinate, String> = HashMap()
@@ -255,7 +265,7 @@ object SecretsHelpers {
         JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
           val persistedNode = JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode).orElse(null)
           val existingCoordinate = getExistingCoordinateIfExists(persistedNode)
-          val coordinate: SecretCoordinate = getCoordinate(secretReader, workspaceId, uuidSupplier, existingCoordinate)
+          val coordinate: SecretCoordinate = getCoordinate(secretReader, secretBaseId, uuidSupplier, existingCoordinate, secretBasePrefix)
           secretMap[coordinate] = json.asText()
           Jsons.jsonNode(mapOf(COORDINATE_FIELD to coordinate.fullCoordinate))
         }
@@ -297,14 +307,15 @@ object SecretsHelpers {
    */
   internal fun getCoordinate(
     secretReader: ReadOnlySecretPersistence,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     uuidSupplier: Supplier<UUID>,
     oldSecretFullCoordinate: String?,
+    secretBasePrefix: String,
   ): SecretCoordinate =
     getSecretCoordinate(
-      "airbyte_workspace_",
+      secretBasePrefix,
       secretReader,
-      workspaceId,
+      secretBaseId,
       uuidSupplier,
       oldSecretFullCoordinate,
     )
@@ -319,7 +330,7 @@ object SecretsHelpers {
    *
    * @param secretBasePrefix prefix for the secret base
    * @param secretReader secret persistence
-   * @param secretBaseId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation.
    * @param oldSecretFullCoordinate a nullable full coordinate (base+version) retrieved from the
