@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.internal
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ArrayNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.ScopeType
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
@@ -20,9 +18,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -119,6 +117,7 @@ class AnalyticsMessageTrackerTest {
   }
 
   @Test
+  @Suppress("UNCHECKED_CAST")
   fun `test payload of track method`() {
     val sourceMessage = createAnalyticsAirbyteMessage()
     val destinationMessage = createAnalyticsAirbyteMessage()
@@ -134,17 +133,16 @@ class AnalyticsMessageTrackerTest {
     // Extract and assert the captured payload
     val capturedPayload = payloadSlot.captured
 
-    val objectMapper = ObjectMapper()
-    val payloadArray: ArrayNode = objectMapper.readTree(capturedPayload["analytics_messages"] as String) as ArrayNode
+    val analyticsMessages = capturedPayload["analytics_messages"] as List<Map<String, Any>>
 
-    assertEquals(2, payloadArray.size())
+    assertEquals(2, analyticsMessages.size)
 
     // Assuming the order is not guaranteed, you can iterate and check conditions
-    payloadArray.forEach { jsonNode ->
-      val origin = jsonNode.get("origin").asText()
-      val timestamp = jsonNode.get("timestamp").asLong()
-      val value = jsonNode.get("value").asText()
-      val type = jsonNode.get("type").asText()
+    analyticsMessages.forEach { analyticsMessage: Map<String, Any> ->
+      val origin = analyticsMessage["origin"]
+      val timestamp = analyticsMessage["timestamp"]
+      val value = analyticsMessage["value"]
+      val type = analyticsMessage["type"]
 
       assertTrue(origin == "SOURCE" || origin == "DESTINATION")
       assertNotNull(timestamp) // Or any specific condition you want to check for timestamp
