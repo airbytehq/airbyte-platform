@@ -123,6 +123,7 @@ create table "public"."actor_oauth_parameter" (
   "actor_type" "public"."actor_type" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "organization_id" uuid,
   constraint "actor_oauth_parameter_pkey" primary key ("id")
 );
 create table "public"."airbyte_configs_migrations" (
