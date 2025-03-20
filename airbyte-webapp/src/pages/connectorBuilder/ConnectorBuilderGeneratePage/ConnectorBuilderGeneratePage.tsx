@@ -31,7 +31,8 @@ import { Text } from "components/ui/Text";
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
 import {
   clearConnectorChatBuilderStorage,
-  getConnectorChatBuilderParamsFromStorage,
+  CONNECTOR_CHAT_ACTIONS,
+  getLaunchBuilderParamsFromStorage,
 } from "core/utils/connectorChatBuilderStorage";
 import { links } from "core/utils/links";
 import { convertSnakeToCamel } from "core/utils/strings";
@@ -194,7 +195,7 @@ const GenerateConnectorFormFields: React.FC<{
   }, [setError, assistApiErrors]);
 
   useEffect(() => {
-    const connectorChatBuilderParams = getConnectorChatBuilderParamsFromStorage();
+    const connectorChatBuilderParams = getLaunchBuilderParamsFromStorage();
 
     if (connectorChatBuilderParams && isConnectorBuilderGenerateFromParamsEnabled) {
       setValue("name", connectorChatBuilderParams.name);
@@ -204,12 +205,12 @@ const GenerateConnectorFormFields: React.FC<{
         const submitAndCleanup = async (data: GeneratorFormResponse) => {
           await onSubmit(data);
 
-          clearConnectorChatBuilderStorage();
+          clearConnectorChatBuilderStorage(CONNECTOR_CHAT_ACTIONS.LAUNCH_BUILDER);
         };
 
         handleSubmit((data) => submitAndCleanup(data as GeneratorFormResponse))();
       } else {
-        clearConnectorChatBuilderStorage();
+        clearConnectorChatBuilderStorage(CONNECTOR_CHAT_ACTIONS.LAUNCH_BUILDER);
       }
     }
   }, [setValue, handleSubmit, onSubmit, isConnectorBuilderGenerateFromParamsEnabled]);
