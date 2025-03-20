@@ -27,8 +27,6 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.ScopedResourceRequirements;
-import io.airbyte.api.model.generated.SourceCloneConfiguration;
-import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
@@ -506,87 +504,6 @@ class SourceHandlerTest {
         sourceConnection.getSourceId());
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
-  }
-
-  @Test
-  void testCloneSourceWithoutConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(
-        standardSourceDefinition.getSourceDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-    final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-
-    final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
-
-    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
-        .thenReturn(standardSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
-        .thenReturn(sourceDefinitionVersion);
-    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
-    when(
-        secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(sourceConnection.getConfiguration());
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
-
-    assertEquals(expectedClonedSourceRead, actualSourceRead);
-    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
-  }
-
-  @Test
-  void testCloneSourceWithConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(
-        standardSourceDefinition.getSourceDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-    final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-
-    final SourceCloneConfiguration sourceCloneConfiguration = new SourceCloneConfiguration().name("Copy Name");
-    final SourceCloneRequestBody sourceCloneRequestBody =
-        new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId()).sourceConfiguration(sourceCloneConfiguration);
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
-
-    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
-        .thenReturn(standardSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
-        .thenReturn(sourceDefinitionVersion);
-    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
-    when(
-        secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(sourceConnection.getConfiguration());
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
-
-    assertEquals(expectedClonedSourceRead, actualSourceRead);
   }
 
   @Test

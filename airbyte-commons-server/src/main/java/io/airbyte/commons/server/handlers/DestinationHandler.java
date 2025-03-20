@@ -10,8 +10,6 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
-import io.airbyte.api.model.generated.DestinationCloneConfiguration;
-import io.airbyte.api.model.generated.DestinationCloneRequestBody;
 import io.airbyte.api.model.generated.DestinationCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -258,35 +256,6 @@ public class DestinationHandler {
     return buildDestinationRead(destinationIdRequestBody.getDestinationId());
   }
 
-  public DestinationRead cloneDestination(final DestinationCloneRequestBody destinationCloneRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    // read destination configuration from db
-    final DestinationRead destinationToClone = buildDestinationReadWithSecrets(destinationCloneRequestBody.getDestinationCloneId());
-    final DestinationCloneConfiguration destinationCloneConfiguration = destinationCloneRequestBody.getDestinationConfiguration();
-
-    final String copyText = " (Copy)";
-    final String destinationName = destinationToClone.getName() + copyText;
-
-    final DestinationCreate destinationCreate = new DestinationCreate()
-        .name(destinationName)
-        .destinationDefinitionId(destinationToClone.getDestinationDefinitionId())
-        .connectionConfiguration(destinationToClone.getConnectionConfiguration())
-        .workspaceId(destinationToClone.getWorkspaceId())
-        .resourceAllocation(destinationToClone.getResourceAllocation());
-
-    if (destinationCloneConfiguration != null) {
-      if (destinationCloneConfiguration.getName() != null) {
-        destinationCreate.name(destinationCloneConfiguration.getName());
-      }
-
-      if (destinationCloneConfiguration.getConnectionConfiguration() != null) {
-        destinationCreate.connectionConfiguration(destinationCloneConfiguration.getConnectionConfiguration());
-      }
-    }
-
-    return createDestination(destinationCreate);
-  }
-
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
@@ -425,22 +394,6 @@ public class DestinationHandler {
     final DestinationConnection dci = Jsons.clone(destinationConnection);
     dci.setConfiguration(secretsProcessor.prepareSecretsForOutput(dci.getConfiguration(), spec.getConnectionSpecification()));
 
-    final StandardDestinationDefinition standardDestinationDefinition =
-        destinationService.getStandardDestinationDefinition(dci.getDestinationDefinitionId());
-    return toDestinationRead(dci, standardDestinationDefinition);
-  }
-
-  @SuppressWarnings("PMD.PreserveStackTrace")
-  private DestinationRead buildDestinationReadWithSecrets(final UUID destinationId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-
-    // remove secrets from config before returning the read
-    final DestinationConnection dci;
-    try {
-      dci = Jsons.clone(destinationService.getDestinationConnectionWithSecrets(destinationId));
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
     final StandardDestinationDefinition standardDestinationDefinition =
         destinationService.getStandardDestinationDefinition(dci.getDestinationDefinitionId());
     return toDestinationRead(dci, standardDestinationDefinition);

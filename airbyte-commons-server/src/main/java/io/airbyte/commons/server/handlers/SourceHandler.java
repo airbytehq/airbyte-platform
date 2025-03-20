@@ -19,8 +19,6 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialSourceUpdate;
-import io.airbyte.api.model.generated.SourceCloneConfiguration;
-import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody;
@@ -318,36 +316,6 @@ public class SourceHandler {
     }
   }
 
-  public SourceRead cloneSource(final SourceCloneRequestBody sourceCloneRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
-    // read source configuration from db
-    final SourceRead sourceToClone;
-    sourceToClone = buildSourceReadWithSecrets(sourceCloneRequestBody.getSourceCloneId());
-    final SourceCloneConfiguration sourceCloneConfiguration = sourceCloneRequestBody.getSourceConfiguration();
-
-    final String copyText = " (Copy)";
-    final String sourceName = sourceToClone.getName() + copyText;
-
-    final SourceCreate sourceCreate = new SourceCreate()
-        .name(sourceName)
-        .sourceDefinitionId(sourceToClone.getSourceDefinitionId())
-        .connectionConfiguration(sourceToClone.getConnectionConfiguration())
-        .workspaceId(sourceToClone.getWorkspaceId())
-        .resourceAllocation(sourceToClone.getResourceAllocation());
-
-    if (sourceCloneConfiguration != null) {
-      if (sourceCloneConfiguration.getName() != null) {
-        sourceCreate.name(sourceCloneConfiguration.getName());
-      }
-
-      if (sourceCloneConfiguration.getConnectionConfiguration() != null) {
-        sourceCreate.connectionConfiguration(sourceCloneConfiguration.getConnectionConfiguration());
-      }
-    }
-
-    return createSource(sourceCreate);
-  }
-
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
@@ -494,21 +462,6 @@ public class SourceHandler {
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
     final JsonNode sanitizedConfig = secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), spec.getConnectionSpecification());
     sourceConnection.setConfiguration(sanitizedConfig);
-    return toSourceRead(sourceConnection, standardSourceDefinition);
-  }
-
-  @SuppressWarnings("PMD.PreserveStackTrace")
-  private SourceRead buildSourceReadWithSecrets(final UUID sourceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    // read configuration from db
-    final SourceConnection sourceConnection;
-    try {
-      sourceConnection = sourceService.getSourceConnectionWithSecrets(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-    final StandardSourceDefinition standardSourceDefinition = sourceService
-        .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
     return toSourceRead(sourceConnection, standardSourceDefinition);
   }
 

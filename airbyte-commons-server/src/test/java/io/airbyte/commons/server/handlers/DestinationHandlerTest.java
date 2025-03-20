@@ -21,8 +21,6 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.DestinationCloneConfiguration;
-import io.airbyte.api.model.generated.DestinationCloneRequestBody;
 import io.airbyte.api.model.generated.DestinationCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -610,106 +608,6 @@ class DestinationHandlerTest {
     final DestinationSearch invalidDestinationSearch = new DestinationSearch().name("invalid");
     actualDestinationRead = destinationHandler.searchDestinations(invalidDestinationSearch);
     assertEquals(0, actualDestinationRead.getDestinations().size());
-  }
-
-  @Test
-  void testCloneDestinationWithConfiguration()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final DestinationConnection clonedConnection = DestinationHelpers.generateDestination(standardDestinationDefinition.getDestinationDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final DestinationRead expectedDestinationRead = new DestinationRead()
-        .name(clonedConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(clonedConnection.getWorkspaceId())
-        .destinationId(clonedConnection.getDestinationId())
-        .connectionConfiguration(clonedConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL)
-        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .isEntitled(IS_ENTITLED)
-        .supportState(SUPPORT_STATE)
-        .resourceAllocation(RESOURCE_ALLOCATION);
-    final DestinationRead destinationRead = new DestinationRead()
-        .name(destinationConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationId(destinationConnection.getDestinationId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
-        .resourceAllocation(RESOURCE_ALLOCATION);
-    final DestinationCloneConfiguration destinationCloneConfiguration = new DestinationCloneConfiguration().name("Copy Name");
-    final DestinationCloneRequestBody destinationCloneRequestBody = new DestinationCloneRequestBody()
-        .destinationCloneId(destinationRead.getDestinationId()).destinationConfiguration(destinationCloneConfiguration);
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getDestinationId());
-    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
-    when(destinationService.getDestinationConnection(clonedConnection.getDestinationId())).thenReturn(clonedConnection);
-
-    when(destinationService.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
-        .thenReturn(standardDestinationDefinition);
-    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
-        .thenReturn(destinationDefinitionVersion);
-    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
-        .thenReturn(standardDestinationDefinition);
-    when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(destinationConnection.getConfiguration());
-    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
-
-    final DestinationRead actualDestinationRead = destinationHandler.cloneDestination(destinationCloneRequestBody);
-
-    assertEquals(expectedDestinationRead, actualDestinationRead);
-  }
-
-  @Test
-  void testCloneDestinationWithoutConfiguration()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final DestinationConnection clonedConnection = DestinationHelpers.generateDestination(standardDestinationDefinition.getDestinationDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final DestinationRead expectedDestinationRead = new DestinationRead()
-        .name(clonedConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(clonedConnection.getWorkspaceId())
-        .destinationId(clonedConnection.getDestinationId())
-        .connectionConfiguration(clonedConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL)
-        .isEntitled(IS_ENTITLED)
-        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE)
-        .resourceAllocation(RESOURCE_ALLOCATION);
-    final DestinationRead destinationRead = new DestinationRead()
-        .name(destinationConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationId(destinationConnection.getDestinationId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
-        .resourceAllocation(RESOURCE_ALLOCATION);
-
-    final DestinationCloneRequestBody destinationCloneRequestBody =
-        new DestinationCloneRequestBody().destinationCloneId(destinationRead.getDestinationId());
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getDestinationId());
-    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
-    when(destinationService.getDestinationConnection(clonedConnection.getDestinationId())).thenReturn(clonedConnection);
-
-    when(destinationService.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
-        .thenReturn(standardDestinationDefinition);
-    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
-        .thenReturn(destinationDefinitionVersion);
-    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
-        .thenReturn(standardDestinationDefinition);
-    when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(destinationConnection.getConfiguration());
-    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
-
-    final DestinationRead actualDestinationRead = destinationHandler.cloneDestination(destinationCloneRequestBody);
-
-    assertEquals(expectedDestinationRead, actualDestinationRead);
   }
 
 }
