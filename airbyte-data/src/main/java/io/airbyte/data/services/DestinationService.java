@@ -26,6 +26,9 @@ public interface DestinationService {
   StandardDestinationDefinition getStandardDestinationDefinition(UUID destinationDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException;
 
+  StandardDestinationDefinition getStandardDestinationDefinition(UUID destinationDefinitionId, boolean includeTombstone)
+      throws JsonValidationException, IOException, ConfigNotFoundException;
+
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
 
   Boolean isDestinationActive(UUID destinationId) throws IOException;

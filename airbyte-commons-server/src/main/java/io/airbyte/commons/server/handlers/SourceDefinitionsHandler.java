@@ -10,7 +10,6 @@ import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionCreate;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceDefinitionRead.SourceTypeEnum;
@@ -117,9 +116,9 @@ public class SourceDefinitionsHandler {
     this.apiPojoConverters = apiPojoConverters;
   }
 
-  public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId)
+  public SourceDefinitionRead buildSourceDefinitionRead(final UUID sourceDefinitionId, final boolean includeTombstone)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
+    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId, includeTombstone);
     final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
     return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
   }
@@ -259,9 +258,9 @@ public class SourceDefinitionsHandler {
     return new PrivateSourceDefinitionReadList().sourceDefinitions(reads);
   }
 
-  public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
+  public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId, final boolean includeTombstone)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    return buildSourceDefinitionRead(sourceDefinitionIdRequestBody.getSourceDefinitionId());
+    return buildSourceDefinitionRead(sourceDefinitionId, includeTombstone);
   }
 
   public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
@@ -273,7 +272,7 @@ public class SourceDefinitionsHandler {
       final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
       throw new IdNotFoundKnownException(message, definitionId.toString());
     }
-    return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
+    return getSourceDefinition(definitionId, true);
   }
 
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
@@ -283,7 +282,7 @@ public class SourceDefinitionsHandler {
     if (!workspaceService.workspaceCanUseDefinition(definitionId, workspaceId)) {
       throw new IdNotFoundKnownException("Cannot find the requested definition with given id for this workspace", definitionId.toString());
     }
-    return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
+    return getSourceDefinition(definitionId, true);
   }
 
   public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) throws IOException {
@@ -373,16 +372,16 @@ public class SourceDefinitionsHandler {
     return newSource;
   }
 
-  public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
+  public void deleteSourceDefinition(final UUID sourceDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     // "delete" all sources associated with the source definition as well. This will cascade to
     // connections that depend on any deleted sources.
     // Delete sources first in case a failure occurs mid-operation.
 
     final StandardSourceDefinition persistedSourceDefinition =
-        sourceService.getStandardSourceDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId());
+        sourceService.getStandardSourceDefinition(sourceDefinitionId);
 
-    for (final SourceRead sourceRead : sourceHandler.listSourcesForSourceDefinition(sourceDefinitionIdRequestBody).getSources()) {
+    for (final SourceRead sourceRead : sourceHandler.listSourcesForSourceDefinition(sourceDefinitionId).getSources()) {
       sourceHandler.deleteSource(sourceRead);
     }
 

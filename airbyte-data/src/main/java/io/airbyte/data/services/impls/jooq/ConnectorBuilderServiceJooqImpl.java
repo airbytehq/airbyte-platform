@@ -618,8 +618,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(
-                                                                                final UUID actorDefinitionId)
+  public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId)
       throws IOException {
     return database
         .query(ctx -> ctx

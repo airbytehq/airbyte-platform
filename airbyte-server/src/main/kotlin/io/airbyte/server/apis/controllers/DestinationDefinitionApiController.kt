@@ -68,7 +68,7 @@ open class DestinationDefinitionApiController(
   ) {
     accessValidator.validateWriteAccess(destinationDefinitionIdRequestBody.destinationDefinitionId)
     execute<Any?> {
-      destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody)
+      destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody.destinationDefinitionId)
       null
     }
   }
@@ -81,7 +81,8 @@ open class DestinationDefinitionApiController(
   ): DestinationDefinitionRead? =
     execute {
       destinationDefinitionsHandler.getDestinationDefinition(
-        destinationDefinitionIdRequestBody,
+        destinationDefinitionIdRequestBody.destinationDefinitionId,
+        true,
       )
     }
 

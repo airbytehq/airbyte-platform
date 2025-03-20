@@ -25,6 +25,9 @@ public interface SourceService {
 
   StandardSourceDefinition getStandardSourceDefinition(UUID sourceDefinitionId) throws JsonValidationException, IOException, ConfigNotFoundException;
 
+  StandardSourceDefinition getStandardSourceDefinition(UUID sourceDefinitionId, boolean includeTombstone)
+      throws JsonValidationException, IOException, ConfigNotFoundException;
+
   StandardSourceDefinition getSourceDefinitionFromSource(UUID sourceId);
 
   StandardSourceDefinition getSourceDefinitionFromConnection(UUID connectionId);

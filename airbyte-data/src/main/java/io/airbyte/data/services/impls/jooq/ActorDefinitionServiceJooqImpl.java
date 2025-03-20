@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq;
 
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
@@ -448,7 +449,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
     // default version because connector builder projects have a different concept of versioning
     return ctx.update(ACTOR_DEFINITION_VERSION).set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, targetImageTag)
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .where(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY.equal("airbyte/source-declarative-manifest")
+        .where(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY.equal(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
             .and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.equal(currentImageTag)))
         .execute();
   }

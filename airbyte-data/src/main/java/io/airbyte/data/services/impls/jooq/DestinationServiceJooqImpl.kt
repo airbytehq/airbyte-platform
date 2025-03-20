@@ -99,6 +99,10 @@ class DestinationServiceJooqImpl
       this.metricClient = metricClient
     }
 
+    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+    override fun getStandardDestinationDefinition(destinationDefinitionId: UUID): StandardDestinationDefinition? =
+      getStandardDestinationDefinition(destinationDefinitionId, true)
+
     /**
      * Get destination definition.
      *
@@ -109,8 +113,11 @@ class DestinationServiceJooqImpl
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
     @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-    override fun getStandardDestinationDefinition(destinationDefinitionId: UUID): StandardDestinationDefinition? =
-      destDefQuery(Optional.of<UUID?>(destinationDefinitionId), true)!!
+    override fun getStandardDestinationDefinition(
+      destinationDefinitionId: UUID,
+      includeTombstone: Boolean,
+    ): StandardDestinationDefinition? =
+      destDefQuery(Optional.of<UUID?>(destinationDefinitionId), includeTombstone)!!
         .findFirst()
         .orElseThrow<ConfigNotFoundException?>(
           Supplier {

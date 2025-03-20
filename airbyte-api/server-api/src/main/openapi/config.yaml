@@ -6668,6 +6668,403 @@ paths:
           example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
           in: query
           required: false
+
+  /public/v1/workspaces/{workspaceId}/definitions/declarative_sources:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDeclarativeSourceDefinitions
+      x-sdk-alias: listDeclarativeSourceDefinitions
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: List declarative source definitions.
+    post:
+      summary: Create a declarative source definition.
+      operationId: publicCreateDeclarativeSourceDefinition
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeclarativeSourceDefinitionRequest"
+
+  /public/v1/workspaces/{workspaceId}/definitions/declarative_sources/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDeclarativeSourceDefinition
+      x-sdk-alias: getDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Get declarative source definition details.
+    put:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeclarativeSourceDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDeclarativeSourceDefinition
+      x-sdk-alias: updateDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Update declarative source definition details.
+    delete:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDeclarativeSourceDefinition
+      x-sdk-alias: deleteDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Delete a declarative source definition.
+
+  /public/v1/workspaces/{workspaceId}/definitions/sources:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListSourceDefinitions
+      x-sdk-alias: listSourceDefinitions
+      x-sdk-group: SourceDefinitions
+      summary: List source definitions.
+
+    post:
+      operationId: publicCreateSourceDefinition
+      x-sdk-alias: createSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Create a source definition.
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+
+  /public/v1/workspaces/{workspaceId}/definitions/sources/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetSourceDefinition
+      x-sdk-alias: getSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Get source definition details.
+    put:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateSourceDefinition
+      x-sdk-alias: updateSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Update source definition details.
+    delete:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteSourceDefinition
+      x-sdk-alias: deleteSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Delete a source definition.
+
+  /public/v1/workspaces/{workspaceId}/definitions/destinations:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDestinationDefinitions
+      x-sdk-alias: listDestinationDefinitions
+      x-sdk-group: DestinationDefinitions
+      summary: List destination definitions.
+
+    post:
+      operationId: publicCreateDestinationDefinition
+      x-sdk-alias: createDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Create a destination definition.
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+
+  /public/v1/workspaces/{workspaceId}/definitions/destinations/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDestinationDefinition
+      x-sdk-alias: getDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Get destination definition details.
+    put:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDestinationDefinition
+      x-sdk-alias: updateDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Update destination definition details.
+    delete:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDestinationDefinition
+      x-sdk-alias: deleteDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Delete a destination definition.
+
   /public/v1/sources:
     get:
       tags:
@@ -16942,6 +17339,7 @@ components:
           destinationType: postgres
           workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
       x-sdk-component: true
+
     ConnectorDefinitionsResponse:
       title: Root Type for DefinitionsResponse
       description: ""
@@ -16954,6 +17352,138 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-sdk-component: true
+
+    CreateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - workspaceId
+        - name
+        - manifest
+      properties:
+        name:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - manifest
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+
+    DeclarativeSourceDefinitionsResponse:
+      title: Root Type for DeclarativeSourceDefinitionsResponse
+      description: ""
+      x-sdk-component: true
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+
+    DeclarativeSourceDefinitionResponse:
+      type: object
+      x-sdk-component: true
+      required:
+        - id
+        - name
+        - manifest
+        - version
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+
+    CreateDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+          format: uri
+
+    UpdateDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerImageTag:
+          type: string
+
+    DefinitionsResponse:
+      title: Root Type for DefinitionsResponse
+      description: ""
+      x-sdk-component: true
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+
+    DefinitionResponse:
+      title: Root Type for DefinitionResponse
+      description: Provides details of a single connector definition.
+      type: object
+      x-sdk-component: true
+      required:
+        - id
+        - name
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse
       description: ""

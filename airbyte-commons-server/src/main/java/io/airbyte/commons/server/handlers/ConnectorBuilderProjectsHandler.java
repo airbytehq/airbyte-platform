@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE;
 import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTOR_BUILDER_PROJECT_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
@@ -273,10 +274,13 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException {
     final UUID id = uuidSupplier.get();
 
-    connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
+    connectorBuilderService.writeBuilderProjectDraft(id,
+        projectCreate.getWorkspaceId(),
+        projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
         projectCreate.getBuilderProject().getComponentsFileContent(),
-        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
+        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(),
+        projectCreate.getBuilderProject().getContributionPullRequestUrl(),
         projectCreate.getBuilderProject().getContributionActorDefinitionId());
 
     return buildIdResponseFromId(id, projectCreate.getWorkspaceId());
@@ -443,7 +447,7 @@ public class ConnectorBuilderProjectsHandler {
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
         .withDockerImageTag(getImageVersionForManifest(manifest).getImageVersion())
-        .withDockerRepository("airbyte/source-declarative-manifest")
+        .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withReleaseStage(ReleaseStage.CUSTOM)
@@ -724,8 +728,9 @@ public class ConnectorBuilderProjectsHandler {
   public DeclarativeManifestBaseImageRead getDeclarativeManifestBaseImage(final DeclarativeManifestRequestBody declarativeManifestRequestBody) {
     final JsonNode declarativeManifest = declarativeManifestRequestBody.getManifest();
     final DeclarativeManifestImageVersion declarativeManifestImageVersion = getImageVersionForManifest(declarativeManifest);
-    final String baseImage = String.format("docker.io/airbyte/source-declarative-manifest:%s@%s", declarativeManifestImageVersion.getImageVersion(),
-        declarativeManifestImageVersion.getImageSha());
+    final String baseImage =
+        String.format("docker.io/%s:%s@%s", AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE, declarativeManifestImageVersion.getImageVersion(),
+            declarativeManifestImageVersion.getImageSha());
     return new DeclarativeManifestBaseImageRead().baseImage(baseImage);
   }
 

@@ -102,6 +102,10 @@ class SourceServiceJooqImpl(
     this.metricClient = metricClient
   }
 
+  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+  override fun getStandardSourceDefinition(sourceDefinitionId: UUID): StandardSourceDefinition? =
+    getStandardSourceDefinition(sourceDefinitionId, true)
+
   /**
    * Get source definition.
    *
@@ -112,8 +116,11 @@ class SourceServiceJooqImpl(
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
   @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-  override fun getStandardSourceDefinition(sourceDefinitionId: UUID): StandardSourceDefinition? =
-    sourceDefQuery(Optional.of(sourceDefinitionId), true)!!
+  override fun getStandardSourceDefinition(
+    sourceDefinitionId: UUID,
+    includeTombstones: Boolean,
+  ): StandardSourceDefinition? =
+    sourceDefQuery(Optional.of(sourceDefinitionId), includeTombstones)!!
       .findFirst()
       .orElseThrow<ConfigNotFoundException?>(Supplier { ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId) })
 

@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialSourceUpdate;
 import io.airbyte.api.model.generated.SourceCreate;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
@@ -301,7 +300,7 @@ public class SourceHandler {
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     return buildSourceRead(sourceIdRequestBody.getSourceId());
   }
 
@@ -346,11 +345,11 @@ public class SourceHandler {
     return new SourceReadList().sources(reads);
   }
 
-  public SourceReadList listSourcesForSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
+  public SourceReadList listSourcesForSourceDefinition(final UUID sourceDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
     final List<SourceRead> reads = Lists.newArrayList();
-    for (final SourceConnection sourceConnection : sourceService.listSourcesForDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId())) {
+    for (final SourceConnection sourceConnection : sourceService.listSourcesForDefinition(sourceDefinitionId)) {
       reads.add(buildSourceRead(sourceConnection));
     }
 

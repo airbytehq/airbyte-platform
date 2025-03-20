@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationCreate;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
@@ -297,12 +296,12 @@ public class DestinationHandler {
     return new DestinationReadList().destinations(reads);
   }
 
-  public DestinationReadList listDestinationsForDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
+  public DestinationReadList listDestinationsForDestinationDefinition(final UUID destinationDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<DestinationRead> reads = Lists.newArrayList();
 
     for (final DestinationConnection destinationConnection : destinationService
-        .listDestinationsForDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId())) {
+        .listDestinationsForDefinition(destinationDefinitionId)) {
       reads.add(buildDestinationRead(destinationConnection));
     }
 

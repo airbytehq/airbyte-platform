@@ -28,7 +28,6 @@ import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SourceCreate;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -545,8 +544,6 @@ class SourceHandlerTest {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
             RESOURCE_ALLOCATION);
-    final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
-        new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(sourceService.listSourcesForDefinition(sourceConnection.getSourceDefinitionId())).thenReturn(Lists.newArrayList(sourceConnection));
@@ -561,7 +558,7 @@ class SourceHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
-    final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceDefinitionIdRequestBody);
+    final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.getSourceDefinitionId());
 
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),

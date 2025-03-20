@@ -14,7 +14,6 @@ import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -31,7 +30,6 @@ import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobReadList;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
@@ -467,17 +465,14 @@ public class JobHistoryHandler {
   }
 
   private SourceDefinitionRead getSourceDefinitionRead(final SourceRead sourceRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
-        new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceRead.getSourceDefinitionId());
-    return sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody);
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    return sourceDefinitionsHandler.getSourceDefinition(sourceRead.getSourceDefinitionId(), true);
   }
 
   private DestinationDefinitionRead getDestinationDefinitionRead(final DestinationRead destinationRead)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
-        new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationRead.getDestinationDefinitionId());
-    return destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody);
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+
+    return destinationDefinitionsHandler.getDestinationDefinition(destinationRead.getDestinationDefinitionId(), true);
   }
 
   private JobDebugInfoRead buildJobDebugInfoRead(final JobInfoRead jobInfoRead)

@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionCreate;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationDefinitionReadList;
@@ -116,10 +115,10 @@ public class DestinationDefinitionsHandler {
     this.licenseEntitlementChecker = licenseEntitlementChecker;
   }
 
-  public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId)
+  public DestinationDefinitionRead buildDestinationDefinitionRead(final UUID destinationDefinitionId, final boolean includeTombstone)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destinationDefinition =
-        destinationService.getStandardDestinationDefinition(destinationDefinitionId);
+        destinationService.getStandardDestinationDefinition(destinationDefinitionId, includeTombstone);
     final ActorDefinitionVersion destinationVersion = actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
     return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
   }
@@ -252,9 +251,9 @@ public class DestinationDefinitionsHandler {
     return new PrivateDestinationDefinitionReadList().destinationDefinitions(reads);
   }
 
-  public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
+  public DestinationDefinitionRead getDestinationDefinition(final UUID destinationDefinitionId, final boolean includeTombstone)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    return buildDestinationDefinitionRead(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
+    return buildDestinationDefinitionRead(destinationDefinitionId, includeTombstone);
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
@@ -265,11 +264,11 @@ public class DestinationDefinitionsHandler {
     if (!workspaceService.workspaceCanUseDefinition(definitionId, workspaceId)) {
       throw new IdNotFoundKnownException("Cannot find the requested definition with given id for this workspace", definitionId.toString());
     }
-    return getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(definitionId));
+    return getDestinationDefinition(definitionId, true);
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
     final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
     final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
@@ -277,7 +276,7 @@ public class DestinationDefinitionsHandler {
       final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
       throw new IdNotFoundKnownException(message, definitionId.toString());
     }
-    return getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(definitionId));
+    return getDestinationDefinition(definitionId, true);
   }
 
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate)
@@ -369,16 +368,16 @@ public class DestinationDefinitionsHandler {
     return newDestination;
   }
 
-  public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
+  public void deleteDestinationDefinition(final UUID destinationDefinitionId)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     // "delete" all destinations associated with the destination definition as well. This will cascade
     // to connections that depend on any deleted
     // destinations. Delete destinations first in case a failure occurs mid-operation.
 
     final StandardDestinationDefinition persistedDestinationDefinition =
-        destinationService.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
+        destinationService.getStandardDestinationDefinition(destinationDefinitionId);
 
-    for (final DestinationRead destinationRead : destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionIdRequestBody)
+    for (final DestinationRead destinationRead : destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionId)
         .getDestinations()) {
       destinationHandler.deleteDestination(destinationRead);
     }
