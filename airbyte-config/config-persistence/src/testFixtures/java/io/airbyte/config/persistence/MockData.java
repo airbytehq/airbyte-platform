@@ -123,6 +123,10 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 3600;
+  public static final UUID DATAPLANE_GROUP_ID_DEFAULT = UUID.randomUUID();
+  public static final UUID DATAPLANE_GROUP_ID_ORG_1 = UUID.randomUUID();
+  public static final UUID DATAPLANE_GROUP_ID_ORG_2 = UUID.randomUUID();
+  public static final UUID DATAPLANE_GROUP_ID_ORG_3 = UUID.randomUUID();
   // User
   static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();

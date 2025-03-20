@@ -6,7 +6,6 @@ package io.airbyte.workers.workload
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -19,35 +18,39 @@ class DataplaneGroupResolver(
     organizationId: UUID,
     workspaceId: UUID,
     actorId: UUID?,
-  ): String = getGeography(workspaceId, null).value
+  ): String = getDataplaneGroupId(workspaceId, null)
 
   fun resolveForDiscover(
     organizationId: UUID,
     workspaceId: UUID,
     actorId: UUID,
-  ): String = getGeography(workspaceId, null).value
+  ): String = getDataplaneGroupId(workspaceId, null)
 
   fun resolveForSync(
     organizationId: UUID,
     workspaceId: UUID,
     connectionId: UUID,
-  ): String = getGeography(workspaceId, connectionId).value
+  ): String = getDataplaneGroupId(workspaceId, connectionId)
 
   fun resolveForSpec(
     organizationId: UUID?,
-    workspaceId: UUID?,
-  ): String = getGeography(workspaceId, null).value
+    workspaceId: UUID,
+  ): String = getDataplaneGroupId(workspaceId, null)
 
-  // TODO Replace with the actual dataplaneGroup look up when defined
-  private fun getGeography(
-    workspaceId: UUID?,
+  private fun getDataplaneGroupId(
+    workspaceId: UUID,
     connectionId: UUID?,
-  ): Geography {
-    val geoFromConn =
+  ): String {
+    val dataplaneGroupFromConn =
       connectionId?.let {
-        airbyteApi.connectionApi.getConnection(ConnectionIdRequestBody(it)).geography
+        airbyteApi.connectionApi.getConnection(ConnectionIdRequestBody(it)).dataplaneGroupId
       }
-    return geoFromConn ?: workspaceId?.let { airbyteApi.workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId)).defaultGeography }
-      ?: Geography.US
+    // TODO Eventually DataplaneGroupId shouldn't be optional. We currently have a default to avoid hard fail during the transition period
+    return dataplaneGroupFromConn?.toString()
+      ?: airbyteApi.workspaceApi
+        .getWorkspace(WorkspaceIdRequestBody(workspaceId))
+        .dataplaneGroupId
+        ?.toString()
+      ?: ""
   }
 }

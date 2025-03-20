@@ -56,7 +56,7 @@ public class PermissionPersistenceHelper {
           + "   UNION"
           + "   SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])"
           + " )"
-          + " SELECT workspace.*, dataplane_group.name "
+          + " SELECT workspace.*, dataplane_group.id, dataplane_group.name "
           + " FROM workspace"
           + " JOIN dataplane_group"
           + " ON workspace.dataplane_group_id = dataplane_group.id"

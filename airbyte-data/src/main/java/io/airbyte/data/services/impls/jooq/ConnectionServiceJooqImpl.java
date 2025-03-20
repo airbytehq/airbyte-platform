@@ -182,7 +182,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
 
         // inner join with all connection_operation rows that match the connection's id
@@ -198,7 +198,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 .where(CONNECTION_OPERATION.OPERATION_ID.eq(operationId))))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID,
+            DATAPLANE_GROUP.NAME))
+        .fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -236,7 +238,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -258,7 +260,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                     StatusType.deprecated)))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID,
+            DATAPLANE_GROUP.NAME))
+        .fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -487,7 +491,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
@@ -496,7 +500,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated))
             .and(includeInactive ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.inactive)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.NAME)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID,
+            DATAPLANE_GROUP.NAME))
+        .fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 

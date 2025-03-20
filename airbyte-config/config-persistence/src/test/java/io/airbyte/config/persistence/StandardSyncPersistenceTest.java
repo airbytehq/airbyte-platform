@@ -178,7 +178,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSync sync = createStandardSync(source1, destination1);
     standardSyncPersistence.writeStandardSync(sync);
 
-    final StandardSync expectedSync = Jsons.clone(sync);
+    final StandardSync expectedSync = Jsons.clone(sync).withDataplaneGroupId(dataplaneGroupId);
     assertEquals(expectedSync, standardSyncPersistence.getStandardSync(sync.getConnectionId()));
 
     final SchemaManagementRecord schemaManagementRecord = getSchemaManagementByConnectionId(sync.getConnectionId());
@@ -198,9 +198,11 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<StandardSync> expected = List.of(
         Jsons.clone(sync1)
-            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE),
+            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+            .withDataplaneGroupId(dataplaneGroupId),
         Jsons.clone(sync2)
-            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE));
+            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+            .withDataplaneGroupId(dataplaneGroupId));
 
     assertEquals(expected, standardSyncPersistence.listStandardSync());
   }
@@ -392,7 +394,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testListConnectionsByActorDefinitionIdAndType() throws IOException, JsonValidationException {
     createBaseObjects();
-    final var expectedSync = createStandardSync(source1, destination1);
+    final var expectedSync = createStandardSync(source1, destination1).withDataplaneGroupId(dataplaneGroupId);
     final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
         ActorType.DESTINATION.value(), false, false);

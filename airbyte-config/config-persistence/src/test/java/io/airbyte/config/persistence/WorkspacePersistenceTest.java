@@ -123,25 +123,25 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     }
 
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
+        .withId(MockData.DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
         .withName(Geography.AUTO.name())
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
+        .withId(MockData.DATAPLANE_GROUP_ID_ORG_1)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName(Geography.AUTO.name())
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
+        .withId(MockData.DATAPLANE_GROUP_ID_ORG_2)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName(Geography.AUTO.name())
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
+        .withId(MockData.DATAPLANE_GROUP_ID_ORG_3)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
         .withName(Geography.AUTO.name())
         .withEnabled(true)
@@ -157,7 +157,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   void testGetWorkspace() throws ConfigNotFoundException, IOException, JsonValidationException {
     workspaceService.writeStandardWorkspaceNoSecrets(
         createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID()).withOrganizationId(DEFAULT_ORGANIZATION_ID));
-    assertReturnsWorkspace(createBaseStandardWorkspace());
+    assertReturnsWorkspace(createBaseStandardWorkspace().withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_DEFAULT));
   }
 
   @Test
@@ -183,7 +183,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withInitialSetupComplete(false)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO)
-        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_DEFAULT);
   }
 
   private static SourceConnection createBaseSource() {
@@ -337,9 +338,11 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   void testListWorkspacesInOrgNoKeyword() throws Exception {
 
     final StandardWorkspace workspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
-        .withOrganizationId(MockData.ORGANIZATION_ID_1);
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
-        .withOrganizationId(MockData.ORGANIZATION_ID_2);
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2);
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
@@ -357,9 +360,11 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName("A workspace");
+        .withName("A workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("B workspace");
+        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("B workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
@@ -420,9 +425,11 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName("workspaceWithKeyword");
+        .withName("workspaceWithKeyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
     final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("workspace");
+        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     workspaceService.writeStandardWorkspaceNoSecrets(otherWorkspace);
@@ -439,7 +446,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace expectedWorkspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName("workspaceInOrganization1");
+        .withName("workspaceInOrganization1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
 
     workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace);
 
@@ -502,28 +510,32 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace1 = createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId1)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName("workspace_with_keyword_1");
+        .withName("workspace_with_keyword_1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace1);
 
     // create a workspace in org_2, name contains search "Keyword"
     final StandardWorkspace workspace2 = createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId2)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
-        .withName("workspace_with_Keyword_2");
+        .withName("workspace_with_Keyword_2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create another workspace in org_2, name does NOT contain search "keyword"
     createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId3)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
-        .withName("workspace_3");
+        .withName("workspace_3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace in org_3, name contains search "keyword"
     createBaseStandardWorkspace()
         .withWorkspaceId(workspaceId4)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
-        .withName("workspace_4_with_keyword");
+        .withName("workspace_4_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_3);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace permission for workspace 1
@@ -572,21 +584,24 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace1 = createBaseStandardWorkspace()
         .withWorkspaceId(workspace1Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName("workspace1");
+        .withName("workspace1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace1);
 
     // create a workspace in org_2
     final StandardWorkspace workspace2 = createBaseStandardWorkspace()
         .withWorkspaceId(workspace2Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
-        .withName("workspace2");
+        .withName("workspace2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace in org_3
     final StandardWorkspace workspace3 = createBaseStandardWorkspace()
         .withWorkspaceId(workspace3Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
-        .withName("workspace3");
+        .withName("workspace3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_3);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace3);
 
     // create a workspace-level permission for workspace 1

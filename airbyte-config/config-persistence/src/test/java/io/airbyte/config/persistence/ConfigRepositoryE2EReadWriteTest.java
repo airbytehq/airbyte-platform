@@ -84,6 +84,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   private WorkspaceService workspaceService;
   private OperationService operationService;
 
+  private Map<Geography, UUID> dataplaneGroupIds;
+
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
     truncateAllTables();
@@ -137,13 +140,15 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     organizationService.writeOrganization(MockData.defaultOrganization());
 
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupIds = new EnumMap<>(Geography.class);
     for (final Geography geography : Geography.values()) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+      var dataplaneGroup = dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
           .withId(UUID.randomUUID())
           .withOrganizationId(DEFAULT_ORGANIZATION_ID)
           .withName(geography.name())
           .withEnabled(true)
           .withTombstone(false));
+      dataplaneGroupIds.put(geography, dataplaneGroup.getId());
     }
 
     connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
@@ -446,7 +451,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @Test
   void testListWorkspaceStandardSyncAll() throws IOException {
-    final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 4));
+    final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 4)
+        .stream().map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO))).toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(
         MockData.standardWorkspaces().get(0).getWorkspaceId(), true);
 
@@ -457,11 +463,12 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testListWorkspaceStandardSyncWithAllFiltering() throws IOException {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, List.of(MockData.SOURCE_ID_1), List.of(MockData.DESTINATION_ID_1), false);
-    final List<StandardSync> expectedSyncs = copyWithV1Types(
+    final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
-            .toList());
+            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO)))
+            .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -471,10 +478,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testListWorkspaceStandardSyncDestinationFiltering() throws IOException {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, null, List.of(MockData.DESTINATION_ID_1), false);
-    final List<StandardSync> expectedSyncs = copyWithV1Types(
+    final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
-            .toList());
+            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO)))
+            .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -484,10 +492,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testListWorkspaceStandardSyncSourceFiltering() throws IOException {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, List.of(MockData.SOURCE_ID_2), null, false);
-    final List<StandardSync> expectedSyncs = copyWithV1Types(
+    final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
-            .toList());
+            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO)))
+            .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -495,7 +504,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @Test
   void testListWorkspaceStandardSyncExcludeDeleted() throws IOException {
-    final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 3));
+    final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 3)
+        .stream()
+        .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO)))
+        .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(MockData.standardWorkspaces().get(0).getWorkspaceId(), false);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -503,9 +515,9 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @Test
   void testGetWorkspaceBySlug() throws IOException {
-    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0).withDataplaneGroupId(dataplaneGroupIds.get(Geography.US));
 
-    final StandardWorkspace tombstonedWorkspace = MockData.standardWorkspaces().get(2);
+    final StandardWorkspace tombstonedWorkspace = MockData.standardWorkspaces().get(2).withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO));
     final Optional<StandardWorkspace> retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace.getSlug(), false);
     final Optional<StandardWorkspace> retrievedTombstonedWorkspaceNoTombstone =
         workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), false);
@@ -735,23 +747,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testGetStandardSyncUsingOperation() throws IOException {
     final UUID operationId = MockData.standardSyncOperations().get(0).getOperationId();
-    final List<StandardSync> expectedSyncs = copyWithV1Types(MockData.standardSyncs().subList(0, 3));
+    final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 3)
+        .stream().map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(Geography.AUTO))).toList();
     final List<StandardSync> actualSyncs = connectionService.listStandardSyncsUsingOperation(operationId);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
-  }
-
-  private List<StandardSync> copyWithV1Types(final List<StandardSync> syncs) {
-    return syncs;
-    // TODO adjust with data types feature flag testing
-    // return syncs.stream()
-    // .map(standardSync -> {
-    // final StandardSync copiedStandardSync = Jsons.deserialize(Jsons.serialize(standardSync),
-    // StandardSync.class);
-    // copiedStandardSync.setCatalog(MockData.getConfiguredCatalogWithV1DataTypes());
-    // return copiedStandardSync;
-    // })
-    // .toList();
   }
 
   private void assertSyncsMatch(final List<StandardSync> expectedSyncs, final List<StandardSync> actualSyncs) {

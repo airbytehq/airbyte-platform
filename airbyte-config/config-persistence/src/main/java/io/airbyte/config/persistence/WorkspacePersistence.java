@@ -42,7 +42,7 @@ public class WorkspacePersistence {
                                                                             final int rowOffset,
                                                                             final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -63,7 +63,7 @@ public class WorkspacePersistence {
    */
   public List<StandardWorkspace> listWorkspacesByInstanceAdminUser(final boolean includeDeleted, final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -83,7 +83,7 @@ public class WorkspacePersistence {
   public List<StandardWorkspace> listWorkspacesByOrganizationIdPaginated(final ResourcesByOrganizationQueryPaginated query,
                                                                          final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -107,7 +107,7 @@ public class WorkspacePersistence {
                                                                 final boolean includeDeleted,
                                                                 final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -178,7 +178,7 @@ public class WorkspacePersistence {
    * Fetch the oldest, non-tombstoned Workspace that belongs to the given Organization.
    */
   public StandardWorkspace getDefaultWorkspaceForOrganization(final UUID organizationId) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))

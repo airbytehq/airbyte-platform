@@ -137,13 +137,13 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       throws IOException {
     final Result<Record> result;
     if (includeTombstone) {
-      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
           .from(WORKSPACE)
           .join(DATAPLANE_GROUP)
           .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
           .where(WORKSPACE.SLUG.eq(slug))).fetch();
     } else {
-      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
           .from(WORKSPACE)
           .join(DATAPLANE_GROUP)
           .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -188,7 +188,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public List<StandardWorkspace> listAllWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -204,7 +204,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
   @Override
   public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
@@ -224,7 +224,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public List<StandardWorkspace> listStandardWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.NAME)
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk(), DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
         .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))

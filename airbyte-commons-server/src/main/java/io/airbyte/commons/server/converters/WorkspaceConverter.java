@@ -30,6 +30,7 @@ public class WorkspaceConverter {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
+        .dataplaneGroupId(workspace.getDataplaneGroupId())
         .organizationId(workspace.getOrganizationId())
         .tombstone(workspace.getTombstone());
     // Add read-only webhook configs.

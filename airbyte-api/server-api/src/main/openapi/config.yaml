@@ -9004,6 +9004,9 @@ components:
           type: boolean
         defaultGeography:
           $ref: "#/components/schemas/Geography"
+        dataplaneGroupId:
+          type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -11266,6 +11269,9 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        dataplaneGroupId:
+          type: string
+          format: uuid
         tags:
           type: array
           items:

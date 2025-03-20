@@ -69,6 +69,7 @@ class AnalyticsTrackingBeanFactory {
             workspace.defaultGeography,
             io.airbyte.api.client.model.generated.Geography::class.java,
           ),
+          UUID.randomUUID(),
           null,
           workspace.tombstone,
           null,

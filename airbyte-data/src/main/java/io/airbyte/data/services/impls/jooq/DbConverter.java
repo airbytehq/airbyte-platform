@@ -153,6 +153,7 @@ public class DbConverter {
             .map(String::toLowerCase)
             .map(Geography::fromValue)
             .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
+        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
 
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
@@ -203,6 +204,7 @@ public class DbConverter {
             .map(String::toLowerCase)
             .map(Geography::fromValue)
             .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
+        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()))
         .withOrganizationId(record.get(WORKSPACE.ORGANIZATION_ID))
