@@ -61,7 +61,7 @@ export const links = {
   featureTalkToSales:
     "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=feature-{feature}",
   billingNotificationsForm:
-    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}",
+    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
 } as const;
 
 export type OutboundLinks = typeof links;
