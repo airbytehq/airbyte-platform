@@ -17,7 +17,7 @@ import java.util.UUID
  *
  */
 data class SecretReference(
-  val id: SecretReferenceId? = null,
+  val id: SecretReferenceId,
   val secretConfigId: SecretConfigId,
   val scopeType: SecretReferenceScopeType,
   val scopeId: UUID,

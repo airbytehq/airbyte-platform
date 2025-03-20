@@ -19,19 +19,19 @@ import java.util.UUID
 data class SecretStorage(
   @field:Id
   @AutoPopulated
-  var id: UUID? = null,
+  val id: UUID? = null,
   @field:TypeDef(type = DataType.OBJECT)
-  var scopeType: SecretStorageScopeType,
-  var scopeId: UUID,
-  var descriptor: String,
+  val scopeType: SecretStorageScopeType,
+  val scopeId: UUID,
+  val descriptor: String,
   @field:TypeDef(type = DataType.OBJECT)
-  var storageType: SecretStorageType,
-  var configuredFromEnvironment: Boolean,
-  var tombstone: Boolean = false,
-  var createdBy: UUID,
-  var updatedBy: UUID,
+  val storageType: SecretStorageType,
+  val configuredFromEnvironment: Boolean,
+  val tombstone: Boolean = false,
+  val createdBy: UUID,
+  val updatedBy: UUID,
   @DateCreated
-  var createdAt: java.time.OffsetDateTime? = null,
+  val createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
-  var updatedAt: java.time.OffsetDateTime? = null,
+  val updatedAt: java.time.OffsetDateTime? = null,
 )

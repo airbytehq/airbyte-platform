@@ -12,7 +12,7 @@ import java.util.UUID
  * The external coordinate describes the location of the secret within the secret storage.
  */
 data class SecretConfig(
-  val id: SecretConfigId? = null,
+  val id: SecretConfigId,
   val secretStorageId: UUID,
   val descriptor: String,
   val externalCoordinate: String,

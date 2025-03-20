@@ -12,9 +12,10 @@ import io.airbyte.domain.models.SecretStorage as ModelSecretStorage
 import io.airbyte.domain.models.SecretStorageScopeType as ModelScopeType
 import io.airbyte.domain.models.SecretStorageType as ModelStorageType
 
-fun EntitySecretStorage.toConfigModel(): ModelSecretStorage =
-  ModelSecretStorage(
-    id = this.id?.let { SecretStorageId(it) },
+fun EntitySecretStorage.toConfigModel(): ModelSecretStorage {
+  this.id ?: throw IllegalStateException("Cannot map EntitySecretStorage that lacks an id")
+  return ModelSecretStorage(
+    id = SecretStorageId(id),
     scopeType = this.scopeType.toConfigModel(),
     scopeId = this.scopeId,
     descriptor = this.descriptor,
@@ -26,6 +27,7 @@ fun EntitySecretStorage.toConfigModel(): ModelSecretStorage =
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
   )
+}
 
 fun EntityStorageType.toConfigModel(): ModelStorageType =
   when (this) {

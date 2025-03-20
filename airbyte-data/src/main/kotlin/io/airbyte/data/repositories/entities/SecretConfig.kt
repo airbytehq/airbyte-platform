@@ -15,16 +15,16 @@ import java.util.UUID
 data class SecretConfig(
   @field:Id
   @AutoPopulated
-  var id: UUID? = null,
-  var secretStorageId: UUID,
-  var descriptor: String,
-  var externalCoordinate: String,
-  var tombstone: Boolean = false,
-  var airbyteManaged: Boolean,
-  var createdBy: UUID,
-  var updatedBy: UUID,
+  val id: UUID? = null,
+  val secretStorageId: UUID,
+  val descriptor: String,
+  val externalCoordinate: String,
+  val tombstone: Boolean = false,
+  val airbyteManaged: Boolean,
+  val createdBy: UUID,
+  val updatedBy: UUID,
   @DateCreated
-  var createdAt: java.time.OffsetDateTime? = null,
+  val createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
-  var updatedAt: java.time.OffsetDateTime? = null,
+  val updatedAt: java.time.OffsetDateTime? = null,
 )

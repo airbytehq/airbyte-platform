@@ -11,36 +11,32 @@ import java.util.UUID
  * These are used to prevent bugs where the wrong UUID is passed to a function.
  */
 
-interface IdType {
-  val value: UUID
-}
-
 @JvmInline
 value class ConnectionId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)
 
 @JvmInline
 value class OrganizationId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)
 
 @JvmInline
 value class WorkspaceId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)
 
 @JvmInline
 value class SecretStorageId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)
 
 @JvmInline
 value class SecretConfigId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)
 
 @JvmInline
 value class SecretReferenceId(
-  override val value: UUID,
-) : IdType
+  val value: UUID,
+)

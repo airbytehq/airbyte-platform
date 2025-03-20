@@ -11,9 +11,10 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.SecretReferenceScopeT
 import io.airbyte.domain.models.SecretReference as ModelSecretReference
 import io.airbyte.domain.models.SecretReferenceScopeType as ModelScopeType
 
-fun EntitySecretReference.toConfigModel(): ModelSecretReference =
-  ModelSecretReference(
-    id = this.id?.let { SecretReferenceId(it) },
+fun EntitySecretReference.toConfigModel(): ModelSecretReference {
+  this.id ?: throw IllegalStateException("Cannot map EntitySecretReference that lacks an id")
+  return ModelSecretReference(
+    id = SecretReferenceId(id),
     secretConfigId = SecretConfigId(this.secretConfigId),
     scopeType = this.scopeType.toConfigModel(),
     scopeId = this.scopeId,
@@ -21,6 +22,7 @@ fun EntitySecretReference.toConfigModel(): ModelSecretReference =
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
   )
+}
 
 fun EntityScopeType.toConfigModel(): ModelScopeType =
   when (this) {

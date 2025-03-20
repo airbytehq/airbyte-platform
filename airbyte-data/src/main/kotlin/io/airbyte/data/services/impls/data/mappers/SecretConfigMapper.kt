@@ -5,12 +5,14 @@
 package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.domain.models.SecretConfigId
+import java.lang.IllegalStateException
 import io.airbyte.data.repositories.entities.SecretConfig as EntitySecretConfig
 import io.airbyte.domain.models.SecretConfig as ModelSecretConfig
 
-fun EntitySecretConfig.toConfigModel(): ModelSecretConfig =
-  ModelSecretConfig(
-    id = this.id?.let { SecretConfigId(it) },
+fun EntitySecretConfig.toConfigModel(): ModelSecretConfig {
+  this.id ?: throw IllegalStateException("Cannot map EntitySecretConfig that lacks an id")
+  return ModelSecretConfig(
+    id = SecretConfigId(id),
     secretStorageId = this.secretStorageId,
     descriptor = this.descriptor,
     externalCoordinate = this.externalCoordinate,
@@ -21,3 +23,4 @@ fun EntitySecretConfig.toConfigModel(): ModelSecretConfig =
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
   )
+}

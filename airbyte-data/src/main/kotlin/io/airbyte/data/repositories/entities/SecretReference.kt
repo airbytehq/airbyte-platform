@@ -18,14 +18,14 @@ import java.util.UUID
 data class SecretReference(
   @field:Id
   @AutoPopulated
-  var id: UUID? = null,
-  var secretConfigId: UUID,
+  val id: UUID? = null,
+  val secretConfigId: UUID,
   @field:TypeDef(type = DataType.OBJECT)
-  var scopeType: SecretReferenceScopeType,
-  var scopeId: UUID,
-  var hydrationPath: String? = null,
+  val scopeType: SecretReferenceScopeType,
+  val scopeId: UUID,
+  val hydrationPath: String? = null,
   @DateCreated
-  var createdAt: java.time.OffsetDateTime? = null,
+  val createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
-  var updatedAt: java.time.OffsetDateTime? = null,
+  val updatedAt: java.time.OffsetDateTime? = null,
 )

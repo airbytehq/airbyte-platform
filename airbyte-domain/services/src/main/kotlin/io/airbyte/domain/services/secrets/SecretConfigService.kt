@@ -14,21 +14,17 @@ import io.airbyte.data.services.SecretConfigService as SecretConfigRepository
 /**
  * Domain service for performing operations related to Airbyte's SecretConfig domain model.
  */
-interface SecretConfigService {
+@Singleton
+class SecretConfigService(
+  private val secretConfigRepository: SecretConfigRepository,
+) {
   /**
    * Get the secret config for a given ID.
    *
    * @param id the ID of the secret config to get
    * @return the secret config for the given ID, or null if none exists
    */
-  fun getById(id: SecretConfigId): SecretConfig
-}
-
-@Singleton
-open class SecretConfigServiceImpl(
-  private val secretConfigRepository: SecretConfigRepository,
-) : SecretConfigService {
-  override fun getById(id: SecretConfigId): SecretConfig =
+  fun getById(id: SecretConfigId): SecretConfig =
     secretConfigRepository.findById(id)
       ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType(SecretConfig::class.simpleName).resourceId(id.value.toString()))
 }

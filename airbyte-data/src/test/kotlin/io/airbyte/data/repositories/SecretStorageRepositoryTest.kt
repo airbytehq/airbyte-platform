@@ -94,9 +94,11 @@ class SecretStorageRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(2, secretStorages.size)
     assertNotNull(secretStorages.first().createdAt)
     assertNotNull(secretStorages.first().updatedAt)
+    assertNotNull(secretStorages.first().id)
     assertNotNull(secretStorages.last().createdAt)
     assertNotNull(secretStorages.last().updatedAt)
-    assertThat(secretStorages.first()).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(secretStorage1)
-    assertThat(secretStorages.last()).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(secretStorage2)
+    assertNotNull(secretStorages.last().id)
+    assertThat(secretStorages.first()).usingRecursiveComparison().ignoringFields("id", "createdAt", "updatedAt").isEqualTo(secretStorage1)
+    assertThat(secretStorages.last()).usingRecursiveComparison().ignoringFields("id", "createdAt", "updatedAt").isEqualTo(secretStorage2)
   }
 }

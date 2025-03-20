@@ -16,7 +16,7 @@ import java.util.UUID
  * storage as its scope, and references a secret that contains the secret storage's configuration.
  */
 data class SecretStorage(
-  val id: SecretStorageId? = null,
+  val id: SecretStorageId,
   val scopeType: SecretStorageScopeType,
   val scopeId: UUID,
   val descriptor: String,

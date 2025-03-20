@@ -23,14 +23,23 @@ import io.airbyte.data.services.SecretStorageService as SecretStorageRepository
 /**
  * Domain service for performing operations related to Airbyte's SecretStorage domain model.
  */
-interface SecretStorageService {
+@Singleton
+class SecretStorageService(
+  private val secretStorageRepository: SecretStorageRepository,
+  private val organizationRepository: OrganizationRepository,
+  private val secretReferenceRepository: SecretReferenceRepository,
+  private val secretsRepositoryReader: SecretsRepositoryReader,
+  private val secretConfigService: SecretConfigService,
+) {
   /**
    * Get the secret storage for a given ID.
    *
    * @param id the ID of the secret storage to get
    * @return the secret storage for the given ID, or null if none exists
    */
-  fun getById(id: SecretStorageId): SecretStorage
+  fun getById(id: SecretStorageId): SecretStorage =
+    secretStorageRepository.findById(id)
+      ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType(SecretStorage::class.simpleName).resourceId(id.value.toString()))
 
   /**
    * Get the secret storage for a workspace.
@@ -38,30 +47,7 @@ interface SecretStorageService {
    * @param workspaceId the workspace to get the secret storage for
    * @return the secret storage for the workspace, or null if none exists
    */
-  fun getByWorkspaceId(workspaceId: WorkspaceId): SecretStorage?
-
-  /**
-   * Hydrate a secret storage with its configuration.
-   *
-   * @param secretStorage the secret storage whose configuration should be hydrated
-   * @return the secret storage with its configuration hydrated
-   */
-  fun hydrateStorageConfig(secretStorage: SecretStorage): SecretStorageWithConfig
-}
-
-@Singleton
-open class SecretStorageServiceImpl(
-  private val secretStorageRepository: SecretStorageRepository,
-  private val organizationRepository: OrganizationRepository,
-  private val secretReferenceRepository: SecretReferenceRepository,
-  private val secretsRepositoryReader: SecretsRepositoryReader,
-  private val secretConfigService: SecretConfigService,
-) : SecretStorageService {
-  override fun getById(id: SecretStorageId): SecretStorage =
-    secretStorageRepository.findById(id)
-      ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType(SecretStorage::class.simpleName).resourceId(id.value.toString()))
-
-  override fun getByWorkspaceId(workspaceId: WorkspaceId): SecretStorage? {
+  fun getByWorkspaceId(workspaceId: WorkspaceId): SecretStorage? {
     // If the workspace has a workspace-scoped secret storage, return the first one found.
     // Otherwise, return the first org-level secret storage found.
     // Note: At some point, we may want to support multiple secret storages per workspace, with
@@ -76,17 +62,27 @@ open class SecretStorageServiceImpl(
         ).firstOrNull()
   }
 
-  override fun hydrateStorageConfig(secretStorage: SecretStorage): SecretStorageWithConfig {
+  /**
+   * Hydrate a secret storage with its configuration.
+   *
+   * @param secretStorage the secret storage whose configuration should be hydrated
+   * @return the secret storage with its configuration hydrated
+   */
+  fun hydrateStorageConfig(secretStorage: SecretStorage): SecretStorageWithConfig {
     if (secretStorage.configuredFromEnvironment) {
       // For now, we just don't support this code path because configuredFromEnvironment dataplanes
       // can only be hydrated/instantiated in their local environment, not through the API.
       throw UnsupportedOperationException("Cannot hydrate a secret storage that is configured from the environment")
     }
-    val secretReferences = secretReferenceRepository.listByScopeTypeAndScopeId(SecretReferenceScopeType.SECRET_STORAGE, secretStorage.id!!.value)
+    val secretReferences =
+      secretReferenceRepository.listByScopeTypeAndScopeId(
+        SecretReferenceScopeType.SECRET_STORAGE,
+        scopeId = secretStorage.id.value,
+      )
     val secretReference =
       when (secretReferences.size) {
         0 -> throw ResourceNotFoundProblem(
-          ProblemResourceData().resourceType(SecretReference::class.simpleName).resourceId(secretStorage.id!!.value.toString()),
+          ProblemResourceData().resourceType(SecretReference::class.simpleName).resourceId(secretStorage.id.value.toString()),
         )
         1 -> secretReferences.first()
         else -> throw IllegalStateException("Multiple secret references found for secret storage ${secretStorage.id}")
