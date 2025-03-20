@@ -219,7 +219,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    * List workspaces (paginated).
    *
    * @param resourcesQueryPaginated - contains all the information we need to paginate
-   * @return A List of StandardWorkspace objectjs
+   * @return A List of StandardWorkspace objects
    * @throws IOException you never know when you IO
    */
   @Override

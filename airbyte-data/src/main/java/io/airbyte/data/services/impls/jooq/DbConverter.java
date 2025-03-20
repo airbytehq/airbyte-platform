@@ -341,6 +341,7 @@ public class DbConverter {
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR_OAUTH_PARAMETER.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
+        .withOrganizationId(record.get(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID))
         .withDestinationDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
@@ -355,6 +356,7 @@ public class DbConverter {
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR_OAUTH_PARAMETER.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
+        .withOrganizationId(record.get(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID))
         .withSourceDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
