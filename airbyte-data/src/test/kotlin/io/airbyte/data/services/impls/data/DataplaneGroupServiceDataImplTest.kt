@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Geography
+import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup
@@ -114,12 +115,42 @@ class DataplaneGroupServiceDataImplTest {
     val mockGeography = Geography.US
 
     every { dataplaneGroupRepository.findAllByOrganizationIdAndName(mockOrganizationId, mockGeography.name) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, mockGeography.name) } returns emptyList()
 
     assertThrows<NoSuchElementException> {
       dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndGeography(mockOrganizationId, mockGeography)
     }
 
     verify { dataplaneGroupRepository.findAllByOrganizationIdAndName(mockOrganizationId, mockGeography.name) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, mockGeography.name) }
+  }
+
+  @Test
+  fun `test get dataplane group by organization id and geography falls back to default org when not found`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val mockDataplaneGroupId = UUID.randomUUID()
+    val mockGeography = Geography.US
+
+    val dataplaneGroup =
+      DataplaneGroup(
+        id = mockDataplaneGroupId,
+        organizationId = DEFAULT_ORGANIZATION_ID,
+        name = mockGeography.name,
+        enabled = true,
+        updatedBy = UUID.randomUUID(),
+        tombstone = false,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndName(mockOrganizationId, mockGeography.name) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, mockGeography.name) } returns listOf(dataplaneGroup)
+
+    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndGeography(mockOrganizationId, mockGeography)
+    assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
+
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndName(mockOrganizationId, mockGeography.name) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, mockGeography.name) }
   }
 
   @Test
