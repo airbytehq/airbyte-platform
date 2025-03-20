@@ -12,6 +12,7 @@ import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter
+import io.airbyte.config.Configs
 import io.airbyte.config.Geography
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
@@ -91,4 +92,29 @@ fun getDefaultWorkspaceName(
   }
 
   return defaultWorkspaceName
+}
+
+/**
+ * If the airbyte edition is cloud and the workspace's default geography is AUTO or null, set it to US.
+ * If not cloud, set a null default geography to AUTO.
+ * This can be removed once default dataplane groups are fully implemented.
+ */
+fun getWorkspaceWithFixedGeography(
+  workspace: StandardWorkspace,
+  airbyteEdition: Configs.AirbyteEdition,
+): StandardWorkspace {
+  workspace.defaultGeography = getDefaultGeographyForAirbyteEdition(airbyteEdition, workspace.defaultGeography)
+  return workspace
+}
+
+private fun getDefaultGeographyForAirbyteEdition(
+  airbyteEdition: Configs.AirbyteEdition,
+  geography: Geography?,
+): Geography {
+  if (airbyteEdition == Configs.AirbyteEdition.CLOUD && (geography == Geography.AUTO || geography == null)) {
+    return Geography.US
+  } else if (geography == null) {
+    return Geography.AUTO
+  }
+  return geography
 }

@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Permission
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
@@ -33,6 +34,7 @@ class ResourceBootstrapHandlerTest {
   private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val featureFlagClient: FeatureFlagClient = mockk()
   private val organizationPaymentConfigService: OrganizationPaymentConfigService = mockk()
+  private val airbyteEdition: AirbyteEdition = mockk()
 
   private val handler =
     ResourceBootstrapHandler(
@@ -44,6 +46,7 @@ class ResourceBootstrapHandlerTest {
       apiAuthorizationHelper,
       featureFlagClient,
       organizationPaymentConfigService,
+      airbyteEdition,
     )
 
   @Nested

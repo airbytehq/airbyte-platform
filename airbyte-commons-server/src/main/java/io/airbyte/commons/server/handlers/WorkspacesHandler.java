@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt.getWorkspaceWithFixedGeography;
 import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -14,7 +15,6 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.EmailNotificationConfig;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
@@ -149,7 +149,7 @@ public class WorkspacesHandler {
     final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
         .id(uuidSupplier.get())
         .organizationId(workspaceCreate.getOrganizationId())
-        .defaultGeography(getDefaultGeographyForAirbyteEdition(workspaceCreate.getDefaultGeography()))
+        .defaultGeography(workspaceCreate.getDefaultGeography())
         .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
         .name(workspaceCreate.getName())
         .notifications(workspaceCreate.getNotifications())
@@ -200,7 +200,7 @@ public class WorkspacesHandler {
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
-        .withDefaultGeography(apiPojoConverters.toPersistenceGeography(getDefaultGeographyForAirbyteEdition(defaultGeography)))
+        .withDefaultGeography(apiPojoConverters.toPersistenceGeography(defaultGeography))
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
         .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
@@ -463,7 +463,7 @@ public class WorkspacesHandler {
     if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
-      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+      workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
     } else {
       // We're saving new webhook configs, so we need to persist the secrets.
       persistStandardWorkspace(workspace);
@@ -487,7 +487,7 @@ public class WorkspacesHandler {
 
     // NOTE: it's safe (and necessary) to use the NoSecrets variant because we never hydrated them in
     // the first place.
-    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -500,7 +500,7 @@ public class WorkspacesHandler {
     final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     persistedWorkspace
         .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
-    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
     return buildWorkspaceReadFromId(workspaceId);
   }
 
@@ -623,8 +623,7 @@ public class WorkspacesHandler {
     }
 
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(
-          getDefaultGeographyForAirbyteEdition(workspacePatch.getDefaultGeography())));
+      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
     if (workspacePatch.getName() != null) {
       workspace.setName(workspacePatch.getName());
@@ -723,15 +722,9 @@ public class WorkspacesHandler {
   @SuppressWarnings("PMD.PreserveStackTrace")
   private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    workspaceService.writeWorkspaceWithSecrets(workspace);
-    return WorkspaceConverter.domainToApiModel(workspace);
-  }
 
-  private Geography getDefaultGeographyForAirbyteEdition(final Geography geography) {
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && geography == Geography.AUTO) {
-      return Geography.US;
-    }
-    return geography;
+    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
 }

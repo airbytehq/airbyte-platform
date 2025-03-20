@@ -12,9 +12,11 @@ import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
+import io.airbyte.commons.server.handlers.helpers.getWorkspaceWithFixedGeography
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
@@ -46,6 +48,7 @@ open class ResourceBootstrapHandler(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
+  private val airbyteEdition: AirbyteEdition,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -73,7 +76,7 @@ open class ResourceBootstrapHandler(
     )
 
     val standardWorkspace = buildStandardWorkspace(workspaceCreateWithId, organization, uuidSupplier)
-    workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
+    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(standardWorkspace, airbyteEdition))
 
     val workspacePermission = buildDefaultWorkspacePermission(user.userId, standardWorkspace.workspaceId)
 

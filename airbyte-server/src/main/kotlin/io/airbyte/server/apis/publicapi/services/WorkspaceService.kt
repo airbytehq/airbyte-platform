@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUpdate
-import io.airbyte.commons.server.handlers.ResourceBootstrapHandlerInterface
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
@@ -94,7 +93,6 @@ open class WorkspaceServiceImpl(
   private val workspacesHandler: WorkspacesHandler,
   @Value("\${airbyte.api.host}") open val publicApiHost: String,
   private val currentUserService: CurrentUserService,
-  private val resourceBootstrapHandler: ResourceBootstrapHandlerInterface,
 ) : WorkspaceService {
   companion object {
     private val log = LoggerFactory.getLogger(WorkspaceServiceImpl::class.java)
