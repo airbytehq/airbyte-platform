@@ -98,7 +98,7 @@ export const hashFieldCollisionValidation = (streams: AirbyteStreamAndConfigurat
     }
 
     const { hashedFields } = config;
-    if (!hashedFields) {
+    if (!hashedFields?.length) {
       // stream doesn't have hashed fields
       return false;
     }
@@ -109,7 +109,10 @@ export const hashFieldCollisionValidation = (streams: AirbyteStreamAndConfigurat
 
     const resolvedHashedFields = hashedFields.map(({ fieldPath }) => fieldPath?.join("."));
     if (
-      resolvedHashedFields.some((fieldName) => fieldName && selectedFieldNames && selectedFieldNames.has(fieldName))
+      resolvedHashedFields.some(
+        // check if this field is selected and conflicts with another selected field
+        (field) => selectedFieldNames.has(field ?? "") && selectedFieldNames.has(`${field}_hashed`)
+      )
     ) {
       return true;
     }

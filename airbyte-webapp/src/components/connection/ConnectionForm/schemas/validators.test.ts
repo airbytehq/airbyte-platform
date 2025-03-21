@@ -8,25 +8,6 @@ import {
   hashFieldCollisionValidation,
 } from "./validators";
 
-// Mock the traverseSchemaToField function
-jest.mock("core/domain/catalog", () => ({
-  traverseSchemaToField: () => {
-    // Return a simple field structure for testing
-    return [
-      {
-        path: ["id"],
-        key: "id",
-        type: "integer",
-      },
-      {
-        path: ["name"],
-        key: "name",
-        type: "string",
-      },
-    ];
-  },
-}));
-
 describe("atLeastOneStreamSelectedValidation", () => {
   const mockRefinementCtx = {
     addIssue: jest.fn(),
@@ -488,6 +469,7 @@ describe("hashFieldCollisionValidation", () => {
             type: "object",
             properties: {
               id: { type: "integer" },
+              id_hashed: { type: "string" },
               name: { type: "string" },
             },
           },
@@ -551,5 +533,96 @@ describe("hashFieldCollisionValidation", () => {
     hashFieldCollisionValidation(streams, mockRefinementCtx);
     // Since id is not in selectedFields, there should be no collision
     expect(mockRefinementCtx.addIssue).not.toHaveBeenCalled();
+  });
+
+  it("should not detect collision when only the field exists without _hashed suffix", () => {
+    const streams: AirbyteStreamAndConfiguration[] = [
+      {
+        stream: {
+          name: "test-stream",
+          namespace: "test-namespace",
+          jsonSchema: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              name: { type: "string" },
+            },
+          },
+        },
+        config: {
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+          hashedFields: [{ fieldPath: ["id"] }],
+          selectedFields: [],
+        },
+      },
+    ];
+
+    hashFieldCollisionValidation(streams, mockRefinementCtx);
+    // No collision when only 'id' exists without 'id_hashed'
+    expect(mockRefinementCtx.addIssue).not.toHaveBeenCalled();
+  });
+
+  it("should not detect collision when only the field_hashed exists", () => {
+    const streams: AirbyteStreamAndConfiguration[] = [
+      {
+        stream: {
+          name: "test-stream",
+          namespace: "test-namespace",
+          jsonSchema: {
+            type: "object",
+            properties: {
+              id_hashed: { type: "string" },
+              name: { type: "string" },
+            },
+          },
+        },
+        config: {
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+          hashedFields: [{ fieldPath: ["non_existent_field"] }],
+          selectedFields: [],
+        },
+      },
+    ];
+
+    hashFieldCollisionValidation(streams, mockRefinementCtx);
+    // No collision when only 'id_hashed' exists without 'id'
+    expect(mockRefinementCtx.addIssue).not.toHaveBeenCalled();
+  });
+
+  it("should detect collision with explicit field selection", () => {
+    const streams: AirbyteStreamAndConfiguration[] = [
+      {
+        stream: {
+          name: "test-stream",
+          namespace: "test-namespace",
+          jsonSchema: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              id_hashed: { type: "string" },
+              name: { type: "string" },
+            },
+          },
+        },
+        config: {
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+          hashedFields: [{ fieldPath: ["id"] }],
+          selectedFields: [{ fieldPath: ["id"] }, { fieldPath: ["id_hashed"] }],
+          fieldSelectionEnabled: true,
+        },
+      },
+    ];
+
+    hashFieldCollisionValidation(streams, mockRefinementCtx);
+    expect(mockRefinementCtx.addIssue).toHaveBeenCalledWith({
+      code: z.ZodIssueCode.custom,
+      message: "connectionForm.streams.hashFieldCollision",
+    });
   });
 });
