@@ -15,22 +15,9 @@ import { DestinationNamespaceDescription } from "./DestinationNamespaceDescripti
 import styles from "./DestinationNamespaceModal.module.scss";
 import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
+import { namespaceFormatSchema } from "../ConnectionForm/schemas/namespaceDefinitionSchema";
 
-const destinationNamespaceSchema = z
-  .object({
-    namespaceDefinition: z.nativeEnum(NamespaceDefinitionType),
-    namespaceFormat: z.string().optional(),
-  })
-  .refine(
-    (data) =>
-      data.namespaceDefinition === NamespaceDefinitionType.customformat ? data.namespaceFormat?.trim() !== "" : true,
-    {
-      path: ["namespaceFormat"],
-      message: "form.empty.error",
-    }
-  );
-
-export type DestinationNamespaceFormValues = z.infer<typeof destinationNamespaceSchema>;
+export type DestinationNamespaceFormValues = z.infer<typeof namespaceFormatSchema>;
 
 const NameSpaceCustomFormatInput: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -70,7 +57,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
 
   return (
     <Form<DestinationNamespaceFormValues>
-      zodSchema={destinationNamespaceSchema}
+      zodSchema={namespaceFormatSchema}
       defaultValues={{
         namespaceDefinition: initialValues.namespaceDefinition,
         // eslint-disable-next-line no-template-curly-in-string
