@@ -195,7 +195,7 @@ create table "public"."connection" (
   "source_catalog_id" uuid,
   "schedule_type" "public"."schedule_type",
   "schedule_data" jsonb,
-  "geography" "public"."geography_type" not null default cast('AUTO' as geography_type),
+  "geography" "public"."geography_type" default cast('AUTO' as geography_type),
   "non_breaking_change_preference" "non_breaking_change_preference_type" not null default cast('ignore' as non_breaking_change_preference_type),
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
