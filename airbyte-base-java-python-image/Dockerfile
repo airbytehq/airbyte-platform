@@ -1,5 +1,6 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.3
-FROM ${JDK_IMAGE}
+ARG AIRBYTE_BASE_JAVA_IMAGE_TAG=dev
+
+FROM airbyte/airbyte-base-java-image:${AIRBYTE_BASE_JAVA_IMAGE_TAG}
 
 USER root
 

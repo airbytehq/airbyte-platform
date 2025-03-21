@@ -1,7 +1,5 @@
 FROM amazoncorretto:21
 
-ARG DOCKER_BUILD_ARCH=amd64
-
 WORKDIR /app
 
 RUN <<EOF
@@ -17,6 +15,10 @@ chown -R airbyte:airbyte /secrets
 chown -R airbyte:airbyte /app
 chown -R airbyte:airbyte /usr/share/pki/ca-trust-source
 chown -R airbyte:airbyte /etc/pki/ca-trust
+mkdir -p /tmp/workspace
+chown -R airbyte:airbyte /tmp/workspace
+mkdir -p /tmp/airbyte_local
+chown -R airbyte:airbyte /tmp/airbyte_local
 EOF
 
 # Add the Datadog Java APM agent
