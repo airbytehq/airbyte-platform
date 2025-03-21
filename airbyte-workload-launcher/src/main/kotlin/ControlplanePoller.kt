@@ -15,9 +15,11 @@ import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.event.ApplicationEventPublisher
+import io.micronaut.http.HttpStatus
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
+import org.openapitools.client.infrastructure.ClientException
 
 private val logger = KotlinLogging.logger {}
 
@@ -74,8 +76,17 @@ class ControlplanePoller(
             dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
           ),
         )
+      } catch (e: ClientException) {
+        if (e.statusCode == HttpStatus.UNAUTHORIZED.code || e.statusCode == HttpStatus.FORBIDDEN.code) {
+          logger.warn { "Failed to authenticate, stopping." }
+          dataplaneConfig?.let {
+            publishConfigChange(it.copy(dataplaneEnabled = false))
+          }
+        } else {
+          logger.warn(e) { "Failed to heartbeat" }
+        }
       } catch (e: Exception) {
-        logger.warn(e) { "Failed to heart beat" }
+        logger.warn(e) { "Failed to heartbeat" }
       }
     }
   }

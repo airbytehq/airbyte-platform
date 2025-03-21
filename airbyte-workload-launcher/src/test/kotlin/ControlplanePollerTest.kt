@@ -14,6 +14,7 @@ import io.airbyte.workload.launcher.ControlplanePoller
 import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
+import io.mockk.Ordering
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -117,14 +118,7 @@ class ControlplanePollerTest {
 
   @Test
   fun `Heartbeat should publish changes`() {
-    val heartbeatResponse =
-      DataplaneHeartbeatResponse(
-        dataplaneName = "dataplane-name",
-        dataplaneId = UUID.randomUUID(),
-        dataplaneEnabled = true,
-        dataplaneGroupId = UUID.randomUUID(),
-        dataplaneGroupName = "group-name",
-      )
+    val heartbeatResponse = defaultHeartbeatResponse
     every {
       apiClient.dataplaneApi
     } returns
@@ -147,14 +141,7 @@ class ControlplanePollerTest {
 
   @Test
   fun `Heartbeat should only publish changes and omit duplicates`() {
-    val heartbeatResponse =
-      DataplaneHeartbeatResponse(
-        dataplaneName = "dataplane-name",
-        dataplaneId = UUID.randomUUID(),
-        dataplaneEnabled = true,
-        dataplaneGroupId = UUID.randomUUID(),
-        dataplaneGroupName = "group-name",
-      )
+    val heartbeatResponse = defaultHeartbeatResponse
     val heartbeatResponse2 = heartbeatResponse.copy(dataplaneId = UUID.randomUUID())
     val heartbeatResponse3 = heartbeatResponse.copy(dataplaneId = UUID.randomUUID())
     every {
@@ -185,6 +172,38 @@ class ControlplanePollerTest {
   }
 
   @Test
+  fun `Heartbeat should send publish a disable config on 401`() {
+    every {
+      apiClient.dataplaneApi
+    } returns
+      mockk {
+        every { heartbeatDataplane(any()) } returns defaultHeartbeatResponse andThenThrows ClientException(statusCode = 401)
+      }
+    poller.heartbeat()
+    poller.heartbeat()
+    verify(ordering = Ordering.ORDERED) {
+      eventPublisher.publishEvent(defaultHeartbeatResponse.toConfig())
+      eventPublisher.publishEvent(match { !it.dataplaneEnabled })
+    }
+  }
+
+  @Test
+  fun `Heartbeat should send publish a disable config on 403`() {
+    every {
+      apiClient.dataplaneApi
+    } returns
+      mockk {
+        every { heartbeatDataplane(any()) } returns defaultHeartbeatResponse andThenThrows ClientException(statusCode = 403)
+      }
+    poller.heartbeat()
+    poller.heartbeat()
+    verify(ordering = Ordering.ORDERED) {
+      eventPublisher.publishEvent(defaultHeartbeatResponse.toConfig())
+      eventPublisher.publishEvent(match { !it.dataplaneEnabled })
+    }
+  }
+
+  @Test
   fun `Heartbeat is a noop if feature flag is off`() {
     featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
 
@@ -194,6 +213,15 @@ class ControlplanePollerTest {
       eventPublisher.publishEvent(any())
     }
   }
+
+  private val defaultHeartbeatResponse =
+    DataplaneHeartbeatResponse(
+      dataplaneName = "dataplane-name",
+      dataplaneId = UUID.randomUUID(),
+      dataplaneEnabled = true,
+      dataplaneGroupId = UUID.randomUUID(),
+      dataplaneGroupName = "group-name",
+    )
 
   private fun DataplaneHeartbeatResponse.toConfig(): DataplaneConfig =
     DataplaneConfig(
