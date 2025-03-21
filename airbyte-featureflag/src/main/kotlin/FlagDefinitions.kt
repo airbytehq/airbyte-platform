@@ -202,6 +202,8 @@ object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-she
 
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
-object UseWorkloadQueueTable : Temporary<Boolean>(key = "platform.use-workload-queue-table", default = false)
+object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-workload-queue-table", default = false)
+
+object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = false)
 
 object WorkloadLauncherUseDataPlaneAuthNFlow : Temporary<Boolean>(key = "platform.workload-launcher-use-data-plane-auth-n-flow", default = false)

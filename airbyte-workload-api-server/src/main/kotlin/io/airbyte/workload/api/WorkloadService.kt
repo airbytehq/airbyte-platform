@@ -17,7 +17,7 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.UseWorkloadQueueTable
+import io.airbyte.featureflag.UseWorkloadQueueTableProducer
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -67,7 +67,7 @@ open class WorkloadService(
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
 
-    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, getFeatureFlagContext(labels, dataplaneGroup)) && dataplaneGroup != null) {
+    if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, getFeatureFlagContext(labels, dataplaneGroup)) && dataplaneGroup != null) {
       workloadQueueRepository.enqueueWorkload(dataplaneGroup = dataplaneGroup, priority = priority.toInt(), workloadId = workloadId)
       // TODO This is only for metric purpose, clean up once we delete the temporal queue
       queue = "$dataplaneGroup-$priority"

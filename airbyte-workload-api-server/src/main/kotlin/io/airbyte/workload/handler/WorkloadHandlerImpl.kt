@@ -11,7 +11,7 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseWorkloadQueueTable
+import io.airbyte.featureflag.UseWorkloadQueueTableProducer
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -314,7 +314,7 @@ class WorkloadHandlerImpl(
     quantity: Int,
   ): List<Workload> {
     val domainWorkloads =
-      if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+      if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
         workloadQueueRepository.pollWorkloadQueue(dataplaneGroup, priority?.toInt(), quantity)
       } else {
         workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
@@ -327,7 +327,7 @@ class WorkloadHandlerImpl(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
   ): Long =
-    if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+    if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
       workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
     } else {
       workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
@@ -335,7 +335,7 @@ class WorkloadHandlerImpl(
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
     val domainStats =
-      if (featureFlagClient.boolVariation(UseWorkloadQueueTable, Empty)) {
+      if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
         workloadQueueRepository.getEnqueuedWorkloadStats()
       } else {
         workloadRepository.getPendingWorkloadQueueStats()

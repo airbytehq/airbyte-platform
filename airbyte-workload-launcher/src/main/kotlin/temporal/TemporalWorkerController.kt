@@ -17,6 +17,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RUNNING_STATUS
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STOPPED_STATUS
 import io.airbyte.workload.launcher.model.DataplaneConfig
+import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueueConsumer
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.scheduling.annotation.Scheduled
@@ -32,8 +33,8 @@ class TemporalWorkerController(
   @Named("workloadLauncherHighPriorityQueue") private val launcherHighPriorityQueue: String,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
-//  private val pollingConsumer: WorkloadApiQueueConsumer, // Uncomment and comment the line below to swap consumers. TODO: wire this up properly.
-  private val pollingConsumer: TemporalLauncherWorker,
+  private val workloadApiQueueConsumer: WorkloadApiQueueConsumer,
+  private val temporalQueueConsumer: TemporalLauncherWorker,
 ) : ApplicationEventListener<DataplaneConfig> {
   private val started: AtomicBoolean = AtomicBoolean(false)
   private var currentDataplaneConfig: DataplaneConfig? = null
@@ -45,7 +46,8 @@ class TemporalWorkerController(
     if (useDataplaneAuthNFlow()) {
       updateEnabledStatus()
     } else {
-      pollingConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      workloadApiQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      temporalQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
       checkWorkerStatus()
     }
   }
@@ -61,9 +63,11 @@ class TemporalWorkerController(
       val context = Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
       val shouldRun = featureFlagClient.boolVariation(WorkloadLauncherConsumerEnabled, context)
       if (shouldRun) {
-        pollingConsumer.resumePolling()
+        workloadApiQueueConsumer.resumePolling()
+        temporalQueueConsumer.resumePolling()
       } else {
-        pollingConsumer.suspendPolling()
+        workloadApiQueueConsumer.suspendPolling()
+        temporalQueueConsumer.suspendPolling()
       }
     }
   }
@@ -77,7 +81,7 @@ class TemporalWorkerController(
   private fun useDataplaneAuthNFlow(): Boolean = featureFlagClient.boolVariation(WorkloadLauncherUseDataPlaneAuthNFlow, PlaneName(dataPlaneName))
 
   private fun reportPollerStatus(queueName: String) {
-    val isPollingSuspended = pollingConsumer.isSuspended(queueName)
+    val isPollingSuspended = temporalQueueConsumer.isSuspended(queueName)
     metricClient.count(
       metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POLLER_STATUS,
       attributes =
@@ -90,7 +94,8 @@ class TemporalWorkerController(
 
   override fun onApplicationEvent(event: DataplaneConfig) {
     if (currentDataplaneConfig == null) {
-      pollingConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      workloadApiQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      temporalQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
     }
     currentDataplaneConfig = event
     updateEnabledStatus()
@@ -107,9 +112,11 @@ class TemporalWorkerController(
     val shouldPollerConsume = currentDataplaneConfig?.dataplaneEnabled ?: false
     if (shouldPollerConsume != pollersConsuming) {
       if (shouldPollerConsume) {
-        pollingConsumer.resumePolling()
+        workloadApiQueueConsumer.resumePolling()
+        temporalQueueConsumer.resumePolling()
       } else {
-        pollingConsumer.suspendPolling()
+        workloadApiQueueConsumer.suspendPolling()
+        temporalQueueConsumer.suspendPolling()
       }
       pollersConsuming = shouldPollerConsume
     }

@@ -12,7 +12,7 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseWorkloadQueueTable
+import io.airbyte.featureflag.UseWorkloadQueueTableProducer
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.repository.WorkloadQueueRepository
@@ -61,7 +61,7 @@ class WorkloadServiceTest {
     priority: WorkloadPriority,
     expectedQueue: String,
   ) {
-    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns false
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns false
     val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient, workloadQueueRepository, featureFlagClient)
 
     workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority, "does-not-apply")
@@ -76,7 +76,7 @@ class WorkloadServiceTest {
     priority: WorkloadPriority,
     expectedQueue: String,
   ) {
-    every { featureFlagClient.boolVariation(UseWorkloadQueueTable, any()) } returns true
+    every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns true
     every { workloadQueueRepository.enqueueWorkload(expectedQueue, priority.toInt(), workloadId) } returns
       WorkloadQueueItem(
         dataplaneGroup = expectedQueue,

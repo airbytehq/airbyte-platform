@@ -8,6 +8,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.WorkloadLauncherConsumerEnabled
 import io.airbyte.featureflag.WorkloadLauncherUseDataPlaneAuthNFlow
 import io.airbyte.workload.launcher.model.DataplaneConfig
+import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueueConsumer
 import io.airbyte.workload.launcher.temporal.TemporalLauncherWorker
 import io.airbyte.workload.launcher.temporal.TemporalWorkerController
 import io.mockk.Ordering
@@ -35,10 +36,12 @@ class TemporalWorkerControllerTest {
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var temporalWorkerController: TemporalWorkerController
   private lateinit var temporalLauncherWorker: TemporalLauncherWorker
+  private lateinit var workloadApiQueueConsumer: WorkloadApiQueueConsumer
 
   @BeforeEach
   fun setup() {
     featureFlagClient = mockk<FeatureFlagClient>()
+    workloadApiQueueConsumer = mockk(relaxed = true)
     temporalLauncherWorker = mockk(relaxed = true)
     temporalWorkerController =
       TemporalWorkerController(
@@ -48,6 +51,7 @@ class TemporalWorkerControllerTest {
         "high-prio-queue",
         mockk(),
         featureFlagClient,
+        workloadApiQueueConsumer,
         temporalLauncherWorker,
       )
   }
@@ -62,7 +66,9 @@ class TemporalWorkerControllerTest {
 
     temporalWorkerController.start()
     verify(ordering = Ordering.ORDERED) {
+      workloadApiQueueConsumer.initialize(any(), any())
       temporalLauncherWorker.initialize(any(), any())
+      workloadApiQueueConsumer.resumePolling()
       temporalLauncherWorker.resumePolling()
     }
   }
@@ -77,7 +83,9 @@ class TemporalWorkerControllerTest {
 
     temporalWorkerController.start()
     verify(ordering = Ordering.ORDERED) {
+      workloadApiQueueConsumer.initialize(any(), any())
       temporalLauncherWorker.initialize(any(), any())
+      workloadApiQueueConsumer.suspendPolling()
       temporalLauncherWorker.suspendPolling()
     }
   }
@@ -90,7 +98,9 @@ class TemporalWorkerControllerTest {
     temporalWorkerController.start()
     verify {
       temporalLauncherWorker.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any(), any())
       temporalLauncherWorker.resumePolling()
+      workloadApiQueueConsumer.resumePolling()
     }
   }
 
@@ -102,7 +112,9 @@ class TemporalWorkerControllerTest {
     temporalWorkerController.start()
     verify {
       temporalLauncherWorker.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any(), any())
       temporalLauncherWorker.suspendPolling()
+      workloadApiQueueConsumer.suspendPolling()
     }
   }
 
@@ -112,7 +124,9 @@ class TemporalWorkerControllerTest {
     temporalWorkerController.onApplicationEvent(DisabledConfig)
     verify(exactly = 0) {
       temporalLauncherWorker.resumePolling()
+      workloadApiQueueConsumer.resumePolling()
       temporalLauncherWorker.suspendPolling()
+      workloadApiQueueConsumer.suspendPolling()
     }
   }
 
@@ -121,26 +135,36 @@ class TemporalWorkerControllerTest {
     every { featureFlagClient.boolVariation(WorkloadLauncherUseDataPlaneAuthNFlow, any()) } returns true
     temporalWorkerController.start()
     clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
 
     temporalWorkerController.onApplicationEvent(EnabledConfig)
     verify { temporalLauncherWorker.resumePolling() }
+    verify { workloadApiQueueConsumer.resumePolling() }
     clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
 
     // Sending enabled twice in a row result in only one invocation
     temporalWorkerController.onApplicationEvent(EnabledConfig)
     verify(exactly = 0) { temporalLauncherWorker.resumePolling() }
+    verify(exactly = 0) { workloadApiQueueConsumer.resumePolling() }
     clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
 
     temporalWorkerController.onApplicationEvent(DisabledConfig)
     verify { temporalLauncherWorker.suspendPolling() }
+    verify { workloadApiQueueConsumer.suspendPolling() }
     clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
 
     // Sending disabled twice in a row result in only one invocation
     temporalWorkerController.onApplicationEvent(DisabledConfig)
     verify(exactly = 0) { temporalLauncherWorker.suspendPolling() }
+    verify(exactly = 0) { workloadApiQueueConsumer.suspendPolling() }
     clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
 
     temporalWorkerController.onApplicationEvent(EnabledConfig)
     verify { temporalLauncherWorker.resumePolling() }
+    verify { workloadApiQueueConsumer.resumePolling() }
   }
 }

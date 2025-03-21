@@ -4,6 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.consumer
 
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.PlaneName
+import io.airbyte.featureflag.UseWorkloadQueueTableConsumer
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -27,9 +30,11 @@ private val logger = KotlinLogging.logger {}
 class WorkloadApiQueuePoller(
   private val workloadApiClient: WorkloadApiClient,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
   private val pollSizeItems: Int,
   private val pollIntervalSeconds: Long,
   private val priority: WorkloadPriority,
+  private val dataplaneName: String,
 ) {
   @Volatile
   private var suspended = true
@@ -56,7 +61,7 @@ class WorkloadApiQueuePoller(
     suspended = false
   }
 
-  fun isSuspended(): Boolean = suspended
+  fun isSuspended(): Boolean = !featureFlagClient.boolVariation(UseWorkloadQueueTableConsumer, PlaneName(dataplaneName)) || suspended
 
   private fun buildInputFlux(): Flux<LauncherInput> {
     val interval = Flux.interval(Duration.ofSeconds(pollIntervalSeconds))
@@ -69,7 +74,7 @@ class WorkloadApiQueuePoller(
       }
 
     return interval
-      .filter { !suspended }
+      .filter { !isSuspended() }
       .flatMap { pollFlux }
       .map(Workload::toLauncherInput)
       .onErrorContinue(this::handlePollError)
