@@ -25,6 +25,7 @@ import { ConnectionsGraphTooltip } from "./ConnectionsGraphTooltip";
 import { getStartOfFirstWindow } from "./getStartOfFirstWindow";
 import { LookbackConfiguration, LookbackWindow, lookbackConfigs } from "./lookbackConfiguration";
 import { RunningJobEvent, useCurrentlyRunningSyncs } from "./useCurrentlyRunningSyncs";
+import { useTrackConnectionsGraph, useTrackConnectionsGraphLoaded } from "./useTrackConnectionGraph";
 import { tooltipConfig } from "../HistoricalOverview/ChartConfig";
 
 interface ConnectionsGraphProps {
@@ -60,6 +61,9 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
     // not change frequently (which would cause the query to be re-run)
     createdAtEnd: dayjs().endOf("day").format(),
   });
+
+  const { trackConnectionGraphDrawerOpened } = useTrackConnectionsGraph();
+  useTrackConnectionsGraphLoaded();
 
   const combinedEvents = useMemo(() => {
     if (timelineData === undefined || currentlyRunningEvents === undefined) {
@@ -150,7 +154,14 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
     const { activeLabel } = chartState;
     const activeLabelNumber = Number(activeLabel);
     const categoryClicked = barChartCategories.find((category) => category.windowId === activeLabelNumber);
+
     if (categoryClicked && categoryClicked.events.length > 0) {
+      trackConnectionGraphDrawerOpened({
+        success: categoryClicked.success,
+        partialSuccess: categoryClicked.partialSuccess,
+        failure: categoryClicked.failure,
+        running: categoryClicked.running,
+      });
       setDidUserOpenDrawer(true);
       setSelectedWindowId(categoryClicked.windowId);
     }
