@@ -22,6 +22,7 @@ interface StreamTestButtonProps {
   hasResolveErrors: boolean;
   isStreamTestQueued: boolean;
   isStreamTestRunning: boolean;
+  isStreamTestStale: boolean;
   className?: string;
   forceDisabled?: boolean;
   requestType: "sync" | "async";
@@ -35,6 +36,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   hasResolveErrors,
   isStreamTestQueued,
   isStreamTestRunning,
+  isStreamTestStale,
   className,
   forceDisabled,
   requestType,
@@ -63,6 +65,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     <FlexContainer direction="column" gap="md" alignItems="center">
       <FormattedMessage id="connectorBuilder.testRead" />
       <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
+      {isStreamTestStale && <FormattedMessage id="connectorBuilder.testRead.stale" />}
     </FlexContainer>
   );
 
@@ -95,7 +98,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const testButton = (
     <Button
-      className={classNames(styles.testButton, className)}
+      className={classNames(styles.testButton, className, { [styles.pulsate]: isStreamTestStale })}
       size="sm"
       onClick={executeTestRead}
       disabled={buttonDisabled}

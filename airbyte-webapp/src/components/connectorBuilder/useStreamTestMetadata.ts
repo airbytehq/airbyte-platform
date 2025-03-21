@@ -110,7 +110,7 @@ export const useStreamTestMetadata = () => {
   );
 
   const getStreamTestWarnings = useCallback(
-    (streamName: string): TestWarning[] => {
+    (streamName: string, ignoreStale: boolean = false): TestWarning[] => {
       const streamTestMetadataStatus = getStreamTestMetadataStatus(streamName);
 
       if (streamTestMetadataStatus === undefined) {
@@ -118,6 +118,9 @@ export const useStreamTestMetadata = () => {
       }
 
       if (streamTestMetadataStatus === null) {
+        if (ignoreStale) {
+          return [];
+        }
         return [
           {
             message: formatMessage({ id: "connectorBuilder.warnings.untestedStream" }),
@@ -129,7 +132,7 @@ export const useStreamTestMetadata = () => {
       const warnings: TestWarning[] = [];
       const isStale = streamTestMetadataStatus.isStale;
 
-      if (streamTestMetadataStatus.isStale) {
+      if (!ignoreStale && streamTestMetadataStatus.isStale) {
         warnings.push({
           message: formatMessage({ id: "connectorBuilder.warnings.staleStreamTest" }),
           priority: "primary",

@@ -70,7 +70,10 @@ export const StreamTester: React.FC<{
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
   const { getStreamTestWarnings, getStreamTestMetadataStatus, getStreamHasCustomType } = useStreamTestMetadata();
-  const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+  const streamTestWarnings = useMemo(
+    () => getStreamTestWarnings(streamName, true),
+    [getStreamTestWarnings, streamName]
+  );
   const streamTestMetadataStatus = useMemo(
     () => getStreamTestMetadataStatus(streamName),
     [getStreamTestMetadataStatus, streamName]
@@ -169,10 +172,8 @@ export const StreamTester: React.FC<{
         hasResolveErrors={Boolean(resolveErrorMessage)}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
-        className={
+        isStreamTestStale={
           !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
-            ? styles.pulsateButton
-            : undefined
         }
         forceDisabled={cantProcessCustomComponents}
         requestType={testStreamRequestType}
