@@ -44,17 +44,16 @@ class ClaimedProcessor(
   private val apiClient: WorkloadApiClient,
   private val pipe: LaunchPipeline,
   private val metricClient: MetricClient,
-  @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${airbyte.workload-launcher.parallelism.default-queue}") parallelism: Int,
   private val claimProcessorTracker: ClaimProcessorTracker,
+  @Value("\${airbyte.workload-launcher.parallelism.default-queue}") parallelism: Int,
   @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration = 5.seconds.toJavaDuration(),
   @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration = 60.seconds.toJavaDuration(),
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
   @Trace(operationName = RESUME_CLAIMED_OPERATION_NAME)
-  fun retrieveAndProcess() {
-    addTagsToTrace()
+  fun retrieveAndProcess(dataplaneId: String) {
+    addTagsToTrace(dataplaneId)
     val workloadListRequest =
       WorkloadListRequest(
         listOf(dataplaneId),
@@ -94,19 +93,19 @@ class ClaimedProcessor(
       .subscribeOn(scheduler)
   }
 
-  private fun addTagsToTrace() {
+  private fun addTagsToTrace(dataplaneId: String) {
     val commonTags = hashMapOf<String, Any>()
     commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
     ApmTraceUtils.addTagsToTrace(commonTags)
   }
 
-  private fun getWorkloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse =
+  private fun getWorkloadList(req: WorkloadListRequest): WorkloadListResponse =
     Failsafe
       .with(
         RetryPolicy
           .builder<Any>()
           .withBackoff(backoffDuration, backoffMaxDelay)
-          .onRetry { _ -> logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+          .onRetry { _ -> logger.error { "Retrying to fetch workloads for dataplane(s): ${req.dataplane}" } }
           .withMaxAttempts(-1)
           .abortOn { exception ->
             when (exception) {
@@ -120,6 +119,6 @@ class ClaimedProcessor(
             }
           }.build(),
       ).get(
-        CheckedSupplier { apiClient.workloadApi.workloadList(workloadListRequest) },
+        CheckedSupplier { apiClient.workloadApi.workloadList(req) },
       )
 }

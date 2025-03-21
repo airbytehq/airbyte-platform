@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.airbyte.workload.launcher.temporal.TemporalWorkerController
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventListener
@@ -24,17 +25,19 @@ class StartupApplicationEventListener(
   private val metricClient: MetricClient,
   private val temporalWorkerController: TemporalWorkerController,
   private val launcherShutdownHelper: LauncherShutdownHelper,
-  private val controlplanePoller: ControlplanePoller,
+  private val identityService: DataplaneIdentityService,
 ) : ApplicationEventListener<ServiceReadyEvent> {
   @VisibleForTesting
   var processorThread: Thread? = null
   var trackerThread: Thread? = null
 
   override fun onApplicationEvent(event: ServiceReadyEvent?) {
+    identityService.initialize()
+
     processorThread =
       thread {
         try {
-          claimedProcessor.retrieveAndProcess()
+          claimedProcessor.retrieveAndProcess(identityService.getDataplaneId())
         } catch (e: Exception) {
           metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_REHYDRATE_FAILURE)
           ApmTraceUtils.addExceptionToTrace(e)

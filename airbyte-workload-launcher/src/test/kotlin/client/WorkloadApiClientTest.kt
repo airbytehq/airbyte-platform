@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher.client
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -21,6 +22,7 @@ private const val APPLICATION_NAME = "airbyte-workload-launcher"
 private const val DATA_PLANE_ID = "data-plane-id"
 
 internal class WorkloadApiClientTest {
+  private lateinit var identifyService: DataplaneIdentityService
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var workloadApi: WorkloadApi
   private lateinit var internalWorkloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient
@@ -29,7 +31,8 @@ internal class WorkloadApiClientTest {
   internal fun setup() {
     workloadApi = mockk()
     internalWorkloadApiClient = mockk()
-    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, DATA_PLANE_ID, APPLICATION_NAME)
+    identifyService = mockk(relaxed = true)
+    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, identifyService, APPLICATION_NAME)
 
     every { internalWorkloadApiClient.workloadApi } returns workloadApi
   }

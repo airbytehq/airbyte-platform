@@ -2,6 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+package io.airbyte.workload.launcher.authn
+
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatResponse
@@ -10,7 +12,6 @@ import io.airbyte.api.client.model.generated.DataplaneInitResponse
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.WorkloadLauncherUseDataPlaneAuthNFlow
-import io.airbyte.workload.launcher.ControlplanePoller
 import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
@@ -26,18 +27,19 @@ import org.junit.jupiter.api.assertThrows
 import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
-class ControlplanePollerTest {
-  val dataplaneName = "test-dataplane"
+class DataplaneIdentityServiceTest {
+  val dataplaneIdProperty = "test-dataplane-1"
+  val dataplaneNameProperty = "test-dataplane"
   val dataplaneCreds =
     DataplaneCredentials(
-      clientId = dataplaneName,
+      clientId = dataplaneNameProperty,
       clientSecret = "some-secret-secret",
     )
   lateinit var apiClient: AirbyteApiClient
   lateinit var featureFlagMap: MutableMap<String, Any>
   lateinit var featureFlagClient: FeatureFlagClient
-  lateinit var poller: ControlplanePoller
   lateinit var eventPublisher: ApplicationEventPublisher<DataplaneConfig>
+  lateinit var service: DataplaneIdentityService
 
   @BeforeEach
   fun setup() {
@@ -48,9 +50,10 @@ class ControlplanePollerTest {
       )
     featureFlagClient = TestClient(featureFlagMap)
     eventPublisher = mockk(relaxed = true)
-    poller =
-      ControlplanePoller(
-        dataplaneName = dataplaneName,
+    service =
+      DataplaneIdentityService(
+        dataplaneIdProperty = dataplaneIdProperty,
+        dataplaneNameProperty = dataplaneNameProperty,
         dataplaneCredentials = dataplaneCreds,
         airbyteApiClient = apiClient,
         featureFlagClient = featureFlagClient,
@@ -59,7 +62,7 @@ class ControlplanePollerTest {
   }
 
   @Test
-  fun `Poller should phone home on initialize`() {
+  fun `phones home on initialize`() {
     val initResponse =
       DataplaneInitResponse(
         dataplaneName = "dataplane-name",
@@ -75,7 +78,7 @@ class ControlplanePollerTest {
         every { initializeDataplane(DataplaneInitRequestBody(dataplaneCreds.clientId)) } returns initResponse
       }
 
-    poller.initialize()
+    service.initialize()
     val expectedConfig =
       DataplaneConfig(
         dataplaneName = initResponse.dataplaneName,
@@ -83,14 +86,15 @@ class ControlplanePollerTest {
         dataplaneEnabled = initResponse.dataplaneEnabled,
         dataplaneGroupId = initResponse.dataplaneGroupId,
         dataplaneGroupName = initResponse.dataplaneGroupName,
+        temporalConsumerEnabled = true,
       )
-    assertEquals(expectedConfig, poller.dataplaneConfig)
+    assertEquals(expectedConfig, service.authNDrivenDataplaneConfig)
 
     verify { eventPublisher.publishEvent(expectedConfig) }
   }
 
   @Test
-  fun `Poller should throw on failed initialize call`() {
+  fun `throws on failed initialize call`() {
     every {
       apiClient.dataplaneApi
     } returns
@@ -99,20 +103,20 @@ class ControlplanePollerTest {
       }
 
     assertThrows<Exception> {
-      poller.initialize()
+      service.initialize()
     }
-    assertNull(poller.dataplaneConfig)
+    assertNull(service.authNDrivenDataplaneConfig)
     verify(exactly = 0) { eventPublisher.publishEvent(any()) }
   }
 
   @Test
-  fun `Poller shouldn't poll if feature flag is off`() {
+  fun `shouldn't poll if feature flag is off`() {
     featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
-    poller.initialize()
+    service.initialize()
     verify(exactly = 0) {
       apiClient.dataplaneApi.initializeDataplane(any())
     }
-    assertNull(poller.dataplaneConfig)
+    assertNull(service.authNDrivenDataplaneConfig)
     verify(exactly = 0) { eventPublisher.publishEvent(any()) }
   }
 
@@ -126,7 +130,7 @@ class ControlplanePollerTest {
         every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneCreds.clientId)) } returns heartbeatResponse
       }
 
-    poller.heartbeat()
+    service.heartbeat()
 
     val expectedConfig =
       DataplaneConfig(
@@ -135,6 +139,7 @@ class ControlplanePollerTest {
         dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
         dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
         dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
+        temporalConsumerEnabled = true,
       )
     verify { eventPublisher.publishEvent(expectedConfig) }
   }
@@ -161,7 +166,7 @@ class ControlplanePollerTest {
       }
 
     repeat(6) {
-      poller.heartbeat()
+      service.heartbeat()
     }
 
     verify(exactly = 1) {
@@ -179,8 +184,8 @@ class ControlplanePollerTest {
       mockk {
         every { heartbeatDataplane(any()) } returns defaultHeartbeatResponse andThenThrows ClientException(statusCode = 401)
       }
-    poller.heartbeat()
-    poller.heartbeat()
+    service.heartbeat()
+    service.heartbeat()
     verify(ordering = Ordering.ORDERED) {
       eventPublisher.publishEvent(defaultHeartbeatResponse.toConfig())
       eventPublisher.publishEvent(match { !it.dataplaneEnabled })
@@ -195,8 +200,8 @@ class ControlplanePollerTest {
       mockk {
         every { heartbeatDataplane(any()) } returns defaultHeartbeatResponse andThenThrows ClientException(statusCode = 403)
       }
-    poller.heartbeat()
-    poller.heartbeat()
+    service.heartbeat()
+    service.heartbeat()
     verify(ordering = Ordering.ORDERED) {
       eventPublisher.publishEvent(defaultHeartbeatResponse.toConfig())
       eventPublisher.publishEvent(match { !it.dataplaneEnabled })
@@ -207,11 +212,38 @@ class ControlplanePollerTest {
   fun `Heartbeat is a noop if feature flag is off`() {
     featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
 
-    poller.heartbeat()
+    service.heartbeat()
     verify(exactly = 0) {
       apiClient.dataplaneApi.heartbeatDataplane(any())
       eventPublisher.publishEvent(any())
     }
+  }
+
+  @Test
+  fun `getters returns static property based values if ff off and api config based values if ff on`() {
+    val initResponse =
+      DataplaneInitResponse(
+        dataplaneName = "data-driven-dataplane-name",
+        dataplaneId = UUID.randomUUID(),
+        dataplaneEnabled = true,
+        dataplaneGroupId = UUID.randomUUID(),
+        dataplaneGroupName = "data-driven-dataplane-group-name",
+      )
+    every {
+      apiClient.dataplaneApi
+    } returns
+      mockk {
+        every { initializeDataplane(DataplaneInitRequestBody(dataplaneCreds.clientId)) } returns initResponse
+      }
+    service.initialize()
+
+    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
+    assertEquals(dataplaneIdProperty, service.getDataplaneId())
+    assertEquals(dataplaneNameProperty, service.getDataplaneName())
+
+    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = true
+    assertEquals(initResponse.dataplaneName, service.getDataplaneName())
+    assertEquals(initResponse.dataplaneId.toString(), service.getDataplaneId())
   }
 
   private val defaultHeartbeatResponse =
@@ -230,5 +262,6 @@ class ControlplanePollerTest {
       dataplaneEnabled = dataplaneEnabled,
       dataplaneGroupId = dataplaneGroupId,
       dataplaneGroupName = dataplaneGroupName,
+      temporalConsumerEnabled = true,
     )
 }

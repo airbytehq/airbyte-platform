@@ -29,6 +29,7 @@ class TemporalWorkerControllerTest {
         dataplaneEnabled = true,
         dataplaneGroupId = UUID.randomUUID(),
         dataplaneGroupName = "group-name",
+        temporalConsumerEnabled = true,
       )
     val DisabledConfig = EnabledConfig.copy(dataplaneEnabled = false)
   }
@@ -146,6 +147,44 @@ class TemporalWorkerControllerTest {
     // Sending enabled twice in a row result in only one invocation
     temporalWorkerController.onApplicationEvent(EnabledConfig)
     verify(exactly = 0) { temporalLauncherWorker.resumePolling() }
+    verify(exactly = 0) { workloadApiQueueConsumer.resumePolling() }
+    clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
+
+    temporalWorkerController.onApplicationEvent(DisabledConfig)
+    verify { temporalLauncherWorker.suspendPolling() }
+    verify { workloadApiQueueConsumer.suspendPolling() }
+    clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
+
+    // Sending disabled twice in a row result in only one invocation
+    temporalWorkerController.onApplicationEvent(DisabledConfig)
+    verify(exactly = 0) { temporalLauncherWorker.suspendPolling() }
+    verify(exactly = 0) { workloadApiQueueConsumer.suspendPolling() }
+    clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
+
+    temporalWorkerController.onApplicationEvent(EnabledConfig)
+    verify { temporalLauncherWorker.resumePolling() }
+    verify { workloadApiQueueConsumer.resumePolling() }
+  }
+
+  @Test
+  fun `calls suspend or resume temporal according to the enabled changes`() {
+    every { featureFlagClient.boolVariation(WorkloadLauncherUseDataPlaneAuthNFlow, any()) } returns true
+    temporalWorkerController.start()
+    clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
+
+    temporalWorkerController.onApplicationEvent(EnabledConfig.copy(temporalConsumerEnabled = false))
+    verify { temporalLauncherWorker.suspendPolling() }
+    verify { workloadApiQueueConsumer.resumePolling() }
+    clearMocks(temporalLauncherWorker)
+    clearMocks(workloadApiQueueConsumer)
+
+    // Sending enabled twice in a row result in only one invocation
+    temporalWorkerController.onApplicationEvent(EnabledConfig)
+    verify { temporalLauncherWorker.resumePolling() }
     verify(exactly = 0) { workloadApiQueueConsumer.resumePolling() }
     clearMocks(temporalLauncherWorker)
     clearMocks(workloadApiQueueConsumer)

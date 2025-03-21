@@ -7,9 +7,6 @@ package io.airbyte.workload.launcher.pods
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PlaneName
-import io.airbyte.featureflag.UseCustomK8sInitCheck
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -29,7 +26,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource
 import io.fabric8.kubernetes.client.readiness.Readiness
 import io.fabric8.kubernetes.client.utils.PodStatusUtil
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -49,8 +45,6 @@ class KubePodLauncher(
   private val metricClient: MetricClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
-  private val featureFlagClient: FeatureFlagClient,
-  @Property(name = "airbyte.data-plane-name") private val dataPlaneName: String?,
 ) {
   fun create(pod: Pod): Pod =
     runKubeCommand(
@@ -67,11 +61,7 @@ class KubePodLauncher(
   fun waitForPodInitStartup(
     pod: Pod,
     waitDuration: Duration,
-  ) = if (shouldUseCustomK8sInitCheck()) {
-    waitForPodInitCustomCheck(pod, waitDuration)
-  } else {
-    waitForPodInitDefaultCheck(pod, waitDuration)
-  }
+  ) = waitForPodInit(pod, waitDuration)
 
   fun waitForPodInitComplete(
     pod: Pod,
@@ -126,34 +116,7 @@ class KubePodLauncher(
     }
   }
 
-  private fun shouldUseCustomK8sInitCheck() =
-    dataPlaneName.isNullOrBlank() ||
-      featureFlagClient.boolVariation(
-        UseCustomK8sInitCheck,
-        PlaneName(dataPlaneName),
-      )
-
-  private fun waitForPodInitDefaultCheck(
-    pod: Pod,
-    waitDuration: Duration,
-  ) {
-    runKubeCommand(
-      {
-        kubernetesClient
-          .resource(pod)
-          .waitUntilCondition(
-            { p: Pod ->
-              PodStatusUtil.isInitializing(p)
-            },
-            waitDuration.toMinutes(),
-            TimeUnit.MINUTES,
-          )
-      },
-      "wait",
-    )
-  }
-
-  private fun waitForPodInitCustomCheck(
+  private fun waitForPodInit(
     pod: Pod,
     waitDuration: Duration,
   ) {

@@ -12,6 +12,7 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.api.client.model.generated.WorkloadQueuePollRequest
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -21,7 +22,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadApiClient(
   private val workloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient,
-  @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
+  private val identityService: DataplaneIdentityService,
   @Value("\${micronaut.application.name}") private val applicationName: String,
 ) {
   fun reportFailure(
@@ -63,20 +64,21 @@ class WorkloadApiClient(
   fun claim(workloadId: String): Boolean {
     var result = false
 
+    val req =
+      WorkloadClaimRequest(
+        workloadId,
+        identityService.getDataplaneId(),
+      )
+
     try {
       val resp: ClaimResponse =
-        workloadApiClient.workloadApi.workloadClaim(
-          WorkloadClaimRequest(
-            workloadId,
-            dataplaneId,
-          ),
-        )
-      logger.info { "Claimed: ${resp.claimed} for $workloadId via API for $dataplaneId" }
+        workloadApiClient.workloadApi.workloadClaim(req)
+      logger.info { "Claimed: ${resp.claimed} for $workloadId via API for ${req.dataplaneId}" }
 
       result = resp.claimed
     } catch (e: Exception) {
       logger.error(e) {
-        "Error claiming workload $workloadId via API for $dataplaneId.\n" +
+        "Error claiming workload $workloadId via API for ${req.dataplaneId}.\n" +
           "Exception: $e\n" +
           "message: ${e.message}\n" +
           "stackTrace: ${e.stackTrace}\n"

@@ -39,6 +39,7 @@ class TemporalWorkerController(
   private val started: AtomicBoolean = AtomicBoolean(false)
   private var currentDataplaneConfig: DataplaneConfig? = null
   private var pollersConsuming: Boolean? = null
+  private var temporalPollersConsuming: Boolean? = null
 
   fun start() {
     started.set(true)
@@ -52,7 +53,7 @@ class TemporalWorkerController(
     }
   }
 
-  @Deprecated("This will be replaced by ControlplanePoller")
+  @Deprecated("This will be replaced by DataplaneIdentityService")
   @Scheduled(fixedRate = "PT10S")
   fun checkWorkerStatus() {
     if (useDataplaneAuthNFlow()) {
@@ -113,12 +114,20 @@ class TemporalWorkerController(
     if (shouldPollerConsume != pollersConsuming) {
       if (shouldPollerConsume) {
         workloadApiQueueConsumer.resumePolling()
-        temporalQueueConsumer.resumePolling()
       } else {
         workloadApiQueueConsumer.suspendPolling()
-        temporalQueueConsumer.suspendPolling()
       }
       pollersConsuming = shouldPollerConsume
+    }
+
+    val shouldTemporalPollersConsume = shouldPollerConsume && currentDataplaneConfig?.temporalConsumerEnabled ?: false
+    if (shouldTemporalPollersConsume != temporalPollersConsuming) {
+      if (shouldTemporalPollersConsume) {
+        temporalQueueConsumer.resumePolling()
+      } else {
+        temporalQueueConsumer.suspendPolling()
+      }
+      temporalPollersConsuming = shouldTemporalPollersConsume
     }
   }
 }

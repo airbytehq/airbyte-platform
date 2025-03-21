@@ -156,8 +156,6 @@ object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggre
 
 object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
 
-object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
-
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
@@ -207,3 +205,5 @@ object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-wo
 object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = false)
 
 object WorkloadLauncherUseDataPlaneAuthNFlow : Temporary<Boolean>(key = "platform.workload-launcher-use-data-plane-auth-n-flow", default = false)
+
+object UseWorkloadTemporalConsumer : Temporary<Boolean>(key = "platform.use-workload-temporal-consumer", default = true)

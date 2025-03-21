@@ -9,10 +9,10 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.airbyte.workload.launcher.client.LogContextFactory
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import kotlin.time.TimeSource
 
@@ -21,7 +21,7 @@ import kotlin.time.TimeSource
  */
 @Singleton
 class PipelineIngressAdapter(
-  @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
+  private val identityService: DataplaneIdentityService,
   private val metricClient: MetricClient,
   private val ctxFactory: LogContextFactory,
 ) {
@@ -45,7 +45,7 @@ class PipelineIngressAdapter(
     )
 
     val commonTags = hashMapOf<String, Any>()
-    commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
+    commonTags[MetricTags.DATA_PLANE_ID_TAG] = identityService.getDataplaneId()
     commonTags[MetricTags.WORKLOAD_ID_TAG] = input.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags)
 
