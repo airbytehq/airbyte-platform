@@ -76,6 +76,9 @@ class GithubContributionService(
   val connectorManifestPath: String
     get() = "$connectorDirectoryPath/manifest.yaml"
 
+  val connectorCustomComponentsPath: String
+    get() = "$connectorDirectoryPath/components.py"
+
   val connectorIconPath: String
     get() = "$connectorDirectoryPath/icon.svg"
 
@@ -223,13 +226,20 @@ class GithubContributionService(
       null
     }
 
-  fun commitFiles(files: Map<String, String>): GHCommit {
+  fun commitFiles(files: Map<String, String?>): GHCommit {
+    // If file's contents are null, don't add it to the tree. If the file's contents are null, and it exists on main, delete it
     val message = "Submission for $connectorImageName from Connector Builder"
     val branchSha = getBranchSha(contributionBranchName, forkedRepository)
     val treeBuilder = forkedRepository.createTree().baseTree(branchSha)
 
     for ((path, content) in files) {
-      treeBuilder.add(path, content, false)
+      if (content != null) {
+        treeBuilder.add(path, content, false)
+      } else {
+        if (checkFileExistsOnMain(path)) {
+          treeBuilder.delete(path)
+        }
+      }
     }
 
     val tree = treeBuilder.create()

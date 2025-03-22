@@ -200,6 +200,9 @@ components:
         manifest_yaml:
           type: string
           description: The connector manifest in YAML form
+        custom_components:
+          type: string
+          description: (Optional) The file contents for any custom python CDK components
         base_image:
           type: string
           description: The base image to use for the connector

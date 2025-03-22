@@ -17,6 +17,7 @@ data class BuilderContributionInfo(
   val description: String,
   val githubToken: String,
   val manifestYaml: String,
+  val customComponents: String?, // optional
   val baseImage: String,
   val versionTag: String,
   val authorUsername: String,

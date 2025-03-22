@@ -37,6 +37,7 @@ class ContributionTemplatesTest {
       description = "This is a test connector.",
       githubToken = "test-token",
       manifestYaml = serialzedYamlContent,
+      customComponents = null,
       baseImage = "test-base-image",
       versionTag = "0.0.1",
       authorUsername = "testuser",

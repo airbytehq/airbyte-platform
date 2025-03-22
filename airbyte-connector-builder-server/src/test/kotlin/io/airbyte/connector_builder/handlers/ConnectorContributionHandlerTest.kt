@@ -81,23 +81,27 @@ class ConnectorContributionHandlerTest {
     every { githubContributionService.connectorIconPath } returns "iconPath"
     every { githubContributionService.connectorAcceptanceTestConfigPath } returns "acceptanceTestConfigPath"
     every { githubContributionService.connectorDocsPath } returns "docsPath"
+    every { githubContributionService.connectorCustomComponentsPath } returns "customComponentsPath"
     every { githubContributionService.checkFileExistsOnMain(any()) } returns false
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(6, filesToCommit.size)
-    assertEquals(setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath"), filesToCommit.keys)
+    assertEquals(7, filesToCommit.size)
+    assertEquals(
+      setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath", "customComponentsPath"),
+      filesToCommit.keys,
+    )
   }
 
   @Test
-  fun `getFilesToCommitGenerationMap gets only manifest and metadata file if all files exist`() {
+  fun `getFilesToCommitGenerationMap gets only manifest and custom components file if all files exist`() {
     val contributionInfo = mockk<BuilderContributionInfo>(relaxed = true)
     val githubContributionService = mockk<GithubContributionService>(relaxed = true)
     every { githubContributionService.connectorManifestPath } returns "manifestPath"
-    every { githubContributionService.connectorMetadataPath } returns "metadataPath"
+    every { githubContributionService.connectorCustomComponentsPath } returns "customComponentsPath"
     every { githubContributionService.checkFileExistsOnMain(any()) } returns true
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(1, filesToCommit.size)
-    assertEquals(setOf("manifestPath"), filesToCommit.keys)
+    assertEquals(2, filesToCommit.size)
+    assertEquals(setOf("manifestPath", "customComponentsPath"), filesToCommit.keys)
   }
 }

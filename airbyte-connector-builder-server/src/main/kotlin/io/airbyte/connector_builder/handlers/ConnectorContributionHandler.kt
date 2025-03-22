@@ -61,15 +61,16 @@ class ConnectorContributionHandler(
   fun getFilesToCommitGenerationMap(
     contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
-  ): Map<String, () -> String> {
-    // Always generate the manifest and metadata files
+  ): Map<String, () -> String?> {
+    // Always generate and overwrite the manifest and custom components python file
+    // If the value of the map is null (in the case of an optional file), this will delete the file if it exists
     val filesToCommit =
       mutableMapOf(
         githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
+        githubContributionService.connectorCustomComponentsPath to { contributionInfo.customComponents },
       )
 
-    // Others - generate if not pre-existing.
-    // Including metadata — do not regenrated it if it already exists.
+    // Do not regenerate these if they already exist
     val createIfNotExistsFiles =
       listOf(
         githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
@@ -103,6 +104,7 @@ class ConnectorContributionHandler(
       description = generateContributionRequestBody.description,
       githubToken = generateContributionRequestBody.githubToken,
       manifestYaml = generateContributionRequestBody.manifestYaml,
+      customComponents = generateContributionRequestBody.customComponents,
       baseImage = generateContributionRequestBody.baseImage,
       versionTag = "0.0.1",
       authorUsername = authorUsername,

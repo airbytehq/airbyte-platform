@@ -518,6 +518,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       github_token: values.githubToken,
       manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
       base_image: baseImage,
+      custom_components: customComponentsCode,
     });
     const newProject: BuilderProjectWithManifest = {
       name: values.name,
