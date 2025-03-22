@@ -5,10 +5,10 @@
 package io.airbyte.workload.launcher.metrics
 
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -17,11 +17,13 @@ class MeterFilterFactory {
   @Singleton
   @Named("dataplaneMeterFilter")
   @io.micronaut.configuration.metrics.annotation.RequiresMetrics
-  fun addCommonTagFilter(identityService: DataplaneIdentityService): MeterFilter {
+  fun addCommonTagFilter(
+    @Value("\${airbyte.data-plane-id}") dataplaneId: String,
+  ): MeterFilter {
     // Add all the common application-specific tags
     val commonTags =
       mutableListOf(
-        Tag.of(MetricTags.DATA_PLANE_ID_TAG, identityService.getDataplaneId()),
+        Tag.of(MetricTags.DATA_PLANE_ID_TAG, dataplaneId),
       )
 
     return MeterFilter.commonTags(commonTags)
