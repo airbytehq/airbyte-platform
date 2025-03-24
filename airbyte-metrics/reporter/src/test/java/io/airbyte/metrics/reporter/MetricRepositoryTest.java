@@ -79,11 +79,11 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.STATUS, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID,
-          CONNECTION.DESTINATION_ID, CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.DESTINATION_ID, CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.DATAPLANE_GROUP_ID)
           .values(activeConnectionId, StatusType.active, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .values(inactiveConnectionId, StatusType.inactive, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       // non-pending jobs
@@ -126,9 +126,9 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS)
@@ -153,9 +153,9 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       // non-pending jobs
@@ -186,9 +186,9 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT)
@@ -218,9 +218,9 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionUuid, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       ctx.insertInto(JOBS, JOBS.ID, JOBS.SCOPE, JOBS.STATUS)
@@ -305,11 +305,11 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -339,15 +339,15 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.deprecated,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.inactive,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -377,9 +377,9 @@ abstract class MetricRepositoryTest {
           .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
-          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
           .values(UUID.randomUUID(), NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"), true, StatusType.active,
-              GeographyType.EU, euDataplaneGroupId)
+              euDataplaneGroupId)
           .execute();
 
       final var res = db.numberOfActiveConnPerWorkspace();
@@ -503,9 +503,9 @@ abstract class MetricRepositoryTest {
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,
-          CONNECTION.UPDATED_AT, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.UPDATED_AT, CONNECTION.DATAPLANE_GROUP_ID)
           .values(connectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 6, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt, GeographyType.EU,
+              JSONB.valueOf("{\"units\": 6, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt,
               euDataplaneGroupId)
           .execute();
 
@@ -538,12 +538,12 @@ abstract class MetricRepositoryTest {
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,
-          CONNECTION.UPDATED_AT, CONNECTION.GEOGRAPHY, CONNECTION.DATAPLANE_GROUP_ID)
+          CONNECTION.UPDATED_AT, CONNECTION.DATAPLANE_GROUP_ID)
           .values(inactiveConnectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.inactive, updateAt, updateAt, GeographyType.EU,
+              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.inactive, updateAt, updateAt,
               euDataplaneGroupId)
           .values(activeConnectionId, NamespaceDefinitionType.source, srcId, dstId, CONN, JSONB.valueOf("{}"),
-              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt, GeographyType.EU,
+              JSONB.valueOf("{\"units\": 12, \"timeUnit\": \"hours\"}"), false, StatusType.active, updateAt, updateAt,
               euDataplaneGroupId)
           .execute();
 

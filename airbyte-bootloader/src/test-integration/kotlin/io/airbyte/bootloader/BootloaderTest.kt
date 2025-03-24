@@ -46,7 +46,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_1_1_019__MakeGeographyNullableOnConnection
+import io.airbyte.db.instance.configs.migrations.V1_1_1_020__DropGeographyFromConnectionAndWorkspace
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable
@@ -816,7 +816,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_019__MakeGeographyNullableOnConnection::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_020__DropGeographyFromConnectionAndWorkspace::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =
