@@ -47,7 +47,7 @@ class TemporalWorkerController(
     if (useDataplaneAuthNFlow()) {
       updateEnabledStatus()
     } else {
-      workloadApiQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      workloadApiQueueConsumer.initialize(launcherQueue)
       temporalQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
       checkWorkerStatus()
     }
@@ -95,7 +95,7 @@ class TemporalWorkerController(
 
   override fun onApplicationEvent(event: DataplaneConfig) {
     if (currentDataplaneConfig == null) {
-      workloadApiQueueConsumer.initialize(event.dataplaneGroupName, event.dataplaneGroupName)
+      workloadApiQueueConsumer.initialize(event.dataplaneGroupId.toString())
       temporalQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
     }
     currentDataplaneConfig = event

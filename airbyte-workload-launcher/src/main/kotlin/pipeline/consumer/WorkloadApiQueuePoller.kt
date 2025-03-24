@@ -48,7 +48,7 @@ class WorkloadApiQueuePoller(
   fun initialize(groupId: String): WorkloadApiQueuePoller {
     if (initialized) return this
 
-    logger.info { "Initalizing ApiQueuePoller with $groupId" }
+    logger.info { "Initalizing ApiQueuePoller with $groupId and $priority" }
 
     this.groupId = groupId
     this.flux = buildInputFlux()

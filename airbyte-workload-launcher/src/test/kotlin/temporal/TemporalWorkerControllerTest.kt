@@ -67,7 +67,7 @@ class TemporalWorkerControllerTest {
 
     temporalWorkerController.start()
     verify(ordering = Ordering.ORDERED) {
-      workloadApiQueueConsumer.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any())
       temporalLauncherWorker.initialize(any(), any())
       workloadApiQueueConsumer.resumePolling()
       temporalLauncherWorker.resumePolling()
@@ -84,7 +84,7 @@ class TemporalWorkerControllerTest {
 
     temporalWorkerController.start()
     verify(ordering = Ordering.ORDERED) {
-      workloadApiQueueConsumer.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any())
       temporalLauncherWorker.initialize(any(), any())
       workloadApiQueueConsumer.suspendPolling()
       temporalLauncherWorker.suspendPolling()
@@ -99,7 +99,7 @@ class TemporalWorkerControllerTest {
     temporalWorkerController.start()
     verify {
       temporalLauncherWorker.initialize(any(), any())
-      workloadApiQueueConsumer.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any())
       temporalLauncherWorker.resumePolling()
       workloadApiQueueConsumer.resumePolling()
     }
@@ -113,7 +113,7 @@ class TemporalWorkerControllerTest {
     temporalWorkerController.start()
     verify {
       temporalLauncherWorker.initialize(any(), any())
-      workloadApiQueueConsumer.initialize(any(), any())
+      workloadApiQueueConsumer.initialize(any())
       temporalLauncherWorker.suspendPolling()
       workloadApiQueueConsumer.suspendPolling()
     }
