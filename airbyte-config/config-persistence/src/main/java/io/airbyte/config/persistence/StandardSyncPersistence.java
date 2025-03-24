@@ -145,8 +145,6 @@ public class StandardSyncPersistence {
           .set(CONNECTION.UPDATED_AT, timestamp)
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
-          .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
-              io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
           .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
@@ -194,8 +192,6 @@ public class StandardSyncPersistence {
           .set(CONNECTION.RESOURCE_REQUIREMENTS,
               JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
-          .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
-              io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
           .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
