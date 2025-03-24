@@ -16538,6 +16538,8 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -16552,6 +16554,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -16570,6 +16574,8 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -16839,6 +16845,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -16877,6 +16885,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -16959,6 +16969,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true
@@ -16970,6 +16982,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true
@@ -16984,6 +16998,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true

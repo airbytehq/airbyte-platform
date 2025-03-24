@@ -126,13 +126,12 @@ class ConnectionServiceImpl(
    */
   override fun getConnection(connectionId: UUID): ConnectionResponse {
     val result =
-      kotlin
-        .runCatching {
-          connectionHandler.getConnection(connectionId)
-        }.onFailure {
-          log.error("Error while getting connection: ", it)
-          ConfigClientErrorHandler.handleError(it)
-        }
+      runCatching {
+        connectionHandler.getConnection(connectionId)
+      }.onFailure {
+        log.error("Error while getting connection: ", it)
+        ConfigClientErrorHandler.handleError(it)
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
     val connectionRead = result.getOrNull()!!

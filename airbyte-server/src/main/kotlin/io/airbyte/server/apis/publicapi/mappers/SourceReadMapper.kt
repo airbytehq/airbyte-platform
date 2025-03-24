@@ -6,6 +6,7 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.publicApi.server.generated.models.SourceResponse
+import io.airbyte.server.apis.publicapi.helpers.toPublic
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -26,5 +27,6 @@ object SourceReadMapper {
       configuration = sourceRead.connectionConfiguration,
       definitionId = sourceRead.sourceDefinitionId.toString(),
       createdAt = sourceRead.createdAt,
+      resourceAllocation = sourceRead.resourceAllocation?.toPublic(),
     )
 }
