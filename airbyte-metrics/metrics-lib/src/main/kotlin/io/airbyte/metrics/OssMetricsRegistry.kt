@@ -699,6 +699,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_queue_consumer_failure",
     metricDescription = "Count of errors in the consumer",
   ),
+  WORKLOAD_QUEUE_MESSAGES_POLLED(
+    metricName = "workload_queue_messages_polled",
+    metricDescription = "Count of messages polled",
+  ),
   WORKLOAD_QUEUE_SIZE(
     metricName = "workload_queue_size",
     metricDescription = "used to track the queue size launcher does not processes a workload successfully",

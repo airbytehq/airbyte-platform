@@ -5,10 +5,13 @@
 package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.scheduler.Schedulers
+
+private val logger = KotlinLogging.logger { }
 
 /**
  * Controls the initialization of pollers and pipelines for both high and default priority workloads.
@@ -25,6 +28,8 @@ class WorkloadApiQueueConsumer(
     defaultDataplaneGroupId: String,
     highPriorityDataplaneGroupId: String,
   ) {
+    logger.info { "Initializing ApiQueueConsumer($defaultDataplaneGroupId, $highPriorityDataplaneGroupId)" }
+
     val defaultPriorityQueuePollerFlux = defaultPriorityQueuePoller.initialize(defaultDataplaneGroupId).flux
     val highPriorityQueuePollerFlux = highPriorityQueuePoller.initialize(highPriorityDataplaneGroupId).flux
 

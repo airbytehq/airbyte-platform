@@ -89,6 +89,7 @@ public class MetricTags {
   public static final String KUBE_COMMAND_TYPE_TAG = "kube_command_type";
   public static final String KUBE_POD_TYPE_TAG = "kube_pod_type";
   public static final String MUTEX_KEY_TAG = "mutex_key";
+  public static final String PRIORITY_TAG = "priority";
   public static final String QUEUE_NAME_TAG = "queue_name";
   public static final String STAGE_NAME_TAG = "stage_name";
   public static final String STATUS_TAG = "status";

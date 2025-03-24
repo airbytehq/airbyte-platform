@@ -95,7 +95,7 @@ class TemporalWorkerController(
 
   override fun onApplicationEvent(event: DataplaneConfig) {
     if (currentDataplaneConfig == null) {
-      workloadApiQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
+      workloadApiQueueConsumer.initialize(event.dataplaneGroupName, event.dataplaneGroupName)
       temporalQueueConsumer.initialize(launcherQueue, launcherHighPriorityQueue)
     }
     currentDataplaneConfig = event

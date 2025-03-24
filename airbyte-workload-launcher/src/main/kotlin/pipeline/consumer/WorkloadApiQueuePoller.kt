@@ -7,8 +7,10 @@ package io.airbyte.workload.launcher.pipeline.consumer
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.UseWorkloadQueueTableConsumer
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.launcher.client.WorkloadApiClient
@@ -46,6 +48,8 @@ class WorkloadApiQueuePoller(
   fun initialize(groupId: String): WorkloadApiQueuePoller {
     if (initialized) return this
 
+    logger.info { "Initalizing ApiQueuePoller with $groupId" }
+
     this.groupId = groupId
     this.flux = buildInputFlux()
     initialized = true
@@ -69,6 +73,12 @@ class WorkloadApiQueuePoller(
     val pollFlux: Flux<Workload> =
       Flux.create { sink ->
         val results = workloadApiClient.pollQueue(groupId, priority, pollSizeItems)
+        metricClient.count(
+          OssMetricsRegistry.WORKLOAD_QUEUE_MESSAGES_POLLED,
+          results.size.toLong(),
+          MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, groupId),
+          MetricAttribute(MetricTags.PRIORITY_TAG, priority.toString()),
+        )
         results.forEach(sink::next)
         sink.complete()
       }
