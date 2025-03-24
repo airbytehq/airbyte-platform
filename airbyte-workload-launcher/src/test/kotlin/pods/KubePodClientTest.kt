@@ -10,6 +10,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.EnableAsyncProfiler
+import io.airbyte.featureflag.ExposedOrchestratorPorts
 import io.airbyte.featureflag.SingleContainerTest
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.featureflag.TestClient
@@ -151,6 +152,7 @@ class KubePodClientTest {
     every { featureFlagClient.boolVariation(EnableAsyncProfiler, any()) } returns false
     every { featureFlagClient.boolVariation(SingleContainerTest, any()) } returns false
     every { featureFlagClient.boolVariation(SocketTest, any()) } returns false
+    every { featureFlagClient.stringVariation(ExposedOrchestratorPorts, any()) } returns ""
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
@@ -214,6 +216,60 @@ class KubePodClientTest {
         kubeInput.destinationRuntimeEnvVars,
         false,
         workspaceId,
+      )
+    } returns pod
+    client.launchReplication(
+      replicationInput = replInput,
+      launcherInput = replLauncherInput,
+    )
+
+    verify(exactly = 1) { launcher.create(pod) }
+    verify(exactly = 1) { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) }
+  }
+
+  @Test
+  fun `launchReplication happy path with exposed ports`() {
+    val kubeInput =
+      ReplicationKubeInput(
+        podName = "podName",
+        labels = mapOf("label" to "value"),
+        annotations = mapOf("annotation" to "value"),
+        nodeSelectors = mapOf("selector" to "value"),
+        orchestratorImage = "orch-image",
+        sourceImage = "source-image",
+        destinationImage = "destination-image",
+        orchestratorReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        sourceReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        destinationReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        initReqs = mockk<io.fabric8.kubernetes.api.model.ResourceRequirements>(),
+        orchestratorRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+        destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
+      )
+    val exposedPorts = listOf(9090, 9091, 9092)
+    every { featureFlagClient.stringVariation(ExposedOrchestratorPorts, any()) } returns exposedPorts.joinToString(separator = ",")
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
+    every {
+      replicationPodFactory.create(
+        kubeInput.podName,
+        kubeInput.labels,
+        kubeInput.annotations,
+        kubeInput.nodeSelectors,
+        kubeInput.orchestratorImage,
+        kubeInput.sourceImage,
+        kubeInput.destinationImage,
+        kubeInput.orchestratorReqs,
+        kubeInput.sourceReqs,
+        kubeInput.destinationReqs,
+        kubeInput.orchestratorRuntimeEnvVars,
+        kubeInput.sourceRuntimeEnvVars,
+        kubeInput.destinationRuntimeEnvVars,
+        false,
+        workspaceId,
+        false,
+        false,
+        false,
+        exposedPorts,
       )
     } returns pod
     client.launchReplication(
@@ -317,6 +373,7 @@ class KubePodClientTest {
         kubeInput.destinationRuntimeEnvVars,
         false,
         workspaceId,
+        emptyList(),
       )
     } returns pod
     client.launchReset(
@@ -345,6 +402,7 @@ class KubePodClientTest {
         any(),
         any(),
         any(),
+        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -359,6 +417,7 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
+        any(),
         any(),
         any(),
         any(),

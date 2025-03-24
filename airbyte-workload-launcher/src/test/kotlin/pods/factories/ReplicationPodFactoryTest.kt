@@ -10,6 +10,7 @@ import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
+import io.airbyte.workers.pod.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
 import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
@@ -37,6 +38,37 @@ class ReplicationPodFactoryTest {
   fun basics() {
     val pod = Fixtures.createPodWithDefaults(Fixtures.defaultReplicationPodFactory)
     assertEquals(3, pod.spec.containers.size)
+    assertEquals(1, pod.spec.initContainers.size)
+
+    val initSpec = pod.spec.initContainers[0]
+    val orchSpec = pod.spec.containers[0]
+    val sourceSpec = pod.spec.containers[1]
+    val destSpec = pod.spec.containers[2]
+    assertEquals("test-init-image", initSpec.image)
+    assertEquals("test-orch-image", orchSpec.image)
+    assertEquals("test-source-image", sourceSpec.image)
+    assertEquals("test-dest-image", destSpec.image)
+  }
+
+  @Test
+  fun `create pod with exposed ports`() {
+    val exposedPorts = listOf(9090, 9091, 9092)
+    val pod = Fixtures.createPodWithDefaults(factory = Fixtures.defaultReplicationPodFactory, exposedOrchestratorPorts = exposedPorts)
+    assertEquals(3, pod.spec.containers.size)
+    assertEquals(
+      exposedPorts.size,
+      pod.spec.containers
+        .find { it.name == ORCHESTRATOR_CONTAINER_NAME }
+        ?.ports
+        ?.size,
+    )
+    assertEquals(
+      exposedPorts,
+      pod.spec.containers
+        .find { it.name == ORCHESTRATOR_CONTAINER_NAME }
+        ?.ports
+        ?.map { it.containerPort },
+    )
     assertEquals(1, pod.spec.initContainers.size)
 
     val initSpec = pod.spec.initContainers[0]
@@ -246,6 +278,10 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars: List<EnvVar> = emptyList(),
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
+      enableAsyncProfiler: Boolean = false,
+      singleConnectorTest: Boolean = false,
+      socketTest: Boolean = false,
+      exposedOrchestratorPorts: List<Int> = emptyList(),
     ) = factory.create(
       podName,
       allLabels,
@@ -262,6 +298,10 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars,
       isFileTransfer,
       workspaceId,
+      enableAsyncProfiler,
+      singleConnectorTest,
+      socketTest,
+      exposedOrchestratorPorts,
     )
 
     fun createResetWithDefaults(
@@ -278,6 +318,7 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars: List<EnvVar> = emptyList(),
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
+      exposedPorts: List<Int> = emptyList(),
     ) = factory.createReset(
       podName,
       allLabels,
@@ -291,6 +332,7 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars,
       isFileTransfer,
       workspaceId,
+      exposedPorts,
     )
   }
 }
