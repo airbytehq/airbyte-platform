@@ -2195,6 +2195,8 @@
   "modal.confirmationTextDescription": "Type {confirmationText} below to confirm this action.",
 
   "copyButton.title": "Copy",
+  "connectorForm.copyConfig": "Copy JSON",
+  "connectorForm.copyConfig.success": "Configuration JSON copied to clipboard",
 
   "login.haveAccount": "Already have an account?",
   "login.noAccount": "Don’t have an account?",
