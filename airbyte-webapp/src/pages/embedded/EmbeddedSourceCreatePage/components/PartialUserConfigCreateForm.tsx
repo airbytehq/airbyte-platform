@@ -11,6 +11,7 @@ import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorFor
 export const MaskCreateForm: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTemplateId = searchParams.get("selectedTemplateId");
+  const workspaceId = searchParams.get("workspaceId");
   const { mutate: createPartialUserConfig } = useCreatePartialUserConfig();
   const configTemplate = useGetConfigTemplate(selectedTemplateId ?? "");
   const maskDefinitionSpecification: SourceDefinitionSpecificationDraft = {
@@ -19,6 +20,7 @@ export const MaskCreateForm: React.FC = () => {
 
   const onSubmit = (values: ConnectorFormValues) => {
     createPartialUserConfig({
+      workspaceId: workspaceId ?? "",
       configTemplateId: selectedTemplateId ?? "",
       partialUserConfigProperties: values,
     });

@@ -18018,14 +18018,19 @@ components:
         sourceId:
           description: the source that this partial user config is for
           type: string
+          format: uuid
         partialUserConfigProperties:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigCreate:
       type: object
       required:
         - configTemplateId
-        - actorProperties
+        - partialUserConfigProperties
+        - workspaceId
       properties:
+        workspaceId:
+          type: string
+          format: uuid
         configTemplateId:
           description: the template that this user config is connected with
           type: string
@@ -18042,7 +18047,7 @@ components:
         partialUserConfig:
           $ref: "#/components/schemas/PartialUserConfigRead"
         source:
-          $ref: "#/components/schemas/SourceResponse"
+          $ref: "#/components/schemas/SourceRead"
     ListPartialUserConfigsRequest:
       type: object
       required:
