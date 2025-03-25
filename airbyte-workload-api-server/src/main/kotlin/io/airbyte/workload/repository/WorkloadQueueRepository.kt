@@ -138,7 +138,6 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
     """
     SELECT count(*) as enqueued_count, dataplane_group, priority FROM workload_queue
         WHERE acked_at IS NULL
-        AND now() > poll_deadline
         GROUP BY dataplane_group, priority
     """,
   )
