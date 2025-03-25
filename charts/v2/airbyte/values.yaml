@@ -2374,7 +2374,7 @@ connectorBuilderServer:
   aiAssistUrlBase: ""
 
 keycloak:
-  enabled: true
+  enabled: false
   env_vars: {}
 
   secretName: ""
@@ -2505,7 +2505,7 @@ keycloak:
     successThreshold: 1
 
 keycloakSetup:
-  enabled: true
+  enabled: false
   env_vars: {}
 
   image:

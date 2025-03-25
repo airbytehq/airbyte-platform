@@ -44,7 +44,6 @@ micronaut:
             secret: ${AB_JWT_SIGNATURE_SECRET:}
 
 airbyte:
-  edition: community
   auth:
     instanceAdmin:
       password: ${AB_INSTANCE_ADMIN_PASSWORD:}

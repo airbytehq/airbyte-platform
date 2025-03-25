@@ -56,7 +56,7 @@ auth:
   config:
     - env: AB_INSTANCE_ADMIN_PASSWORD
       key: instanceAdmin.password
-      refKey: INSTANCE_ADMIN_PASSWORD
+      refKey: instance-admin-password
       sensitive: true
       secretRef: airbyte.auth.bootstrap.managedSecretName
 
@@ -78,7 +78,7 @@ auth.bootstrap:
 
     - env: AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY
       key: instanceAdmin.passwordSecretKey
-      defaultValue: INSTANCE_ADMIN_PASSWORD
+      defaultValue: instance-admin-password
 
     # client id
     - env: AB_INSTANCE_ADMIN_CLIENT_ID
@@ -87,7 +87,7 @@ auth.bootstrap:
 
     - env: AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY
       key: instanceAdmin.clientIdSecretKey
-      defaultValue: INSTANCE_ADMIN_CLIENT_ID
+      defaultValue: instance-admin-client-id
 
     # client secret
     - env: AB_INSTANCE_ADMIN_CLIENT_SECRET
@@ -96,7 +96,7 @@ auth.bootstrap:
 
     - env: AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY
       key: instanceAdmin.clientSecretSecretKey
-      defaultValue: INSTANCE_ADMIN_CLIENT_SECRET
+      defaultValue: instance-admin-client-secret
 
     # jwt signature
     - env: AB_JWT_SIGNATURE_SECRET
@@ -105,13 +105,14 @@ auth.bootstrap:
 
     - env: AB_JWT_SIGNATURE_SECRET_KEY
       key: security.jwtSignatureSecretKey
-      defaultValue: JWT_SIGNATURE_SECRET
+      defaultValue: jwt-signature-secret
       
 auth.identityProvider:
   keyBasePath: global.auth.identityProvider
   config:
     - env: IDENTITY_PROVIDER_TYPE
       key: type
+      defaultValue: simple
 
     - env: OIDC_DOMAIN
       key: oidc.domain
@@ -151,7 +152,7 @@ auth.jwt:
     - env: AB_JWT_SIGNATURE_SECRET
       key: jwtSignatureSecret
       sensitive: true
-      refKey: JWT_SIGNATURE_SECRET
+      refKey: jwt-signature-secret
       secretRef: airbyte.auth.bootstrap.managedSecretName
 
 auth.security:
@@ -593,7 +594,12 @@ micronaut:
   config:
     - env: MICRONAUT_ENVIRONMENTS
       key: environments
-      valueExp: join "," (append .Values.global.micronaut.environments (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")))
+      valueExp: |
+        join "," (
+              concat .Values.global.micronaut.environments 
+              (list (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")))
+              (list (ternary "edition-community" (include "airbyte.auth.identityProvider.type" .) (eq (include "airbyte.auth.identityProvider.type" .) "simple")))
+            )
 
 minio:
   keyBasePath: minio

@@ -9,7 +9,7 @@
 Renders the auth.instanceAdmin.password secret key
 */}}
 {{- define "airbyte.auth.instanceAdmin.password.secretKey" }}
-	{{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "INSTANCE_ADMIN_PASSWORD" }}
+	{{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" }}
 {{- end }}
 
 {{/*
@@ -110,7 +110,7 @@ Renders the auth.bootstrap.instanceAdmin.password environment variable
 Renders the global.auth.instanceAdmin.passwordSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.passwordSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "INSTANCE_ADMIN_PASSWORD" }}
+    {{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" }}
 {{- end }}
 
 {{/*
@@ -153,7 +153,7 @@ Renders the auth.bootstrap.instanceAdmin.cilentId environment variable
 Renders the global.auth.instanceAdmin.clientIdSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.clientIdSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "INSTANCE_ADMIN_CLIENT_ID" }}
+    {{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" }}
 {{- end }}
 
 {{/*
@@ -196,7 +196,7 @@ Renders the auth.bootstrap.instanceAdmin.clientSecret environment variable
 Renders the global.auth.instanceAdmin.clientSecretSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "INSTANCE_ADMIN_CLIENT_SECRET" }}
+    {{- .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" }}
 {{- end }}
 
 {{/*
@@ -239,7 +239,7 @@ Renders the auth.bootstrap.security.jwtSignatureSecret environment variable
 Renders the global.auth.security.jwtSignatureSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.security.jwtSignatureSecretKey" }}
-    {{- .Values.global.auth.security.jwtSignatureSecretKey | default "JWT_SIGNATURE_SECRET" }}
+    {{- .Values.global.auth.security.jwtSignatureSecretKey | default "jwt-signature-secret" }}
 {{- end }}
 
 {{/*
@@ -306,7 +306,7 @@ Renders the auth.identityProvider secret name
 Renders the global.auth.identityProvider.type value
 */}}
 {{- define "airbyte.auth.identityProvider.type" }}
-    {{- .Values.global.auth.identityProvider.type }}
+    {{- .Values.global.auth.identityProvider.type | default "simple" }}
 {{- end }}
 
 {{/*
@@ -572,7 +572,7 @@ Renders the auth.jwt secret name
 Renders the auth.jwt.jwtSignatureSecret secret key
 */}}
 {{- define "airbyte.auth.jwt.jwtSignatureSecret.secretKey" }}
-	{{- .Values.global.auth.security.jwtSignatureSecretSecretKey | default "JWT_SIGNATURE_SECRET" }}
+	{{- .Values.global.auth.security.jwtSignatureSecretSecretKey | default "jwt-signature-secret" }}
 {{- end }}
 
 {{/*
