@@ -34,14 +34,14 @@ class WorkloadApiQueueConsumer(
       defaultPriorityQueuePoller
         .initialize(dataplaneGroupId)
         .flux
-        .parallel()
+        .parallel(defaultPriorityParallelism)
         .runOn(defaultPriorityThreadPool)
 
     val highPriorityQueuePollerFlux =
       highPriorityQueuePoller
         .initialize(dataplaneGroupId)
         .flux
-        .parallel()
+        .parallel(defaultPriorityParallelism)
         .runOn(highPriorityThreadPool)
 
     highPriorityQueuePollerFlux
