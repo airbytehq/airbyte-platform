@@ -2,6 +2,7 @@ import { z, RefinementCtx } from "zod";
 
 import { AirbyteStreamAndConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog";
+import { isNonNullable } from "core/utils/isNonNullable";
 
 /**
  * Check that at least one stream is selected(enabled)
@@ -107,11 +108,11 @@ export const hashFieldCollisionValidation = (streams: AirbyteStreamAndConfigurat
     const namespace = stream?.namespace ?? "";
     const selectedFieldNames = selectedFieldNamesByStream[`${namespace}_${streamName}`];
 
-    const resolvedHashedFields = hashedFields.map(({ fieldPath }) => fieldPath?.join("."));
+    const resolvedHashedFields = hashedFields.map(({ fieldPath }) => fieldPath?.join(".")).filter(isNonNullable);
     if (
       resolvedHashedFields.some(
         // check if this field is selected and conflicts with another selected field
-        (field) => selectedFieldNames.has(field ?? "") && selectedFieldNames.has(`${field}_hashed`)
+        (field) => selectedFieldNames.has(field) && selectedFieldNames.has(`${field}_hashed`)
       )
     ) {
       return true;

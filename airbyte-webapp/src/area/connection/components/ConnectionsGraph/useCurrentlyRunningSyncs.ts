@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 
 import { useGetCachedConnectionStatusesById } from "core/api";
 import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
-
+import { isNonNullable } from "core/utils/isNonNullable";
 export interface RunningJobEvent {
   createdAt: string;
   eventType: "RUNNING_JOB";
@@ -19,7 +19,7 @@ export const useCurrentlyRunningSyncs = (connectionIds: string[]): RunningJobEve
   const statuses = Object.values(connectionStatuses);
 
   return statuses
-    .filter((status): status is NonNullable<typeof status> => status !== undefined)
+    .filter(isNonNullable)
     .filter((status) => status.connectionSyncStatus === ConnectionSyncStatus.running)
     .map((status) => ({
       createdAt: status.lastSyncJobCreatedAt
