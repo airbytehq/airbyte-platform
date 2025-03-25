@@ -25,7 +25,6 @@ export const links = {
   syncModeLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections`,
   sourceDefinedCursorLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections/incremental-append-deduped/#source-defined-cursor`,
   sourceDefinedPKLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections/incremental-append-deduped/#source-defined-primary-key`,
-  demoLink: "https://demo.airbyte.io",
   contactSales: "https://airbyte.com/talk-to-sales",
   webpageLink: "https://airbyte.com",
   webhookVideoGuideLink: "https://www.youtube.com/watch?v=NjYm8F-KiFc",

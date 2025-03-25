@@ -11,7 +11,6 @@ import { Tooltip } from "components/ui/Tooltip";
 import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
-import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
@@ -241,17 +240,6 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
         >
           <FormattedMessage id="connection.onboarding.createFirst" />
         </Link>
-        <FormattedMessage
-          tagName="span"
-          id="connection.onboarding.demoInstance"
-          values={{
-            demoLnk: (children: React.ReactNode) => (
-              <a href={links.demoLink} target="_blank" rel="noreferrer noopener" className={styles.demoLink}>
-                {children}
-              </a>
-            ),
-          }}
-        />
       </div>
     </div>
   );

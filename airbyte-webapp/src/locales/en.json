@@ -583,7 +583,6 @@
   "connection.onboarding.destinationsDescription": "A destination is where Airbyte sends data. These are typically data warehouses or databases.",
   "connection.onboarding.addDestination": "Connect a source in order to send data to {destination}",
   "connection.onboarding.moreDestinations": "Connect a source in order to send data to any of Airbyte’s {count, plural, =0 {} other {{count}+}} destinations",
-  "connection.onboarding.demoInstance": "or play around in our <demoLnk>demo instance</demoLnk>.",
 
   "connection.refreshDataRecommended": "Refresh streams recommended",
   "connection.saveWithRefresh": "Save configuration and refresh (recommended)",
