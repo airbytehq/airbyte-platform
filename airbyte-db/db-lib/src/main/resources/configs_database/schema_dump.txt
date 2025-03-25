@@ -712,7 +712,7 @@ alter table "public"."actor_definition_config_injection" add constraint "actor_d
 alter table "public"."actor_definition_version" add constraint "actor_definition_version_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_workspace_grant" add constraint "actor_definition_workspace_grant_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."auth_user" add constraint "auth_user_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
-alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition_version" ("id");
+alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."config_template" add constraint "config_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection" add constraint "connection_actor_catalog_id_fk" foreign key ("source_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."connection" add constraint "connection_destination_id_fkey" foreign key ("destination_id") references "public"."actor" ("id");
