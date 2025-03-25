@@ -67,7 +67,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
       workloads AS (
         UPDATE workload_queue AS q
            SET
-              poll_deadline = now() + (:redeliveryWindowMins * interval '1 minute'),
+              poll_deadline = now() + (:redeliveryWindowSecs * interval '1 second'),
               updated_at = now()
         FROM workload w
               WHERE q.id = ANY(SELECT id FROM polled_q_ids)
@@ -89,7 +89,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
     dataplaneGroup: String?,
     priority: Int?,
     quantity: Int = 1,
-    redeliveryWindowMins: Int = 30,
+    redeliveryWindowSecs: Int = 300,
   ): List<Workload>
 
   @Query(

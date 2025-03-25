@@ -26,6 +26,7 @@ import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImpl
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
 import io.micronaut.http.HttpRequest
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
+@Property(name = "airbyte.workload-api.workload-redelivery-window", value = "PT30M")
 @MicronautTest(environments = [Environment.TEST])
 class WorkloadApiTest(
   @Client("/") val client: HttpClient,

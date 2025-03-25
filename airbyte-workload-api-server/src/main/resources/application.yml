@@ -79,6 +79,8 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
+  workload-api:
+    workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
 
 endpoints:
   beans:

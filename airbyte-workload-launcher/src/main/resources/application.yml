@@ -107,11 +107,11 @@ airbyte:
     network-policy-introspection: false
     consumer:
       default-queue:
-        poll-interval-seconds: 5
-        poll-size-items: 10
+        poll-interval-seconds: ${WORKLOAD_DEFAULT_PRIO_POLL_FREQUENCY:1}
+        poll-size-items: ${WORKLOAD_DEFAULT_PRIO_POLL_SIZE:30}
       high-priority-queue:
-        poll-interval-seconds: 1
-        poll-size-items: 10
+        poll-interval-seconds: ${WORKLOAD_HIGH_PRIO_POLL_FREQUENCY:1}
+        poll-size-items: ${WORKLOAD_HIGH_PRIO_POLL_SIZE:30}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:

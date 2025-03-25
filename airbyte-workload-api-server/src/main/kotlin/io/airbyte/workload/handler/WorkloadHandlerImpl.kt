@@ -26,7 +26,9 @@ import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
@@ -43,6 +45,7 @@ class WorkloadHandlerImpl(
   private val airbyteApi: AirbyteApiClient,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
+  @Property(name = "airbyte.workload-api.workload-redelivery-window") private val workloadRedeliveryWindow: Duration,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
@@ -315,7 +318,12 @@ class WorkloadHandlerImpl(
   ): List<Workload> {
     val domainWorkloads =
       if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
-        workloadQueueRepository.pollWorkloadQueue(dataplaneGroup, priority?.toInt(), quantity)
+        workloadQueueRepository.pollWorkloadQueue(
+          dataplaneGroup,
+          priority?.toInt(),
+          quantity,
+          redeliveryWindowSecs = workloadRedeliveryWindow.seconds.toInt(),
+        )
       } else {
         workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
       }

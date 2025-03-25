@@ -731,10 +731,10 @@ internal class WorkloadRepositoryTest {
       workloadRepo.save(it)
       workloadQueueRepo.enqueueWorkload(group, priority, it.id)
     }
-    val result1 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowMins = 0)
+    val result1 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowSecs = 0)
     assertWorkloadsEqual(workloads, result1, "workloads are delivered as expected")
 
-    val result2 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowMins = 1)
+    val result2 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10, redeliveryWindowSecs = 60)
     assertWorkloadsEqual(workloads, result2, "workloads are re-delivered since we passed an empty window in the first poll")
 
     val result3 = workloadQueueRepo.pollWorkloadQueue(group, priority, quantity = 10)

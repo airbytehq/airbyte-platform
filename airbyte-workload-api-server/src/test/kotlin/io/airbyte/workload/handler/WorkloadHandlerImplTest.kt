@@ -60,6 +60,9 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 import io.airbyte.config.SignalInput as ConfigSignalInput
 
 class WorkloadHandlerImplTest {
@@ -746,6 +749,7 @@ class WorkloadHandlerImplTest {
         mockk<AirbyteApiClient>(),
         mockk<MetricClient>(),
         mockk<FeatureFlagClient>(),
+        Fixtures.redeliveryWindow.toJavaDuration(),
       )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
@@ -800,7 +804,7 @@ class WorkloadHandlerImplTest {
     domainWorkloads: List<Workload>,
   ) {
     every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns true
-    every { workloadQueueRepository.pollWorkloadQueue(group, priority, 10) }.returns(domainWorkloads)
+    every { workloadQueueRepository.pollWorkloadQueue(group, priority, 10, any()) }.returns(domainWorkloads)
     val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
     val expected = domainWorkloads.map { it.toApi() }
 
@@ -843,7 +847,18 @@ class WorkloadHandlerImplTest {
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, workloadQueueRepository, airbyteApi, metricClient, featureFlagClient))
+    val redeliveryWindow: Duration = 30.minutes
+    val workloadHandler =
+      spyk(
+        WorkloadHandlerImpl(
+          workloadRepository,
+          workloadQueueRepository,
+          airbyteApi,
+          metricClient,
+          featureFlagClient,
+          redeliveryWindow.toJavaDuration(),
+        ),
+      )
 
     val configSignalInput =
       ConfigSignalInput(
