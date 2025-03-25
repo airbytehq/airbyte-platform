@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
 import io.airbyte.config.ActorType
+import io.airbyte.featureflag.AllowConfigTemplateEndpoints
 import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LicenseAllowEnterpriseConnector
@@ -24,6 +25,8 @@ interface EntitlementProvider {
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean>
+
+  fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean
 }
 
 /**
@@ -36,6 +39,8 @@ class DefaultEntitlementProvider : EntitlementProvider {
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean> = actorDefinitionIds.associateWith { _ -> false }
+
+  override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -60,6 +65,8 @@ class EnterpriseEntitlementProvider(
 
     return actorDefinitionIds.associateWith { _ -> false }
   }
+
+  override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = activeLicense.license?.isEmbedded ?: false
 }
 
 /**
@@ -93,4 +100,7 @@ class CloudEntitlementProvider(
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean> = actorDefinitionIds.associateWith { hasEnterpriseConnector(organizationId, actorType, it) }
+
+  override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean =
+    featureFlagClient.boolVariation(AllowConfigTemplateEndpoints, Organization(organizationId))
 }
