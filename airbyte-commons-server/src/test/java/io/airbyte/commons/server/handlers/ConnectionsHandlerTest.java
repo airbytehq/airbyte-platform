@@ -169,6 +169,7 @@ import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
@@ -311,6 +312,7 @@ class ConnectionsHandlerTest {
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
   private MetricClient metricClient;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -431,6 +433,7 @@ class ConnectionsHandlerTest {
 
     featureFlagClient = mock(TestClient.class);
     metricClient = mock(MetricClient.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -447,7 +450,11 @@ class ConnectionsHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.AirbyteEdition.COMMUNITY);
+            Configs.AirbyteEdition.COMMUNITY,
+            featureFlagClient,
+            secretsRepositoryWriter,
+            metricClient,
+            secretPersistenceConfigService);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -469,7 +476,8 @@ class ConnectionsHandlerTest {
         catalogConverter,
         apiPojoConverters,
         metricClient,
-        Configs.AirbyteEdition.COMMUNITY);
+        Configs.AirbyteEdition.COMMUNITY,
+        secretsRepositoryWriter);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

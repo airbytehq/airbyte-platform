@@ -862,65 +862,11 @@ class SourceServiceJooqImpl(
     writeSourceConnectionNoSecrets(newSourceConnection)
   }
 
-  /**
-   * Write a source with its secrets to the appropriate persistence. Secrets go to secrets store and
-   * the rest of the object (with pointers to the secrets store) get saved in the db.
-   *
-   * @param source to write
-   * @param connectorSpecification spec for the destination
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with the secrets store or db.
-   */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-  override fun writeSourceConnectionWithSecrets(
-    source: SourceConnection,
-    connectorSpecification: ConnectorSpecification,
-  ) {
-    val previousSourceConnection =
-      getSourceIfExists(source.getSourceId()).map<JsonNode?>(Function { obj: SourceConnection? -> obj!!.getConfiguration() })
-
-    val organizationId = getOrganizationIdFromWorkspaceId(source.getWorkspaceId())
-
-    var secretPersistence: RuntimeSecretPersistence? = null
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-      val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-      secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
-    }
-    val partialConfig: JsonNode
-    if (previousSourceConnection.isPresent()) {
-      partialConfig =
-        secretsRepositoryWriter.updateFromConfig(
-          source.getWorkspaceId(),
-          previousSourceConnection.get(),
-          source.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          secretPersistence,
-        )
-    } else {
-      partialConfig =
-        secretsRepositoryWriter.createFromConfig(
-          source.getWorkspaceId(),
-          source.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          secretPersistence,
-        )
-    }
-
-    val partialSource = Jsons.clone<SourceConnection?>(source).withConfiguration(partialConfig)
-    writeSourceConnectionNoSecrets(partialSource)
-  }
-
-  private fun getSourceIfExists(sourceId: UUID): Optional<SourceConnection> {
+  override fun getSourceConnectionIfExists(sourceId: UUID): Optional<SourceConnection> {
     try {
       return Optional.of(getSourceConnection(sourceId))
-    } catch (e: ConfigNotFoundException) {
-      log.warn("Unable to find source with ID {}", sourceId)
-      return Optional.empty()
-    } catch (e: JsonValidationException) {
-      log.warn("Unable to find source with ID {}", sourceId)
-      return Optional.empty()
-    } catch (e: IOException) {
-      log.warn("Unable to find source with ID {}", sourceId)
+    } catch (_: Exception) {
+      log.warn("Unable to find source with ID $sourceId")
       return Optional.empty()
     }
   }

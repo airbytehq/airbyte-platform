@@ -48,6 +48,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
@@ -104,6 +105,7 @@ public class SourceHandler {
   private final ApiPojoConverters apiPojoConverters;
   private final MetricClient metricClient;
   private final Configs.AirbyteEdition airbyteEdition;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -126,7 +128,8 @@ public class SourceHandler {
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
                        final MetricClient metricClient,
-                       final Configs.AirbyteEdition airbyteEdition) {
+                       final Configs.AirbyteEdition airbyteEdition,
+                       final SecretsRepositoryWriter secretsRepositoryWriter) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -148,6 +151,7 @@ public class SourceHandler {
     this.apiPojoConverters = apiPojoConverters;
     this.metricClient = metricClient;
     this.airbyteEdition = airbyteEdition;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -508,11 +512,33 @@ public class SourceHandler {
         .withTombstone(tombstone)
         .withConfiguration(oAuthMaskedConfigurationJson)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
-    try {
-      sourceService.writeSourceConnectionWithSecrets(sourceConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+
+    final Optional<JsonNode> previousSourceConfig =
+        sourceService.getSourceConnectionIfExists(sourceId).map(SourceConnection::getConfiguration);
+
+    RuntimeSecretPersistence secretPersistence = null;
+    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
     }
+    final JsonNode partialConfig;
+    if (previousSourceConfig.isPresent()) {
+      partialConfig = secretsRepositoryWriter.updateFromConfig(
+          workspaceId,
+          previousSourceConfig.get(),
+          sourceConnection.getConfiguration(),
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.createFromConfig(
+          workspaceId,
+          sourceConnection.getConfiguration(),
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    }
+    sourceConnection.setConfiguration(partialConfig);
+
+    sourceService.writeSourceConnectionNoSecrets(sourceConnection);
   }
 
   protected SourceRead toSourceRead(final SourceConnection sourceConnection,

@@ -62,6 +62,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
@@ -82,6 +83,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Assertions;
@@ -124,6 +126,7 @@ class SourceHandlerTest {
   private static final String DEFAULT_MEMORY = "2 GB";
   private static final String DEFAULT_CPU = "2";
   private static final ScopedResourceRequirements RESOURCE_ALLOCATION = getResourceRequirementsForSourceRequest(DEFAULT_CPU, DEFAULT_MEMORY);
+  private static final UUID ORG_ID = UUID.randomUUID();
 
   private SourceService sourceService;
   private WorkspaceService workspaceService;
@@ -132,6 +135,8 @@ class SourceHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
   private CatalogService catalogService;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
@@ -156,8 +161,10 @@ class SourceHandlerTest {
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
+    when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(ORG_ID);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -201,7 +208,8 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.COMMUNITY);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.COMMUNITY,
+        secretsRepositoryWriter);
   }
 
   @Test
@@ -228,6 +236,9 @@ class SourceHandlerTest {
             .thenReturn(sourceCreate.getConnectionConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretsRepositoryWriter.createFromConfig(sourceConnection.getWorkspaceId(), sourceConnection.getConfiguration(),
+        sourceDefinitionVersion.getSpec().getConnectionSpecification(), null))
+            .thenReturn(sourceConnection.getConfiguration());
 
     final SourceRead actualSourceRead = sourceHandler.createSource(sourceCreate);
 
@@ -242,9 +253,9 @@ class SourceHandlerTest {
         sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(sourceConnection, connectorSpecification);
+    verify(sourceService).writeSourceConnectionNoSecrets(sourceConnection);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
-    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceCreate.getConnectionConfiguration());
   }
 
   @Test
@@ -296,7 +307,8 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD,
+        secretsRepositoryWriter);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -357,6 +369,10 @@ class SourceHandlerTest {
         .thenReturn(expectedSourceConnection);
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(sourceService.getSourceConnectionIfExists(sourceConnection.getSourceId())).thenReturn(Optional.of(sourceConnection));
+    when(secretsRepositoryWriter.updateFromConfig(sourceConnection.getWorkspaceId(), sourceConnection.getConfiguration(),
+        sourceConnection.getConfiguration(), sourceDefinitionVersion.getSpec().getConnectionSpecification(), null))
+            .thenReturn(sourceConnection.getConfiguration());
 
     final SourceRead actualSourceRead = sourceHandler.updateSource(sourceUpdate);
     final SourceRead expectedSourceRead =
@@ -370,7 +386,7 @@ class SourceHandlerTest {
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(), newConfiguration, sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(sourceService).writeSourceConnectionNoSecrets(expectedSourceConnection);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
@@ -443,7 +459,8 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD,
+        secretsRepositoryWriter);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
@@ -631,8 +648,6 @@ class SourceHandlerTest {
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
-    // We should not no longer get secrets or write secrets anymore (since we are deleting the source).
-    verify(sourceService, times(0)).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
     verify(sourceService, times(0)).getSourceConnectionWithSecrets(any());
     verify(sourceService).tombstoneSource(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);

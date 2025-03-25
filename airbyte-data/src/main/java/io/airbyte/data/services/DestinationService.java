@@ -16,6 +16,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -49,6 +50,8 @@ public interface DestinationService {
 
   DestinationConnection getDestinationConnection(UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException;
 
+  Optional<DestinationConnection> getDestinationConnectionIfExists(UUID destinationId);
+
   void writeDestinationConnectionNoSecrets(DestinationConnection partialDestination) throws IOException;
 
   List<DestinationConnection> listDestinationConnection() throws IOException;
@@ -75,11 +78,6 @@ public interface DestinationService {
   List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
   DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
-  void writeDestinationConnectionWithSecrets(
-                                             DestinationConnection destination,
-                                             ConnectorSpecification connectorSpecification)
-      throws JsonValidationException, IOException, ConfigNotFoundException;
 
   void tombstoneDestination(
                             final String name,

@@ -109,6 +109,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
@@ -230,6 +231,7 @@ class WebBackendConnectionsHandlerTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SourceService sourceService = mock(SourceService.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
 
     final Supplier uuidGenerator = mock(Supplier.class);
 
@@ -247,7 +249,11 @@ class WebBackendConnectionsHandlerTest {
         apiPojoConverters,
         workspaceHelper,
         licenseEntitlementChecker,
-        Configs.AirbyteEdition.COMMUNITY);
+        Configs.AirbyteEdition.COMMUNITY,
+        featureFlagClient,
+        secretsRepositoryWriter,
+        metricClient,
+        secretPersistenceConfigService);
 
     final SourceHandler sourceHandler = new SourceHandler(
         catalogService,
@@ -270,7 +276,8 @@ class WebBackendConnectionsHandlerTest {
         catalogConverter,
         apiPojoConverters,
         metricClient,
-        Configs.AirbyteEdition.COMMUNITY);
+        Configs.AirbyteEdition.COMMUNITY,
+        secretsRepositoryWriter);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,

@@ -16,6 +16,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -43,6 +44,8 @@ public interface SourceService {
   void updateStandardSourceDefinition(StandardSourceDefinition sourceDefinition) throws IOException, JsonValidationException, ConfigNotFoundException;
 
   SourceConnection getSourceConnection(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
+
+  Optional<SourceConnection> getSourceConnectionIfExists(UUID sourceId);
 
   List<SourceConnection> listSourceConnection() throws IOException;
 
@@ -72,10 +75,6 @@ public interface SourceService {
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
   void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
-
-  void writeSourceConnectionWithSecrets(final SourceConnection source,
-                                        final ConnectorSpecification connectorSpecification)
-      throws JsonValidationException, IOException, ConfigNotFoundException;
 
   void tombstoneSource(
                        final String name,

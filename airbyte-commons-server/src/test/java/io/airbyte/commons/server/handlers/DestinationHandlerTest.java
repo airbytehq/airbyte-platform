@@ -54,8 +54,12 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -63,6 +67,7 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Assertions;
@@ -104,6 +109,10 @@ class DestinationHandlerTest {
   private static final ScopedResourceRequirements RESOURCE_ALLOCATION = getResourceRequirementsForDestinationRequest(DEFAULT_CPU, DEFAULT_MEMORY);
   private DestinationService destinationService;
   private WorkspaceHelper workspaceHelper;
+  private TestClient featureFlagClient;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+  private MetricClient metricClient;
+  private SecretPersistenceConfigService secretPersistenceConfigService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -120,6 +129,10 @@ class DestinationHandlerTest {
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    featureFlagClient = mock(TestClient.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    metricClient = mock(MetricClient.class);
+    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -158,7 +171,11 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.AirbyteEdition.COMMUNITY);
+            Configs.AirbyteEdition.COMMUNITY,
+            featureFlagClient,
+            secretsRepositoryWriter,
+            metricClient,
+            secretPersistenceConfigService);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -186,6 +203,9 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
+    when(secretsRepositoryWriter.createFromConfig(destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(),
+        destinationDefinitionVersion.getSpec().getConnectionSpecification(), null))
+            .thenReturn(destinationConnection.getConfiguration());
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -212,8 +232,8 @@ class DestinationHandlerTest {
 
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
-    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration());
-    verify(destinationService).writeDestinationConnectionWithSecrets(destinationConnection, connectorSpecification);
+    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationCreate.getConnectionConfiguration());
+    verify(destinationService).writeDestinationConnectionNoSecrets(destinationConnection);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
         destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(), destinationDefinitionVersion.getSpec());
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId());
@@ -269,7 +289,11 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.AirbyteEdition.CLOUD);
+            Configs.AirbyteEdition.CLOUD,
+            featureFlagClient,
+            secretsRepositoryWriter,
+            metricClient,
+            secretPersistenceConfigService);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -327,6 +351,11 @@ class DestinationHandlerTest {
         .thenReturn(expectedDestinationConnection);
     when(configurationUpdate.destination(destinationConnection.getDestinationId(), updatedDestName, newConfiguration))
         .thenReturn(expectedDestinationConnection);
+    when(destinationService.getDestinationConnectionIfExists(destinationConnection.getDestinationId()))
+        .thenReturn(Optional.of(destinationConnection));
+    when(secretsRepositoryWriter.updateFromConfig(destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(),
+        destinationConnection.getConfiguration(), destinationDefinitionVersion.getSpec().getConnectionSpecification(), null))
+            .thenReturn(destinationConnection.getConfiguration());
 
     final DestinationRead actualDestinationRead = destinationHandler.updateDestination(destinationUpdate);
 
@@ -338,7 +367,7 @@ class DestinationHandlerTest {
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification());
-    verify(destinationService).writeDestinationConnectionWithSecrets(expectedDestinationConnection, connectorSpecification);
+    verify(destinationService).writeDestinationConnectionNoSecrets(expectedDestinationConnection);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
         destinationConnection.getWorkspaceId(), newConfiguration, destinationDefinitionVersion.getSpec());
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
@@ -409,7 +438,11 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.AirbyteEdition.CLOUD);
+            Configs.AirbyteEdition.CLOUD,
+            featureFlagClient,
+            secretsRepositoryWriter,
+            metricClient,
+            secretPersistenceConfigService);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
@@ -564,7 +597,7 @@ class DestinationHandlerTest {
 
     // We should not no longer get secrets or write secrets anymore (since we are deleting the
     // destination).
-    verify(destinationService, times(0)).writeDestinationConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(destinationService, times(0)).writeDestinationConnectionNoSecrets(expectedSourceConnection);
     verify(destinationService, times(0)).getDestinationConnectionWithSecrets(any());
     verify(destinationService).tombstoneDestination(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);

@@ -849,65 +849,11 @@ class DestinationServiceJooqImpl
       writeDestinationConnectionNoSecrets(newDestinationConnection)
     }
 
-    /**
-     * Write a destination with its secrets to the appropriate persistence. Secrets go to secrets store
-     * and the rest of the object (with pointers to the secrets store) get saved in the db.
-     *
-     * @param destination to write
-     * @param connectorSpecification spec for the destination
-     * @throws JsonValidationException if the workspace is or contains invalid json
-     * @throws IOException if there is an issue while interacting with the secrets store or db.
-     */
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-    override fun writeDestinationConnectionWithSecrets(
-      destination: DestinationConnection,
-      connectorSpecification: ConnectorSpecification,
-    ) {
-      val previousDestinationConnection =
-        getDestinationIfExists(destination.getDestinationId()).map<JsonNode?>(Function { obj: DestinationConnection? -> obj!!.getConfiguration() })
-
-      val organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId())
-      var secretPersistence: RuntimeSecretPersistence? = null
-      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-        val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-        secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
-      }
-
-      val partialConfig: JsonNode
-      if (previousDestinationConnection.isPresent()) {
-        partialConfig =
-          secretsRepositoryWriter.updateFromConfig(
-            destination.getWorkspaceId(),
-            previousDestinationConnection.get(),
-            destination.getConfiguration(),
-            connectorSpecification.getConnectionSpecification(),
-            secretPersistence,
-          )
-      } else {
-        partialConfig =
-          secretsRepositoryWriter.createFromConfig(
-            destination.getWorkspaceId(),
-            destination.getConfiguration(),
-            connectorSpecification.getConnectionSpecification(),
-            secretPersistence,
-          )
-      }
-
-      val partialSource = Jsons.clone<DestinationConnection?>(destination).withConfiguration(partialConfig)
-      writeDestinationConnectionNoSecrets(partialSource)
-    }
-
-    private fun getDestinationIfExists(destinationId: UUID): Optional<DestinationConnection> {
+    override fun getDestinationConnectionIfExists(destinationId: UUID): Optional<DestinationConnection> {
       try {
         return Optional.of(getDestinationConnection(destinationId))
-      } catch (e: ConfigNotFoundException) {
-        log.warn("Unable to find destination with ID {}", destinationId)
-        return Optional.empty()
-      } catch (e: JsonValidationException) {
-        log.warn("Unable to find destination with ID {}", destinationId)
-        return Optional.empty()
-      } catch (e: IOException) {
-        log.warn("Unable to find destination with ID {}", destinationId)
+      } catch (_: Exception) {
+        log.warn("Unable to find destination with ID $destinationId")
         return Optional.empty()
       }
     }

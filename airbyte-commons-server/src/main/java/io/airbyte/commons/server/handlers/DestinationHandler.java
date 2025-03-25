@@ -31,14 +31,23 @@ import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.ScopeType;
+import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -74,6 +83,10 @@ public class DestinationHandler {
   private final WorkspaceHelper workspaceHelper;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final Configs.AirbyteEdition airbyteEdition;
+  private final FeatureFlagClient featureFlagClient;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final MetricClient metricClient;
+  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -89,7 +102,11 @@ public class DestinationHandler {
                             final ApiPojoConverters apiPojoConverters,
                             final WorkspaceHelper workspaceHelper,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
-                            final Configs.AirbyteEdition airbyteEdition) {
+                            final Configs.AirbyteEdition airbyteEdition,
+                            final FeatureFlagClient featureFlagClient,
+                            final SecretsRepositoryWriter secretsRepositoryWriter,
+                            final MetricClient metricClient,
+                            final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -104,6 +121,10 @@ public class DestinationHandler {
     this.workspaceHelper = workspaceHelper;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.airbyteEdition = airbyteEdition;
+    this.featureFlagClient = featureFlagClient;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.metricClient = metricClient;
+    this.secretPersistenceConfigService = secretPersistenceConfigService;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -366,11 +387,33 @@ public class DestinationHandler {
         .withConfiguration(oAuthMaskedConfigurationJson)
         .withTombstone(tombstone)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
-    try {
-      destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+
+    final Optional<JsonNode> previousDestinationConfig =
+        destinationService.getDestinationConnectionIfExists(destinationId).map(DestinationConnection::getConfiguration);
+
+    RuntimeSecretPersistence secretPersistence = null;
+    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
     }
+    final JsonNode partialConfig;
+    if (previousDestinationConfig.isPresent()) {
+      partialConfig = secretsRepositoryWriter.updateFromConfig(
+          workspaceId,
+          previousDestinationConfig.get(),
+          destinationConnection.getConfiguration(),
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.createFromConfig(
+          workspaceId,
+          destinationConnection.getConfiguration(),
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    }
+    destinationConnection.setConfiguration(partialConfig);
+
+    destinationService.writeDestinationConnectionNoSecrets(destinationConnection);
   }
 
   public DestinationRead buildDestinationRead(final UUID destinationId)
