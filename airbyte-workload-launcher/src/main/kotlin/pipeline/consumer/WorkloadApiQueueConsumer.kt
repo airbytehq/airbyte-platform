@@ -27,20 +27,29 @@ class WorkloadApiQueueConsumer(
   fun initialize(dataplaneGroupId: String) {
     logger.info { "Initializing ApiQueueConsumer for $dataplaneGroupId" }
 
-    val defaultPriorityQueuePollerFlux = defaultPriorityQueuePoller.initialize(dataplaneGroupId).flux
-    val highPriorityQueuePollerFlux = highPriorityQueuePoller.initialize(dataplaneGroupId).flux
-
     val defaultPriorityThreadPool = Schedulers.newBoundedElastic(defaultPriorityParallelism, defaultPriorityParallelism, "default")
     val highPriorityThreadPool = Schedulers.newBoundedElastic(highPriorityParallelism, highPriorityParallelism, "high")
 
-    pipeline
-      .apply(defaultPriorityQueuePollerFlux)
-      .subscribeOn(defaultPriorityThreadPool)
+    val defaultPriorityQueuePollerFlux =
+      defaultPriorityQueuePoller
+        .initialize(dataplaneGroupId)
+        .flux
+        .parallel()
+        .runOn(defaultPriorityThreadPool)
+
+    val highPriorityQueuePollerFlux =
+      highPriorityQueuePoller
+        .initialize(dataplaneGroupId)
+        .flux
+        .parallel()
+        .runOn(highPriorityThreadPool)
+
+    highPriorityQueuePollerFlux
+      .flatMap(pipeline::buildPipeline)
       .subscribe()
 
-    pipeline
-      .apply(highPriorityQueuePollerFlux)
-      .subscribeOn(highPriorityThreadPool)
+    defaultPriorityQueuePollerFlux
+      .flatMap(pipeline::buildPipeline)
       .subscribe()
   }
 
