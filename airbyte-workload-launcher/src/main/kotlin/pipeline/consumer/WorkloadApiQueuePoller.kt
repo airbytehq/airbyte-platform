@@ -84,6 +84,7 @@ class WorkloadApiQueuePoller(
       }
 
     return interval
+      .onBackpressureDrop()
       .filter { !isSuspended() }
       .flatMap { pollFlux }
       .map(Workload::toLauncherInput)
