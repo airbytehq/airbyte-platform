@@ -884,7 +884,7 @@
   "connection.timeline.connection_schema_update.catalog_config_diff.syncModesChanged.mode": "{sourceSyncMode} | {destinationSyncMode}",
   "connection.timeline.connection_schema_update.catalog_config_diff.syncModesChanged.description": "{streamName} ({prevSyncMode} to {currentSyncMode})",
   "connection.timeline.connection_schema_update.catalog_config_diff.cursorFieldsChanged": "{count, plural, one {Cursor field changed:} other {Cursor fields changed:}}",
-  "connection.timeline.connection_schema_update.catalog_config_diff.cursorFieldsChanged.description": "{streamName} ({prevCursorField} to {currentCursorField})",
+  "connection.timeline.connection_schema_update.catalog_config_diff.cursorFieldsChanged.description": "{streamName} ({prevCursorField, select, undefined {{currentCursorField}} other {{prevCursorField} to {currentCursorField}}})",
   "connection.timeline.connection_schema_update.catalog_config_diff.primaryKeysChanged": "{count, plural, one {Primary key changed:} other {Primary keys changed:}}",
   "connection.timeline.connection_schema_update.catalog_config_diff.primaryKeysChanged.description.single": "{streamName} ({prevPrimaryKey} to {currentPrimaryKey})",
   "connection.timeline.connection_schema_update.catalog_config_diff.primaryKeysChanged.description.multiple": "{streamName} ({changedPrimaryKeys})",

@@ -35,7 +35,9 @@ export const CursorFieldsDiffSection: React.FC<CursorFieldsDiffSectionProps> = (
                 id="connection.timeline.connection_schema_update.catalog_config_diff.cursorFieldsChanged.description"
                 values={{
                   streamName: cursorField.streamName,
-                  prevCursorField: <span className={styles.prevValue}>{cursorField.prev}</span>,
+                  prevCursorField: cursorField.prev?.length ? (
+                    <span className={styles.prevValue}>{cursorField.prev}</span>
+                  ) : undefined,
                   currentCursorField: <span className={styles.currentValue}>{cursorField.current}</span>,
                 }}
               />
