@@ -65,15 +65,29 @@ global:
       type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      oidc: {}
-      #  # -- OIDC application domain
-      #  domain: ""
-      #  # -- OIDC application name
-      #  appName: ""
-      #  # -- The key within `clientIdSecretName` where the OIDC client id is stored
-      #  clientIdSecretKey: ""
-      #  # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
-      #  clientSecretSecretKey: ""
+      oidc: 
+        # -- OIDC application domain
+        domain: ""
+        # -- OIDC application name
+        appName: ""
+        # -- The key within `clientIdSecretName` where the OIDC client id is stored
+        clientIdSecretKey: ""
+        # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+        clientSecretSecretKey: ""
+
+      # -- Generic OIDC configuration (required if `auth.identityProvider.type` is "generic-oidc")
+      genericOidc:
+        clientId: ""
+        audience: ""
+        issuer: ""
+        endpoints:
+          authorizationServerEndpoint: ""
+          jwksEndpoint: ""
+        fields:
+          subject: "sub"
+          email: "email"
+          name: "name"
+          issuer: "iss"
 
     # -- Security configuration
     security:
@@ -805,6 +819,8 @@ server:
   replicaCount: 1
 
   deploymentStrategyType: Recreate
+
+  applications: ""
 
   image:
     # -- The repository to use for the airbyte server image.
