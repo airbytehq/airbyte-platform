@@ -22,7 +22,6 @@ import { CloudSettingsRoutePaths } from "./routePaths";
 export const CloudSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const workspace = useCurrentWorkspace();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
@@ -60,17 +59,15 @@ export const CloudSettingsPage: React.FC = () => {
         </SettingsNavigationBlock>
         <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
           <SettingsLink
-            iconType="community"
+            iconType="gear"
             name={formatMessage({ id: "settings.general" })}
             to={CloudSettingsRoutePaths.Workspace}
           />
-          {supportsDataResidency && (
-            <SettingsLink
-              iconType="globe"
-              name={formatMessage({ id: "settings.dataResidency" })}
-              to={CloudSettingsRoutePaths.DataResidency}
-            />
-          )}
+          <SettingsLink
+            iconType="community"
+            name={formatMessage({ id: "settings.members" })}
+            to={CloudSettingsRoutePaths.WorkspaceMembers}
+          />
           <SettingsLink
             iconType="source"
             name={formatMessage({ id: "tables.sources" })}

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.CheckOperationRead
@@ -16,7 +17,6 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
-import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -27,7 +27,6 @@ import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Test
-import java.io.IOException
 
 @MicronautTest
 internal class OperationApiControllerTest {
@@ -75,7 +74,6 @@ internal class OperationApiControllerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListOperationsForConnection() {
     every { operationsHandler.listOperationsForConnection(any()) } returns OperationReadList() andThenThrows ConfigNotFoundException("", "")
 
@@ -85,7 +83,6 @@ internal class OperationApiControllerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateOperation() {
     every { operationsHandler.updateOperation(any()) } returns OperationRead() andThenThrows ConfigNotFoundException("", "")
 

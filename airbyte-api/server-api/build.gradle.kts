@@ -4,6 +4,23 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
 }
 
+airbyte {
+  spotless {
+    excludes =
+      listOf(
+        "src/main/openapi/api.yaml",
+        "src/main/openapi/api_sdk.yaml",
+        "src/main/openapi/api_terraform.yaml",
+        "src/main/openapi/api_documentation_connections.yaml",
+        "src/main/openapi/api_documentation_sources.yaml",
+        "src/main/openapi/api_documentation_destinations.yaml",
+        "src/main/openapi/api_documentation_streams.yaml",
+        "src/main/openapi/api_documentation_jobs.yaml",
+        "src/main/openapi/api_documentation_workspaces.yaml",
+      )
+  }
+}
+
 dependencies {
   annotationProcessor(libs.micronaut.openapi)
 
@@ -18,7 +35,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.commons.io)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)

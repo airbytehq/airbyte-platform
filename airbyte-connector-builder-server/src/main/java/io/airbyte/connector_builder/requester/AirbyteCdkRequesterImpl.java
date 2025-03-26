@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.requester;
@@ -14,9 +14,9 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.connector_builder.TracingHelper;
+import io.airbyte.connector_builder.api.model.generated.AuxiliaryRequest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
-import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
@@ -102,7 +102,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     response.setTestReadLimitReached(data.get("test_read_limit_reached").asBoolean());
     response.setLatestConfigUpdate(data.get("latest_config_update"));
     response.setInferredDatetimeFormats(data.get("inferred_datetime_formats"));
-    final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = convertToList(data.get("auxiliary_requests"), new TypeReference<>() {});
+    final List<AuxiliaryRequest> auxiliaryRequests = convertToList(data.get("auxiliary_requests"), new TypeReference<>() {});
     response.setAuxiliaryRequests(auxiliaryRequests);
     return response;
   }

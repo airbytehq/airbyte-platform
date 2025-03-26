@@ -1,9 +1,14 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
-import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -41,24 +46,30 @@ class KubePodClient(
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
   private val replicationPodFactory: ReplicationPodFactory,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
-  private val featureFlagClient: FeatureFlagClient,
-  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
-  fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
-  }
+  fun podsExistForAutoId(autoId: UUID): Boolean = kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+    val sharedLabels =
+      labeler.getSharedLabels(
+        launcherInput.workloadId,
+        launcherInput.mutexKey,
+        launcherInput.labels,
+        launcherInput.autoId,
+        replicationInput.workspaceId,
+        replicationInput.networkSecurityTokens,
+      )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+    val enableAsyncProfiler = featureFlagClient.boolVariation(EnableAsyncProfiler, Connection(replicationInput.connectionId))
     var pod =
       replicationPodFactory.create(
         kubeInput.podName,
@@ -76,6 +87,7 @@ class KubePodClient(
         kubeInput.destinationRuntimeEnvVars,
         replicationInput.useFileTransfer,
         replicationInput.workspaceId,
+        enableAsyncProfiler,
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
@@ -107,7 +119,15 @@ class KubePodClient(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
+    val sharedLabels =
+      labeler.getSharedLabels(
+        launcherInput.workloadId,
+        launcherInput.mutexKey,
+        launcherInput.labels,
+        launcherInput.autoId,
+        replicationInput.workspaceId,
+        replicationInput.networkSecurityTokens,
+      )
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
 
     var pod =
@@ -160,8 +180,9 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        workspaceId = checkInput.launcherConfig.workspaceId,
+        networkSecurityTokens = checkInput.checkConnectionInput.networkSecurityTokens,
       )
-
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
@@ -178,6 +199,8 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        workspaceId = discoverCatalogInput.launcherConfig.workspaceId,
+        networkSecurityTokens = discoverCatalogInput.discoverCatalogInput.networkSecurityTokens,
       )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
@@ -196,6 +219,8 @@ class KubePodClient(
         mutexKey = launcherInput.mutexKey,
         passThroughLabels = launcherInput.labels,
         autoId = launcherInput.autoId,
+        null,
+        emptyList(),
       )
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)

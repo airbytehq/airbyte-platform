@@ -9,13 +9,13 @@ import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestSubstreamPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
-import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest, useBuilderWatch } from "../types";
+import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface ParentStreamsSectionProps {
   streamFieldPath: StreamPathFn;
@@ -81,13 +81,13 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
               label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
               tooltip={formatMessage({ id: "connectorBuilder.parentStreams.parentStream.tooltip" })}
             />
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={buildPath("parent_key")}
               manifestPath="ParentStreamConfig.properties.parent_key"
             />
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={buildPath("partition_field")}
               manifestPath="ParentStreamConfig.properties.partition_field"
               tooltip={

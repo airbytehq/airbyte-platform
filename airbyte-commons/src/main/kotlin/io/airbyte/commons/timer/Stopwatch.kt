@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.timer
 
 import java.util.concurrent.atomic.AtomicLong
@@ -29,7 +30,10 @@ class Stopwatch {
    * it back upon close.
    */
   @JvmRecord
-  data class StopwatchInstance(val parent: Stopwatch, val startTime: Long) : AutoCloseable {
+  data class StopwatchInstance(
+    val parent: Stopwatch,
+    val startTime: Long,
+  ) : AutoCloseable {
     override fun close() {
       parent.stop(this)
     }
@@ -43,23 +47,17 @@ class Stopwatch {
   /**
    * Start a timer instance.
    */
-  fun start(): StopwatchInstance {
-    return StopwatchInstance(this, currentTime())
-  }
+  fun start(): StopwatchInstance = StopwatchInstance(this, currentTime())
 
-  fun getElapsedTimeInNanos(): Long {
-    return elapsedTimeInNanos.get()
-  }
+  fun getElapsedTimeInNanos(): Long = elapsedTimeInNanos.get()
 
-  fun getExecutionCount(): Long {
-    return executionCount.get()
-  }
+  fun getExecutionCount(): Long = executionCount.get()
 
   val avgExecTimeInNanos: Double
     get() = getElapsedTimeInNanos().toDouble() / getExecutionCount()
 
-  override fun toString(): String {
-    return String.format(
+  override fun toString(): String =
+    String.format(
       "%.02f %s/exec (total: %.02f%s, %s executions)",
       avgExecTimeInNanos,
       "ns",
@@ -67,11 +65,8 @@ class Stopwatch {
       "s",
       getExecutionCount(),
     )
-  }
 
-  private fun currentTime(): Long {
-    return System.nanoTime()
-  }
+  private fun currentTime(): Long = System.nanoTime()
 
   private fun stop(t: StopwatchInstance) {
     val delta = currentTime() - t.startTime

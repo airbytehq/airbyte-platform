@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -31,9 +31,7 @@ object JobResponseMapper {
    * @param jobInfoRead Output of a job create/get from config api
    * @return JobResponse Response object which contains job id, status, and job type
    */
-  fun from(jobInfoRead: JobInfoRead): JobResponse {
-    return fromJobRead(jobInfoRead.job)
-  }
+  fun from(jobInfoRead: JobInfoRead): JobResponse = fromJobRead(jobInfoRead.job)
 
   /**
    * Converts a JobWithAttemptsRead object from the config api to a JobResponse object.
@@ -41,15 +39,13 @@ object JobResponseMapper {
    * @param jobWithAttemptsRead Output of a job get with attempts from config api
    * @return JobResponse Response object which contains job id, status, and job type
    */
-  fun from(jobWithAttemptsRead: JobWithAttemptsRead): JobResponse {
-    return fromJobRead(jobWithAttemptsRead.job)
-  }
+  fun from(jobWithAttemptsRead: JobWithAttemptsRead): JobResponse = fromJobRead(jobWithAttemptsRead.job)
 
   /**
    * Converts a JobRead object from the config api to a JobResponse object.
    */
-  private fun fromJobRead(jobRead: JobRead): JobResponse {
-    return JobResponse(
+  private fun fromJobRead(jobRead: JobRead): JobResponse =
+    JobResponse(
       jobId = jobRead.id,
       status = JobStatusEnum.valueOf(jobRead.status.toString().uppercase()),
       connectionId = jobRead.configId,
@@ -81,5 +77,4 @@ object JobResponseMapper {
       bytesSynced = jobRead.aggregatedStats?.bytesCommitted,
       rowsSynced = jobRead.aggregatedStats?.recordsCommitted,
     )
-  }
 }

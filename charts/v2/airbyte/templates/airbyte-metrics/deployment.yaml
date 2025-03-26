@@ -1,3 +1,4 @@
+{{- if .Values.metrics.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10,6 +11,8 @@ metadata:
     app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.airbyte.io/fullname: {{ include "airbyte.fullname" . }}
+  annotations:
+    {{ toYaml .Values.metrics.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.metrics.replicaCount }}
   selector:
@@ -22,11 +25,11 @@ spec:
       labels:
         airbyte: metrics
         {{- if .Values.metrics.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.metrics.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -37,20 +40,20 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.metrics.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.metrics.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.metrics.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
       {{- end }}
       containers:
       - name: airbyte-metrics-container
         image: {{ include "imageUrl" (list .Values.metrics.image $) }}
         imagePullPolicy: "{{ .Values.metrics.image.pullPolicy }}"
         env:
-        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
@@ -102,3 +105,4 @@ spec:
       {{- if .Values.metrics.extraVolumes }}
       {{ toYaml .Values.metrics.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

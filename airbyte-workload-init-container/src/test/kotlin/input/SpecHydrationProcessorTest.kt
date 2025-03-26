@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
@@ -45,8 +50,11 @@ class SpecHydrationProcessorTest {
   fun `parses input and writes output to expected file`() {
     val input = Fixtures.workload
 
-    val parsed = SpecInput()
-    parsed.launcherConfig = IntegrationLauncherConfig()
+    val parsed =
+      SpecInput(
+        jobRunConfig = JobRunConfig(),
+        launcherConfig = IntegrationLauncherConfig(),
+      )
 
     val serializedInput = "serialized hydrated blob"
 

@@ -5,10 +5,8 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
-
   api(libs.bundles.micronaut.annotation)
+  api(libs.micronaut.cache.caffeine)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -16,7 +14,6 @@ dependencies {
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
-  implementation(libs.bundles.apache)
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.datadog)
@@ -37,9 +34,6 @@ dependencies {
   // For Keycloak Application Management
   implementation(libs.bundles.keycloak.client)
   implementation(libs.micronaut.security.jwt)
-
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok)
 
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.micronaut.test)
@@ -63,9 +57,8 @@ tasks.named("spotbugsMain") {
   enabled = false
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
-// been removed, this can also be removed.
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

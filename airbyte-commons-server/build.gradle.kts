@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -27,13 +25,9 @@ dependencies {
   implementation(libs.s3)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
-  implementation(libs.bundles.apache)
-  implementation(libs.slugify)
   implementation(libs.quartz.scheduler)
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
-  implementation(libs.commons.io)
-  implementation(libs.apache.commons.lang)
   implementation(libs.kotlin.logging)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
@@ -48,6 +42,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-storage"))

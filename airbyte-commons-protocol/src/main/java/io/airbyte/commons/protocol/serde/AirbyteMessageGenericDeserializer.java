@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.protocol.serde;
@@ -7,7 +7,6 @@ package io.airbyte.commons.protocol.serde;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import java.util.Optional;
-import lombok.Getter;
 
 /**
  * Default Airbyte Protocol deserializer.
@@ -16,7 +15,6 @@ import lombok.Getter;
  */
 public class AirbyteMessageGenericDeserializer<T> implements AirbyteMessageDeserializer<T> {
 
-  @Getter
   final Version targetVersion;
   final Class<T> typeClass;
 
@@ -28,6 +26,11 @@ public class AirbyteMessageGenericDeserializer<T> implements AirbyteMessageDeser
   @Override
   public Optional<T> deserializeExact(final String json) {
     return Jsons.tryDeserializeExact(json, typeClass);
+  }
+
+  @Override
+  public Version getTargetVersion() {
+    return targetVersion;
   }
 
 }

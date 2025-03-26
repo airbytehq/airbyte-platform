@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.notification
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -13,10 +17,14 @@ interface ConfigFetcher<T> {
   fun notificationType(): NotificationType
 }
 
-data class WebhookConfig(val webhookUrl: String)
+data class WebhookConfig(
+  val webhookUrl: String,
+)
 
 @Singleton
-class WebhookConfigFetcher(private val airbyteApiClient: AirbyteApiClient) : ConfigFetcher<WebhookConfig> {
+class WebhookConfigFetcher(
+  private val airbyteApiClient: AirbyteApiClient,
+) : ConfigFetcher<WebhookConfig> {
   override fun fetchConfig(connectionId: UUID): WebhookConfig? {
     val workspaceRead: WorkspaceRead =
       ConnectionIdRequestBody(connectionId = connectionId).let {
@@ -33,4 +41,6 @@ class WebhookConfigFetcher(private val airbyteApiClient: AirbyteApiClient) : Con
   override fun notificationType(): NotificationType = NotificationType.WEBHOOK
 }
 
-data class CustomerIoEmailConfig(val to: String)
+data class CustomerIoEmailConfig(
+  val to: String,
+)

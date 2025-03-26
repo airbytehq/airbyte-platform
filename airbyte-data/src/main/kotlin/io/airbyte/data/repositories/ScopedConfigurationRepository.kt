@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ScopedConfiguration
@@ -60,4 +64,14 @@ interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration
   fun findByKey(key: String): List<ScopedConfiguration>
 
   fun deleteByIdInList(ids: List<UUID>)
+
+  fun updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+    origin: String,
+    value: String,
+  )
 }

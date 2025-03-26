@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -11,13 +11,15 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
@@ -26,9 +28,10 @@ import lombok.extern.slf4j.Slf4j;
  *
  * Javadocs suppressed because api docs should be used as source of truth.
  */
-@Slf4j
 @Singleton
 public class WebBackendCheckUpdatesHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final int NO_CHANGES_FOUND = 0;
 

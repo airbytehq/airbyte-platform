@@ -1,13 +1,16 @@
 import classNames from "classnames";
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { ComboBox, OptionsConfig, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
+import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
@@ -19,8 +22,9 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";
+import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { useWatchWithPreview } from "../preview";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface EnumFieldProps {
   options: string[] | Array<{ label: string; value: string }>;
@@ -55,12 +59,17 @@ interface BaseFieldProps {
   preview?: (formValue: string) => ReactNode;
   labelAction?: ReactNode;
   className?: string;
-  omitInterpolationContext?: boolean;
   disabled?: boolean;
 }
 
 export type BuilderFieldProps = BaseFieldProps &
   (
+    | {
+        type: "jinja";
+        onChange?: (newValue: string) => void;
+        onBlur?: (value: string) => void;
+        bubbleUpUndoRedo?: boolean;
+      }
     | {
         type: "string" | "number" | "integer";
         onChange?: (newValue: string) => void;
@@ -80,6 +89,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
+    | { type: "graphql"; onChange?: (newValue: string) => void }
     | {
         type: "enum";
         onChange?: (newValue: string) => void;
@@ -87,6 +97,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[]; optionsConfig?: OptionsConfig }
     | { type: "multicombobox"; onChange?: (newValue: string[]) => void; options: Option[] }
+    | { type: "secret"; onChange?: (newValue: string) => void }
   );
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, disabled, ...props }) => {
@@ -141,7 +152,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   preview,
   manifestPath,
   manifestOptionPaths,
-  omitInterpolationContext,
   labelAction,
   ...props
 }) => {
@@ -150,17 +160,12 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   // when setValue is called on a parent path in a way that changes the value of this field.
   const { fieldValue, isPreview } = useWatchWithPreview({ name: path });
 
+  const isPreviewRef = useRef(isPreview);
+  isPreviewRef.current = isPreview;
+
   const hasError = !!fieldState.error;
 
-  const { label, tooltip } = getLabelAndTooltip(
-    props.label,
-    props.tooltip,
-    manifestPath,
-    path,
-    false,
-    omitInterpolationContext,
-    manifestOptionPaths
-  );
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, false, manifestOptionPaths);
 
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -217,15 +222,51 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       optional={optional}
       ref={elementRef}
     >
-      {(props.type === "number" || props.type === "string" || props.type === "integer") && (
+      {props.type === "jinja" && (
+        <JinjaInput
+          key={path}
+          name={field.name}
+          value={fieldValue || ""}
+          onChange={(newValue) => {
+            // Monaco editor triggers onChange whenever the value is changed, whether by the user or by
+            // changing the value passed to the "value" prop above.
+            // Because we show preview values by changing the value prop, but we don't want to actually
+            // commit that preview value back to the form, we don't want to call setValue in that case.
+            // So, we use a ref to track the current value of isPreview (because onChange gets called
+            // on the old instance of the component which has the old value of isPreview), and if the
+            // current value is true, then we don't commit the change back to the form.
+            if (isPreviewRef.current) {
+              return;
+            }
+            setValue(newValue);
+          }}
+          onBlur={(value) => {
+            field.onBlur();
+            props.onBlur?.(value);
+          }}
+          disabled={isDisabled}
+          manifestPath={manifestPath}
+          error={hasError}
+          bubbleUpUndoRedo={props.bubbleUpUndoRedo}
+        />
+      )}
+      {(props.type === "string" || props.type === "number" || props.type === "integer") && (
         <Input
           {...field}
           onChange={(e) => {
-            setValue(e.target.value);
+            const val =
+              e.target.value === ""
+                ? props.type === "string"
+                  ? e.target.value
+                  : undefined
+                : props.type === "number" || props.type === "integer"
+                ? Number(e.target.value)
+                : e.target.value;
+            setValue(val);
           }}
           placeholder={props.placeholder}
           className={props.className}
-          type={props.type}
+          type={props.type === "integer" ? "number" : props.type}
           value={(fieldValue as string | number | undefined) ?? ""}
           error={hasError}
           readOnly={readOnly}
@@ -267,10 +308,12 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <div className={classNames(props.className, styles.jsonEditor)}>
           <CodeEditor
             key={path}
-            automaticLayout
             value={fieldValue || ""}
             language="json"
             onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
               setValue(val);
             }}
             disabled={isDisabled}
@@ -335,6 +378,35 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           disabled={isDisabled}
         />
       )}
+      {props.type === "secret" && (
+        <SecretField
+          name={path}
+          value={fieldValue as string}
+          onUpdate={(val) => {
+            // Remove the value instead of setting it to the empty string, as secret persistence
+            // gets mad at empty secrets
+            setValue(val || undefined);
+          }}
+          disabled={isDisabled}
+          error={hasError}
+        />
+      )}
+      {props.type === "graphql" && (
+        <div className={classNames(props.className, styles.graphqlEditor)}>
+          <GraphQLEditor
+            key={path}
+            value={fieldValue || ""}
+            onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
+              setValue(val);
+            }}
+            disabled={isDisabled}
+            paddingTop
+          />
+        </div>
+      )}
       {hasError && (
         <Text className={styles.error}>
           <FormattedMessage
@@ -347,6 +419,84 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       )}
       {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
     </ControlLabels>
+  );
+};
+
+interface SecretFieldProps {
+  name: string;
+  value: string;
+  onUpdate: (value: string) => void;
+  disabled?: boolean;
+  error?: boolean;
+}
+const SecretField: React.FC<SecretFieldProps> = ({ name, value, onUpdate, disabled, error }) => {
+  const [editingValue, setEditingValue] = useState<string | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const pushUpdate = useCallback(() => {
+    onUpdate(editingValue ?? "");
+    setEditingValue(undefined);
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  }, [editingValue, onUpdate]);
+
+  const isDisabled = disabled || (!!value && editingValue === undefined);
+  return (
+    <FlexContainer gap="sm">
+      <Input
+        ref={inputRef}
+        name={name}
+        onChange={(e) => {
+          setEditingValue(e.target.value);
+        }}
+        type="password"
+        value={editingValue ?? value}
+        error={error}
+        readOnly={isDisabled}
+        disabled={isDisabled}
+        onBlur={(e) => {
+          if (e.target.parentElement?.parentElement?.contains(e.relatedTarget)) {
+            return;
+          }
+          if (editingValue === undefined) {
+            return;
+          }
+          if (!value) {
+            onUpdate(editingValue);
+          }
+          setEditingValue(undefined);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            pushUpdate();
+          }
+        }}
+      />
+      {value && editingValue === undefined && (
+        <Button size="sm" className={styles.secretButton} variant="secondary" onClick={() => setEditingValue("")}>
+          <FormattedMessage id="form.edit" />
+        </Button>
+      )}
+      {value && editingValue !== undefined && (
+        <>
+          <Button type="button" size="sm" variant="secondary" onClick={() => setEditingValue(undefined)}>
+            <FormattedMessage id="form.cancel" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              onUpdate(editingValue ?? "");
+              setEditingValue(undefined);
+            }}
+          >
+            <FormattedMessage id="form.done" />
+          </Button>
+        </>
+      )}
+    </FlexContainer>
   );
 };
 

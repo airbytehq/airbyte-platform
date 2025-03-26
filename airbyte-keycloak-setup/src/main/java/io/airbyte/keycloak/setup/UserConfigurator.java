@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -7,19 +7,22 @@ package io.airbyte.keycloak.setup;
 import io.airbyte.commons.auth.config.InitialUserConfig;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.Response;
+import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for user creation. It includes methods to create user credentials.
  */
 @Singleton
-@Slf4j
 public class UserConfigurator {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static final int HTTP_STATUS_CREATED = 201;
 

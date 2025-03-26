@@ -1,3 +1,4 @@
+{{- if .Values.webapp.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +9,8 @@ metadata:
     {{- if .Values.webapp.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.webapp.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.webapp.replicaCount }}
   selector:
@@ -24,22 +27,22 @@ spec:
         {{ toYaml (mergeOverwrite .Values.webapp.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.webapp.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.webapp.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.webapp.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.webapp.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- if .Values.webapp.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.webapp.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.webapp.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.webapp.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.webapp.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.webapp.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -57,10 +60,10 @@ spec:
         imagePullPolicy: "{{ .Values.webapp.image.pullPolicy }}"
         env:
 
-        {{ include "airbyte.airbyte.envs" . | nindent 8 }}
-        {{ include "airbyte.webapp.envs" . | nindent 8 }}
+        {{ include "airbyte.common.envs" . | nindent 8 }}
+        {{ include "airbyte.keycloak.admin.client.internalHost.env" . | nindent 8 }}
         {{ include "airbyte.tracking.envs" . | nindent 8 }}
-        {{ include "airbyte.keycloak.internalHost.env" . | nindent 8 }}
+        {{ include "airbyte.webapp.envs" . | nindent 8 }}
 
         # Values from secret
         {{- if .Values.webapp.secrets }}
@@ -139,3 +142,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{ toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

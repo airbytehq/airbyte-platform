@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest
@@ -13,7 +14,6 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
-import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -24,7 +24,6 @@ import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Test
-import java.io.IOException
 
 @MicronautTest
 internal class DestinationOauthApiControllerTest {
@@ -39,7 +38,6 @@ internal class DestinationOauthApiControllerTest {
   fun oauthHandler(): OAuthHandler = mockk()
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCompleteDestinationOAuth() {
     every { oAuthHandler.completeDestinationOAuth(any()) } returns CompleteOAuthResponse() andThenThrows ConfigNotFoundException("", "")
 
@@ -49,7 +47,6 @@ internal class DestinationOauthApiControllerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetDestinationOAuthConsent() {
     every { oAuthHandler.getDestinationOAuthConsent(any()) } returns OAuthConsentRead() andThenThrows ConfigNotFoundException("", "")
 
@@ -59,7 +56,6 @@ internal class DestinationOauthApiControllerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testDeleteDestination() {
     every { oAuthHandler.setDestinationInstancewideOauthParams(any()) } returns Unit
 

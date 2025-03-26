@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -47,14 +47,14 @@ class RetryStatePersistenceActivityTest {
     mRetryStateClient = mock(RetryStateClient.class);
     mWorkspaceApi = mock(WorkspaceApi.class);
     when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false,
-        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null));
+        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null, null));
     when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
   }
 
   @ParameterizedTest
   @ValueSource(longs = {124, 541, 12, 2, 1})
   void hydrateDelegatesToRetryStatePersistence(final long jobId) {
-    final var manager = RetryManager.builder().build();
+    final var manager = new RetryManager(null, null, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
     final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.hydrateRetryState(eq(jobId), Mockito.any())).thenReturn(manager);
 
@@ -70,7 +70,7 @@ class RetryStatePersistenceActivityTest {
   @MethodSource("persistMatrix")
   void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) throws IOException {
     final var success = true;
-    final var manager = RetryManager.builder().build();
+    final var manager = new RetryManager(null, null, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
     final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.persistRetryState(jobId, connectionId, manager)).thenReturn(success);
 

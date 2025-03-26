@@ -16,6 +16,7 @@ import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSync } from "./components/LastSync";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
+import { TagsCell } from "./components/TagsCell";
 import styles from "./ConnectionTable.module.scss";
 import { ConnectionTableDataItem } from "./types";
 
@@ -64,7 +65,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="tables.name" />,
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.connectionName,
           responsive: true,
           noPadding: true,
         },
@@ -78,7 +79,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           />
         ),
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.width25,
           responsive: true,
           noPadding: true,
         },
@@ -90,7 +91,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           <FormattedMessage id={entity === "connection" ? "tables.sourceConnectionToName" : "tables.connector"} />
         ),
         meta: {
-          thClassName: styles.width30,
+          thClassName: styles.width25,
           responsive: true,
           noPadding: true,
         },
@@ -105,11 +106,20 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         },
         cell: FrequencyCell,
       }),
+      columnHelper.accessor("tags", {
+        header: () => <FormattedMessage id="connection.tags.title" />,
+        enableSorting: false,
+        meta: {
+          noPadding: true,
+          thClassName: styles.tags,
+        },
+        cell: TagsCell,
+      }),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
         cell: LastSyncCell,
         meta: {
-          thClassName: styles.width20,
+          thClassName: styles.lastSync,
           noPadding: true,
         },
         sortUndefined: 1,
@@ -117,7 +127,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
         meta: {
-          thClassName: styles.thEnabled,
+          thClassName: styles.enabled,
         },
         cell: StateSwitchCell,
         enableSorting: false,
@@ -125,13 +135,13 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       columnHelper.accessor("connection", {
         header: "",
         meta: {
-          thClassName: styles.thConnectionSettings,
+          thClassName: styles.connectionSettings,
         },
         cell: EntityWarningsCell,
         enableSorting: false,
       }),
     ],
-    [columnHelper, entity, EntityNameCell]
+    [columnHelper, EntityNameCell, entity]
   );
 
   const customScrollParent = useContext(ScrollParentContext);

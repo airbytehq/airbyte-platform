@@ -3,7 +3,7 @@ micronaut:
     port: -1
 
 airbyte:
-  deployment-mode: OSS
+  edition: COMMUNITY
   role: ${AIRBYTE_ROLE:}
   version: 0.4128173.0
   acceptance:
@@ -33,6 +33,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE:state}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT:workload-output}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD:activity-payload}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:not-blank}
       minio:

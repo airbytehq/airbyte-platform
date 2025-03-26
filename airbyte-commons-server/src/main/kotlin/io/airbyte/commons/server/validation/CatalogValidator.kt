@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.validation
 
 import com.google.common.collect.Iterators
@@ -8,9 +12,9 @@ import io.airbyte.commons.server.validation.CatalogValidator.Constants.PROPERTIE
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
@@ -37,7 +41,9 @@ class CatalogValidator(
           } else {
             val fieldNames: Iterator<String> =
               if (s.stream.jsonSchema.get(PROPERTIES_KEY) != null) {
-                s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames()
+                s.stream.jsonSchema
+                  .get(PROPERTIES_KEY)
+                  .fieldNames()
               } else {
                 emptyList<String>().iterator()
               }

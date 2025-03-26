@@ -1,3 +1,4 @@
+{{- if .Values.connectorBuilderServer.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -5,6 +6,8 @@ metadata:
   name: {{ .Release.Name }}-connector-builder-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    {{ toYaml .Values.connectorBuilderServer.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.connectorBuilderServer.replicaCount }}
   selector:
@@ -23,11 +26,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.connectorBuilderServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.connectorBuilderServer.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.connectorBuilderServer.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -38,13 +41,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.connectorBuilderServer.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorBuilderServer.extraInitContainers }}
       initContainers:
@@ -60,12 +63,18 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorBuilderServer.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
-        {{- include "airbyte.airbyte.envs" . | nindent 8 }}
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.connectorBuilder.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- end }}
+
+        {{- if (ne (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise"))) }}
+        {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret
@@ -87,7 +96,7 @@ spec:
         {{- end }}
         {{- end }}
 
-        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        # Values from extraEnv for more compatibility (if you want to use external secret source or other stuff)
         {{- if .Values.connectorBuilderServer.extraEnv }}
         {{- toYaml .Values.connectorBuilderServer.extraEnv | nindent 8 }}
         {{- end }}
@@ -148,3 +157,4 @@ spec:
       {{- if .Values.connectorBuilderServer.extraVolumes }}
 {{ toYaml .Values.connectorBuilderServer.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

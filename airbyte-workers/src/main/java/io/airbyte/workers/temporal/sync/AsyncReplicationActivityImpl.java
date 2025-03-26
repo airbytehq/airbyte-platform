@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -16,7 +16,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.logging.LogSource;
 import io.airbyte.commons.logging.MdcScope;
@@ -30,10 +29,10 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -66,7 +65,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
   private final ReplicationInputMapper replicationInputMapper;
   private final Path workspaceRoot;
-  private final AirbyteApiClient airbyteApiClient;
   private final WorkloadApiClient workloadApiClient;
   private final WorkloadClient workloadClient;
   private final JobOutputDocStore jobOutputDocStore;
@@ -79,7 +77,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
   public AsyncReplicationActivityImpl(
                                       @Named("workspaceRoot") final Path workspaceRoot,
-                                      final AirbyteApiClient airbyteApiClient,
                                       final JobOutputDocStore jobOutputDocStore,
                                       final WorkloadApiClient workloadApiClient,
                                       final WorkloadClient workloadClient,
@@ -91,7 +88,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                       final LogClientManager logClientManager) {
     this.replicationInputMapper = new ReplicationInputMapper();
     this.workspaceRoot = workspaceRoot;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -106,7 +102,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
   @VisibleForTesting
   AsyncReplicationActivityImpl(final ReplicationInputMapper replicationInputMapper,
                                @Named("workspaceRoot") final Path workspaceRoot,
-                               final AirbyteApiClient airbyteApiClient,
                                final JobOutputDocStore jobOutputDocStore,
                                final WorkloadApiClient workloadApiClient,
                                final WorkloadClient workloadClient,
@@ -118,7 +113,6 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                final LogClientManager logClientManager) {
     this.replicationInputMapper = replicationInputMapper;
     this.workspaceRoot = workspaceRoot;
-    this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -143,12 +137,12 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
         .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
         .build()) {
       logClientManager.setJobMdc(jobRoot);
-      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+      metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION);
 
       ApmTraceUtils.addTagsToTrace(tracingContext.traceAttributes);
 
-      if (replicationActivityInput.getIsReset()) {
-        metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+      if (replicationActivityInput.isReset()) {
+        metricClient.count(OssMetricsRegistry.RESET_REQUEST);
       }
 
       LOGGER.info("Starting async replication");
@@ -254,8 +248,8 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final WorkloadApiWorker worker;
 
     replicationInput = replicationInputMapper.toReplicationInput(replicationActivityInput);
-    worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-        workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
+    worker = new WorkloadApiWorker(jobOutputDocStore, workloadApiClient,
+        workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager);
 
     return new WorkerAndReplicationInput(worker, replicationInput);
   }

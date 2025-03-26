@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -39,6 +39,8 @@ public class MetricTags {
   public static final String FAILURE_CAUSE = "failure_cause";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";
+  public static final String INTERNAL_MESSAGE = "internal_message";
+  public static final String EXTERNAL_MESSAGE = "external_message";
   public static final String GEOGRAPHY = "geography";
   public static final String IMPLEMENTATION = "implementation";
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
@@ -55,6 +57,7 @@ public class MetricTags {
   public static final String NOTIFICATION_TRIGGER = "notification_trigger";
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RELEASE_STAGE = "release_stage";
+  public static final String SECRET_COORDINATES_UPDATED = "secret_coordinates_updated";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";
@@ -79,6 +82,20 @@ public class MetricTags {
   public static final String IS_MATCH = "is_match";
   public static final String IS_MISS = "is_miss";
   public static final String TASK_QUEUE = "task_queue";
+
+  // workload tags
+  public static final String DATA_PLANE_ID_TAG = "data_plane_id";
+  public static final String DATA_PLANE_GROUP_TAG = "data_plane_group";
+  public static final String KUBE_COMMAND_TYPE_TAG = "kube_command_type";
+  public static final String KUBE_POD_TYPE_TAG = "kube_pod_type";
+  public static final String MUTEX_KEY_TAG = "mutex_key";
+  public static final String QUEUE_NAME_TAG = "queue_name";
+  public static final String STAGE_NAME_TAG = "stage_name";
+  public static final String STATUS_TAG = "status";
+  public static final String WORKLOAD_CANCEL_REASON_TAG = "cancel_reason";
+  public static final String WORKLOAD_CANCEL_SOURCE_TAG = "cancel_source";
+  public static final String WORKLOAD_ID_TAG = "workload_id";
+  public static final String WORKLOAD_TYPE_TAG = "workload_type";
 
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.value() : UNKNOWN;

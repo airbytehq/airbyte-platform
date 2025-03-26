@@ -17,13 +17,14 @@ import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/Airbyt
 import {
   Connector,
   ConnectorDefinition,
-  ConnectorDefinitionSpecification,
+  ConnectorDefinitionSpecificationRead,
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -55,7 +56,7 @@ interface ConnectorCardBaseProps {
    * id of the selected connector definition id - might be available even if the specification is not loaded yet
    * */
   selectedConnectorDefinitionId: string | null;
-  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecification;
+  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead;
   isEditMode?: boolean;
 
   // used in ConnectorForm
@@ -89,6 +90,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   leftFooterSlot = null,
   ...props
 }) => {
+  const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
 
@@ -189,14 +191,19 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const connector = isEditMode ? props.connector : undefined;
   const connectorId = connector ? getConnectorId(connector) : undefined;
 
+  const isConnectorEntitled = connector?.isEntitled === true;
+
   // Fill form with existing connector values otherwise set the default service name
-  const formValues = useMemo(
-    () => (isEditMode && connector ? connector : { name: selectedConnectorDefinition?.name }),
-    [isEditMode, connector, selectedConnectorDefinition?.name]
-  );
+  const formValues = useMemo(() => {
+    if (isEditMode && connector) {
+      return connector;
+    }
+    return { name: selectedConnectorDefinition?.name };
+  }, [isEditMode, connector, selectedConnectorDefinition?.name]);
 
   return (
     <ConnectorForm
+      canEdit={canEditConnector && (isConnectorEntitled || !connector)}
       trackDirtyChanges
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>

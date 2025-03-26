@@ -41,6 +41,42 @@ describe("#validateAndMapEvent", () => {
     {
       id: "3",
       createdAt: 1728936020,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "INVALID_PAYMENT_METHOD",
+      },
+    },
+    {
+      id: "4",
+      createdAt: 1728936025,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "INVOICE_MARKED_UNCOLLECTIBLE",
+      },
+    },
+    {
+      id: "5",
+      createdAt: 1728936030,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "UNSUBSCRIBED",
+      },
+    },
+    {
+      id: "6",
+      createdAt: 1728936035,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "MANUALLY_LOCKED",
+      },
+    },
+    {
+      id: "7",
+      createdAt: 1728936040,
       eventType: ConnectionEventType.SYNC_STARTED,
       connectionId: mockConnection.connectionId,
       user: {
@@ -55,8 +91,8 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
-      id: "4",
-      createdAt: 1728936040,
+      id: "8",
+      createdAt: 1728936045,
       eventType: ConnectionEventType.SYNC_CANCELLED,
       connectionId: mockConnection.connectionId,
       user: {
@@ -79,7 +115,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = validTimelineEvents
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
   });
   it("removes invalid events from list and triggers error tracking", () => {
     const eventsWithInvalidEvent = [
@@ -108,7 +144,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = eventsWithInvalidEvent
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
     expect(trackError).toHaveBeenCalledTimes(1);
   });
   it("removes events with only resourceRequirement patches but does not trigger error handling", () => {
@@ -139,7 +175,7 @@ describe("#validateAndMapEvent", () => {
     const validatedEvents = eventsWithResourceUpdate
       .map((event) => validateAndMapEvent(event))
       .filter((event) => event !== null);
-    expect(validatedEvents).toHaveLength(4);
+    expect(validatedEvents).toHaveLength(validTimelineEvents.length);
     expect(trackError).toHaveBeenCalledTimes(0);
   });
 });

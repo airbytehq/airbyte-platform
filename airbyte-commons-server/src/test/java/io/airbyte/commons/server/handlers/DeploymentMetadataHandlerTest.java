@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -24,12 +24,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 class DeploymentMetadataHandlerTest {
 
   @ParameterizedTest
-  @ValueSource(strings = {Environment.KUBERNETES, Environment.TEST})
+  @ValueSource(strings = {Environment.TEST})
   void testRetrievingDeploymentMetadata(final String activeEnvironment) {
     final UUID deploymentId = UUID.randomUUID();
     final String version = "0.1.2";
     final AirbyteVersion airbyteVersion = new AirbyteVersion(version);
-    final Configs.DeploymentMode deploymentMode = Configs.DeploymentMode.OSS;
+    final Configs.AirbyteEdition airbyteEdition = Configs.AirbyteEdition.COMMUNITY;
     final DSLContext dslContext = mock(DSLContext.class);
     final Environment environment = mock(Environment.class);
     final Result<org.jooq.Record> result = mock(Result.class);
@@ -38,12 +38,12 @@ class DeploymentMetadataHandlerTest {
     when(dslContext.fetch(anyString())).thenReturn(result);
     when(environment.getActiveNames()).thenReturn(Set.of(activeEnvironment));
 
-    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, deploymentMode, dslContext);
+    final DeploymentMetadataHandler handler = new DeploymentMetadataHandler(airbyteVersion, airbyteEdition, dslContext);
 
     final DeploymentMetadataRead deploymentMetadataRead = handler.getDeploymentMetadata();
 
     assertEquals(deploymentId, deploymentMetadataRead.getId());
-    assertEquals(deploymentMode.name(), deploymentMetadataRead.getMode());
+    assertEquals(airbyteEdition.name(), deploymentMetadataRead.getMode());
     assertEquals(version, deploymentMetadataRead.getVersion());
   }
 

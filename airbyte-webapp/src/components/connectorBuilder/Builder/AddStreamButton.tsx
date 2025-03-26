@@ -27,8 +27,8 @@ import {
 } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface AddStreamResponse {
   streamName: string;
@@ -315,11 +315,12 @@ const AddStreamForm = ({
             />
           )}
           {showUrlPath && (
-            <BuilderFieldWithInputs
+            <BuilderField
               path="urlPath"
-              type="string"
+              type="jinja"
               label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
               tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+              bubbleUpUndoRedo={false}
             />
           )}
           {/* Only allow to copy from another stream within the modal if there aren't initial values set already and there are other streams */}

@@ -1,16 +1,18 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
 
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,7 @@ final class NumPendingJobs extends Emitter {
       db.numberOfPendingJobsByGeography().forEach((geography, count) -> client.gauge(
           OssMetricsRegistry.NUM_PENDING_JOBS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geography)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, geography != null ? geography : Emitter.UNKNOWN)));
 
       return null;
     });
@@ -41,7 +43,7 @@ final class NumRunningJobs extends Emitter {
       db.numberOfRunningJobsByTaskQueue().forEach((attemptQueue, count) -> client.gauge(
           OssMetricsRegistry.NUM_RUNNING_JOBS,
           count,
-          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue)));
+          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue != null ? attemptQueue : Emitter.UNKNOWN)));
       return null;
     });
   }
@@ -71,7 +73,7 @@ final class OldestRunningJob extends Emitter {
       db.oldestRunningJobAgeSecsByTaskQueue().forEach((attemptQueue, count) -> client.gauge(
           OssMetricsRegistry.OLDEST_RUNNING_JOB_AGE_SECS,
           count,
-          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue)));
+          new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue != null ? attemptQueue : Emitter.UNKNOWN)));
       return null;
     });
   }
@@ -87,7 +89,7 @@ final class OldestPendingJob extends Emitter {
       db.oldestPendingJobAgeSecsByGeography().forEach((geographyType, count) -> client.gauge(
           OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geographyType)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, geographyType != null ? geographyType : Emitter.UNKNOWN)));
       return null;
     });
   }
@@ -131,12 +133,24 @@ final class NumAbnormalScheduledSyncs extends Emitter {
 
 @SuppressWarnings("OneTopLevelClass")
 @Singleton
-final class NumUnusuallyLongSyncs extends Emitter {
+final class UnusuallyLongSyncs extends Emitter {
 
-  NumUnusuallyLongSyncs(final MetricClient client, final MetricRepository db) {
+  UnusuallyLongSyncs(final MetricClient client, final MetricRepository db) {
     super(client, () -> {
-      final var count = db.numberOfJobsRunningUnusuallyLong();
-      client.gauge(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, count);
+      final var longRunningJobs = db.unusuallyLongRunningJobs();
+      longRunningJobs.forEach(job -> {
+        final List<MetricAttribute> attributes = new ArrayList<>();
+        // job might be null if we fail to map the row to the model under rare circumstances
+        if (job != null) {
+          attributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, job.sourceDockerImage()));
+          attributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, job.destinationDockerImage()));
+          attributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.connectionId()));
+          attributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, job.workspaceId()));
+        }
+
+        client.count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, attributes.toArray(new MetricAttribute[0]));
+      });
+
       return null;
     });
   }
@@ -197,6 +211,7 @@ final class TotalJobRuntimeByTerminalState extends Emitter {
 @SuppressWarnings("OneTopLevelClass")
 sealed class Emitter {
 
+  public static final String UNKNOWN = "unknown";
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   protected final MetricClient client;
   protected final Callable<Void> callable;
@@ -216,7 +231,7 @@ sealed class Emitter {
   public void emit() {
     try {
       callable.call();
-      client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+      client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
     } catch (final Exception e) {
       log.error("Exception querying database for metric: ", e);
     }

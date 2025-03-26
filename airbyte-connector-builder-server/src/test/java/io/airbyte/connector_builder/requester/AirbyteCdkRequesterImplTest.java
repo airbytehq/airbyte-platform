@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.requester;
@@ -17,8 +17,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.airbyte.connector_builder.api.model.generated.AuxiliaryRequest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
-import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
@@ -89,7 +89,7 @@ class AirbyteCdkRequesterImplTest {
     final List<StreamReadLogsInner> logs = mapper.convertValue(response.get("logs"), new TypeReference<>() {});
     assertEquals(logs, streamRead.getLogs());
 
-    final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = mapper.convertValue(
+    final List<AuxiliaryRequest> auxiliaryRequests = mapper.convertValue(
         response.get("auxiliary_requests"), new TypeReference<>() {});
     assertEquals(auxiliaryRequests, streamRead.getAuxiliaryRequests());
 

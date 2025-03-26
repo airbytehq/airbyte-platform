@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
@@ -7,9 +7,6 @@ package io.airbyte.container_orchestrator.config;
 import io.airbyte.commons.storage.DocumentType;
 import io.airbyte.commons.storage.StorageClient;
 import io.airbyte.commons.storage.StorageClientFactory;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -20,12 +17,6 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Factory
 class ApplicationBeanFactory {
-
-  @Singleton
-  public MetricClient metricClient() {
-    MetricClientFactory.initialize(MetricEmittingApps.ORCHESTRATOR);
-    return MetricClientFactory.getMetricClient();
-  }
 
   @Singleton
   @Named("stateDocumentStore")

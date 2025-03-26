@@ -2,9 +2,9 @@ import { Row } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { CatalogListBox } from "components/connection/SyncCatalogTable/components/CatalogListBox/CatalogListBox";
 import { updateFieldHashing } from "components/connection/SyncCatalogTable/utils/streamConfigHelpers";
 import { Option } from "components/ui/ListBox";
-import { InlineListBox } from "components/ui/ListBox/InlineListBox";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
@@ -64,7 +64,7 @@ export const FieldHashMapping: React.FC<FieldHashMappingProps> = ({ row, updateS
   };
 
   const listbox = (
-    <InlineListBox<HashModeValue>
+    <CatalogListBox<HashModeValue>
       isDisabled={isDisabled || !isFieldHashingAllowed}
       options={options}
       selectedValue={isFieldHashed ? "hashed" : "unhashed"}

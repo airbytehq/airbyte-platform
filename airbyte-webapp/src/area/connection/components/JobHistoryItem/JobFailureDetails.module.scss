@@ -6,10 +6,26 @@
   flex-direction: column;
 }
 
+.details {
+  white-space: pre-wrap;
+}
+
 .failedMessage {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.secondaryMessage {
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.expandedMessage {
+  border-radius: variables.$border-radius-md;
+  padding-top: variables.$spacing-sm;
+  padding-bottom: variables.$spacing-sm;
 }
 
 .seeMore {
@@ -21,16 +37,14 @@
   vertical-align: middle;
 }
 
-.secondaryMessage {
+.errorMessage {
   padding: variables.$spacing-sm;
   border-radius: variables.$border-radius-md;
-  font-family: monospace;
+  background-color: colors.$red-50;
+}
 
-  &.errorMessage {
-    background-color: colors.$red-50;
-  }
-
-  &.warningMessage {
-    background-color: colors.$yellow-50;
-  }
+.warningMessage {
+  padding: variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$yellow-50;
 }

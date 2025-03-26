@@ -13,3 +13,7 @@ keycloak-setup:
 server:
   env_vars:
     API_AUTHORIZATION_ENABLED: "true"
+
+worker:
+  env_vars:
+    DISCOVER_REFRESH_WINDOW_MINUTES: "0"

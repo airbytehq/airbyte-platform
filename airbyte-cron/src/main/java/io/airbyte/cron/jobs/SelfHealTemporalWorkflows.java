@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -8,10 +8,10 @@ import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME
 
 import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.scheduling.annotation.Scheduled;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import jakarta.inject.Singleton;
@@ -38,7 +38,7 @@ public class SelfHealTemporalWorkflows {
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "10s")
   void cleanTemporal() {
-    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "self_heal_temporal"));
+    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, new MetricAttribute(MetricTags.CRON_TYPE, "self_heal_temporal"));
     final var numRestarted = temporalClient.restartClosedWorkflowByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
     metricClient.count(OssMetricsRegistry.WORKFLOWS_HEALED, numRestarted);
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -178,20 +178,22 @@ class CustomerioNotificationClientTest {
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     mockWebServer.enqueue(new MockResponse());
 
-    SyncSummary summary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
-        .destination(DestinationInfo.builder().name(RANDOM_INPUT).build())
-        .source(SourceInfo.builder().name(RANDOM_INPUT).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
-        .startedAt(Instant.ofEpochSecond(1000000))
-        .finishedAt(Instant.ofEpochSecond(2000000))
-        .isSuccess(false)
-        .bytesEmitted(123240L)
-        .bytesCommitted(9000L)
-        .recordsEmitted(780)
-        .recordsCommitted(600)
-        .errorMessage(RANDOM_INPUT)
-        .build();
+    SyncSummary summary = new SyncSummary(
+        new WorkspaceInfo(WORKSPACE_ID, null, null),
+        new ConnectionInfo(CONNECTION_ID, null, null),
+        new SourceInfo(null, RANDOM_INPUT, null),
+        new DestinationInfo(null, RANDOM_INPUT, null),
+        10L,
+        false,
+        Instant.ofEpochSecond(1000000),
+        Instant.ofEpochSecond(2000000),
+        123240L,
+        9000L,
+        780,
+        600,
+        0,
+        0,
+        RANDOM_INPUT);
     final boolean result =
         customerioNotificationClient.notifyConnectionDisabled(summary, WORKSPACE.getEmail());
 
@@ -231,12 +233,13 @@ class CustomerioNotificationClientTest {
             .streamDescriptor(new StreamDescriptor().name("stream_with_added_pk")));
     String recipient = "airbyte@airbyte.io";
     String transactionMessageId = "455";
-    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).build())
-        .connectionInfo(ConnectionInfo.builder().id(connectionId).name(connectionName).build())
-        .sourceInfo(SourceInfo.builder().id(sourceId).name(sourceName).build())
-        .catalogDiff(diff)
-        .build();
+    SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workspaceId, workspaceName, null),
+        new ConnectionInfo(connectionId, connectionName, null),
+        new SourceInfo(sourceId, sourceName, null),
+        false,
+        diff);
+
     ObjectNode node =
         CustomerioNotificationClient.buildSchemaChangeJson(notification, recipient, transactionMessageId);
 
@@ -267,23 +270,22 @@ class CustomerioNotificationClientTest {
     Instant startedAt = Instant.ofEpochSecond(1000000);
     Instant finishedAt = Instant.ofEpochSecond(1070000);
 
-    SyncSummary syncSummary = SyncSummary.builder()
-        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).url("http://workspace").build())
-        .source(SourceInfo.builder().id(sourceId).name(sourceName).url("http://source").build())
-        .destination(DestinationInfo.builder().id(destinationId).name(destinationName).url("http://source").build())
-        .connection(ConnectionInfo.builder().id(connectionId).name(connectionName).url("http://connection").build())
-        .jobId(100L)
-        .isSuccess(false)
-        .errorMessage("Connection to the source failed")
-        .startedAt(startedAt)
-        .finishedAt(finishedAt)
-        .bytesEmitted(1000L)
-        .bytesCommitted(9000L)
-        .recordsFilteredOut(0L)
-        .bytesFilteredOut(0L)
-        .recordsEmitted(50)
-        .recordsCommitted(48)
-        .build();
+    SyncSummary syncSummary = new SyncSummary(
+        new WorkspaceInfo(workspaceId, workspaceName, "http://workspace"),
+        new ConnectionInfo(connectionId, connectionName, "http://connection"),
+        new SourceInfo(sourceId, sourceName, "http://source"),
+        new DestinationInfo(destinationId, destinationName, "http://source"),
+        100L,
+        false,
+        startedAt,
+        finishedAt,
+        1000L,
+        9000L,
+        50,
+        48,
+        0L,
+        0L,
+        "Connection to the source failed");
     String email = "joe@foobar.com";
     String transactionId = "201";
 
@@ -298,6 +300,7 @@ class CustomerioNotificationClientTest {
     JsonNode expected = mapper.readTree(jsonContent);
     ObjectNode node = CustomerioNotificationClient.buildSyncCompletedJson(syncSummary, email, transactionId);
     assertEquals(expected.get("message_data").get("bytesEmitted"), node.get("message_data").get("bytesEmitted"));
+    assertEquals(expected.size(), node.size());
     assertEquals(expected, node);
   }
 

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi

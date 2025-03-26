@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging.logback
@@ -34,3 +34,4 @@ const val CALLER_THREAD_NAME_PATTERN = "CALLER_THREAD_NAME"
 
 const val CLOUD_OPERATIONS_JOB_LOGGER_NAME = "airbyte-cloud-operations-job-logger"
 const val PLATFORM_LOGGER_NAME = "airbyte-platform-logger"
+const val AUDIT_LOGGER_NAME = "airbyte-audit-logger"

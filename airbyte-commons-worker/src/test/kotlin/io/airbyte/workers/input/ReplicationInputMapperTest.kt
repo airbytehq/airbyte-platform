@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.input
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -67,8 +71,8 @@ class ReplicationInputMapperTest {
   }
 
   object Fixtures {
-    fun getActivityInputForSourceConfig(sourceConfig: JsonNode): ReplicationActivityInput {
-      return ReplicationActivityInput(
+    fun getActivityInputForSourceConfig(sourceConfig: JsonNode): ReplicationActivityInput =
+      ReplicationActivityInput(
         UUID.randomUUID(),
         UUID.randomUUID(),
         sourceConfig,
@@ -87,8 +91,8 @@ class ReplicationInputMapperTest {
         null,
         ConnectionContext().withOrganizationId(UUID.randomUUID()),
         null,
+        emptyList(),
       )
-    }
 
     val replicationActivityInputSimpleFileTransfer =
       getActivityInputForSourceConfig(Jsons.jsonNode(mapOf("use_file_transfer" to true)))

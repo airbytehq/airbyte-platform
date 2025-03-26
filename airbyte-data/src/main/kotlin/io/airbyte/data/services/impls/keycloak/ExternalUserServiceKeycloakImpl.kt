@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.data.services.ExternalUserService
@@ -24,8 +28,7 @@ class ExternalUserServiceKeycloakImpl(
     email: String,
     realmToKeep: String,
   ) {
-    keycloakAdminClient.realms().findAll().forEach {
-        realm ->
+    keycloakAdminClient.realms().findAll().forEach { realm ->
       run {
         if (realm.realm != realmToKeep) {
           deleteUserByEmailInRealm(email, realm.realm)
@@ -38,7 +41,12 @@ class ExternalUserServiceKeycloakImpl(
     val realms = keycloakAdminClient.realms().findAll()
     for (realm in realms) {
       try {
-        val user = keycloakAdminClient.realm(realm.realm).users().get(authUserId).toRepresentation()
+        val user =
+          keycloakAdminClient
+            .realm(realm.realm)
+            .users()
+            .get(authUserId)
+            .toRepresentation()
         if (user != null) {
           logger.info { "Auth user found in realm ${realm.realm} (id: ${user.id})" }
           return realm.realm

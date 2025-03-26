@@ -4,7 +4,6 @@ import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
-import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 
 import { useConnectorForm } from "./connectorFormContext";
@@ -50,6 +49,14 @@ interface AuthenticationHook {
    * whether we will render "authenticate" or "re-authenticate" on the OAuth button text
    */
   hasAuthFieldValues: boolean;
+  /**
+   * This will return true if Airbyte global credentials are unavailable for the connector.
+   * This is used to determine whether we should render an info tooltip for the user to
+   * tell them what the redirect URL of their OAuth app should be.
+   */
+  shouldShowRedirectUrlTooltip: boolean;
+  manualOAuthMode: boolean;
+  toggleManualOAuthMode: () => void;
 }
 
 export const useAuthentication = (): AuthenticationHook => {
@@ -59,9 +66,12 @@ export const useAuthentication = (): AuthenticationHook => {
     formState: { submitCount },
   } = useFormContext<ConnectorFormValues>();
   const values = watch();
-  const { getValues, selectedConnectorDefinitionSpecification: connectorSpec } = useConnectorForm();
-
-  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
+  const {
+    getValues,
+    selectedConnectorDefinitionSpecification: connectorSpec,
+    manualOAuthMode,
+    toggleManualOAuthMode,
+  } = useConnectorForm();
 
   const advancedAuth = connectorSpec?.advancedAuth;
 
@@ -93,12 +103,14 @@ export const useAuthentication = (): AuthenticationHook => {
   const isAuthButtonVisible = useMemo(
     () =>
       Boolean(
-        allowOAuthConnector &&
-          advancedAuth &&
+        advancedAuth &&
           shouldShowButtonForAdvancedAuth(advancedAuth.predicateKey, advancedAuth.predicateValue, valuesWithDefaults)
       ),
-    [advancedAuth, valuesWithDefaults, allowOAuthConnector]
+    [advancedAuth, valuesWithDefaults]
   );
+
+  const shouldShowRedirectUrlTooltip =
+    connectorSpec?.advancedAuthGlobalCredentialsAvailable === false && !manualOAuthMode;
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(
@@ -113,11 +125,9 @@ export const useAuthentication = (): AuthenticationHook => {
 
   const isHiddenAuthField = useCallback(
     (fieldPath: string) => {
-      // A field should be hidden due to OAuth if we have OAuth enabled and selected (in case it's inside a oneOf)
-      // and the field is part of the OAuth flow parameters.
-      return isAuthButtonVisible && implicitAuthFieldPaths.includes(fieldPath);
+      return isAuthButtonVisible && !manualOAuthMode && implicitAuthFieldPaths.includes(fieldPath);
     },
-    [implicitAuthFieldPaths, isAuthButtonVisible]
+    [implicitAuthFieldPaths, isAuthButtonVisible, manualOAuthMode]
   );
 
   const hiddenAuthFieldErrors = useMemo(() => {
@@ -155,5 +165,8 @@ export const useAuthentication = (): AuthenticationHook => {
     hiddenAuthFieldErrors,
     shouldShowAuthButton,
     hasAuthFieldValues,
+    shouldShowRedirectUrlTooltip,
+    manualOAuthMode,
+    toggleManualOAuthMode,
   };
 };

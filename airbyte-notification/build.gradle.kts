@@ -4,9 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -19,8 +16,6 @@ dependencies {
   implementation("org.commonmark:commonmark:0.21.0")
 
   implementation(libs.guava)
-  implementation(libs.bundles.apache)
-  implementation(libs.commons.io)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
 

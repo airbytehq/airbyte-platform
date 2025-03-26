@@ -24,7 +24,7 @@ Helm chart to deploy airbyte-metrics
 | extraVolumes | list | `[]` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
-| global.deploymentMode | string | `"oss"` |  |
+| global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -205,8 +205,8 @@ class JobInputHandlerTest {
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withIsReset(false)
-        .withUseAsyncReplicate(false)
-        .withUseAsyncActivities(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -281,8 +281,8 @@ class JobInputHandlerTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true)
-        .withUseAsyncReplicate(false)
-        .withUseAsyncActivities(false);
+        .withUseAsyncReplicate(true)
+        .withUseAsyncActivities(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))

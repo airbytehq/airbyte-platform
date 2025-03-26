@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -44,7 +44,7 @@ class WorkspaceNotificationConfigFetcherTest {
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
         .thenReturn(
             new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", true, UUID.randomUUID(), email, null, null, null, null, null,
-                new NotificationSettings(null, null, null, null, null, notificationItem, null, null), null, null, null, null, null));
+                new NotificationSettings(null, null, null, null, null, notificationItem, null, null), null, null, null, null, null, null));
 
     NotificationItemWithCustomerIoConfig result =
         workspaceNotificationConfigFetcher.fetchNotificationConfig(connectionId, NotificationEvent.ON_BREAKING_CHANGE);

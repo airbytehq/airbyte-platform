@@ -13,6 +13,11 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   StreamAttributeTransformTransformType,
+  StreamConfigDiff,
+  StreamConfigDiffConfigType,
+  StreamFieldStatusChanged,
+  StreamFieldStatusChangedStatus,
+  StreamMapperType,
   StreamTransformTransformType,
 } from "core/api/types/AirbyteClient";
 
@@ -35,6 +40,10 @@ const connectionAutoDisabledReasons = [
   "INVALID_CREDIT_BALANCE",
   "CONNECTOR_NOT_SUPPORTED",
   "WORKSPACE_IS_DELINQUENT",
+  "INVOICE_MARKED_UNCOLLECTIBLE",
+  "INVALID_PAYMENT_METHOD",
+  "UNSUBSCRIBED",
+  "MANUALLY_LOCKED",
 
   // this is from `ConnectionAutoUpdatedReason` but is also stamped onto the disabledReason field
   "SCHEMA_CHANGE_AUTO_PROPAGATE",
@@ -44,6 +53,10 @@ const connectionAutoDisabledReasons = [
   "ONLY_FAILED_JOBS_RECENTLY",
   "TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW",
 ];
+
+const connectorChangeReasons = ["SYSTEM", "USER"];
+// TODO: ask BE team to use already defined types - ConnectorType
+const ConnectorType = ["SOURCE", "DESTINATION"];
 
 // property-specific schemas
 /**
@@ -134,6 +147,67 @@ const catalogDiffSchema = yup.object({
   transforms: yup.array().of(streamTransformsSchema).required(),
 });
 
+const connectorUpdateSchema = yup.object({
+  toVersion: yup.string().required(),
+  fromVersion: yup.string().required(),
+  connectorName: yup.string().required(),
+  connectorType: yup.string().oneOf(ConnectorType).required(),
+  // TODO: ask BE team to add this prop, untill then it is optional
+  changeReason: yup.string().oneOf(connectorChangeReasons).optional(),
+  // TODO: ask BE team how to handle this prop, untill then it is optional
+  triggeredBy: yup.string().oneOf(["BREAKING_CHANGE_MANUAL"]).optional(),
+});
+
+const streamFieldStatusChangedSchema: yup.SchemaOf<StreamFieldStatusChanged> = yup.object({
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+  fields: yup.array().of(yup.string()).optional(),
+  status: yup.mixed<StreamFieldStatusChangedStatus>().oneOf(["enabled", "disabled"]).optional(),
+});
+
+const syncModeChangedSchema = yup.object({
+  currentDestinationSyncMode: yup.string().optional(),
+  currentSourceSyncMode: yup.string().optional(),
+  prevDestinationSyncMode: yup.string().optional(),
+  prevSourceSyncMode: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+});
+
+const streamConfigDiffSchema: yup.SchemaOf<StreamConfigDiff> = yup.object({
+  configType: yup.mixed<StreamConfigDiffConfigType>().oneOf(["primary_key", "cursor_field"]).optional(),
+  current: yup.string().optional(),
+  prev: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+});
+
+export const fieldDataTypeDiffSchema = yup.object({
+  current: yup.string().optional(),
+  fieldName: yup.string().optional(),
+  prev: yup.string().optional(),
+  streamName: yup.string().optional(),
+  streamNamespace: yup.string().optional(),
+});
+
+const catalogConfigDiffSchema = yup.object({
+  // user changes
+  streamsEnabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  streamsDisabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsEnabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsDisabled: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  syncModesChanged: yup.array().of(syncModeChangedSchema).optional(),
+  cursorFieldsChanged: yup.array().of(streamConfigDiffSchema).optional(),
+  primaryKeysChanged: yup.array().of(streamConfigDiffSchema).optional(),
+
+  // system changes
+  streamsAdded: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  streamsRemoved: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsAdded: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsRemoved: yup.array().of(streamFieldStatusChangedSchema).optional(),
+  fieldsDataTypeChanged: yup.array().of(fieldDataTypeDiffSchema).optional(),
+});
+
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
 
 export const jobFailureReasonSchema = yup.object({
@@ -188,6 +262,7 @@ export const refreshEventSummarySchema = yup.object({
   attemptsCount: yup.number().optional(),
   bytesLoaded: yup.number().required(),
   streams: yup.array().of(streamDescriptorSchema).required(),
+  failureReason: jobFailureReasonSchema.nullable(),
   jobId: yup.number().required(),
 });
 
@@ -274,6 +349,22 @@ export const connectionSettingsUpdateEventSummarySchema = yup.object({
 export const schemaUpdateSummarySchema = yup.object({
   catalogDiff: catalogDiffSchema.required(),
   updateReason: yup.mixed().oneOf(["SCHEMA_CHANGE_AUTO_PROPAGATE"]).optional(),
+});
+
+export const schemaConfigUpdateSchema = yup.object({
+  airbyteCatalogDiff: yup.object({
+    catalogDiff: catalogDiffSchema.required(),
+    catalogConfigDiff: catalogConfigDiffSchema.required(),
+  }),
+});
+
+export const mappingEventSummarySchema = yup.object({
+  streamName: yup.string().required(),
+  streamNamespace: yup.string().optional(),
+  mapperType: yup
+    .mixed<StreamMapperType>()
+    .oneOf([...Object.values(StreamMapperType)])
+    .required(),
 });
 
 /**
@@ -363,6 +454,25 @@ export const connectionSettingsUpdateEventSchema = generalEventSchema.shape({
 export const schemaUpdateEventSchema = generalEventSchema.shape({
   eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_UPDATE]).required(),
   summary: schemaUpdateSummarySchema.required(),
+});
+
+export const connectorUpdateEventSchema = generalEventSchema.shape({
+  eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.CONNECTOR_UPDATE]).required(),
+  summary: connectorUpdateSchema.required(),
+});
+
+export const schemaConfigUpdateEventSchema = generalEventSchema.shape({
+  // TODO: add schema config update event type from AirbyteClient once it is defined
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.SCHEMA_CONFIG_UPDATE]).required(),
+  eventType: yup.string().oneOf(["SCHEMA_CONFIG_UPDATE"]).required(),
+  summary: schemaConfigUpdateSchema.required(),
+});
+
+export const mappingEventSchema = generalEventSchema.shape({
+  // TODO: add mapping event types from AirbyteClient once they are defined
+  // eventType: yup.mixed<ConnectionEventType>().oneOf([ConnectionEventType.MAPPING_CREATE, ConnectionEventType.MAPPING_UPDATE, ConnectionEventType.MAPPING_DELETE]).required(),
+  eventType: yup.mixed().oneOf(["MAPPING_CREATE", "MAPPING_UPDATE", "MAPPING_DELETE"]).required(),
+  summary: mappingEventSummarySchema.required(),
 });
 
 export interface ConnectionTimelineRunningEvent {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -28,6 +28,7 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -55,6 +56,7 @@ class JobCreationAndStatusUpdateHelperTest {
 
   JobCreationAndStatusUpdateHelper helper;
   ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  MetricClient metricClient;
 
   @BeforeEach
   void setup() {
@@ -64,6 +66,7 @@ class JobCreationAndStatusUpdateHelperTest {
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
+    metricClient = mock(MetricClient.class);
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
@@ -71,7 +74,8 @@ class JobCreationAndStatusUpdateHelperTest {
         mConnectionService,
         mJobNotifier,
         mJobTracker,
-        connectionTimelineEventHelper);
+        connectionTimelineEventHelper,
+        metricClient);
   }
 
   @Test
@@ -191,7 +195,7 @@ class JobCreationAndStatusUpdateHelperTest {
             .withSourceDefinitionVersionId(sourceDefVersionId)
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(Fixtures.JOB_ID, ConfigType.SYNC, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
-        0L, 0L, 0L);
+        0L, 0L, 0L, true);
 
     when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
         .thenReturn(List.of(
@@ -211,7 +215,7 @@ class JobCreationAndStatusUpdateHelperTest {
         .withResetConnection(new JobResetConnectionConfig()
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(Fixtures.JOB_ID, RESET_CONNECTION, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
-        0L, 0L, 0L);
+        0L, 0L, 0L, true);
 
     when(mActorDefinitionService.getActorDefinitionVersions(List.of(destinationDefVersionId)))
         .thenReturn(List.of(
@@ -228,15 +232,15 @@ class JobCreationAndStatusUpdateHelperTest {
     private static final long JOB_ID = 123L;
 
     static Job job(final long id, final long createdAt) {
-      return new Job(id, null, null, null, null, null, null, createdAt, 0);
+      return new Job(id, null, null, null, null, null, null, createdAt, 0, true);
     }
 
     static Job job(final JobStatus status) {
-      return new Job(1, null, null, null, null, status, null, 0, 0);
+      return new Job(1, null, null, null, null, status, null, 0, 0, true);
     }
 
     static Job job(final long id, final List<Attempt> attempts, final JobStatus status) {
-      return new Job(id, null, null, null, attempts, status, null, 0, 0);
+      return new Job(id, null, null, null, attempts, status, null, 0, 0, true);
     }
 
     static Attempt attempt(final int number, final long jobId, final AttemptStatus status) {

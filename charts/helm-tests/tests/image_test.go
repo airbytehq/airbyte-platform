@@ -19,22 +19,19 @@ func TestImages_Default(t *testing.T) {
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:dev",
 		"airbyte/cron:dev",
-		"bitnami/kubectl:1.28.9",
 		"airbyte/server:dev",
-		"temporalio/auto-setup:1.23.0",
+		"airbyte/airbyte-base-java-image:3.3.2",
+		"temporalio/auto-setup:1.26",
 		"airbyte/webapp:dev",
 		"airbyte/worker:dev",
 		"airbyte/workload-api-server:dev",
 		"airbyte/workload-launcher:dev",
 		"airbyte/bootloader:dev",
-		"airbyte/mc:latest",
-		"busybox:latest",
 		"airbyte/db:dev",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
 		"airbyte/workload-init-container:dev",
-		"curlimages/curl:8.1.1",
+		"airbyte/async-profiler:dev",
 		"airbyte/connector-sidecar:dev",
-		"busybox:1.35",
 		"airbyte/container-orchestrator:dev",
 	})
 }
@@ -48,16 +45,14 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:dev",
 		"airbyte/cron:dev",
-		"bitnami/kubectl:1.28.9",
 		"airbyte/server:dev",
-		"temporalio/auto-setup:1.23.0",
+		"temporalio/auto-setup:1.26",
 		"airbyte/webapp:dev",
 		"airbyte/worker:dev",
+		"airbyte/airbyte-base-java-image:3.3.2",
 		"airbyte/workload-api-server:dev",
 		"airbyte/workload-launcher:dev",
 		"airbyte/bootloader:dev",
-		"airbyte/mc:latest",
-		"busybox:latest",
 		"airbyte/db:dev",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
 		"airbyte/metrics-reporter:dev",
@@ -65,11 +60,10 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 		"postgres:13-alpine",
 		"airbyte/keycloak:dev",
 		"airbyte/keycloak-setup:dev",
-		"curlimages/curl:8.1.1",
 		"airbyte/container-orchestrator:dev",
 		"airbyte/workload-init-container:dev",
+		"airbyte/async-profiler:dev",
 		"airbyte/connector-sidecar:dev",
-		"busybox:1.35",
 	})
 }
 
@@ -83,25 +77,22 @@ func TestImages_GlobalTag(t *testing.T) {
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:test-tag",
 		"airbyte/cron:test-tag",
-		"bitnami/kubectl:1.28.9",
 		"airbyte/server:test-tag",
-		"temporalio/auto-setup:1.23.0",
+		"temporalio/auto-setup:1.26",
 		"airbyte/webapp:test-tag",
 		"airbyte/worker:test-tag",
 		"airbyte/workload-api-server:test-tag",
 		"airbyte/workload-launcher:test-tag",
+		"airbyte/airbyte-base-java-image:3.3.2",
 		"airbyte/bootloader:test-tag",
-		"airbyte/mc:latest",
-		"busybox:latest",
 		"airbyte/db:test-tag",
 		"minio/minio:RELEASE.2023-11-20T22-40-07Z",
 		"airbyte/metrics-reporter:test-tag",
 		"temporalio/ui:2.30.1",
-		"curlimages/curl:8.1.1",
-		"busybox:1.35",
 		"postgres:13-alpine",
 		"airbyte/connector-sidecar:test-tag",
 		"airbyte/workload-init-container:test-tag",
+		"airbyte/async-profiler:test-tag",
 		"airbyte/container-orchestrator:test-tag",
 		"airbyte/keycloak-setup:test-tag",
 		"airbyte/keycloak:test-tag",
@@ -135,11 +126,10 @@ func TestImages_GlobalRegistry(t *testing.T) {
 	}
 
 	// The loop above checks these too, but these are important core images, so they're tested explicitly here.
-	assert.Equal(t, "http://my-registry/busybox:1.35", env.Data["JOB_KUBE_BUSYBOX_IMAGE"])
-	assert.Equal(t, "http://my-registry/curlimages/curl:8.1.1", env.Data["JOB_KUBE_CURL_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/container-orchestrator:dev", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/connector-sidecar:dev", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "http://my-registry/airbyte/workload-init-container:dev", env.Data["WORKLOAD_INIT_IMAGE"])
+	assert.Equal(t, "http://my-registry/airbyte/async-profiler:dev", env.Data["CONNECTOR_PROFILER_IMAGE"])
 }
 
 func TestImages_GlobalRegistry_NoTrailingSlash(t *testing.T) {
@@ -166,34 +156,30 @@ func TestImages_AppTag(t *testing.T) {
 	for _, app := range slices.Concat(allApps, moreApps) {
 		setAppOpt(opts, app, "image.tag", "app-tag")
 	}
-	opts.SetValues["minio.mcImage.tag"] = "mc-app-tag"
 
 	chart := renderChart(t, opts)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
 		"airbyte/connector-builder-server:app-tag",
 		"airbyte/cron:app-tag",
-		"bitnami/kubectl:app-tag",
 		"airbyte/server:app-tag",
 		"temporalio/auto-setup:app-tag",
+		"airbyte/airbyte-base-java-image:app-tag",
 		"airbyte/webapp:app-tag",
 		"airbyte/worker:app-tag",
 		"airbyte/workload-api-server:app-tag",
 		"airbyte/workload-launcher:app-tag",
 		"airbyte/bootloader:app-tag",
-		"airbyte/mc:mc-app-tag",
-		"busybox:app-tag",
 		"airbyte/db:app-tag",
 		"minio/minio:app-tag",
 		"airbyte/metrics-reporter:app-tag",
 		"temporalio/ui:app-tag",
-		"busybox:1.35",
 		"postgres:13-alpine",
-		"curlimages/curl:8.1.1",
 		"airbyte/keycloak:app-tag",
 		"airbyte/keycloak-setup:app-tag",
 		// these don't support app tags due to backwards compat.
 		"airbyte/workload-init-container:global-tag",
+		"airbyte/async-profiler:global-tag",
 		"airbyte/container-orchestrator:global-tag",
 		"airbyte/connector-sidecar:global-tag",
 	})
@@ -230,19 +216,17 @@ func TestImages_StringImages(t *testing.T) {
 	// Make sure the imageUrl helper handles the cases where the image value
 	// is a string instead of an object.
 	opts := BaseHelmOptions()
-	opts.SetValues["global.jobs.kube.images.busybox"] = "my-busybox"
-	opts.SetValues["global.jobs.kube.images.curl"] = "my-curl"
 	opts.SetValues["workload-launcher.containerOrchestrator.image"] = "my-oc"
 	opts.SetValues["workload-launcher.connectorSidecar.image"] = "my-cs"
 	opts.SetValues["workload-launcher.workloadInit.image"] = "my-wi"
+	opts.SetValues["workload-launcher.connectorProfiler.image"] = "my-cp"
 
 	chart := renderChart(t, opts)
 	env := getConfigMap(chart, "airbyte-airbyte-env")
-	assert.Equal(t, "my-busybox", env.Data["JOB_KUBE_BUSYBOX_IMAGE"])
-	assert.Equal(t, "my-curl", env.Data["JOB_KUBE_CURL_IMAGE"])
 	assert.Equal(t, "my-oc", env.Data["CONTAINER_ORCHESTRATOR_IMAGE"])
 	assert.Equal(t, "my-cs", env.Data["CONNECTOR_SIDECAR_IMAGE"])
 	assert.Equal(t, "my-wi", env.Data["WORKLOAD_INIT_IMAGE"])
+	assert.Equal(t, "my-cp", env.Data["CONNECTOR_PROFILER_IMAGE"])
 }
 
 func enableAllImages(opts *helm.Options) {

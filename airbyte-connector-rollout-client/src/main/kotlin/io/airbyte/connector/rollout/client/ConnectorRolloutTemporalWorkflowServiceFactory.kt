@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.connector.rollout.client
 
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig
@@ -8,6 +9,7 @@ import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
 import io.airbyte.connector.rollout.shared.Constants
+import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.temporal.serviceclient.WorkflowServiceStubs
@@ -22,6 +24,7 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
   @Value("\${temporal.cloud.connector-rollout.host}") temporalCloudHost: String?,
   @Value("\${temporal.cloud.connector-rollout.namespace}") temporalCloudNamespace: String?,
   @Value("\${temporal.host}") temporalHost: String?,
+  meterRegistry: MeterRegistry?,
 ) {
   private val temporalCloudConfig: TemporalCloudConfig =
     TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace)
@@ -31,6 +34,7 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
       temporalCloudConfig,
       TemporalSelfHostedConfig(temporalHost, if (temporalCloudEnabled) temporalCloudNamespace else Constants.DEFAULT_NAMESPACE),
       temporalCloudEnabled,
+      meterRegistry,
     )
 
   /**

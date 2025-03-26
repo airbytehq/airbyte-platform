@@ -1,14 +1,18 @@
-@use "../../../../../../scss/colors";
-@use "../../../../../../scss/variables";
-
-.message {
-  margin-left: variables.$spacing-lg;
-}
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
 
 .error {
+  margin-left: variables.$spacing-lg;
   color: colors.$red;
 }
 
-.success {
-  color: colors.$green;
+.accented__container {
+  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+}
+
+.accented__button {
+  // show above the pulses
+  position: relative;
+  z-index: 1;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.storage
@@ -31,6 +31,8 @@ data class StorageBucketConfig(
   @Value("\${$STORAGE_BUCKET_STATE}") val state: String,
   @Value("\${$STORAGE_BUCKET_WORKLOAD_OUTPUT}") val workloadOutput: String,
   @Value("\${$STORAGE_BUCKET_ACTIVITY_PAYLOAD}") val activityPayload: String,
+  @Value("\${$STORAGE_BUCKET_AUDIT_LOGGING:}") val auditLogging: String?,
+  @Value("\${$STORAGE_BUCKET_PROFILER_OUTPUT:}") val profilerOutput: String?,
 )
 
 /**
@@ -50,6 +52,9 @@ data class AzureStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.AZURE.name)
       put(EnvVar.AZURE_STORAGE_CONNECTION_STRING, connectionString)
     }.mapKeys { it.key.name }
@@ -74,6 +79,9 @@ data class GcsStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.GCS.name)
       put(EnvVar.GOOGLE_APPLICATION_CREDENTIALS, applicationCredentials)
     }.mapKeys { it.key.name }
@@ -102,12 +110,15 @@ data class S3StorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.S3.name)
       accessKey?.let {
-        put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
+        put(EnvVar.AWS_ACCESS_KEY_ID, it)
       }
       secretAccessKey?.let {
-        put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
+        put(EnvVar.AWS_SECRET_ACCESS_KEY, it)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
     }.mapKeys { it.key.name }
@@ -136,6 +147,9 @@ data class MinioStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.MINIO.name)
       put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
       put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
@@ -162,6 +176,9 @@ class LocalStorageConfig(
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
       put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
+      buckets.auditLogging?.let {
+        put(EnvVar.STORAGE_BUCKET_AUDIT_LOGGING, it)
+      }
       put(EnvVar.STORAGE_TYPE, StorageType.LOCAL.name)
     }.mapKeys { it.key.name }
 }
@@ -171,4 +188,4 @@ class LocalStorageConfig(
  *
  * Any non-null [String] that calls [mask] will return `"*******"`. Any null [String] will return `"null"`.
  */
-private fun String?.mask(): String = this?.let { "*******" } ?: "null"
+private fun String?.mask(): String = this?.let { _ -> "*******" } ?: "null"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -46,10 +46,12 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -57,7 +59,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
@@ -67,10 +68,13 @@ import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.exception.DataAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 @Singleton
 public class WorkspaceServiceJooqImpl implements WorkspaceService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final ExceptionWrappingDatabase database;
   private final FeatureFlagClient featureFlagClient;
@@ -78,19 +82,22 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionServiceJooqImpl connectionService;
+  private final MetricClient metricClient;
 
   @VisibleForTesting
   public WorkspaceServiceJooqImpl(@Named("configDatabase") final Database database,
                                   final FeatureFlagClient featureFlagClient,
                                   final SecretsRepositoryReader secretsRepositoryReader,
                                   final SecretsRepositoryWriter secretsRepositoryWriter,
-                                  final SecretPersistenceConfigService secretPersistenceConfigService) {
+                                  final SecretPersistenceConfigService secretPersistenceConfigService,
+                                  final MetricClient metricClient) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = new ConnectionServiceJooqImpl(database);
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -693,7 +700,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
           secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
       webhookConfigs =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(workspace.getWebhookOperationConfigs(),
-              new RuntimeSecretPersistence(secretPersistenceConfig));
+              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
     } else {
       webhookConfigs = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(workspace.getWebhookOperationConfigs());
     }
@@ -722,7 +729,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
         final SecretPersistenceConfig secretPersistenceConfig =
             secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
-        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
       }
 
       final JsonNode partialConfig;

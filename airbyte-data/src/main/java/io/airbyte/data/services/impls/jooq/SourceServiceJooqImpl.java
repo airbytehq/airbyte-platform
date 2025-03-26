@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -47,11 +47,13 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,8 +65,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -76,10 +76,13 @@ import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 @Singleton
 public class SourceServiceJooqImpl implements SourceService {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final ExceptionWrappingDatabase database;
   private final FeatureFlagClient featureFlagClient;
@@ -88,6 +91,7 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionService connectionService;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
+  private final MetricClient metricClient;
 
   // TODO: This has too many dependencies.
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -96,7 +100,8 @@ public class SourceServiceJooqImpl implements SourceService {
                                final SecretsRepositoryWriter secretsRepositoryWriter,
                                final SecretPersistenceConfigService secretPersistenceConfigService,
                                final ConnectionService connectionService,
-                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
+                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
+                               final MetricClient metricClient) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
@@ -104,6 +109,7 @@ public class SourceServiceJooqImpl implements SourceService {
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -523,7 +529,7 @@ public class SourceServiceJooqImpl implements SourceService {
         scopeId,
         scopeType,
         joinType,
-        ArrayUtils.addAll(conditions,
+        ConditionsHelper.addAll(conditions,
             ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
             ACTOR_DEFINITION.PUBLIC.eq(false)));
 
@@ -593,6 +599,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardSourceDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardSourceDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardSourceDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardSourceDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardSourceDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getResourceRequirements())))
@@ -620,6 +627,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardSourceDefinition.getTombstone() != null && standardSourceDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardSourceDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardSourceDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardSourceDefinition.getEnterprise())
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardSourceDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getResourceRequirements())))
@@ -653,6 +661,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.ACTOR_TYPE, ActorType.source)
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(sourceConnection.getResourceRequirements())))
             .where(ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute();
       } else {
@@ -666,6 +675,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.RESOURCE_REQUIREMENTS, JSONB.valueOf(Jsons.serialize(sourceConnection.getResourceRequirements())))
             .execute();
       }
     });
@@ -706,7 +716,7 @@ public class SourceServiceJooqImpl implements SourceService {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(source.getConfiguration(),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
+          new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
     } else {
       hydratedConfig = secretRepositoryReader.hydrateConfigFromDefaultSecretPersistence(source.getConfiguration());
     }
@@ -737,7 +747,7 @@ public class SourceServiceJooqImpl implements SourceService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
     }
     secretsRepositoryWriter.deleteFromConfig(
         config,
@@ -777,7 +787,7 @@ public class SourceServiceJooqImpl implements SourceService {
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
     }
     final JsonNode partialConfig;
     if (previousSourceConnection.isPresent()) {

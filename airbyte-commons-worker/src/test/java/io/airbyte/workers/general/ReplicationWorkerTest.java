@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_JOB_LOG_PATH_MDC_KEY;
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.metrics.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
+import static io.airbyte.metrics.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -49,7 +49,6 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
@@ -60,10 +59,10 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteLogMessage.Level;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -102,8 +101,8 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Files;
@@ -122,7 +121,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -213,8 +211,8 @@ abstract class ReplicationWorkerTest {
 
     jobRoot = Files.createDirectories(Files.createTempDirectory("test").resolve(WORKSPACE_ROOT));
 
-    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
-    replicationInput = syncPair.getValue();
+    final var syncPair = TestConfigHelpers.createReplicationConfig();
+    replicationInput = syncPair.getSecond();
 
     sourceConfig = WorkerUtils.syncToWorkerSourceConfig(replicationInput);
     destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(replicationInput);
@@ -260,7 +258,10 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null, null));
+        null,
+        null,
+        null,
+        null));
     destinationApi = mock(DestinationApi.class);
     when(destinationApi.getDestination(any())).thenReturn(new DestinationRead(
         DESTINATION_DEFINITION_ID,
@@ -273,7 +274,10 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null, null));
+        null,
+        null,
+        null,
+        null));
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
     streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
     when(streamStatusTrackerFactory.create(any())).thenReturn(mock(StreamStatusTracker.class));
@@ -898,7 +902,7 @@ abstract class ReplicationWorkerTest {
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
-    verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+    verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
         new MetricAttribute(MetricTags.KILLED, "true"),
         new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
@@ -947,7 +951,7 @@ abstract class ReplicationWorkerTest {
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
-    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), any(MetricAttribute.class));
     verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
 
     assertEquals(1, actual.getFailures().size());
@@ -993,7 +997,7 @@ abstract class ReplicationWorkerTest {
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
-    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
     verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
 
     assertEquals(1, actual.getFailures().size());
@@ -1044,7 +1048,7 @@ abstract class ReplicationWorkerTest {
 
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
-    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), any(MetricAttribute.class));
     verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
 
     assertEquals(FailureOrigin.DESTINATION, actual.getFailures().get(0).getFailureOrigin());

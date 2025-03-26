@@ -75,6 +75,9 @@
 
 .streamViewText {
   color: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .emptyStreamViewText {

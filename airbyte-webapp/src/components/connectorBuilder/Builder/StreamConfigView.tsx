@@ -12,6 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import {
+  CsvDecoderType,
   IterableDecoderType,
   JsonDecoderType,
   JsonlDecoderType,
@@ -29,8 +30,8 @@ import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
+import { DecoderConfig } from "./DecoderConfig";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { getOptionsByManifest } from "./manifestHelpers";
@@ -43,8 +44,9 @@ import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BUILDER_DECODER_TYPES, BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { BUILDER_DECODER_TYPES, BuilderStream, DECODER_CONFIGS, StreamPathFn, isEmptyOrDefault } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -63,6 +65,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     [streamPath]
   );
   const baseUrl = useBuilderWatch("formValues.global.urlBase");
+  const selectedDecoder = useBuilderWatch(streamFieldPath("decoder"));
 
   return (
     <BuilderConfigView
@@ -84,8 +87,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       {selectedTab === "configuration" ? (
         <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
           <BuilderCard>
-            <BuilderFieldWithInputs
-              type="string"
+            <BuilderField
+              type="jinja"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
@@ -101,7 +104,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="enum"
               label={formatMessage({ id: "connectorBuilder.decoder.label" })}
               tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
-              path={streamFieldPath("decoder")}
+              path={streamFieldPath("decoder.type")}
               options={[...BUILDER_DECODER_TYPES]}
               manifestPath="SimpleRetriever.properties.decoder"
               manifestOptionPaths={[
@@ -109,8 +112,18 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
                 XmlDecoderType.XmlDecoder,
                 JsonlDecoderType.JsonlDecoder,
                 IterableDecoderType.IterableDecoder,
+                CsvDecoderType.CsvDecoder,
               ]}
             />
+            {selectedDecoder.type && DECODER_CONFIGS[selectedDecoder.type] && (
+              <DecoderConfig
+                decoderType={selectedDecoder.type}
+                streamFieldPath={streamFieldPath}
+                currentStreamIndex={streamNum}
+                BuilderCard={BuilderCard}
+                BuilderField={BuilderField}
+              />
+            )}
             <BuilderField
               type="array"
               path={streamFieldPath("primaryKey")}
@@ -330,7 +343,6 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
-            automaticLayout
             onChange={(val: string | undefined) => {
               setValue(path, val, {
                 shouldValidate: true,

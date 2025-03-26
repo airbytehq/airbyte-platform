@@ -1,10 +1,12 @@
+import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
+
 import { BuilderField } from "./BuilderField";
-import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { useWatchWithPreview } from "../preview";
 import { InjectIntoValue, injectIntoOptions } from "../useBuilderValidationSchema";
+import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface BuilderRequestInjectionProps {
   path: string;
@@ -22,8 +24,16 @@ export const BuilderRequestInjection: React.FC<BuilderRequestInjectionProps> = (
   excludeValues,
 }) => {
   const { formatMessage } = useIntl();
-  const { fieldValue: value } = useWatchWithPreview({ name: `${path}.inject_into` });
+  const { fieldValue: injectInto } = useWatchWithPreview({ name: `${path}.inject_into` });
   const { setValue } = useFormContext();
+
+  useEffect(() => {
+    if (injectInto === RequestOptionInjectInto.body_json) {
+      setValue(`${path}.field_name`, undefined);
+    } else {
+      setValue(`${path}.field_path`, undefined);
+    }
+  }, [injectInto, path, setValue]);
 
   return (
     <>
@@ -43,16 +53,26 @@ export const BuilderRequestInjection: React.FC<BuilderRequestInjectionProps> = (
         label={label || formatMessage({ id: "connectorBuilder.injectInto.label" })}
         tooltip={tooltip || formatMessage({ id: "connectorBuilder.injectInto.tooltip" }, { descriptor })}
       />
-      {value !== "path" && (
-        <BuilderFieldWithInputs
-          type="string"
-          path={`${path}.field_name`}
-          label={
-            injectIntoOptions.find((option) => option.value === value)?.fieldLabel ??
-            formatMessage({ id: "connectorBuilder.injectInto.fieldName.label" })
-          }
-          tooltip={formatMessage({ id: "connectorBuilder.injectInto.fieldName.tooltip" }, { descriptor })}
+      {injectInto === RequestOptionInjectInto.body_json ? (
+        <BuilderField
+          type="array"
+          path={`${path}.field_path`}
+          itemType="string"
+          label={formatMessage({ id: "connectorBuilder.injectInto.fieldPath.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.injectInto.fieldPath.tooltip" }, { descriptor })}
         />
+      ) : (
+        injectInto !== "path" && (
+          <BuilderField
+            type="jinja"
+            path={`${path}.field_name`}
+            label={
+              injectIntoOptions.find((option) => option.value === injectInto)?.fieldLabel ??
+              formatMessage({ id: "connectorBuilder.injectInto.fieldName.label" })
+            }
+            tooltip={formatMessage({ id: "connectorBuilder.injectInto.fieldName.tooltip" }, { descriptor })}
+          />
+        )
       )}
     </>
   );

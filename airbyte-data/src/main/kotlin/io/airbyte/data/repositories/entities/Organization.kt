@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories.entities
 
 import io.micronaut.data.annotation.DateCreated
@@ -14,8 +18,6 @@ open class Organization(
   var name: String,
   var userId: UUID? = null,
   var email: String,
-  var pba: Boolean = false,
-  var orgLevelBilling: Boolean = false,
   var tombstone: Boolean = false,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,

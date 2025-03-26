@@ -1,6 +1,4 @@
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
-import { FloatProps } from "@headlessui-float/react/dist/float";
 import classnames from "classnames";
 import difference from "lodash/difference";
 import isArray from "lodash/isArray";
@@ -13,6 +11,7 @@ import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
 import { IconProps } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -41,10 +40,9 @@ interface BaseProps {
    */
   controlBtnIcon: IconProps["type"];
   /**
-   * Callback to notify when the options menu is opened/closed
-   * @param open
+   * Content for the tooltip
    */
-  onOptionsMenuToggle?: (open: boolean) => void;
+  controlBtnTooltipContent?: React.ReactNode;
 }
 
 export interface CatalogComboBoxProps extends BaseProps {
@@ -60,21 +58,6 @@ export interface MultiCatalogComboBoxProps extends BaseProps {
 
 const transformStringToArray = (value: string, limit?: number): string[] =>
   value.split(",", limit).map((word) => word.trim());
-
-// layout for options menu
-const FloatLayout: React.FC<FloatProps> = ({ children, ...restProps }) => (
-  <Float
-    placement="bottom-start"
-    flip={15}
-    offset={5} // $spacing-sm
-    autoUpdate={{
-      elementResize: false, // this will prevent render in wrong place after multiple open/close actions
-    }}
-    {...restProps}
-  >
-    {children}
-  </Float>
-);
 
 type ControlButtonProps = Omit<BaseProps, "options"> & {
   open: boolean;
@@ -98,6 +81,7 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
     buttonEditText = formatMessage({ id: "ui.combobox.buttonEditText" }),
     controlClassName,
     controlBtnIcon,
+    controlBtnTooltipContent,
   } = props;
 
   const [isButtonHovered, setIsButtonHovered] = useState(false);
@@ -135,6 +119,24 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
     }
   };
 
+  const comboboxButton = (
+    <ComboboxButton
+      ref={ref}
+      as={Button}
+      type="button"
+      variant="clear"
+      full
+      disabled={disabled}
+      icon={isButtonHovered && !disabled ? (value?.length ? "pencil" : "plus") : controlBtnIcon}
+      iconSize="sm"
+      onMouseEnter={() => onButtonHover(true)}
+      onMouseLeave={() => onButtonHover(false)}
+      className={classnames(styles.buttonClear, { [styles.error]: error }, controlClassName)}
+    >
+      {getButtonText()}
+    </ComboboxButton>
+  );
+
   return (
     <>
       {open ? (
@@ -149,28 +151,12 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
           placeholder={`${inputPlaceholder}`}
           onFocus={() => setIsButtonHovered(false)}
         />
+      ) : controlBtnTooltipContent ? (
+        <Tooltip placement="bottom" control={comboboxButton}>
+          {controlBtnTooltipContent}
+        </Tooltip>
       ) : (
-        <ComboboxButton
-          ref={ref}
-          as={Button}
-          type="button"
-          variant="clear"
-          full
-          disabled={disabled}
-          icon={isButtonHovered && !disabled ? (value?.length ? "pencil" : "plus") : controlBtnIcon}
-          iconSize="sm"
-          onMouseEnter={() => onButtonHover(true)}
-          onMouseLeave={() => onButtonHover(false)}
-          className={classnames(
-            styles.buttonClear,
-            {
-              [styles.error]: error,
-            },
-            controlClassName
-          )}
-        >
-          {getButtonText()}
-        </ComboboxButton>
+        comboboxButton
       )}
     </>
   );
@@ -238,13 +224,7 @@ const Options = React.forwardRef(
 );
 Options.displayName = "Options";
 
-export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({
-  value,
-  options,
-  onChange,
-  onOptionsMenuToggle,
-  ...restControlProps
-}) => {
+export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({ value, options, onChange, ...restControlProps }) => {
   const [filterQuery, setFilterQuery] = useState("");
 
   const onCloseOptionsMenu = () => {
@@ -262,23 +242,12 @@ export const CatalogComboBox: React.FC<CatalogComboBoxProps> = ({
       onClose={onCloseOptionsMenu}
       immediate
     >
-      {({ open }) => {
-        // reset filter value after closing the options menu
-        if (!open && filterQuery.length) {
-          setFilterQuery("");
-        }
-
-        if (onOptionsMenuToggle) {
-          onOptionsMenuToggle(open);
-        }
-
-        return (
-          <FloatLayout>
-            <ControlButton value={value} open={open} setFilterQuery={setFilterQuery} {...restControlProps} />
-            <Options options={options} filterQuery={filterQuery} />
-          </FloatLayout>
-        );
-      }}
+      {({ open }) => (
+        <FloatLayout>
+          <ControlButton value={value} open={open} setFilterQuery={setFilterQuery} {...restControlProps} />
+          <Options options={options} filterQuery={filterQuery} />
+        </FloatLayout>
+      )}
     </Combobox>
   );
 };
@@ -287,7 +256,6 @@ export const MultiCatalogComboBox: React.FC<MultiCatalogComboBoxProps> = ({
   value,
   options,
   onChange,
-  onOptionsMenuToggle,
   ...restControlProps
 }) => {
   const [filterQuery, setFilterQuery] = useState("");
@@ -315,17 +283,12 @@ export const MultiCatalogComboBox: React.FC<MultiCatalogComboBoxProps> = ({
       onClose={onCloseOptionsMenu}
       immediate
     >
-      {({ open }) => {
-        if (onOptionsMenuToggle) {
-          onOptionsMenuToggle(open);
-        }
-        return (
-          <FloatLayout>
-            <ControlButton open={open} value={selectedOptions} setFilterQuery={setFilterQuery} {...restControlProps} />
-            <Options options={options} filterQuery={filterQuery} multiple />
-          </FloatLayout>
-        );
-      }}
+      {({ open }) => (
+        <FloatLayout>
+          <ControlButton open={open} value={selectedOptions} setFilterQuery={setFilterQuery} {...restControlProps} />
+          <Options options={options} filterQuery={filterQuery} multiple />
+        </FloatLayout>
+      )}
     </Combobox>
   );
 };

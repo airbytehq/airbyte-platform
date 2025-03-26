@@ -3,7 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { AdvancedAuth } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 
 import { useNotificationService } from "../../../../../../hooks/services/Notification";
 import { useRunOauthRevocation } from "../../../../../../hooks/services/useConnectorAuthRevocation";
@@ -16,7 +16,7 @@ interface Credentials {
 
 function useFormOauthRevocationAdapter(
   sourceId: string,
-  connector: ConnectorDefinitionSpecification,
+  connector: ConnectorDefinitionSpecificationRead,
   connectorDefinition?: ConnectorDefinition
 ): {
   loading: boolean;

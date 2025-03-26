@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":oss:airbyte-commons"))
@@ -16,7 +14,6 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(libs.guava)
   implementation(libs.bundles.jackson)
-  implementation(libs.bundles.apache)
 
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 

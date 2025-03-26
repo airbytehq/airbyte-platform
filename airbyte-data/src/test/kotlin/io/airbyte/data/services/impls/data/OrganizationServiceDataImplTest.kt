@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Organization
@@ -21,8 +25,6 @@ private val BASE_ORGANIZATION =
     userId = UUID.randomUUID()
     name = "Test Organization"
     email = "test@airbyte.io"
-    pba = false
-    orgLevelBilling = false
   }
 
 private val ORGANIZATION_WITH_ID =
@@ -31,8 +33,6 @@ private val ORGANIZATION_WITH_ID =
     userId = BASE_ORGANIZATION.userId
     name = BASE_ORGANIZATION.name
     email = BASE_ORGANIZATION.email
-    pba = BASE_ORGANIZATION.pba
-    orgLevelBilling = BASE_ORGANIZATION.orgLevelBilling
   }
 
 class OrganizationServiceDataImplTest {

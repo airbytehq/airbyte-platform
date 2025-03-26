@@ -2,7 +2,6 @@ micronaut:
   application:
     name: airbyte-workload-launcher
   env:
-    cloud-deduction: true
     additional-envs: ${MICRONAUT_ENVIRONMENTS:}
   server:
     port: 8016
@@ -13,14 +12,34 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
+  caches:
+    network-policy-label-cache:
+      expire-after-write: 10m
+      maximum-size: 100_000
+  executors:
+    kube-client:
+      type: cached
+      n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      core-pool-size: 0
 
 airbyte:
+  pod-sweeper:
+    # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
+    # meaning running pods are preserved indefinitely.
+    runningTtl: ${RUNNING_TTL_MINUTES:""}
+    succeededTtl: ${SUCCEEDED_TTL_MINUTES:10}
+    unsuccessfulTtl: ${UNSUCCESSFUL_TTL_MINUTES:120}
+    rate: PT2M
   connector:
     source:
       credentials:
@@ -36,6 +55,7 @@ airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -78,6 +98,7 @@ airbyte:
       high-priority-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    network-policy-introspection: false
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -120,11 +141,13 @@ airbyte:
         client-id-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY:}
         client-secret-ref-name: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME:}
         client-secret-ref-key: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY:}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
   role: ${AIRBYTE_ROLE:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:
     job:
       error-reporting:
@@ -132,6 +155,7 @@ airbyte:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
+        connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
         init:
           container:
             image: ${WORKLOAD_INIT_IMAGE:}
@@ -142,11 +166,20 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
         tolerations: ${JOB_KUBE_TOLERATIONS:}
         sidecar:
           container:
             image: ${CONNECTOR_SIDECAR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        profiler:
+          container:
+            image: ${CONNECTOR_PROFILER_IMAGE:}
+            image-pull-policy: ${JOB_KUBE_PROFILER_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+            cpu-limit: ${PROFILER_JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+            cpu-request: ${PROFILER_JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+            memory-limit: ${PROFILER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:1024Mi}
+            memory-request: ${PROFILER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:1024Mi}
         volumes:
           data-plane-creds:
             mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
@@ -205,10 +238,6 @@ airbyte:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
-  metric:
-    client: ${METRIC_CLIENT:}
-    should-publish: ${PUBLISH_METRICS:false}
-    otel-collector-endpoint: ${OTEL_COLLECTOR_ENDPOINT:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
@@ -235,6 +264,7 @@ airbyte:
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
         connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
       gcs:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.factory;
@@ -203,7 +203,7 @@ public class OAuthConfigSupplier {
                                                final BiConsumer<String, List<String>> consumer) {
     final JsonNode outputSpecTop = spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
     final JsonNode outputSpec;
-    if (outputSpecTop.has(PROPERTIES)) {
+    if (outputSpecTop != null && outputSpecTop.has(PROPERTIES)) {
       outputSpec = outputSpecTop.get(PROPERTIES);
     } else {
       LOGGER.error(String.format("In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare properties.", connectorName));

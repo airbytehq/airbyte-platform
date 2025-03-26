@@ -5,9 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -15,7 +12,6 @@ dependencies {
   api(libs.micronaut.cache.caffeine)
 
   implementation(project(":oss:airbyte-commons"))
-  implementation(libs.apache.commons.cli)
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
@@ -49,10 +45,11 @@ airbyte {
   }
 }
 
-val copyScripts = tasks.register<Copy>("copyScripts") {
-  from("scripts")
-  into("build/airbyte/docker/bin/scripts")
-}
+val copyScripts =
+  tasks.register<Copy>("copyScripts") {
+    from("scripts")
+    into("build/airbyte/docker/bin/scripts")
+  }
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyScripts)

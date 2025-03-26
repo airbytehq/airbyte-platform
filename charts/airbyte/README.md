@@ -1,27 +1,6 @@
 # airbyte
 
-![Version: 1.1.1](https://img.shields.io/badge/Version-1.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.1.0](https://img.shields.io/badge/AppVersion-1.1.0-informational?style=flat-square)
-
 Helm chart to deploy airbyte
-
-## Requirements
-
-| Repository | Name | Version |
-|------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | cron | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | keycloak | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | worker | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | workload-api-server | 1.1.1 |
-| https://airbytehq.github.io/helm-charts/ | workload-launcher | 1.1.1 |
-| https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
 
@@ -123,14 +102,6 @@ Helm chart to deploy airbyte
 | cron.resources.requests | object | `{}` | The requested resources for the cron container                                                                                                                          |
 | cron.secrets | object | `{}` | Supply additional secrets to container                                                                                                                                  |
 | cron.tolerations | list | `[]` | Tolerations for cron pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                        |
-| externalDatabase.database | string | `""` | Database name                                                                                                                                                           |
-| externalDatabase.existingSecret | string | `""` | Name of an existing secret resource containing the DB password                                                                                                          |
-| externalDatabase.existingSecretPasswordKey | string | `""` | Name of an existing secret key containing the DB password                                                                                                               |
-| externalDatabase.host | string | `""` | Database host                                                                                                                                                           |
-| externalDatabase.jdbcUrl | string | `""` | Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)                                                                                                  |
-| externalDatabase.password | string | `""` | Database password                                                                                                                                                       |
-| externalDatabase.port | string | `""` | Database port number                                                                                                                                                    |
-| externalDatabase.user | string | `""` | non-root Username for Airbyte Database                                                                                                                                  |
 | fullnameOverride | string | `""` | String to fully override airbyte.fullname template with a string                                                                                                        |
 | global.airbyteUrl | string | `""` | The URL where Airbyte will be reached; This should match your Ingress host                                                                                              |
 | global.airbyteYml | string | `""` |                                                                                                                                                                         |
@@ -148,14 +119,11 @@ Helm chart to deploy airbyte
 | global.database.port | string | `""` | The database port                                                                                                                                                       |
 | global.database.secretName | string | `""` | Secret name where database credentials are stored                                                                                                                       |
 | global.database.user | string | `""` | The database user                                                                                                                                                       |
-| global.deploymentMode | string | `"oss"` | Deployment mode, whether or not render the default env vars and volumes in deployment spec                                                                              |
-| global.edition | string | `"community"` | Edition; "community" or "pro"                                                                                                                                           |
+| global.edition | string | `"community"` | Edition; "community" "enterprise"                                                                                                                                       |
 | global.enterprise.licenseKeySecretKey | string | `"license-key"` | The key within `licenseKeySecretName` where the Airbyte license key is stored                                                                                           |
 | global.enterprise.secretName | string | `"airbyte-config-secrets"` | Secret name where an Airbyte license key is stored                                                                                                                      |
 | global.env_vars | object | `{}` | Environment variables                                                                                                                                                   |
 | global.jobs.kube.annotations | object | `{}` | key/value annotations applied to kube jobs                                                                                                                              |
-| global.jobs.kube.images.busybox | string | `""` | busybox image used by the job pod                                                                                                                                       |
-| global.jobs.kube.images.curl | string | `""` | curl image used by the job pod                                                                                                                                          |
 | global.jobs.kube.labels | object | `{}` | key/value labels applied to kube jobs                                                                                                                                   |
 | global.jobs.kube.main_container_image_pull_secret | string | `""` | image pull secret to use for job pod                                                                                                                                    |
 | global.jobs.kube.nodeSelector | object | `{}` | Node labels for pod assignment                                                                                                                                          |
@@ -350,7 +318,7 @@ Helm chart to deploy airbyte
 | temporal.extraVolumes | list | `[]` | Additional volumes for temporal pods                                                                                                                                    |
 | temporal.image.pullPolicy | string | `"IfNotPresent"` | The pull policy for the temporal image                                                                                                                                  |
 | temporal.image.repository | string | `"temporalio/auto-setup"` | The temporal image repository to use                                                                                                                                    |
-| temporal.image.tag | string | `"1.23.0"` | The temporal image tag to use                                                                                                                                           |
+| temporal.image.tag | string | `"1.26"` | The temporal image tag to use                                                                                                                                           |
 | temporal.livenessProbe.enabled | bool | `false` | Enable livenessProbe on the temporal                                                                                                                                    |
 | temporal.nodeSelector | object | `{}` | Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/                                                                      |
 | temporal.podAnnotations | object | `{}` | Add extra annotations to the temporal pod                                                                                                                               |
@@ -540,4 +508,4 @@ Helm chart to deploy airbyte
 | workload-launcher.resources.limits | object | `{}` | The resources limits for the workload launcher container                                                                                                                |
 | workload-launcher.resources.requests | object | `{}` | The requested resources for the workload launcher container                                                                                                             |
 | workload-launcher.tolerations | list | `[]` | Tolerations for workload launcher pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                           |
-| workload-launcher.workloadInit.image | string | `""` | Workload Init image                                                                                                                                                 |
+| workload-launcher.workloadInit.image | string | `""` | Workload Init image                                                                                                                                                     |

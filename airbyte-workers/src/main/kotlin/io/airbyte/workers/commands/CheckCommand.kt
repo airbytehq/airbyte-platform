@@ -1,17 +1,20 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionOutput
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
@@ -53,20 +56,20 @@ class CheckCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.checkConnectionInput.actorContext.workspaceId
-    val geo: Geography = getGeography(input.launcherConfig.connectionId, workspaceId)
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
       labels =
-        listOf(
+        listOfNotNull(
           WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
           WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, attemptNumber.toString()),
           WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
           WorkloadLabel(Metadata.ACTOR_TYPE, input.checkConnectionInput.actorType.toString()),
+          // Can be null if this is the first check that gets run
+          input.checkConnectionInput.actorId?.let { WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, it.toString()) },
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
-      geography = geo.value,
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,
@@ -84,14 +87,18 @@ class CheckCommand(
             StandardCheckConnectionOutput()
               .withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage(failureReason.externalMessage),
-          )
-          .withFailureReason(failureReason)
+          ).withFailureReason(failureReason)
       }
 
     metricClient.count(
-      OssMetricsRegistry.SIDECAR_CHECK,
-      1,
-      MetricAttribute(MetricTags.STATUS, if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success"),
+      metric = OssMetricsRegistry.SIDECAR_CHECK,
+      attributes =
+        arrayOf(
+          MetricAttribute(
+            MetricTags.STATUS,
+            if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success",
+          ),
+        ),
     )
 
     return output

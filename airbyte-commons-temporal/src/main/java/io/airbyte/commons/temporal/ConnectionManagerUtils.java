@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -9,10 +9,10 @@ import io.airbyte.commons.temporal.exception.UnreachableWorkflowException;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
@@ -23,17 +23,20 @@ import io.temporal.workflow.Functions.Proc;
 import io.temporal.workflow.Functions.Proc1;
 import io.temporal.workflow.Functions.TemporalFunctionalInterfaceMarker;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility functions for connection manager workflows.
  */
 @Singleton
-@Slf4j
 public class ConnectionManagerUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final WorkflowClientWrapped workflowClientWrapped;
   private final MetricClient metricClient;
@@ -100,7 +103,7 @@ public class ConnectionManagerUtils {
       }
       return connectionManagerWorkflow;
     } catch (final UnreachableWorkflowException e) {
-      metricClient.count(OssMetricsRegistry.WORFLOW_UNREACHABLE, 1,
+      metricClient.count(OssMetricsRegistry.WORFLOW_UNREACHABLE,
           new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
       log.error(
           String.format(

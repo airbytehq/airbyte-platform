@@ -1,18 +1,21 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
 
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fake client for customerIoNotification - this will not send any actual emails.
  */
-@Slf4j
 @Singleton
 public class FakeCustomerIoEmailNotificationSender extends CustomerIoEmailNotificationSender {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   FakeCustomerIoEmailNotificationSender() {
     super(null, null);

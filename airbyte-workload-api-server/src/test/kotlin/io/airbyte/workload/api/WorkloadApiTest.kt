@@ -1,7 +1,13 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api
 
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.WorkflowClientWrapped
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -9,6 +15,8 @@ import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
+import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
+import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -43,50 +51,45 @@ class WorkloadApiTest(
   @Client("/") val client: HttpClient,
 ) {
   @Singleton
-  fun mockMeterRegistry(): MeterRegistry {
-    return SimpleMeterRegistry()
-  }
+  fun mockMeterRegistry(): MeterRegistry = SimpleMeterRegistry()
 
   private val workloadService = mockk<WorkloadService>()
 
   @MockBean(WorkloadService::class)
   @Replaces(WorkloadService::class)
-  fun workloadService(): WorkloadService {
-    return workloadService
-  }
+  fun workloadService(): WorkloadService = workloadService
 
   private val workloadHandler = mockk<WorkloadHandlerImpl>()
 
   @MockBean(WorkloadHandler::class)
   @Replaces(WorkloadHandler::class)
-  fun workloadHandler(): WorkloadHandler {
-    return workloadHandler
-  }
+  fun workloadHandler(): WorkloadHandler = workloadHandler
 
   private val workflowClient = mockk<WorkflowClient>()
 
   @MockBean(WorkflowClient::class)
   @Replaces(WorkflowClient::class)
-  fun workflowClient(): WorkflowClient {
-    return workflowClient
-  }
+  fun workflowClient(): WorkflowClient = workflowClient
 
   private val workloadClientWrapped = mockk<WorkflowClientWrapped>()
+  private val airbyteApiClient: AirbyteApiClient = mockk()
+
+  @MockBean(AirbyteApiClient::class)
+  @Replaces(AirbyteApiClient::class)
+  fun airbyteApiClient(): AirbyteApiClient = airbyteApiClient
 
   @MockBean(WorkflowClientWrapped::class)
   @Replaces(WorkflowClientWrapped::class)
-  fun workloadClientWrapped(): WorkflowClientWrapped {
-    return workloadClientWrapped
-  }
+  fun workloadClientWrapped(): WorkflowClientWrapped = workloadClientWrapped
 
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
-    every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
-    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-    verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -287,6 +290,37 @@ class WorkloadApiTest(
       HttpStatus.GONE,
       exceptionMessage,
     )
+  }
+
+  @Test
+  fun `poll workloads happy path`() {
+    val req =
+      WorkloadQueuePollRequest(
+        dataplaneGroup = "dataplane-group-1",
+        priority = WorkloadPriority.DEFAULT,
+        10,
+      )
+
+    every { workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, 10) }.returns(emptyList())
+    testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/poll", req), HttpStatus.OK)
+  }
+
+  @Test
+  fun `count queue depth happy path`() {
+    val req =
+      WorkloadQueueQueryRequest(
+        dataplaneGroup = "dataplane-group-1",
+        priority = WorkloadPriority.DEFAULT,
+      )
+
+    every { workloadHandler.countWorkloadQueueDepth(req.dataplaneGroup, req.priority) }.returns(1)
+    testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/depth", req), HttpStatus.OK)
+  }
+
+  @Test
+  fun `get queue stats happy path`() {
+    every { workloadHandler.getWorkloadQueueStats() }.returns(listOf())
+    testEndpointStatus(HttpRequest.GET("/api/v1/workload/queue/stats"), HttpStatus.OK)
   }
 
   private fun testEndpointStatus(

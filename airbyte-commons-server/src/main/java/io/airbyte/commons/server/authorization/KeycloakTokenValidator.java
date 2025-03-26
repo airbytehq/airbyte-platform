@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.authorization;
@@ -16,38 +16,46 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.support.RbacRoleHelper;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micrometer.common.util.StringUtils;
+import io.micronaut.context.annotation.Primary;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
 import io.micronaut.security.token.validator.TokenValidator;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 /**
  * Token Validator for Airbyte Cloud and Enterprise. Performs an online validation of the token
  * against the Keycloak server.
  */
-@Slf4j
 @Singleton
+@Primary
 @RequiresAuthMode(AuthMode.OIDC)
+@Requires(property = "airbyte.auth.identity-provider.type",
+          notEquals = "generic-oidc")
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
   "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String EXTERNAL_USER = "external-user";
   private static final String INTERNAL_SERVICE_ACCOUNT = "internal-service-account";
@@ -79,7 +87,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
           } else {
             // pass to the next validator, if one exists
             log.debug("Token was not a valid Keycloak token: {}", token);
-            metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION, 1,
+            metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
                 AUTHENTICATION_FAILURE_METRIC_ATTRIBUTE,
                 new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));
             return Mono.empty();
@@ -100,7 +108,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       if (isInternalServiceAccount(userAttributeMap)) {
         log.debug("Performing authentication for internal service account...");
         final String clientName = jwtPayload.get("azp").asText();
-        metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION, 1,
+        metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
             AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
             new MetricAttribute(MetricTags.USER_TYPE, INTERNAL_SERVICE_ACCOUNT),
             new MetricAttribute(MetricTags.CLIENT_ID, clientName),
@@ -115,7 +123,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
         final var roles = tokenRoleResolver.resolveRoles(authUserId, request);
 
         log.debug("Authenticating user '{}' with roles {}...", authUserId, roles);
-        metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION, 1,
+        metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
             AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
             new MetricAttribute(MetricTags.USER_TYPE, EXTERNAL_USER),
             new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));

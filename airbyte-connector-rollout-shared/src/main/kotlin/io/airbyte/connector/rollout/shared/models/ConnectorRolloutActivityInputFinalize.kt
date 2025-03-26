@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared.models
 
 import io.airbyte.config.ConnectorEnumRolloutStrategy
@@ -15,4 +19,5 @@ data class ConnectorRolloutActivityInputFinalize(
   var failedReason: String? = null,
   var updatedBy: UUID? = null,
   var rolloutStrategy: ConnectorEnumRolloutStrategy? = null,
+  var retainPinsOnCancellation: Boolean = true,
 )

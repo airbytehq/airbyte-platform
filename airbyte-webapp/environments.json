@@ -5,6 +5,12 @@
     "envFile": ".env.development-k8s",
     "description": "Local Kubernetes cluster via `make deploy.oss`"
   },
+  "enterprise": {
+    "name": "frontend-dev-enterprise",
+    "group": "Enterprise",
+    "envFile": ".env.frontend-dev-enterprise",
+    "description": "Develop against a remote Enterprise environment. Requires VPN to be active."
+  },
   "enterprise-local": {
     "name": "Local K8s",
     "group": "Enterprise",

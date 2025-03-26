@@ -8,7 +8,6 @@ import {
   enterName,
   enterRecordSelector,
   enterStreamName,
-  enterTestInputs,
   enterUrlBase,
   enterUrlPath,
   enterUrlPathFromForm,
@@ -19,7 +18,6 @@ import {
   goToView,
   openDetectedSchemaTab,
   openStreamSchemaTab,
-  openTestInputs,
   selectAuthMethod,
   submitForm,
 } from "pages/connectorBuilderPage";
@@ -50,9 +48,8 @@ export const configureStream = () => {
 export const configureAuth = () => {
   goToView("global");
   selectAuthMethod("Bearer");
-  openTestInputs();
-  enterTestInputs({ apiKey: "theauthkey" });
-  submitForm();
+  goToView("inputs");
+  focusAndType("[name='testingValues.api_key']", "theauthkey");
 };
 
 export const configurePagination = () => {
@@ -65,7 +62,7 @@ export const configureParameterizedRequests = (numberOfParameters: number) => {
   goToView("0");
   enableParameterizedRequests();
   configureParameters(Array.from(Array(numberOfParameters).keys()).join(","), "item_id");
-  enterUrlPath("items/{{}{{} stream_slice.item_id }}");
+  enterUrlPath("items/{{}{{} stream_slice.item_id");
 };
 
 export const publishProject = () => {
@@ -170,10 +167,15 @@ export const assertSchemaMismatch = () => {
 };
 
 export const assertUrlPath = (urlPath: string) => {
-  getUrlPathInput().should("have.attr", "value", urlPath);
+  getUrlPathInput().contains(urlPath);
 };
 
 export const acceptSchema = () => {
   openDetectedSchemaTab();
   cy.get("[data-testid='accept-schema']").click();
+};
+
+export const focusAndType = (selector: string, text: string) => {
+  cy.get(selector).click();
+  cy.get(selector).type(text);
 };

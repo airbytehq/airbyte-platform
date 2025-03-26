@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -17,7 +17,6 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
@@ -37,6 +36,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
@@ -69,10 +69,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.Data;
 
 @SuppressWarnings("LineLength")
 public class MockData {
@@ -310,14 +310,11 @@ public class MockData {
 
   public static List<Organization> organizations() {
     final Organization organization1 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com").withPba(false)
-            .withOrgLevelBilling(false);
+        new Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com");
     final Organization organization2 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com").withPba(false)
-            .withOrgLevelBilling(false);
+        new Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com");
     final Organization organization3 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com").withPba(false)
-            .withOrgLevelBilling(false);
+        new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com");
     return Arrays.asList(organization1, organization2, organization3);
   }
 
@@ -391,7 +388,7 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
@@ -482,7 +479,7 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
@@ -889,17 +886,49 @@ public class MockData {
     return new Organization()
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
         .withName("default org")
-        .withEmail("test@test.com")
-        .withPba(false)
-        .withOrgLevelBilling(false);
+        .withEmail("test@test.com");
 
   }
 
-  @Data
   public static class ActorCatalogFetchEventWithCreationDate {
 
     private final ActorCatalogFetchEvent actorCatalogFetchEvent;
     private final OffsetDateTime createdAt;
+
+    public ActorCatalogFetchEventWithCreationDate(ActorCatalogFetchEvent actorCatalogFetchEvent, OffsetDateTime createdAt) {
+      this.actorCatalogFetchEvent = actorCatalogFetchEvent;
+      this.createdAt = createdAt;
+    }
+
+    public ActorCatalogFetchEvent getActorCatalogFetchEvent() {
+      return actorCatalogFetchEvent;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+      return createdAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ActorCatalogFetchEventWithCreationDate that = (ActorCatalogFetchEventWithCreationDate) o;
+      return Objects.equals(actorCatalogFetchEvent, that.actorCatalogFetchEvent) && Objects.equals(createdAt, that.createdAt);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(actorCatalogFetchEvent, createdAt);
+    }
+
+    @Override
+    public String toString() {
+      return "ActorCatalogFetchEventWithCreationDate{"
+          + "actorCatalogFetchEvent=" + actorCatalogFetchEvent
+          + ", createdAt=" + createdAt
+          + '}';
+    }
 
   }
 

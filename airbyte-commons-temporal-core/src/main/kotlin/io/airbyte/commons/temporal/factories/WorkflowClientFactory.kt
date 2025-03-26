@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.factories
@@ -17,22 +17,22 @@ class WorkflowClientFactory {
     workflowServiceStubs: WorkflowServiceStubs,
     namespace: String,
     dataConverter: DataConverter,
-  ): WorkflowClient {
-    return WorkflowClient.newInstance(
+  ): WorkflowClient =
+    WorkflowClient.newInstance(
       workflowServiceStubs,
-      WorkflowClientOptions.newBuilder()
+      WorkflowClientOptions
+        .newBuilder()
         .setDataConverter(dataConverter)
-        .setNamespace(namespace).build(),
+        .setNamespace(namespace)
+        .build(),
     )
-  }
 
   fun createWorkflowClient(
     workflowServiceStubs: WorkflowServiceStubs,
     options: WorkflowClientOptions,
-  ): WorkflowClient {
-    return WorkflowClient.newInstance(
+  ): WorkflowClient =
+    WorkflowClient.newInstance(
       workflowServiceStubs,
       options,
     )
-  }
 }

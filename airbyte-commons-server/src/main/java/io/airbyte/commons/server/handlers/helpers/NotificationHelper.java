@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -11,10 +11,10 @@ import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
 import io.airbyte.notification.messages.ConnectionInfo;
@@ -32,13 +32,16 @@ public class NotificationHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHelper.class);
   public static final String NOTIFICATION_TRIGGER_SCHEMA = "schema_propagated";
   public static final String NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY = "schema_diff_to_apply";
+  public static final String NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED = "schema_diff_to_apply_propagation_disabled";
 
   private final WebUrlHelper webUrlHelper;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
+  private final MetricClient metricClient;
 
-  public NotificationHelper(final WebUrlHelper webUrlHelper, final ApplySchemaChangeHelper applySchemaChangeHelper) {
+  public NotificationHelper(final WebUrlHelper webUrlHelper, final ApplySchemaChangeHelper applySchemaChangeHelper, final MetricClient metricClient) {
     this.webUrlHelper = webUrlHelper;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
+    this.metricClient = metricClient;
   }
 
   private SchemaUpdateNotification getSchemaUpdateNotification(final NotificationSettings notificationSettings,
@@ -47,7 +50,7 @@ public class NotificationHelper {
                                                                final ConnectionRead connection,
                                                                final SourceConnection source) {
     try {
-      if (notificationSettings.getSendOnConnectionUpdate() == null) {
+      if (notificationSettings != null && notificationSettings.getSendOnConnectionUpdate() == null) {
         LOGGER.warn("Connection update notification settings are not configured for workspaceId: '{}'", workspace.getWorkspaceId());
         return null;
       }
@@ -65,13 +68,12 @@ public class NotificationHelper {
       final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
       final boolean isBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
 
-      final SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-          .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
-          .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
-          .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
-          .catalogDiff(diff)
-          .isBreakingChange(isBreakingChange)
-          .build();
+      final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+          new WorkspaceInfo(workspace.getWorkspaceId(), workspace.getName(), workspaceUrl),
+          new ConnectionInfo(connection.getConnectionId(), connection.getName(), connectionUrl),
+          new SourceInfo(source.getSourceId(), source.getName(), sourceUrl),
+          isBreakingChange,
+          diff);
       return notification;
     } catch (final Exception e) {
       LOGGER.error("Failed to build notification {}: {}", workspace, e);
@@ -84,7 +86,8 @@ public class NotificationHelper {
                                       final StandardWorkspace workspace,
                                       final ConnectionRead connection,
                                       final SourceConnection source,
-                                      final String email) {
+                                      final String email,
+                                      final Boolean isPropagationDisabled) {
     try {
       final SchemaUpdateNotification notification = getSchemaUpdateNotification(notificationSettings, diff, workspace, connection, source);
       if (notification == null) {
@@ -93,44 +96,62 @@ public class NotificationHelper {
       final NotificationItem item;
       final boolean isBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
       if (isBreakingChange) {
-        item = notificationSettings.getSendOnConnectionUpdateActionRequired();
+        item = notificationSettings != null ? notificationSettings.getSendOnConnectionUpdateActionRequired() : null;
       } else {
-        item = notificationSettings.getSendOnConnectionUpdate();
+        item = notificationSettings != null ? notificationSettings.getSendOnConnectionUpdate() : null;
       }
 
-      for (final Notification.NotificationType type : item.getNotificationType()) {
-        switch (type) {
-          case SLACK -> {
-            final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            if (slackNotificationClient.notifySchemaDiffToApply(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
-            } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+      if (item != null) {
+        for (final Notification.NotificationType type : item.getNotificationType()) {
+          switch (type) {
+            case SLACK -> {
+              final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
+              if (isPropagationDisabled) {
+                sendNotificationMetrics(
+                    slackNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                    slackNotificationClient.getNotificationClientType(),
+                    NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
+              } else {
+                sendNotificationMetrics(
+                    slackNotificationClient.notifySchemaDiffToApply(notification, email),
+                    slackNotificationClient.getNotificationClientType(),
+                    NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
+              }
             }
-          }
-          case CUSTOMERIO -> {
-            final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            if (emailNotificationClient.notifySchemaDiffToApply(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
-            } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
-                  new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
-                  new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY));
+            case CUSTOMERIO -> {
+              final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
+              if (isPropagationDisabled) {
+                sendNotificationMetrics(
+                    emailNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                    emailNotificationClient.getNotificationClientType(),
+                    NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
+              } else {
+                sendNotificationMetrics(
+                    emailNotificationClient.notifySchemaDiffToApply(notification, email),
+                    emailNotificationClient.getNotificationClientType(),
+                    NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
+              }
             }
-          }
-          default -> {
-            LOGGER.warn("Notification type {} not supported", type);
+            default -> {
+              LOGGER.warn("Notification type {} not supported", type);
+            }
           }
         }
       }
     } catch (final Exception e) {
       LOGGER.error("Failed to send notification {}: {}", workspace, e);
+    }
+  }
+
+  void sendNotificationMetrics(final boolean success, final String notificationClientType, final String metricAttributeValue) {
+    if (success) {
+      metricClient.count(OssMetricsRegistry.NOTIFICATION_SUCCESS,
+          new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, notificationClientType),
+          new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, metricAttributeValue));
+    } else {
+      metricClient.count(OssMetricsRegistry.NOTIFICATION_FAILED,
+          new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, notificationClientType),
+          new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, metricAttributeValue));
     }
   }
 
@@ -157,11 +178,11 @@ public class NotificationHelper {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
             if (slackNotificationClient.notifySchemaPropagated(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
+              metricClient.count(OssMetricsRegistry.NOTIFICATION_SUCCESS,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
             } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
+              metricClient.count(OssMetricsRegistry.NOTIFICATION_FAILED,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
             }
@@ -169,11 +190,11 @@ public class NotificationHelper {
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
             if (emailNotificationClient.notifySchemaPropagated(notification, email)) {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_SUCCESS, 1,
+              metricClient.count(OssMetricsRegistry.NOTIFICATION_SUCCESS,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
             } else {
-              MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATION_FAILED, 1,
+              metricClient.count(OssMetricsRegistry.NOTIFICATION_FAILED,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
             }

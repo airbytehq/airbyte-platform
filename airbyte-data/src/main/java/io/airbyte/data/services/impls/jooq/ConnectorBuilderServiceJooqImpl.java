@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -49,11 +49,14 @@ import org.jooq.exception.DataAccessException;
 @Singleton
 public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService {
 
+  private static final String INJECTED_DECLARATIVE_MANIFEST_KEY = "__injected_declarative_manifest";
+
   private static final List<Field<?>> BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS =
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
           CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE, CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
-          field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"), CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID,
-          CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID);
+          field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"), CONNECTOR_BUILDER_PROJECT.UPDATED_AT,
+          CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID, CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL,
+          CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT);
 
   private final ExceptionWrappingDatabase database;
 
@@ -128,8 +131,10 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             CONNECTOR_BUILDER_PROJECT.NAME,
             CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID,
             CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
+            CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT,
             field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"))
-        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST)
+        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST,
+            DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT)
         .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
         .from(CONNECTOR_BUILDER_PROJECT)
         .join(ACTIVE_DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
@@ -194,6 +199,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @param workspaceId the id of the workspace the project is associated with
    * @param name the name of the project
    * @param manifestDraft the manifest (can be null for no draft)
+   * @param componentsFileContent the content of the components file (can be null)
    * @throws IOException exception while interacting with db
    */
   @Override
@@ -201,12 +207,13 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
                                        final UUID workspaceId,
                                        final String name,
                                        final JsonNode manifestDraft,
+                                       final String componentsFileContent,
                                        final UUID baseActorDefinitionVersionId,
                                        final String contributionUrl,
                                        final UUID contributionActorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
-      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, baseActorDefinitionVersionId, contributionUrl,
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, componentsFileContent, baseActorDefinitionVersionId, contributionUrl,
           contributionActorDefinitionId, ctx);
       return null;
     });
@@ -223,6 +230,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(projectId))
           .execute();
@@ -244,6 +252,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
               .and(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)))
@@ -266,6 +275,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @param workspaceId the id of the workspace the project is associated with
    * @param name the name of the project
    * @param manifestDraft the manifest (can be null for no draft)
+   * @param componentsFileContent the content of the components file (can be null)
    * @param actorDefinitionId the id of the associated actor definition
    * @throws IOException exception while interacting with db
    */
@@ -274,13 +284,15 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
                                                      final UUID workspaceId,
                                                      final String name,
                                                      final JsonNode manifestDraft,
+                                                     final String componentsFileContent,
                                                      final UUID baseActorDefinitionVersionId,
                                                      final String contributionPullRequestUrl,
                                                      final UUID contributionActorDefinitionId,
                                                      final UUID actorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
-      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, baseActorDefinitionVersionId, contributionPullRequestUrl,
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, componentsFileContent, baseActorDefinitionVersionId,
+          contributionPullRequestUrl,
           contributionActorDefinitionId, ctx);
       ctx.update(ACTOR_DEFINITION)
           .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
@@ -313,6 +325,28 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   }
 
   /**
+   * Deletes all config injections associated with a given actor definition ID.
+   *
+   * @param actorDefinitionId The ID of the actor definition whose config injections should be deleted
+   * @param ctx The JOOQ DSL context to use for the deletion
+   */
+  private void deleteActorDefinitionConfigInjections(final UUID actorDefinitionId, final DSLContext ctx) {
+    ctx.deleteFrom(ACTOR_DEFINITION_CONFIG_INJECTION)
+        .where(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .execute();
+  }
+
+  /**
+   * Checks if a given config injection is a manifest injection by comparing its injection path.
+   *
+   * @param injection The config injection to check
+   * @return true if the injection is a manifest injection, false otherwise
+   */
+  private static Boolean isManifestInjection(ActorDefinitionConfigInjection injection) {
+    return INJECTED_DECLARATIVE_MANIFEST_KEY.equals(injection.getInjectionPath());
+  }
+
+  /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
    * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
@@ -340,7 +374,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *
    * @param declarativeManifest declarative manifest version to create and make active
-   * @param configInjection configInjection for the manifest
+   * @param configInjections configInjection for the manifest
    * @param connectorSpecification connectorSpecification associated with the declarativeManifest
    *        being created
    * @throws IOException exception while interacting with db
@@ -348,14 +382,24 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
-                                                       final ActorDefinitionConfigInjection configInjection,
+                                                       final List<ActorDefinitionConfigInjection> configInjections,
                                                        final ConnectorSpecification connectorSpecification,
                                                        final String cdkVersion)
       throws IOException {
-    if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
+
+    // find one manifest config injection
+    Optional<ActorDefinitionConfigInjection> manifestConfigInjection = configInjections.stream()
+        .filter(ConnectorBuilderServiceJooqImpl::isManifestInjection)
+        .findFirst();
+
+    if (manifestConfigInjection.isEmpty()) {
+      throw new IllegalArgumentException("No manifest config injection found");
+    }
+
+    if (!declarativeManifest.getActorDefinitionId().equals(manifestConfigInjection.get().getActorDefinitionId())) {
       throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
     }
-    if (!declarativeManifest.getManifest().equals(configInjection.getJsonToInject())) {
+    if (!declarativeManifest.getManifest().equals(manifestConfigInjection.get().getJsonToInject())) {
       throw new IllegalArgumentException("The DeclarativeManifest does not match the config injection");
     }
     if (!declarativeManifest.getSpec().get("connectionSpecification").equals(connectorSpecification.getConnectionSpecification())) {
@@ -363,7 +407,13 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     }
 
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
+      // Set new version of the actor definition
+      updateDeclarativeActorDefinitionVersion(manifestConfigInjection.get().getActorDefinitionId(), connectorSpecification, cdkVersion, ctx);
+
+      // Replace all existing config injections
+      upsertActorDefinitionConfigInjections(configInjections, ctx);
+
+      // Insert the new declarative manifest
       insertActiveDeclarativeManifest(declarativeManifest, ctx);
       return null;
     });
@@ -398,7 +448,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @param sourceDefinitionId actor definition to update
    * @param version the version of the manifest to make active. declarative_manifest.version must
    *        already exist
-   * @param configInjection configInjection for the manifest
+   * @param configInjections configInjections for the manifest
    * @param connectorSpecification connectorSpecification associated with the declarativeManifest
    *        being made active
    * @throws IOException exception while interacting with db
@@ -406,12 +456,13 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   @Override
   public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
                                                 final Long version,
-                                                final ActorDefinitionConfigInjection configInjection,
+                                                final List<ActorDefinitionConfigInjection> configInjections,
                                                 final ConnectorSpecification connectorSpecification,
                                                 final String cdkVersion)
       throws IOException {
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
+      updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, ctx);
+      upsertActorDefinitionConfigInjections(configInjections, ctx);
       upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version), ctx);
       return null;
     });
@@ -452,6 +503,77 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
       writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection, ctx);
       return null;
     });
+  }
+
+  /**
+   * Update or create one or more config injection object. If there is an existing config injection
+   * for the given actor definition and path, it is updated. If there isn't yet, a new config
+   * injection is created.
+   *
+   * @param actorDefinitionConfigInjections the config injections to write to the database
+   * @throws IOException exception while interacting with db
+   */
+  @Override
+  public void writeActorDefinitionConfigInjectionsForPath(
+                                                          final List<ActorDefinitionConfigInjection> actorDefinitionConfigInjections)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeActorDefinitionConfigInjectionsForPath(actorDefinitionConfigInjections, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write multiple config injections to the database using the provided DSL context. This method
+   * iterates through the list of config injections and writes each one individually.
+   *
+   * @param actorDefinitionConfigInjections List of config injections to write
+   * @param ctx The JOOQ DSL context to use for database operations
+   */
+  private void writeActorDefinitionConfigInjectionsForPath(
+                                                           final List<ActorDefinitionConfigInjection> actorDefinitionConfigInjections,
+                                                           final DSLContext ctx) {
+    for (final ActorDefinitionConfigInjection configInjection : actorDefinitionConfigInjections) {
+      writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
+    }
+  }
+
+  /**
+   * Update or insert a list of config injections for an actor definition. This method: 1. Validates
+   * that a manifest config injection exists in the list 2. Ensures all config injections are for the
+   * same actor definition 3. Deletes any existing config injections for the actor definition 4.
+   * Writes the new config injections
+   *
+   * @param configInjections List of config injections to upsert
+   * @param ctx The JOOQ DSL context to use for database operations
+   * @throws IllegalArgumentException if no manifest injection is found or if config injections have
+   *         different actor definition IDs
+   */
+  private void upsertActorDefinitionConfigInjections(
+                                                     final List<ActorDefinitionConfigInjection> configInjections,
+                                                     final DSLContext ctx) {
+
+    // find one manifest config injection
+    Optional<ActorDefinitionConfigInjection> manifestConfigInjection = configInjections.stream()
+        .filter(ConnectorBuilderServiceJooqImpl::isManifestInjection)
+        .findFirst();
+
+    // Ensure all config injections have the same actor definition id
+    final long uniqueActorDefinitionIds = configInjections.stream().map(ActorDefinitionConfigInjection::getActorDefinitionId).distinct().count();
+    final boolean hasMoreThanOneActorDefinitionId = uniqueActorDefinitionIds > 1;
+    if (hasMoreThanOneActorDefinitionId) {
+      throw new IllegalArgumentException("All config injections must have the same actor definition id");
+    }
+
+    if (manifestConfigInjection.isEmpty()) {
+      throw new IllegalArgumentException("No manifest config injection found");
+    }
+
+    // Delete all existing config injections for the actor definition
+    deleteActorDefinitionConfigInjections(manifestConfigInjection.get().getActorDefinitionId(), ctx);
+
+    // Write all new config injections
+    writeActorDefinitionConfigInjectionsForPath(configInjections, ctx);
   }
 
   /**
@@ -502,7 +624,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     return database
         .query(ctx -> ctx
             .select(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.SPEC,
-                DECLARATIVE_MANIFEST.VERSION)
+                DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT)
             .from(DECLARATIVE_MANIFEST)
             .where(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
             .fetch())
@@ -585,6 +707,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
                                         final UUID workspaceId,
                                         final String name,
                                         final JsonNode manifestDraft,
+                                        final String componentsFileContent,
                                         final UUID baseActorDefinitionVersionId,
                                         final String contributionPullRequestUrl,
                                         final UUID contributionActorDefinitionId,
@@ -605,6 +728,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .set(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID, baseActorDefinitionVersionId)
           .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, contributionPullRequestUrl)
           .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID, contributionActorDefinitionId)
+          .set(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT, componentsFileContent)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
           .where(matchId)
           .execute();
@@ -618,6 +742,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .set(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID, baseActorDefinitionVersionId)
           .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL, contributionPullRequestUrl)
           .set(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID, contributionActorDefinitionId)
+          .set(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT, componentsFileContent)
           .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
           .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
           .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
@@ -625,13 +750,15 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     }
   }
 
-  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
+  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest,
+                                               final DSLContext ctx) {
     insertDeclarativeManifest(declarativeManifest, ctx);
     upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
         .withVersion(declarativeManifest.getVersion()), ctx);
   }
 
-  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
+  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest,
+                                                final DSLContext ctx) {
     // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
     // object that is not null. Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
@@ -649,10 +776,11 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .set(DECLARATIVE_MANIFEST.SPEC, JSONB.valueOf(Jsons.serialize(declarativeManifest.getSpec())))
         .set(DECLARATIVE_MANIFEST.VERSION, declarativeManifest.getVersion())
         .set(DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+        .set(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT, declarativeManifest.getComponentsFileContent())
         .execute();
   }
 
-  private void updateDeclarativeActorDefinitionVersion(final ActorDefinitionConfigInjection configInjection,
+  private void updateDeclarativeActorDefinitionVersion(final UUID actorDefinitionId,
                                                        final ConnectorSpecification spec,
                                                        final String cdkVersion,
                                                        final DSLContext ctx) {
@@ -662,10 +790,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, cdkVersion)
-        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
+        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .execute();
-
-    writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
   private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, final DSLContext ctx) {
@@ -726,7 +852,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
         .withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
         .withManifestVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
-        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION));
+        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
+        .withComponentsFileContent(record.get(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT));
   }
 
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
@@ -36,9 +40,10 @@ class ConnectorDefinitionsServiceImpl(
       }
       ConnectorType.DESTINATION -> {
         if (workspaceId != null) {
-          return destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(
-            WorkspaceIdRequestBody().workspaceId(workspaceId),
-          ).toPublicApiModel()
+          return destinationDefinitionsHandler
+            .listDestinationDefinitionsForWorkspace(
+              WorkspaceIdRequestBody().workspaceId(workspaceId),
+            ).toPublicApiModel()
         }
         return destinationDefinitionsHandler.listPublicDestinationDefinitions().toPublicApiModel()
       }

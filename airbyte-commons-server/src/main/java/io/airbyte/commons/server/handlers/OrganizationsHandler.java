@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -17,6 +17,7 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.data.services.OrganizationPaymentConfigService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
@@ -43,14 +44,17 @@ public class OrganizationsHandler {
   private final OrganizationPersistence organizationPersistence;
 
   private final Supplier<UUID> uuidGenerator;
+  private final OrganizationPaymentConfigService organizationPaymentConfigService;
 
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
                               final PermissionService permissionService,
-                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
+                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
+                              final OrganizationPaymentConfigService organizationPaymentConfigService) {
     this.organizationPersistence = organizationPersistence;
     this.permissionService = permissionService;
     this.uuidGenerator = uuidGenerator;
+    this.organizationPaymentConfigService = organizationPaymentConfigService;
   }
 
   private static OrganizationRead buildOrganizationRead(final Organization organization) {
@@ -58,8 +62,6 @@ public class OrganizationsHandler {
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
         .email(organization.getEmail())
-        .pba(organization.getPba())
-        .orgLevelBilling(organization.getOrgLevelBilling())
         .ssoRealm(organization.getSsoRealm());
   }
 
@@ -69,15 +71,11 @@ public class OrganizationsHandler {
     final String email = organizationCreateRequestBody.getEmail();
     final UUID userId = organizationCreateRequestBody.getUserId();
     final UUID orgId = uuidGenerator.get();
-    final Boolean pba = organizationCreateRequestBody.getPba() != null && organizationCreateRequestBody.getPba();
-    final Boolean orgLevelBilling = organizationCreateRequestBody.getOrgLevelBilling() != null && organizationCreateRequestBody.getOrgLevelBilling();
     final Organization organization = new Organization()
         .withOrganizationId(orgId)
         .withName(organizationName)
         .withEmail(email)
-        .withUserId(userId)
-        .withPba(pba)
-        .withOrgLevelBilling(orgLevelBilling);
+        .withUserId(userId);
     organizationPersistence.createOrganization(organization);
 
     try {
@@ -90,6 +88,8 @@ public class OrganizationsHandler {
     } catch (final PermissionRedundantException e) {
       throw new ConflictException(e.getMessage(), e);
     }
+
+    organizationPaymentConfigService.saveDefaultPaymentConfig(organization.getOrganizationId());
     return buildOrganizationRead(organization);
   }
 

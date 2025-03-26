@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services
 
 import io.airbyte.data.repositories.AttemptsRepository
@@ -40,7 +44,8 @@ class StreamAttemptMetadataService(
       streamAttemptMetadataRepository.saveAll(entitiesToSave)
     } catch (e: Exception) {
       val existingStreams =
-        streamAttemptMetadataRepository.findAllByAttemptId(attemptId)
+        streamAttemptMetadataRepository
+          .findAllByAttemptId(attemptId)
           .associate { Pair(it.streamName, it.streamNamespace) to it.id }
       val partitionedEntities =
         entitiesToSave

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
@@ -12,7 +16,6 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Organization
-import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -95,17 +98,10 @@ open class ResourceBootstrapHandler(
         this.userId = user.userId
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
-        this.orgLevelBilling = true
-        this.pba = false
       }
     organizationService.writeOrganization(organization)
 
-    val paymentConfig =
-      OrganizationPaymentConfig()
-        .withOrganizationId(organization.organizationId)
-        .withPaymentStatus(OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED)
-
-    organizationPaymentConfigService.savePaymentConfig(paymentConfig)
+    organizationPaymentConfigService.saveDefaultPaymentConfig(organization.organizationId)
 
     val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
     permissionService.createPermission(organizationPermission)
@@ -144,29 +140,27 @@ open class ResourceBootstrapHandler(
   private fun buildDefaultWorkspacePermission(
     userId: UUID,
     workspaceId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.workspaceId = workspaceId
       this.permissionType = DEFAULT_WORKSPACE_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
   private fun buildDefaultOrganizationPermission(
     userId: UUID,
     organizationId: UUID,
-  ): Permission {
-    return Permission().apply {
+  ): Permission =
+    Permission().apply {
       this.userId = userId
       this.organizationId = organizationId
       this.permissionType = DEFAULT_ORGANIZATION_PERMISSION_TYPE
       this.permissionId = uuidSupplier.get()
     }
-  }
 
-  private fun getDefaultOrganizationName(user: AuthenticatedUser): String {
-    return when {
+  private fun getDefaultOrganizationName(user: AuthenticatedUser): String =
+    when {
       user.companyName != null -> {
         "${user.companyName}'s Organization"
       }
@@ -179,5 +173,4 @@ open class ResourceBootstrapHandler(
         "${user.email.split("@").first()}'s Organization"
       }
     }
-  }
 }

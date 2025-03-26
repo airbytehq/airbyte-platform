@@ -2,6 +2,7 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
+import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 import { useNotificationService } from "hooks/services/Notification";
@@ -135,7 +136,7 @@ export const useDonwnloadJobLogsFetchQuery = () => {
                           `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
                           ...(attemptHasFormattedLogs(info) ? info.logs.logLines : []),
                           ...(attemptHasStructuredLogs(info)
-                            ? info.logs.events.map((event) => JSON.stringify(event))
+                            ? info.logs.events.map((event) => formatLogEvent(event))
                             : []),
                           `\n\n\n`,
                         ])

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.sync
 
 import io.airbyte.analytics.SEGMENT_WRITE_KEY_ENV_VAR
@@ -34,6 +38,7 @@ object OrchestratorConstants {
           EnvVar.STORAGE_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT,
+          EnvVar.STORAGE_BUCKET_AUDIT_LOGGING,
           EnvVar.STORAGE_TYPE,
           EnvVar.WORKSPACE_ROOT,
         ).map { it.name },

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -7,21 +7,24 @@ package io.airbyte.keycloak.setup;
 import io.airbyte.commons.auth.config.OidcConfig;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.Response;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for configuring an identity provider. It creates and manages various
  * identity providers for authentication purposes.
  */
 @Singleton
-@Slf4j
 @SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class IdentityProvidersConfigurator {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   static final String AIRBYTE_MANAGED_IDP_KEY = "airbyte-managed-idp";
   static final String AIRBYTE_MANAGED_IDP_VALUE = "true";

@@ -1,27 +1,35 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.worker
 
+import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.problems.model.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse
 import io.airbyte.config.ConnectorEnumRolloutState
+import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.connector.rollout.shared.Constants
+import io.airbyte.connector.rollout.shared.Decision
+import io.airbyte.connector.rollout.shared.RolloutProgressionDecider
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputCleanup
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputVerifyDefaultVersion
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.connector.rollout.worker.activities.CleanupActivity
 import io.airbyte.connector.rollout.worker.activities.DoRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FinalizeRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.FindRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.GetRolloutActivity
+import io.airbyte.connector.rollout.worker.activities.PauseRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivity
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivity
 import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivity
@@ -30,7 +38,6 @@ import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
 import io.temporal.failure.ApplicationFailure
 import io.temporal.workflow.Workflow
-import java.lang.reflect.Field
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -89,11 +96,11 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     )
 
   private val verifyActivityOptions =
-    defaultActivityOptions.toBuilder()
+    defaultActivityOptions
+      .toBuilder()
       .setHeartbeatTimeout(
         Duration.ofSeconds(Constants.VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS.toLong()),
-      )
-      .setStartToCloseTimeout(
+      ).setStartToCloseTimeout(
         Duration.ofSeconds((Constants.VERIFY_ACTIVITY_TIMEOUT_MILLIS / 1000).toLong()),
       ).build()
 
@@ -109,31 +116,245 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       defaultActivityOptions,
     )
 
-  private var startRolloutFailed = false
+  private val pauseRolloutActivity =
+    Workflow.newActivityStub(
+      PauseRolloutActivity::class.java,
+      defaultActivityOptions,
+    )
+
+  private var isPaused = false
+  private var workflowId: String? = null
   private var connectorRollout: ConnectorRolloutOutput? = null
 
-  override fun run(input: ConnectorRolloutActivityInputStart): ConnectorEnumRolloutState {
-    val workflowId = Workflow.getInfo().workflowId
+  override fun run(input: ConnectorRolloutWorkflowInput): ConnectorEnumRolloutState {
+    workflowId = Workflow.getInfo().workflowId
 
     // Checkpoint to record the workflow version
     Workflow.getVersion("ChangedActivityInputStart", Workflow.DEFAULT_VERSION, 1)
 
+    // Set the rollout's initial state
     setRollout(input)
 
-    // End the workflow if we were unable to start the rollout, or we've reached a terminal state
-    Workflow.await { startRolloutFailed || rolloutStateIsTerminal() }
-    if (startRolloutFailed) {
-      throw ApplicationFailure.newFailure(
-        "Failure starting rollout for $workflowId",
-        ConnectorEnumRolloutState.CANCELED.value(),
-      )
+    startRollout(
+      ConnectorRolloutActivityInputStart(
+        input.dockerRepository,
+        input.dockerImageTag,
+        input.actorDefinitionId,
+        input.rolloutId,
+        input.updatedBy,
+        input.rolloutStrategy,
+        input.migratePins,
+      ),
+    )
+
+    return if (input.rolloutStrategy == ConnectorEnumRolloutStrategy.AUTOMATED) {
+      logger.info { "Running an automated workflow for $workflowId" }
+      try {
+        runAutomated(workflowId!!, input)
+      } catch (e: Exception) {
+        connectorRollout =
+          pauseRollout(
+            ConnectorRolloutActivityInputPause(
+              input.dockerRepository,
+              input.dockerImageTag,
+              input.actorDefinitionId,
+              input.rolloutId,
+              "Paused due to an exception in the automated rollout: ${e.message}",
+              null,
+              ConnectorEnumRolloutStrategy.AUTOMATED,
+            ),
+          )
+        Workflow.await { rolloutStateIsTerminal() }
+        getRolloutState()
+      }
+    } else {
+      runManual(workflowId!!)
     }
+  }
+
+  @VisibleForTesting
+  fun runManual(workflowId: String): ConnectorEnumRolloutState {
+    // End the workflow if we were unable to start the rollout, or we've reached a terminal state
+    Workflow.await { rolloutStateIsTerminal() }
     logger.info { "Rollout for $workflowId has reached a terminal state: ${connectorRollout?.state}" }
 
     return getRolloutState()
   }
 
-  private fun setRollout(input: ConnectorRolloutActivityInputStart) {
+  @VisibleForTesting
+  fun runAutomated(
+    workflowId: String,
+    input: ConnectorRolloutWorkflowInput,
+  ): ConnectorEnumRolloutState {
+    val rollout = connectorRollout!!
+
+    var nextRolloutStageAt = getCurrentTimeMilli()
+    val expirationTime = nextRolloutStageAt.plusSeconds(input.rolloutExpirationSeconds.toLong())
+
+    val waitBetweenRolloutsSeconds = input.waitBetweenRolloutSeconds
+    val waitBetweenResultPollsSeconds = input.waitBetweenSyncResultsQueriesSeconds
+    val stepSizePercentage = rollout.initialRolloutPct ?: Constants.DEFAULT_INITIAL_ROLLOUT_PERCENTAGE
+
+    // Continuously manage the rollout until we reach a terminal state, the workflow is paused, or the rollout expires.
+    // The loop performs the following steps:
+    // 1. If it's time to advance the rollout (based on `nextRolloutTime`), increase the rollout percentage and attempt
+    //    to apply it. If this fails, pause the workflow.
+    // 2. Wait (`Workflow.sleep`) to give time for sync results to become available, then fetch the latest rollout state.
+    // 3. Use the fetched state to make a decision (`Decision`), which may include finalizing or pausing the rollout, or
+    //    waiting for more data.
+    // When the rollout is paused, manual intervention is required to finalize the workflow.
+    while (!rolloutStateIsTerminal() && !isPaused && (Workflow.currentTimeMillis() < expirationTime.toEpochMilli())) {
+      val currentTime = getCurrentTimeMilli()
+      val targetPercentageToPin = minOf((connectorRollout!!.currentTargetRolloutPct ?: 0) + stepSizePercentage, 100)
+      if (currentTime >= nextRolloutStageAt) {
+        // In the first iteration, we always progress the rollout.
+        // After that, we wait `waitBetweenRolloutsSeconds` before pinning more actors.
+        // `waitBetweenRolloutsSeconds` should be longer than `waitBetweenResultPollsSeconds`, allowing us to get the
+        // sync status more often than we pin new actors.
+        logger.info {
+          "Advancing rolloutId = ${rollout.id} " +
+            " targetPercentage=$targetPercentageToPin" +
+            " rolloutStrategy = ${rollout.rolloutStrategy}"
+        }
+        nextRolloutStageAt = currentTime.plusSeconds(waitBetweenRolloutsSeconds.toLong())
+        try {
+          connectorRollout =
+            progressRollout(
+              ConnectorRolloutActivityInputRollout(
+                dockerRepository = input.dockerRepository,
+                dockerImageTag = input.dockerImageTag,
+                actorDefinitionId = input.actorDefinitionId,
+                rolloutId = input.rolloutId,
+                actorIds = null,
+                // We let the rollout handler validate that the targetPercentage is within bounds
+                targetPercentage = targetPercentageToPin,
+                rolloutStrategy = ConnectorEnumRolloutStrategy.AUTOMATED,
+              ),
+            )
+        } catch (e: Exception) {
+          logger.error { "Failed to advance the rollout. workflowId=$workflowId e=${e.message} e.cause=${e.cause} e=$e" }
+          if (!rolloutPercentageReached(e)) {
+            connectorRollout =
+              pauseRollout(
+                ConnectorRolloutActivityInputPause(
+                  input.dockerRepository,
+                  input.dockerImageTag,
+                  input.actorDefinitionId,
+                  input.rolloutId,
+                  "Paused due to an exception while pinning connections: $e",
+                  null,
+                  ConnectorEnumRolloutStrategy.AUTOMATED,
+                ),
+              )
+            break
+          }
+        }
+      }
+
+      if (!isPaused) {
+        logger.info { "Waiting for data. workflowId=$workflowId" }
+        val exitedEarly =
+          Workflow.await(Duration.ofSeconds(waitBetweenResultPollsSeconds.toLong())) {
+            rolloutStateIsTerminal() ||
+              isPaused ||
+              (connectorRollout != null && connectorRollout!!.state == ConnectorEnumRolloutState.FINALIZING)
+          }
+        if (exitedEarly) {
+          logger.info { "Workflow is paused, finalizing, or complete. workflowId=$workflowId state=${connectorRollout!!.state} isPaused=$isPaused" }
+          break
+        }
+        logger.info { "Fetching data. workflowId=$workflowId" }
+
+        connectorRollout =
+          getRolloutActivity.getRollout(
+            ConnectorRolloutActivityInputGet(
+              dockerRepository = input.dockerRepository,
+              dockerImageTag = input.dockerImageTag,
+              actorDefinitionId = input.actorDefinitionId,
+              rolloutId = input.rolloutId,
+            ),
+          )
+
+        val decision = RolloutProgressionDecider().decide(connectorRollout!!)
+        logger.info { "Fetched data. connectorRollout=$connectorRollout decision=${decision.name} workflowId=$workflowId" }
+        doNext(decision, workflowId, input)
+        if (decision == Decision.RELEASE) {
+          return getRolloutState()
+        }
+      }
+    }
+
+    // We've timed out waiting for results or the rollout is paused. At this point we require a dev to manually finalize the rollout.
+    Workflow.await { rolloutStateIsTerminal() }
+    return getRolloutState()
+  }
+
+  private fun rolloutPercentageReached(e: Exception): Boolean {
+    logger.info { "e.cause.message = ${e.cause?.message}" }
+    return e.cause?.message?.contains(ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse().type) ?: false
+  }
+
+  private fun getCurrentTimeMilli(): Instant = Instant.ofEpochMilli(Workflow.currentTimeMillis())
+
+  private fun doNext(
+    decision: Decision,
+    workflowId: String,
+    input: ConnectorRolloutWorkflowInput,
+  ) {
+    when (decision) {
+      Decision.RELEASE -> {
+        logger.info { "Finalizing rollout with ${ConnectorRolloutFinalState.SUCCEEDED}. workflowId=$workflowId" }
+        connectorRollout =
+          finalizeRollout(
+            ConnectorRolloutActivityInputFinalize(
+              dockerRepository = input.dockerRepository,
+              dockerImageTag = input.dockerImageTag,
+              actorDefinitionId = input.actorDefinitionId,
+              rolloutId = input.rolloutId,
+              result = ConnectorRolloutFinalState.SUCCEEDED,
+              previousVersionDockerImageTag = input.initialVersionDockerImageTag!!,
+              rolloutStrategy = ConnectorEnumRolloutStrategy.AUTOMATED,
+            ),
+          )
+      }
+      Decision.ROLLBACK -> {
+        logger.info { "Finalizing rollout with ${ConnectorRolloutFinalState.FAILED_ROLLED_BACK}. workflowId=$workflowId" }
+        connectorRollout =
+          finalizeRollout(
+            ConnectorRolloutActivityInputFinalize(
+              dockerRepository = input.dockerRepository,
+              dockerImageTag = input.dockerImageTag,
+              actorDefinitionId = input.actorDefinitionId,
+              rolloutId = input.rolloutId,
+              result = ConnectorRolloutFinalState.FAILED_ROLLED_BACK,
+              previousVersionDockerImageTag = input.initialVersionDockerImageTag!!,
+              failedReason = "Rolled back due to failed syncs for the release candidate version",
+              rolloutStrategy = ConnectorEnumRolloutStrategy.AUTOMATED,
+            ),
+          )
+      }
+      Decision.INSUFFICIENT_DATA -> {
+        logger.info { "Not enough data to decide. workflowId=$workflowId" }
+      }
+      Decision.PAUSE -> {
+        connectorRollout =
+          pauseRollout(
+            ConnectorRolloutActivityInputPause(
+              input.dockerRepository,
+              input.dockerImageTag,
+              input.actorDefinitionId,
+              input.rolloutId,
+              "Paused due to insufficient successful syncs in the allotted time.",
+              null,
+              ConnectorEnumRolloutStrategy.AUTOMATED,
+            ),
+          )
+        logger.info { "Pausing the workflow. workflowId=$workflowId" }
+      }
+    }
+  }
+
+  private fun setRollout(input: ConnectorRolloutWorkflowInput) {
     connectorRollout =
       ConnectorRolloutOutput(
         id = input.connectorRollout?.id,
@@ -158,28 +379,25 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         expiresAt = getOffset(input.connectorRollout?.expiresAt),
         errorMsg = input.connectorRollout?.errorMsg,
         failedReason = input.connectorRollout?.failedReason,
+        pausedReason = input.connectorRollout?.pausedReason,
         actorSelectionInfo = input.actorSelectionInfo,
         actorSyncs = input.actorSyncs,
       )
   }
 
-  private fun getOffset(timestamp: Long?): OffsetDateTime? {
-    return if (timestamp == null) {
+  private fun getOffset(timestamp: Long?): OffsetDateTime? =
+    if (timestamp == null) {
       null
     } else {
       Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC)
     }
-  }
 
-  private fun getRolloutState(): ConnectorEnumRolloutState {
-    return connectorRollout?.state ?: ConnectorEnumRolloutState.INITIALIZED
-  }
+  private fun getRolloutState(): ConnectorEnumRolloutState = connectorRollout?.state ?: ConnectorEnumRolloutState.WORKFLOW_STARTED
 
-  private fun rolloutStateIsTerminal(): Boolean {
-    return ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
-  }
+  private fun rolloutStateIsTerminal(): Boolean = ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
 
-  override fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
+  @VisibleForTesting
+  internal fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
     logger.info { "startRollout: calling startRolloutActivity" }
     val workflowRunId = Workflow.getInfo().firstExecutionRunId
     return try {
@@ -202,15 +420,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
           rolloutStrategy = input.rolloutStrategy,
         ),
       )
-      startRolloutFailed = true
-      throw e
-    }
-  }
-
-  override fun startRolloutValidator(input: ConnectorRolloutActivityInputStart) {
-    logger.info { "startRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot start rollout; invalid input: ${mapAttributesToString(input)}"
+      throw ApplicationFailure.newFailure(
+        "Failure starting rollout for $workflowId",
+        ConnectorEnumRolloutState.CANCELED.value(),
+      )
     }
   }
 
@@ -223,9 +436,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun findRolloutValidator(input: ConnectorRolloutActivityInputFind) {
     logger.info { "findRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null)) {
-      "Cannot find rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
@@ -237,24 +447,31 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun getRolloutValidator(input: ConnectorRolloutActivityInputGet) {
     logger.info { "getRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot get rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
-  override fun doRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
-    logger.info { "doRollout: calling doRolloutActivity" }
+  override fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
+    logger.info { "pauseRollout: calling doRolloutActivity with input=$input" }
+    val output = pauseRolloutActivity.pauseRollout(input)
+    isPaused = true
+    connectorRollout = output
+    logger.info { "pauseRolloutActivity.pauseRollout = $output" }
+    return output
+  }
+
+  override fun pauseRolloutValidator(input: ConnectorRolloutActivityInputPause) {
+    logger.info { "pauseRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
+  }
+
+  override fun progressRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
+    logger.info { "progressRollout: calling doRolloutActivity with input=$input" }
     val output = doRolloutActivity.doRollout(input)
     connectorRollout = output
     logger.info { "doRolloutActivity.doRollout = $output" }
     return output
   }
 
-  override fun doRolloutValidator(input: ConnectorRolloutActivityInputRollout) {
-    logger.info { "doRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
+  override fun progressRolloutValidator(input: ConnectorRolloutActivityInputRollout) {
+    logger.info { "progressRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
@@ -306,7 +523,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       }
     }
 
-    // Unpin all actors that were pinned to the release candidate
+    // Mark the rollout as finalized, and unpin all actors that were pinned to the release candidate if appropriate
     logger.info { "finalizeRollout: calling finalizeRolloutActivity" }
     val rolloutResult = finalizeRolloutActivity.finalizeRollout(input)
     logger.info { "finalizeRolloutActivity.finalizeRollout rolloutResult = $rolloutResult" }
@@ -316,35 +533,5 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun finalizeRolloutValidator(input: ConnectorRolloutActivityInputFinalize) {
     logger.info { "finalizeRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(
-      !(
-        input.dockerRepository == null ||
-          input.dockerImageTag == null ||
-          input.actorDefinitionId == null ||
-          input.rolloutId == null ||
-          input.result == null
-      ),
-    ) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
-  }
-
-  companion object {
-    fun mapAttributesToString(obj: Any): String {
-      val result = StringBuilder()
-      val fields: Array<Field> = obj.javaClass.declaredFields
-      for (field in fields) {
-        try {
-          val value = field.get(obj)
-          result
-            .append("${field.name}=")
-            .append(value?.toString() ?: "null")
-            .append(" ")
-        } catch (e: IllegalAccessException) {
-          logger.error(e) { "Error mapping attributes to string: ${e.message}" }
-        }
-      }
-      return result.toString().trim()
-    }
   }
 }

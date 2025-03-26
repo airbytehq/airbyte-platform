@@ -24,8 +24,8 @@ import { RecordTable } from "./RecordTable";
 import { SchemaDiffView } from "./SchemaDiffView";
 import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {

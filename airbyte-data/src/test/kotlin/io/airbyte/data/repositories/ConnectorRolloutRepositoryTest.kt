@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.config.ConnectorRolloutFinalState
@@ -34,8 +38,7 @@ class ActiveStatesProvider : ArgumentsProvider {
     return ConnectorRolloutStateType.entries
       .filter { stateType ->
         !terminalStateLiterals.contains(stateType.literal)
-      }
-      .map { Arguments.of(it) }
+      }.map { Arguments.of(it) }
       .stream()
   }
 }
@@ -50,8 +53,7 @@ class TerminalStatesProvider : ArgumentsProvider {
     return ConnectorRolloutStateType.entries
       .filter { stateType ->
         terminalStateLiterals.contains(stateType.literal)
-      }
-      .map { Arguments.of(it) }
+      }.map { Arguments.of(it) }
       .stream()
   }
 }
@@ -62,16 +64,20 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     @BeforeAll
     @JvmStatic
     fun setup() {
-      jooqDslContext.alterTable(Tables.CONNECTOR_ROLLOUT)
+      jooqDslContext
+        .alterTable(Tables.CONNECTOR_ROLLOUT)
         .dropForeignKey(Keys.CONNECTOR_ROLLOUT__FK_ACTOR_DEFINITION_ID.constraint())
         .execute()
-      jooqDslContext.alterTable(Tables.CONNECTOR_ROLLOUT)
+      jooqDslContext
+        .alterTable(Tables.CONNECTOR_ROLLOUT)
         .dropForeignKey(Keys.CONNECTOR_ROLLOUT__FK_RELEASE_CANDIDATE_VERSION_ID.constraint())
         .execute()
-      jooqDslContext.alterTable(Tables.CONNECTOR_ROLLOUT)
+      jooqDslContext
+        .alterTable(Tables.CONNECTOR_ROLLOUT)
         .dropForeignKey(Keys.CONNECTOR_ROLLOUT__FK_INITIAL_VERSION_ID.constraint())
         .execute()
-      jooqDslContext.alterTable(Tables.CONNECTOR_ROLLOUT)
+      jooqDslContext
+        .alterTable(Tables.CONNECTOR_ROLLOUT)
         .dropForeignKey(Keys.CONNECTOR_ROLLOUT__FK_UPDATED_BY.constraint())
         .execute()
     }
@@ -136,8 +142,8 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     rolloutId: UUID,
     actorDefinitionId: UUID,
     state: ConnectorRolloutStateType,
-  ): ConnectorRollout {
-    return ConnectorRollout(
+  ): ConnectorRollout =
+    ConnectorRollout(
       id = rolloutId,
       workflowRunId = UUID.randomUUID().toString(),
       actorDefinitionId = actorDefinitionId,
@@ -151,7 +157,6 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
       maxStepWaitTimeMins = 60,
       expiresAt = OffsetDateTime.now().plusDays(1),
     )
-  }
 
   private fun assertConnectorRolloutEquals(
     expected: ConnectorRollout,

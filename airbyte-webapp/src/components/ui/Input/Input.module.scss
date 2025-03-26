@@ -2,10 +2,13 @@
 @use "scss/variables";
 
 .container {
+  height: variables.$form-input-height;
   width: 100%;
   position: relative;
   border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-sm;
+  display: flex;
+  align-items: stretch;
 
   &.light {
     background-color: colors.$foreground;
@@ -54,7 +57,6 @@
   width: 100%;
   padding: 7px 8px;
   font-size: variables.$font-size-lg;
-  line-height: 1.4;
   font-weight: normal;
   border: none;
   background: none;

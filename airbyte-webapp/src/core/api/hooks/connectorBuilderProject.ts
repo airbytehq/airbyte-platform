@@ -65,6 +65,7 @@ export interface BuilderProject {
   version: "draft" | number;
   sourceDefinitionId?: string;
   id: string;
+  updatedAt: number;
   hasDraft?: boolean;
   baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
   contributionInfo?: ContributionInfo;
@@ -74,6 +75,7 @@ export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  componentsFileContent?: string;
   contributionPullRequestUrl?: string;
   contributionActorDefinitionId?: string;
 }
@@ -102,6 +104,7 @@ export const convertProjectDetailsReadToBuilderProject = (
     typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
       ? projectDetails.activeDeclarativeManifestVersion
       : "draft",
+  updatedAt: projectDetails.updatedAt,
   sourceDefinitionId: projectDetails.sourceDefinitionId,
   id: projectDetails.builderProjectId,
   hasDraft: projectDetails.hasDraft,
@@ -165,6 +168,7 @@ export const useCreateBuilderProject = () => {
               id: builderProjectId,
               name,
               version: "draft" as const,
+              updatedAt: Date.now(),
             },
           ]
         );
@@ -254,7 +258,12 @@ export const useResolvedBuilderProjectVersion = (projectId: string, version?: nu
       if (!project.declarativeManifest?.manifest) {
         return null;
       }
-      return (await resolveManifestQuery(project.declarativeManifest.manifest)).manifest as DeclarativeComponentSchema;
+      const resolvedManifest = (await resolveManifestQuery(project.declarativeManifest.manifest))
+        .manifest as DeclarativeComponentSchema;
+      return {
+        resolvedManifest,
+        componentsFileContent: project.builderProject.componentsFileContent,
+      };
     },
     {
       retry: false,
@@ -270,7 +279,14 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
+    ({
+      name,
+      manifest,
+      yamlManifest,
+      contributionActorDefinitionId,
+      contributionPullRequestUrl,
+      componentsFileContent,
+    }) =>
       updateConnectorBuilderProject(
         {
           workspaceId,
@@ -281,6 +297,7 @@ export const useUpdateBuilderProject = (projectId: string) => {
             yamlManifest,
             contributionActorDefinitionId,
             contributionPullRequestUrl,
+            componentsFileContent,
           },
         },
         requestOptions
@@ -303,6 +320,7 @@ export interface BuilderProjectPublishBody {
   projectId: string;
   description: string;
   manifest: DeclarativeComponentSchema;
+  componentsFileContent?: string;
 }
 
 function updateProjectQueryCache(
@@ -340,7 +358,7 @@ export const usePublishBuilderProject = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
-    ({ name, projectId, description, manifest }) =>
+    ({ name, projectId, description, manifest, componentsFileContent }) =>
       publishConnectorBuilderProject(
         {
           workspaceId,
@@ -353,8 +371,10 @@ export const usePublishBuilderProject = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
+          componentsFileContent,
         },
         requestOptions
       ),
@@ -375,6 +395,7 @@ export interface NewVersionBody {
   version: number;
   useAsActiveVersion: boolean;
   manifest: DeclarativeComponentSchema;
+  componentsFileContent?: string;
 }
 
 export const useReleaseNewBuilderProjectVersion = () => {
@@ -383,7 +404,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, NewVersionBody>(
-    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
+    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest, componentsFileContent }) =>
       createDeclarativeSourceDefinitionManifest(
         {
           workspaceId,
@@ -395,9 +416,11 @@ export const useReleaseNewBuilderProjectVersion = () => {
             spec: {
               documentationUrl: manifest.spec?.documentation_url,
               connectionSpecification: manifest.spec?.connection_specification,
+              advancedAuth: manifest.spec?.advanced_auth,
             },
           },
           setAsActiveManifest: useAsActiveVersion,
+          componentsFileContent,
         },
         requestOptions
       ),
@@ -466,17 +489,21 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream,
+  testStream: DeclarativeStream | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
 
   return useQuery<StreamReadTransformedSlices>(
     connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
-    () =>
-      readConnectorBuilderProjectStream(params, requestOptions).then((streamRead) =>
-        transformSlices(streamRead, testStream)
-      ),
+    async () => {
+      if (!testStream) {
+        // this shouldn't happen, because read stream can only be triggered when a stream is selected
+        throw new Error("No test stream provided - this state should not be reached!");
+      }
+      const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
+      return transformSlices(streamRead, testStream);
+    },
     {
       refetchOnWindowFocus: false,
       enabled: false,
@@ -547,10 +574,7 @@ const transformSlices = (
   };
 };
 
-export const useBuilderProjectUpdateTestingValues = (
-  builderProjectId: string,
-  onSuccess: (data: ConnectorBuilderProjectTestingValues) => void
-) => {
+export const useBuilderProjectUpdateTestingValues = (builderProjectId: string, onSettled?: () => void) => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
@@ -565,7 +589,7 @@ export const useBuilderProjectUpdateTestingValues = (
         requestOptions
       ),
     {
-      onSuccess,
+      onSettled,
     }
   );
 };

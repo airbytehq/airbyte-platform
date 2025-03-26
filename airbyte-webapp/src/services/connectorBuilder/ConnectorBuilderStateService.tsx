@@ -1,9 +1,9 @@
 import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
 import { dump } from "js-yaml";
-import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";
 import toPath from "lodash/toPath";
+import { editor, Position } from "monaco-editor";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
@@ -18,12 +18,13 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { getStreamHash, useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
+import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
 
@@ -38,31 +39,27 @@ import {
   StreamReadTransformedSlices,
   useBuilderProject,
   useBuilderProjectReadStream,
-  useBuilderProjectUpdateTestingValues,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
   usePublishBuilderProject,
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
+  useIsForeignWorkspace,
 } from "core/api";
-import { useIsForeignWorkspace } from "core/api/cloud";
 import {
   ConnectorBuilderProjectTestingValues,
   ConnectorBuilderProjectTestingValuesUpdate,
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
 import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
-import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
-import { FormGroupItem } from "core/form/types";
+import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
@@ -70,7 +67,7 @@ import SchemaWorker from "./SchemaWorker?worker";
 
 const worker = new SchemaWorker();
 
-export type BuilderView = "global" | "inputs" | number;
+export type BuilderView = BuilderState["view"];
 
 export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 
@@ -92,7 +89,9 @@ interface FormStateContext {
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
-  previousManifestDraft: DeclarativeComponentSchema | undefined;
+  previousManifestDraft:
+    | { manifest: DeclarativeComponentSchema; componentsFileContent: string | undefined }
+    | undefined;
   displayedVersion: number | undefined;
   formValuesValid: boolean;
   formValuesDirty: boolean;
@@ -102,7 +101,11 @@ interface FormStateContext {
   isResolving: boolean;
   streamNames: string[];
   undoRedo: UndoRedo;
-  setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
+  setDisplayedVersion: (
+    value: number | undefined,
+    manifest: DeclarativeComponentSchema,
+    customComponentsCode: string | undefined
+  ) => void;
   updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -112,7 +115,6 @@ interface FormStateContext {
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
   setFormValuesDirty: (value: boolean) => void;
-  updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
   assistSessionId: string;
@@ -155,6 +157,13 @@ interface FormManagementStateContext {
   setScrollToField: (field: string | undefined) => void;
   stateKey: number;
   setStateKey: React.Dispatch<React.SetStateAction<number>>;
+  newUserInputContext: NewUserInputContext | undefined;
+  setNewUserInputContext: (context: NewUserInputContext | undefined) => void;
+}
+
+interface NewUserInputContext {
+  model: editor.ITextModel;
+  position: Position;
 }
 
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
@@ -247,7 +256,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [displayedVersion, setDisplayedVersion] = useState<number | undefined>(
     builderProject.declarativeManifest?.version
   );
-  const [previousManifestDraft, setPreviousManifestDraft] = useState<ConnectorManifest | undefined>(undefined);
+  const [previousManifestDraft, setPreviousManifestDraft] = useState<
+    FormStateContext["previousManifestDraft"] | undefined
+  >(undefined);
   const [jsonManifest, setJsonManifest] = useState<ConnectorManifest>(
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) ?? DEFAULT_JSON_MANIFEST_VALUES
   );
@@ -261,6 +272,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const { setValue, getValues } = useFormContext();
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   const {
     data: resolveData,
@@ -289,7 +301,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const streams = useBuilderWatch("formValues.streams");
   const streamNames =
-    mode === "ui" ? streams.map((stream) => stream.name) : resolvedManifest.streams.map((stream) => stream.name ?? "");
+    mode === "ui"
+      ? streams.map((stream) => stream.name)
+      : resolvedManifest.streams?.map((stream) => stream.name ?? "") ?? [];
 
   useEffect(() => {
     if (name !== currentProject.name) {
@@ -297,6 +311,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       setDisplayedVersion(undefined);
     }
   }, [currentProject.name, name]);
+
+  useEffect(() => {
+    setPreviousManifestDraft(undefined);
+    setDisplayedVersion(undefined);
+  }, [customComponentsCode]);
 
   // use ref so that updateJsonManifest is not recreated on every change to jsonManifest
   const jsonManifestRef = useRef(jsonManifest);
@@ -312,8 +331,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   }, []);
 
   useEffect(() => {
-    setStoredMode(mode);
-  }, [mode, setStoredMode]);
+    setStoredMode(projectId, mode);
+  }, [mode, projectId, setStoredMode]);
 
   const formValues = useBuilderWatch("formValues");
   const openNoUiValueModal = useNoUiValueModal();
@@ -326,7 +345,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setValue("mode", "yaml");
       } else {
         const confirmDiscard = (errorMessage: string) => {
-          if (isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) && jsonManifest.streams.length > 0) {
+          if (
+            isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) &&
+            (!jsonManifest.streams || jsonManifest.streams.length > 0)
+          ) {
             openNoUiValueModal(errorMessage);
           } else {
             openConfirmationModal({
@@ -357,7 +379,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
           // set jsonManifest first so that a save isn't triggered
           setJsonManifest(convertedManifest);
-          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
+          setPersistedState({
+            name: currentProject.name,
+            manifest: convertedManifest,
+            componentsFileContent: customComponentsCode,
+          });
           // don't need to explicitly validate here, since automatic form validation will still prevent
           // publishing if there are any form errors
           setValue("formValues", convertedFormValues, { shouldValidate: false });
@@ -383,6 +409,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       resolveErrorMessage,
       resolvedManifest,
       setValue,
+      customComponentsCode,
     ]
   );
 
@@ -401,29 +428,31 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [persistedState, setPersistedState] = useState<BuilderProjectWithManifest>(() => ({
     manifest: jsonManifest,
     name: builderProject.builderProject.name,
+    componentsFileContent: builderProject.builderProject.componentsFileContent,
   }));
 
   const setToVersion = useCallback(
-    (version: number | undefined, manifest: DeclarativeComponentSchema) => {
+    (version: number | undefined, manifest: DeclarativeComponentSchema, componentsFileContent: string | undefined) => {
       const updateManifestState = (manifestToProcess: DeclarativeComponentSchema) => {
         const cleanedManifest = removeEmptyProperties(manifestToProcess);
         if (version === undefined) {
           // set persisted state to the current state so that the draft is not saved when switching back to the staged draft
-          setPersistedState({ name: currentProject.name, manifest: cleanedManifest });
+          setPersistedState({ name: currentProject.name, manifest: cleanedManifest, componentsFileContent });
         }
         // set json manifest first so that a save isn't triggered
         setJsonManifest(cleanedManifest);
         setValue("yaml", convertJsonToYaml(cleanedManifest));
+        setValue("customComponentsCode", componentsFileContent || undefined);
       };
 
       const view = getValues("view");
-      if (typeof view === "number" && manifest.streams.length <= view) {
+      if (typeof view === "number" && manifest.streams && manifest.streams.length <= view) {
         // switch back to global view if the selected stream does not exist anymore
         setValue("view", "global");
       }
 
       if (displayedVersion === undefined && version !== undefined) {
-        setPreviousManifestDraft(resolvedManifest);
+        setPreviousManifestDraft({ manifest: resolvedManifest, componentsFileContent: customComponentsCode });
       } else if (version === undefined) {
         setPreviousManifestDraft(undefined);
       }
@@ -445,7 +474,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       setDisplayedVersion(version);
       setStateKey((key) => key + 1);
     },
-    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue]
+    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue, customComponentsCode]
   );
 
   const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();
@@ -483,7 +512,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     persistedState,
     displayedVersion,
     updateError,
-    permission
+    permission,
+    customComponentsCode
   );
 
   const modeRef = useRef(mode);
@@ -505,10 +535,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       name,
       manifest: jsonManifest,
       yamlManifest: convertJsonToYaml(jsonManifest),
+      componentsFileContent: customComponentsCode,
     };
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [permission, name, formAndResolveValid, jsonManifest, updateProject]);
+  }, [permission, name, formAndResolveValid, jsonManifest, updateProject, customComponentsCode]);
 
   useDebounce(
     () => {
@@ -516,7 +547,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         // do not save already released versions as draft
         return;
       }
-      if (persistedState.manifest === jsonManifest && persistedState.name === name) {
+      if (
+        persistedState.manifest === jsonManifest &&
+        persistedState.name === name &&
+        persistedState.componentsFileContent === customComponentsCode
+      ) {
         // first run of the hook, no need to update
         return;
       }
@@ -527,12 +562,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   const { pendingBlocker, blockedOnInvalidState } = useBlockOnSavingState(savingState);
-
-  const { mutateAsync: updateTestingValues } = useBuilderProjectUpdateTestingValues(projectId, (result) =>
-    setValue("testingValues", result)
-  );
-
-  useUpdateTestingValuesOnSpecChange(jsonManifest.spec, updateTestingValues);
 
   useUpdateLockedInputs();
 
@@ -567,7 +596,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     toggleUI,
     setFormValuesValid,
     setFormValuesDirty,
-    updateTestingValues,
     updateYamlCdkVersion,
     setAssistEnabled,
     assistEnabled,
@@ -581,48 +609,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     </ConnectorBuilderFormStateContext.Provider>
   );
 };
-
-const EMPTY_SCHEMA = {};
-
-const useUpdateTestingValuesOnSpecChange = (
-  spec: Spec | undefined,
-  updateTestingValues: FormStateContext["updateTestingValues"]
-) => {
-  const testingValues = useBuilderWatch("testingValues");
-  const specRef = useRef<Spec | undefined>(spec);
-
-  useEffect(() => {
-    if (!isEqual(specRef.current?.connection_specification, spec?.connection_specification)) {
-      // clone testingValues because applyTestingValuesDefaults mutates the object
-      const testingValuesWithDefaults = applyTestingValuesDefaults(cloneDeep(testingValues), spec);
-      if (!isEqual(testingValues, testingValuesWithDefaults)) {
-        updateTestingValues({
-          spec: spec?.connection_specification ?? {},
-          testingValues: testingValuesWithDefaults ?? {},
-        });
-      }
-    }
-    specRef.current = spec;
-  }, [spec, testingValues, updateTestingValues]);
-};
-
-export function applyTestingValuesDefaults(
-  testingValues: ConnectorBuilderProjectTestingValues | undefined,
-  spec?: Spec
-) {
-  const testingValuesToUpdate = testingValues || {};
-  try {
-    const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
-    const formFields = jsonSchemaToFormBlock(jsonSchema);
-    setDefaultValues(formFields as FormGroupItem, testingValuesToUpdate, { respectExistingValues: true });
-  } catch {
-    // spec is user supplied so it might not be valid - prevent crashing the application by just skipping trying to set default values
-  }
-
-  return testingValues === undefined && Object.keys(testingValuesToUpdate).length === 0
-    ? undefined
-    : testingValuesToUpdate;
-}
 
 export function useInitializedBuilderProject() {
   const { projectId } = useParams<{
@@ -672,6 +658,9 @@ export function useInitializedBuilderProject() {
  * With this, we will only require testing streams that the user changes.
  */
 function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedManifest: ConnectorManifest) {
+  if (!persistedManifest.streams || !resolvedManifest.streams) {
+    return;
+  }
   if (persistedManifest.streams.length !== resolvedManifest.streams.length) {
     // this should never happen, since resolving a manifest should never affect the number of streams
     throw new Error("Persisted manifest streams length doesn't match resolved streams length");
@@ -736,10 +725,11 @@ function getSavingState(
   formAndResolveValid: boolean,
   mode: BuilderState["mode"],
   name: string | undefined,
-  persistedState: { name: string; manifest?: DeclarativeComponentSchema },
+  persistedState: { name: string; manifest?: DeclarativeComponentSchema; componentsFileContent?: string },
   displayedVersion: number | undefined,
   updateError: Error | null,
-  permission: ConnectorBuilderPermission
+  permission: ConnectorBuilderPermission,
+  currentComponentsFileContent?: string
 ): SavingState {
   if (updateError) {
     return "error";
@@ -756,7 +746,11 @@ function getSavingState(
   if (permission !== "write") {
     return "readonly";
   }
-  const currentStateIsPersistedState = persistedState.manifest === currentJsonManifest && persistedState.name === name;
+
+  const currentStateIsPersistedState =
+    persistedState.manifest === currentJsonManifest &&
+    persistedState.name === name &&
+    persistedState.componentsFileContent === currentComponentsFileContent;
 
   if (currentStateIsPersistedState || displayedVersion !== undefined) {
     return "saved";
@@ -787,7 +781,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const testStream = resolvedManifest.streams[testStreamIndex];
+  const testStream = resolvedManifest.streams?.[testStreamIndex];
   const filteredManifest = {
     ...resolvedManifest,
     streams: [testStream],
@@ -837,6 +831,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     },
     testStream,
     (result) => {
+      if (!testStream) {
+        return;
+      }
+
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);
       }
@@ -855,6 +853,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
         // Set the schema_loader on the test stream to the inferred schema as well, so
         // that it is included in the stream when generating the test result stream hash.
+
         testStream.schema_loader = {
           type: "InlineSchemaLoader",
           schema: result.inferred_schema,
@@ -868,11 +867,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   );
 
+  const { testingValuesDirty } = useUpdateTestingValuesOnChange();
   const [queuedStreamRead, setQueuedStreamRead] = useState(false);
   const { refetch } = streamRead;
-  // trigger a stream read if the a stream read is queued and form is in a ready state to be tested
+  // trigger a stream read if a stream read is queued and form is in a ready state to be tested
   useEffect(() => {
-    if (isResolving || formValuesDirty || !queuedStreamRead) {
+    if (isResolving || formValuesDirty || testingValuesDirty || !queuedStreamRead) {
       return;
     }
 
@@ -883,7 +883,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
     setQueuedStreamRead(false);
     refetch();
-  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty]);
+  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty, testingValuesDirty]);
 
   const queueStreamRead = useCallback(() => {
     setQueuedStreamRead(true);
@@ -1012,6 +1012,7 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   const [isTestReadSettingsOpen, setTestReadSettingsOpen] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [stateKey, setStateKey] = useState(0);
+  const [newUserInputContext, setNewUserInputContext] = useState<NewUserInputContext | undefined>(undefined);
 
   const handleScrollToField = useCallback(
     (ref: React.RefObject<HTMLDivElement>, path: string) => {
@@ -1033,8 +1034,10 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
       setScrollToField,
       stateKey,
       setStateKey,
+      newUserInputContext,
+      setNewUserInputContext,
     }),
-    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey, newUserInputContext]
   );
 
   return (

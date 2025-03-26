@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.csp
 
 import io.airbyte.commons.storage.DocumentType
@@ -37,7 +41,7 @@ class CspCheckerTest {
 
     assertEquals(StorageType.LOCAL, checkResult.storage.type)
     assertEquals(
-      setOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS),
+      setOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS, DocumentType.AUDIT_LOGS),
       checkResult.storage.buckets
         .map { it.documentType }
         .toSet(),

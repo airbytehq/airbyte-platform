@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helpers;
@@ -7,16 +7,19 @@ package io.airbyte.workers.helpers;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.Random;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper to compute and apply random jitter to scheduled connections.
  */
 @Singleton
-@Slf4j
 public class ScheduleJitterHelper {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final int noJitterCutoffMinutes;
   private final int highFrequencyThresholdMinutes;

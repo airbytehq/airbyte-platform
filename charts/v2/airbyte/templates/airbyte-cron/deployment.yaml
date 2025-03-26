@@ -8,6 +8,8 @@ metadata:
     {{- if .Values.cron.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.cron.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.cron.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.cron.replicaCount }}
   selector:
@@ -24,11 +26,11 @@ spec:
         {{ toYaml (mergeOverwrite .Values.cron.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.cron.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.cron.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.cron.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.cron.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccountName }}
@@ -40,13 +42,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.cron.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.cron.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.cron.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.cron.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.cron.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.cron.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.cron.extraInitContainers }}
       initContainers:
@@ -58,9 +60,11 @@ spec:
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
           env:
 
-          {{- include "airbyte.airbyte.envs" . | nindent 10 }}
+          {{- include "airbyte.common.envs" . | nindent 10 }}
+          {{- include "airbyte.cron.envs" . | nindent 10 }}
           {{- include "airbyte.database.envs" . | nindent 10 }}
           {{- include "airbyte.database.migrations.envs" . | nindent 10 }}
+          {{- include "airbyte.featureFlags.envs" . | nindent 10 }}
           {{- include "airbyte.metrics.envs" . | nindent 10 }}
           {{- include "airbyte.micronaut.envs" . | nindent 10 }}
           {{- include "airbyte.temporal.envs" . | nindent 10 }}

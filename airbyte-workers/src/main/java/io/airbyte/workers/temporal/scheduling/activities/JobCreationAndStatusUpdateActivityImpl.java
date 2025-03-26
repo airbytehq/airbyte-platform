@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -33,17 +33,20 @@ import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JobCreationAndStatusUpdateActivityImpl.
  */
-@Slf4j
 @Singleton
 @Requires(env = EnvConstants.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
@@ -65,7 +68,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public JobCreationOutput createNewJob(final JobCreationInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
-      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId()));
+      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId(), input.isScheduled()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
@@ -110,12 +113,16 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     final var output = input.getStandardSyncOutput();
 
     try {
-      final var request = new JobSuccessWithAttemptNumberRequest(
-          input.getJobId(),
-          input.getAttemptNumber(),
-          input.getConnectionId(),
-          output);
-      airbyteApiClient.getJobsApi().jobSuccessWithAttemptNumber(request);
+      if (input.getJobId() != null) {
+        final var request = new JobSuccessWithAttemptNumberRequest(
+            input.getJobId(),
+            input.getAttemptNumber(),
+            input.getConnectionId(),
+            output);
+        airbyteApiClient.getJobsApi().jobSuccessWithAttemptNumber(request);
+      } else {
+        log.warn("Skipping job success update because job ID is null (connection ID = {}).", input.getConnectionId());
+      }
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
         throw e;
@@ -134,12 +141,16 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final var request = new JobFailureRequest(
-          input.getJobId(),
-          input.getAttemptNumber(),
-          input.getConnectionId(),
-          input.getReason());
-      airbyteApiClient.getJobsApi().jobFailure(request);
+      if (input.getJobId() != null) {
+        final var request = new JobFailureRequest(
+            input.getJobId(),
+            input.getAttemptNumber(),
+            input.getConnectionId(),
+            input.getReason());
+        airbyteApiClient.getJobsApi().jobFailure(request);
+      } else {
+        log.warn("Skipping job failure update because job ID is null (connection ID = {}).", input.getConnectionId());
+      }
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
         throw e;
@@ -159,13 +170,17 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     final var output = input.getStandardSyncOutput();
 
     try {
-      final var req = new FailAttemptRequest(
-          input.getJobId(),
-          input.getAttemptNumber(),
-          input.getAttemptFailureSummary(),
-          output);
+      if (input.getJobId() != null) {
+        final var req = new FailAttemptRequest(
+            input.getJobId(),
+            input.getAttemptNumber(),
+            input.getAttemptFailureSummary(),
+            output);
 
-      airbyteApiClient.getAttemptApi().failAttempt(req);
+        airbyteApiClient.getAttemptApi().failAttempt(req);
+      } else {
+        log.warn("Skipping attempt failure update because job ID is null (connection ID = {}).", input.getConnectionId());
+      }
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
         throw e;

@@ -70,8 +70,8 @@ properties:
   useAsyncActivities:
     description: whether we should use async activities
     type: boolean
-  podLabels:
-    description: Additional labels to apply to the pods created for this job
+  networkSecurityTokens:
+    description: Workload launcher will use these to grant pods additional network access
     type: array
     items:
       type: string

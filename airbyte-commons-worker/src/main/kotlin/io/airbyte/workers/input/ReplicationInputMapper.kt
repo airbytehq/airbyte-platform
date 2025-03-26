@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.workers.input
 
 import io.airbyte.commons.json.Jsons
@@ -19,12 +20,13 @@ class ReplicationInputMapper {
     // TODO: Remove any introspection of connector configs. Determine whether to use 'file transfer' mode another way.
     val sourceConfiguration: SourceActorConfig = Jsons.`object`(replicationActivityInput.sourceConfiguration, SourceActorConfig::class.java)
     val useFileTransfer =
-      sourceConfiguration.useFileTransfer || (
-        sourceConfiguration.deliveryMethod != null &&
-          "use_file_transfer".equals(
-            sourceConfiguration.deliveryMethod.deliveryType,
-          )
-      )
+      sourceConfiguration.useFileTransfer ||
+        (
+          sourceConfiguration.deliveryMethod != null &&
+            "use_file_transfer".equals(
+              sourceConfiguration.deliveryMethod.deliveryType,
+            )
+        )
 
     return ReplicationInput()
       .withNamespaceDefinition(replicationActivityInput.namespaceDefinition)
@@ -44,5 +46,6 @@ class ReplicationInputMapper {
       .withDestinationConfiguration(replicationActivityInput.destinationConfiguration)
       .withConnectionContext(replicationActivityInput.connectionContext)
       .withUseFileTransfer(useFileTransfer)
+      .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
   }
 }

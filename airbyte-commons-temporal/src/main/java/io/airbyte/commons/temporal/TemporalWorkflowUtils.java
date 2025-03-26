@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -33,16 +33,16 @@ public class TemporalWorkflowUtils {
    * @return connection updated input
    */
   public static ConnectionUpdaterInput buildStartWorkflowInput(final UUID connectionId) {
-    return ConnectionUpdaterInput.builder()
-        .connectionId(connectionId)
-        .jobId(null)
-        .attemptId(null)
-        .fromFailure(false)
-        .attemptNumber(1)
-        .workflowState(null)
-        .resetConnection(false)
-        .fromJobResetFailure(false)
-        .build();
+    return new ConnectionUpdaterInput(
+        connectionId,
+        null,
+        null,
+        false,
+        1,
+        null,
+        false,
+        false,
+        false);
   }
 
   /**

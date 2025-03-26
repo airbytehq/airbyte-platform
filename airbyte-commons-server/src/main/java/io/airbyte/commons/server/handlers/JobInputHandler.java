@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -60,9 +60,6 @@ import io.airbyte.data.services.shared.NetworkSecurityTokenKey;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseAsyncActivities;
-import io.airbyte.featureflag.UseAsyncReplicate;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
@@ -214,9 +211,6 @@ public class JobInputHandler {
         featureFlagContext.add(new Connection(standardSync.getConnectionId()));
       }
 
-      final boolean useAsyncReplicate = featureFlagClient.boolVariation(UseAsyncReplicate.INSTANCE, new Multi(featureFlagContext));
-      final boolean useAsyncActivities = featureFlagClient.boolVariation(UseAsyncActivities.INSTANCE, new Workspace(config.getWorkspaceId()));
-
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
       final StandardSyncInput syncInput = new StandardSyncInput()
@@ -234,9 +228,9 @@ public class JobInputHandler {
           .withWorkspaceId(config.getWorkspaceId())
           .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType))
           .withConnectionContext(connectionContext)
-          .withUseAsyncReplicate(useAsyncReplicate)
-          .withUseAsyncActivities(useAsyncActivities)
-          .withPodLabels(getPodLabelValues(config.getWorkspaceId()));
+          .withUseAsyncReplicate(true)
+          .withUseAsyncActivities(true)
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -304,7 +298,7 @@ public class JobInputHandler {
           .withConnectionConfiguration(sourceConfiguration)
           .withResourceRequirements(sourceCheckResourceRequirements)
           .withActorContext(sourceContext)
-          .withPodLabels(getPodLabelValues(jobSyncConfig.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
 
       final ResourceRequirements destinationCheckResourceRequirements =
           getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION);
@@ -317,7 +311,7 @@ public class JobInputHandler {
           .withConnectionConfiguration(destinationConfiguration)
           .withResourceRequirements(destinationCheckResourceRequirements)
           .withActorContext(destinationContext)
-          .withPodLabels(getPodLabelValues(jobSyncConfig.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
       return new SyncJobCheckConnectionInputs(
           sourceLauncherConfig,
           destinationLauncherConfig,
@@ -463,7 +457,7 @@ public class JobInputHandler {
         destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
 
-  private @NotNull List<String> getPodLabelValues(final UUID workspaceId) {
+  private @NotNull List<String> getNetworkSecurityTokens(final UUID workspaceId) {
     final Map<ConfigScopeType, UUID> scopes = Map.of(ConfigScopeType.WORKSPACE, workspaceId);
     try {
       final List<ScopedConfiguration> podLabelConfigurations =

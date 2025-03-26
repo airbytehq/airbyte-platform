@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.csp
 
 import io.airbyte.commons.annotation.InternalForTesting
@@ -22,7 +26,8 @@ internal const val STORAGE_DOC_CONTENTS = "environment permissions check"
  * To ensure that all of the proper storage checks are performed, each [DocumentType]'s [StorageClient] needs to be checked.
  */
 @InternalForTesting
-internal val storageDocTypes = listOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS)
+internal val storageDocTypes =
+  listOf(DocumentType.STATE, DocumentType.LOGS, DocumentType.WORKLOAD_OUTPUT, DocumentType.ACTIVITY_PAYLOADS, DocumentType.AUDIT_LOGS)
 
 /**
  * Holds the results of the various environmental checks executed.
@@ -134,7 +139,7 @@ private inline fun <R> toStatus(
 ): Pair<String, Status> =
   runCatching { block() }
     .fold(
-      onSuccess = { PassStatus() },
+      onSuccess = { _ -> PassStatus() },
       onFailure = { FailStatus(throwable = it) },
     ).let {
       Pair(name, it)

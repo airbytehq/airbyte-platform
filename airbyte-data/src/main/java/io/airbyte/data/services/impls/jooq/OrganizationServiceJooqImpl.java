@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -83,8 +83,6 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.EMAIL, organization.getEmail())
             .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(ORGANIZATION.UPDATED_AT, timestamp)
-            .set(ORGANIZATION.PBA, organization.getPba())
-            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
             .execute();
       } else {
@@ -95,8 +93,6 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(WORKSPACE.CREATED_AT, timestamp)
             .set(WORKSPACE.UPDATED_AT, timestamp)
-            .set(ORGANIZATION.PBA, organization.getPba())
-            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .execute();
       }
       return null;

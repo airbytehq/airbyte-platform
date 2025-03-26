@@ -29,8 +29,8 @@ Helm chart to deploy airbyte-connector-builder-server
 | global.credVolumeOverride | string | `""` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
-| global.deploymentMode | string | `"oss"` |  |
 | global.deploymentStrategyType | string | `"RollingUpdate"` |  |
+| global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |
 | global.extraSelectorLabels | object | `{}` |  |

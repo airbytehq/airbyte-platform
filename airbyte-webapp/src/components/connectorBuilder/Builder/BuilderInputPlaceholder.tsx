@@ -1,11 +1,10 @@
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
-
-import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderInputPlaceholder.module.scss";
 import { getLabelAndTooltip } from "./manifestHelpers";
@@ -17,8 +16,8 @@ export interface BuilderFieldProps {
 }
 
 export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
-  const { setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
-  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true, true);
+  const { setValue } = useFormContext();
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, true);
   return (
     <FlexContainer alignItems="center">
       <FlexItem grow>
@@ -32,7 +31,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           <Button
             icon="user"
             variant="link"
-            onClick={() => setTestingValuesInputOpen(true)}
+            onClick={() => setValue("view", "inputs")}
             className={styles.tooltipTrigger}
             iconClassName={styles.tooltipIcon}
           />
@@ -44,7 +43,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           variant="link"
           type="button"
           onClick={() => {
-            setTestingValuesInputOpen(true);
+            setValue("view", "inputs");
           }}
         >
           <FormattedMessage id="connectorBuilder.placeholder.button" />

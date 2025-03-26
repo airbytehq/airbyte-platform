@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import lombok.Getter;
 
 /**
  * Tracks heartbeats and, when asked, says if it has been too long since the last heartbeat. He's
@@ -20,7 +19,6 @@ import lombok.Getter;
  */
 public class HeartbeatMonitor {
 
-  @Getter
   private final Duration heartbeatFreshnessThreshold;
   private final Supplier<Instant> nowSupplier;
   private final AtomicReference<Instant> lastBeat;
@@ -65,6 +63,10 @@ public class HeartbeatMonitor {
     } else {
       return Optional.ofNullable(Duration.between(lastBeat.get(), nowSupplier.get()));
     }
+  }
+
+  public Duration getHeartbeatFreshnessThreshold() {
+    return heartbeatFreshnessThreshold;
   }
 
 }

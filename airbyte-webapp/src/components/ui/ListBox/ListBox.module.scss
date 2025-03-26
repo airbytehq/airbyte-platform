@@ -7,17 +7,16 @@
   cursor: pointer;
   background-color: initial;
   color: colors.$dark-blue;
-  border: 1px solid colors.$grey-200;
+  border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-sm;
-  padding: 7px 8px;
+  padding-inline: variables.$spacing-md;
   text-align: left;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: variables.$spacing-md;
   font-size: variables.$font-size-lg;
-  line-height: 1.4;
-  min-height: 36px;
+  height: variables.$form-input-height;
 
   &:disabled {
     border-color: colors.$grey-100;

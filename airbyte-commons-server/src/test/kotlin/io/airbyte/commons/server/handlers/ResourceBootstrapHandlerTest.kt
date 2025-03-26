@@ -1,22 +1,20 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.config.Organization
-import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.Permission
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
-import io.kotest.assertions.asClue
-import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
@@ -65,26 +63,17 @@ class ResourceBootstrapHandlerTest {
     @Test
     fun `creates organization with organization payment config`() {
       val spy = spyk(handler)
-      val createdOrgSlot = slot<Organization>()
-      val paymentConfigSlot = slot<OrganizationPaymentConfig>()
 
       every { spy.findExistingOrganization(any()) } returns null
-      every { organizationService.writeOrganization(capture(createdOrgSlot)) } returns Unit
-      every { organizationPaymentConfigService.savePaymentConfig(capture(paymentConfigSlot)) } returns Unit
+      every { organizationService.writeOrganization(any()) } returns Unit
+      every { organizationPaymentConfigService.saveDefaultPaymentConfig(any()) } returns Unit
 
       spy.findOrCreateOrganizationAndPermission(user)
 
       verify { organizationService.writeOrganization(any()) }
-      verify { organizationPaymentConfigService.savePaymentConfig(any()) }
+      verify { organizationPaymentConfigService.saveDefaultPaymentConfig(any()) }
 
-      createdOrgSlot.captured.asClue {
-        it.orgLevelBilling.shouldBeTrue()
-      }
-
-      paymentConfigSlot.captured.asClue {
-        it.paymentStatus shouldBe OrganizationPaymentConfig.PaymentStatus.UNINITIALIZED
-        it.organizationId shouldBe orgId
-      }
+      // We no longer need to test the payment config saved because default config is always the same
     }
   }
 }

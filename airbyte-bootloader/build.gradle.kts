@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
@@ -15,11 +13,10 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.flyway)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
-  implementation(libs.guava)
-  implementation(libs.apache.commons.lang)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -58,14 +55,11 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
-
-  integrationTestCompileOnly(libs.lombok)
-  integrationTestAnnotationProcessor(libs.lombok)
 }
 
 airbyte {
   application {
-    mainClass = "io.airbyte.bootloader.Application"
+    mainClass = "io.airbyte.bootloader.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
@@ -81,8 +75,8 @@ airbyte {
   }
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -56,8 +56,10 @@ import io.airbyte.config.SyncMode;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.JobService;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
+import io.airbyte.featureflag.OnlyUseScheduledForGetTime;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
@@ -77,13 +79,11 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * JobHistoryHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
 @Singleton
-@Slf4j
 @SuppressWarnings("PMD.PreserveStackTrace")
 public class JobHistoryHandler {
 
@@ -320,11 +320,15 @@ public class JobHistoryHandler {
 
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
     final Optional<Job> job = jobPersistence.getLastReplicationJob(connectionIdRequestBody.getConnectionId());
-    if (job.isEmpty()) {
-      return new JobOptionalRead();
-    } else {
-      return jobConverter.getJobOptionalRead(job.get());
-    }
+    return jobConverter.getJobOptionalRead(job);
+
+  }
+
+  public JobOptionalRead getLastReplicationJobWithCancel(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
+    final boolean useScheduled =
+        featureFlagClient.boolVariation(OnlyUseScheduledForGetTime.INSTANCE, new Connection(connectionIdRequestBody.getConnectionId()));
+    final Optional<Job> job = jobPersistence.getLastReplicationJobWithCancel(connectionIdRequestBody.getConnectionId(), useScheduled);
+    return jobConverter.getJobOptionalRead(job);
 
   }
 
@@ -342,7 +346,7 @@ public class JobHistoryHandler {
     final JobDebugInfoRead jobDebugInfoRead = buildJobDebugInfoRead(jobinfoRead);
     if (temporalClient != null) {
       final UUID connectionId = UUID.fromString(job.getScope());
-      temporalClient.getWorkflowState(connectionId)
+      Optional.ofNullable(temporalClient.getWorkflowState(connectionId))
           .map(workflowStateConverter::getWorkflowStateRead)
           .ifPresent(jobDebugInfoRead::setWorkflowState);
     }

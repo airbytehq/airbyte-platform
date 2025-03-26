@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
@@ -73,7 +77,8 @@ internal class ScopedConfigurationHandlerTest {
   fun `test getScopedConfiguration`() {
     val testId = UUID.randomUUID()
     val scopedConfiguration =
-      ScopedConfiguration().withId(testId)
+      ScopedConfiguration()
+        .withId(testId)
         .withValue("value")
         .withKey("key")
         .withDescription("description")
@@ -126,7 +131,8 @@ internal class ScopedConfigurationHandlerTest {
   fun `test listScopedConfigurations`() {
     val scopedConfigurations =
       listOf(
-        ScopedConfiguration().withId(UUID.randomUUID())
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
           .withValue("value1")
           .withKey("key1")
           .withDescription("description1")
@@ -137,7 +143,8 @@ internal class ScopedConfigurationHandlerTest {
           .withScopeType(ConfigScopeType.ORGANIZATION)
           .withOrigin(UUID.randomUUID().toString())
           .withOriginType(ConfigOriginType.USER),
-        ScopedConfiguration().withId(UUID.randomUUID())
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
           .withValue("value2")
           .withKey("key1")
           .withDescription("description2")
@@ -706,8 +713,7 @@ internal class ScopedConfigurationHandlerTest {
             .origin(origin)
             .originType(ConfigOriginType.USER.toString())
             .originName(originName),
-        )
-        .ancestorConfigurations(
+        ).ancestorConfigurations(
           listOf(
             ScopedConfigurationRead()
               .id(orgId.toString())
@@ -724,8 +730,7 @@ internal class ScopedConfigurationHandlerTest {
               .originType(ConfigOriginType.USER.toString())
               .originName(originName),
           ),
-        )
-        .descendantConfigurations(
+        ).descendantConfigurations(
           listOf(
             ScopedConfigurationRead()
               .id(sourceId.toString())

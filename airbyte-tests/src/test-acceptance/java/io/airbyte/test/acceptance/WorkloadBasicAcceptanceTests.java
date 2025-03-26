@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -13,12 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.Flag;
-import io.airbyte.featureflag.UseAsyncActivities;
-import io.airbyte.featureflag.UseAsyncReplicate;
-import io.airbyte.featureflag.Workspace;
-import io.airbyte.featureflag.tests.TestFlagsSetter;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -28,8 +22,6 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for operations utilizing the workload api / launcher. As development continues on these
@@ -82,22 +74,6 @@ class WorkloadBasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testSyncWithAsyncReplicationActivity() throws Exception {
-    final UUID workspaceId = testResources.getWorkspaceId();
-
-    testResources.getTestHarness().createWorkspaceWithId(workspaceId);
-
-    try (var ignored = withFlag(UseAsyncReplicate.INSTANCE, new Workspace(workspaceId), true)) {
-      testResources.runSmallSyncForAWorkspaceId(workspaceId);
-    }
-  }
-
-  @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
   void testDestinationCheckConnectionWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
@@ -116,9 +92,8 @@ class WorkloadBasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testDiscover(final boolean useAsyncActivities) throws Exception {
+  @Test
+  void testDiscover() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
 
@@ -126,17 +101,11 @@ class WorkloadBasicAcceptanceTests {
     testResources.getTestHarness().createWorkspaceWithId(workspaceId);
 
     final AirbyteCatalog actual;
-    try (var ignored = withFlag(UseAsyncActivities.INSTANCE, new Workspace(workspaceId), useAsyncActivities)) {
-      final UUID sourceId = testResources.getTestHarness().createPostgresSource(workspaceId).getSourceId();
+    final UUID sourceId = testResources.getTestHarness().createPostgresSource(workspaceId).getSourceId();
 
-      actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
-    }
+    actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
 
     testResources.getTestHarness().compareCatalog(actual);
-  }
-
-  private <T> TestFlagsSetter.FlagOverride<T> withFlag(final Flag<T> flag, final Context context, final T value) {
-    return testResources.getTestHarness().getTestFlagsSetter().withFlag(flag, value, context);
   }
 
 }

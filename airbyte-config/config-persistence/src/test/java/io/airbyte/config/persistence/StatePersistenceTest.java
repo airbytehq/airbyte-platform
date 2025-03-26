@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -24,6 +24,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -38,6 +39,7 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
@@ -86,12 +88,15 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final var metricClient = mock(MetricClient.class);
     connectionService = mock(ConnectionService.class);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
         new ActorDefinitionServiceJooqImpl(database),
-        mock(ScopedConfigurationService.class));
+        mock(ScopedConfigurationService.class),
+        connectionTimelineEventService);
     connectionService = new ConnectionServiceJooqImpl(database);
     sourceService = new SourceServiceJooqImpl(
         database,
@@ -100,7 +105,8 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
@@ -108,13 +114,15 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
 
     connectionId = setupTestData();
 

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.featureflag
 
 import org.junit.jupiter.api.AfterEach
@@ -36,23 +37,28 @@ internal class FlagsTest {
       FieldSelectionWorkspaces.fetcher = { workspaceIds.joinToString() }
 
       // true if matching workspace
-      FieldSelectionWorkspaces.enabled(Workspace("0000"))
+      FieldSelectionWorkspaces
+        .enabled(Workspace("0000"))
         .also { assertTrue(it) }
 
       // true if matching workspace in multi
-      FieldSelectionWorkspaces.enabled(Multi(listOf(User("0000"), Workspace("0000"))))
+      FieldSelectionWorkspaces
+        .enabled(Multi(listOf(User("0000"), Workspace("0000"))))
         .also { assertTrue(it) }
 
       // false if no matching workspace
-      FieldSelectionWorkspaces.enabled(Workspace("1111"))
+      FieldSelectionWorkspaces
+        .enabled(Workspace("1111"))
         .also { assertFalse(it) }
 
       // false if incorrect type
-      FieldSelectionWorkspaces.enabled(User("0000"))
+      FieldSelectionWorkspaces
+        .enabled(User("0000"))
         .also { assertFalse(it) }
 
       // false if matching workspace in multi
-      FieldSelectionWorkspaces.enabled(Multi(listOf(User("0000"), Workspace("1111"))))
+      FieldSelectionWorkspaces
+        .enabled(Multi(listOf(User("0000"), Workspace("1111"))))
         .also { assertFalse(it) }
     }
   }

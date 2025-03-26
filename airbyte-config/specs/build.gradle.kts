@@ -7,8 +7,6 @@ plugins {
 }
 
 dependencies {
-  compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
@@ -17,8 +15,6 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-json-validation"))
 
-  implementation(libs.commons.cli)
-  implementation(libs.commons.io)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
   implementation(libs.google.cloud.storage)
@@ -35,19 +31,21 @@ dependencies {
 
 airbyte {
   spotless {
-    excludes = listOf(
-      "src/main/resources/seed/oss_registry.json",
-      "src/main/resources/seed/local_oss_registry.json",
-    )
+    excludes =
+      listOf(
+        "src/main/resources/seed/oss_registry.json",
+        "src/main/resources/seed/local_oss_registry.json",
+      )
   }
 }
 
-val downloadConnectorRegistry = tasks.register<Download>("downloadConnectorRegistry") {
-  src("https://connectors.airbyte.com/files/registries/v0/oss_registry.json")
-  dest(File(projectDir, "src/main/resources/seed/local_oss_registry.json"))
-  overwrite(true)
-  onlyIfModified(true)
-}
+val downloadConnectorRegistry =
+  tasks.register<Download>("downloadConnectorRegistry") {
+    src("https://connectors.airbyte.com/files/registries/v0/oss_registry.json")
+    dest(File(projectDir, "src/main/resources/seed/local_oss_registry.json"))
+    overwrite(true)
+    onlyIfModified(true)
+  }
 
 tasks.processResources {
   dependsOn(downloadConnectorRegistry)

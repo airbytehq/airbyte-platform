@@ -1,10 +1,15 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.initContainer.system.FileClient
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
@@ -58,9 +63,12 @@ class DiscoverHydrationProcessorTest {
     val input = Fixtures.workload
 
     val unhydrated = StandardDiscoverCatalogInput()
-    val parsed = DiscoverCatalogInput()
-    parsed.discoverCatalogInput = unhydrated
-    parsed.launcherConfig = IntegrationLauncherConfig()
+    val parsed =
+      DiscoverCatalogInput(
+        jobRunConfig = JobRunConfig(),
+        discoverCatalogInput = unhydrated,
+        launcherConfig = IntegrationLauncherConfig(),
+      )
 
     val connectionConfiguration = Jsons.jsonNode(mapOf("key-1" to "value-1"))
     val hydrated = StandardDiscoverCatalogInput()

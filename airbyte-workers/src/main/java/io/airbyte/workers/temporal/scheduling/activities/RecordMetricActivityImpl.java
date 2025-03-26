@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities;
@@ -16,32 +16,35 @@ import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of the {@link RecordMetricActivity} that is managed by the application framework
  * and therefore has access to other singletons managed by the framework.
  */
-@Slf4j
 @Singleton
 @Requires(env = EnvConstants.CONTROL_PLANE)
 public class RecordMetricActivityImpl implements RecordMetricActivity {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AirbyteApiClient airbyteApiClient;
   private final MetricClient metricClient;
@@ -65,7 +68,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
       baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).toList());
     }
     metricInput.getFailureCause().ifPresent(fc -> baseMetricAttributes.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, fc.name())));
-    metricClient.count(metricInput.getMetricName(), 1L, baseMetricAttributes.toArray(new MetricAttribute[] {}));
+    metricClient.count(metricInput.getMetricName(), baseMetricAttributes.toArray(new MetricAttribute[] {}));
   }
 
   /**

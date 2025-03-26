@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
@@ -46,19 +47,6 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         content: formatMessage({ id: "billing.banners.manualPaymentStatusInternal" }),
       };
     }
-    return {
-      level: "info",
-      content: formatMessage(
-        { id: "billing.banners.manualPaymentStatus" },
-        {
-          lnk: (node: React.ReactNode) => (
-            <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
-              {node}
-            </ExternalLink>
-          ),
-        }
-      ),
-    };
   }
 
   if (billing.paymentStatus === "locked") {
@@ -67,9 +55,9 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
       content: formatMessage(
         { id: "billing.banners.lockedPaymentStatus" },
         {
-          mail: (
-            <ExternalLink href="mailto:billing@airbyte.io" variant="primary">
-              billing@airbyte.io
+          lnk: (node: React.ReactNode) => (
+            <ExternalLink href={links.supportPortal} opensInNewTab>
+              {node}
             </ExternalLink>
           ),
         }
@@ -156,7 +144,10 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     }
   }
 
-  if (trialStatus?.trialStatus === "post_trial" && billing.paymentStatus === "uninitialized") {
+  if (
+    trialStatus?.trialStatus === "post_trial" &&
+    (billing.paymentStatus === "uninitialized" || billing.subscriptionStatus !== "subscribed")
+  ) {
     return {
       level: "info",
       content: formatMessage(

@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ImplementationTable } from "components/EntityTable";
@@ -17,10 +17,13 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useCurrentWorkspace, useFilters, useSourceList } from "core/api";
+import { SourceLimitReachedModal } from "area/workspace/components/SourceLimitReachedModal";
+import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
+import { useConnectionList, useFilters, useSourceList } from "core/api";
 import { SourceRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllSourcesPage.module.scss";
 import { SourcePaths } from "../../routePaths";
@@ -28,12 +31,13 @@ import { SourcePaths } from "../../routePaths";
 const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) => {
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const onCreateSource = () => navigate(`${SourcePaths.SelectSourceNew}`);
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateSource = useIntent("CreateSource", { workspaceId });
+  const canCreateSource = useGeneratedIntent(Intent.CreateOrEditConnector);
   const connectionList = useConnectionList({ sourceId: sources.map(({ sourceId }) => sourceId) });
   const connections = connectionList?.connections ?? [];
   const data = getEntityTableData(sources, connections, "source");
+  const { limits, sourceLimitReached } = useCurrentWorkspaceLimits();
+  const { formatMessage } = useIntl();
+  const { openModal } = useModalService();
 
   const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: string | null }>({
     search: "",
@@ -45,6 +49,17 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
     () => filterBySearchEntityTableData(debouncedSearchFilter, status, data),
     [data, debouncedSearchFilter, status]
   );
+
+  const onCreateSource = () => {
+    if (sourceLimitReached && limits) {
+      openModal({
+        title: formatMessage({ id: "workspaces.sourceLimitReached.title" }),
+        content: () => <SourceLimitReachedModal sourceCount={limits.sources.current} />,
+      });
+    } else {
+      navigate(`${SourcePaths.SelectSourceNew}`);
+    }
+  };
 
   return sources.length ? (
     <>

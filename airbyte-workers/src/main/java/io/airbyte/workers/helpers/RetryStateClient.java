@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helpers;
@@ -28,20 +28,22 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Business and request logic for retrieving and persisting retry state data.
  */
-@Slf4j
 @Singleton
 public class RetryStateClient {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   final AirbyteApiClient airbyteApiClient;
   final FeatureFlagClient featureFlagClient;
@@ -83,23 +85,29 @@ public class RetryStateClient {
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
-  @SneakyThrows
   public RetryManager hydrateRetryState(final Long jobId, final UUID workspaceId) throws RetryableException {
-    final var organizationId = fetchOrganizationId(workspaceId);
+    try {
+      final var organizationId = fetchOrganizationId(workspaceId);
 
-    final var manager = initializeBuilder(workspaceId, organizationId);
+      final var manager = initializeRetryManager(workspaceId, organizationId);
 
-    final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
+      final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
-    // if there is retry state we hydrate
-    // otherwise we will build with default 0 values
-    state.ifPresent(s -> manager
-        .totalCompleteFailures(s.getTotalCompleteFailures())
-        .totalPartialFailures(s.getTotalPartialFailures())
-        .successiveCompleteFailures(s.getSuccessiveCompleteFailures())
-        .successivePartialFailures(s.getSuccessivePartialFailures()));
+      // if there is retry state we hydrate
+      // otherwise we will build with default 0 values
+      state.ifPresent(s -> {
+        manager.setTotalCompleteFailures(s.getTotalCompleteFailures());
+        manager.setTotalPartialFailures(s.getTotalPartialFailures());
+        manager.setSuccessiveCompleteFailures(s.getSuccessiveCompleteFailures());
+        manager.setSuccessivePartialFailures(s.getSuccessivePartialFailures());
+      });
 
-    return manager.build();
+      return manager;
+    } catch (final RetryableException e) {
+      throw e;
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -126,7 +134,7 @@ public class RetryStateClient {
    * tweak values on the fly without requiring redeployment. Eventually we plan to finalize the
    * default values and remove these FF'd values.
    */
-  private RetryManager.RetryManagerBuilder initializeBuilder(final UUID workspaceId, final UUID organizationId) {
+  private RetryManager initializeRetryManager(final UUID workspaceId, final UUID organizationId) {
     final var ffContext = organizationId == null
         ? new Workspace(workspaceId)
         : new Multi(List.of(new Workspace(workspaceId), new Organization(organizationId)));
@@ -136,12 +144,13 @@ public class RetryStateClient {
     final var ffSuccessivePartialFailureLimit = featureFlagClient.intVariation(SuccessivePartialFailureLimit.INSTANCE, ffContext);
     final var ffTotalPartialFailureLimit = featureFlagClient.intVariation(TotalPartialFailureLimit.INSTANCE, ffContext);
 
-    return RetryManager.builder()
-        .completeFailureBackoffPolicy(buildBackOffPolicy(ffContext))
-        .successiveCompleteFailureLimit(initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit))
-        .successivePartialFailureLimit(initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit))
-        .totalCompleteFailureLimit(initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit))
-        .totalPartialFailureLimit(initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
+    return new RetryManager(
+        buildBackOffPolicy(ffContext),
+        null,
+        initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit),
+        initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit),
+        initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit),
+        initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
   }
 
   private BackoffPolicy buildBackOffPolicy(final Context ffContext) {
@@ -149,11 +158,10 @@ public class RetryStateClient {
     final var ffMax = featureFlagClient.intVariation(CompleteFailureBackoffMaxInterval.INSTANCE, ffContext);
     final var ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase.INSTANCE, ffContext);
 
-    return BackoffPolicy.builder()
-        .minInterval(Duration.ofSeconds(initializedOrElse(ffMin, minInterval)))
-        .maxInterval(Duration.ofSeconds(initializedOrElse(ffMax, maxInterval)))
-        .base(initializedOrElse(ffBase, backoffBase))
-        .build();
+    return new BackoffPolicy(
+        Duration.ofSeconds(initializedOrElse(ffMin, minInterval)),
+        Duration.ofSeconds(initializedOrElse(ffMax, maxInterval)),
+        initializedOrElse(ffBase, backoffBase));
   }
 
   /**

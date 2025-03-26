@@ -661,6 +661,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
 
+  /v1/source_definitions/list_enterprise_stubs_for_workspace:
+    post:
+      tags:
+        - source_definition
+      summary: List all enterprise source connector stubs for a specified workspace.
+      operationId: listEnterpriseSourceStubsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+
   /v1/source_definitions/create_custom:
     post:
       tags:
@@ -2381,6 +2400,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/list_minimal:
+    post:
+      tags:
+        - connection
+      summary: List all events in a given time span in a minimal representation
+      operationId: listConnectionEventsMinimal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsListMinimalRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionEventListMinimal"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/events/backfill:
     post:
       tags:
@@ -2534,6 +2576,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostprocessDiscoveredCatalogResult"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/get_context:
+    post:
+      tags:
+        - connection
+      summary: Retrieves the domain ids for all objects related to a connection.
+      operationId: getConnectionContext
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionContextRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3555,7 +3620,32 @@ paths:
     post:
       tags:
         - jobs
+      summary: Get the latest job not including the cancel jobs.
       operationId: getLastReplicationJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOptionalRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/get_last_replication_job_with_cancel:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the latest job including the cancel jobs. This is used for scheduling in order to make sure that we don't immediately start a new job after a cancel.
+      operationId: getLastReplicationJobWithCancel
       requestBody:
         content:
           application/json:
@@ -4723,13 +4813,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentInformationRead"
-  /v1/billing/organization_balance:
+  /v1/billing/subscription_info:
     post:
-      summary: Get the current balance of an organization
+      summary: Get the current information about the organization's subscription
       tags:
         - billing
         - cloud-only
-      operationId: getOrganizationBalance
+      operationId: getSubscriptionInfo
       requestBody:
         content:
           application/json:
@@ -4737,11 +4827,11 @@ paths:
               $ref: "#/components/schemas/OrganizationIdRequestBody"
       responses:
         "200":
-          description: Successfully got organization's balance
+          description: Successfully got organization subscription info
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationBalanceRead"
+                $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
   /v1/billing/trial_status:
     post:
       summary: Get the current trial status of an organization
@@ -4761,6 +4851,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationTrialStatusRead"
+  /v1/billing/cancel_subscription:
+    post:
+      summary: Schedule canceling the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: cancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully scheduled cancelation of the subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelSubscriptionRead"
+  /v1/billing/unschedule_cancel_subscription:
+    post:
+      summary: Unschedule a scheduled cancelation of the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: unscheduleCancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "204":
+          description: Successfully unscheduled cancelation of the subscription
   /v1/organization_payment_config/{organizationId}:
     get:
       summary: Get an organization payment config
@@ -4784,26 +4908,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-    delete:
-      summary: Delete an organization payment config
-      tags:
-        - organization_payment_config
-        - billing
-        - cloud-only
-        - admin-api
-      operationId: deleteOrganizationPaymentConfig
-      parameters:
-        - in: path
-          name: organizationId
-          schema:
-            type: string
-            format: uuid
-          required: true
-      responses:
-        "204":
-          description: Successfully deleted organization payment config
-        "404":
-          description: Payment config didn't exist
   /v1/organization_payment_config:
     post:
       summary: Create or update an organization payment config
@@ -5445,7 +5549,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorRolloutResponse"
+                $ref: "#/components/schemas/ConnectorRolloutManualRolloutResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -5477,6 +5581,30 @@ paths:
 
       summary: Manually finalize a connector rollout by ID. This will unpin all actors that have been pinned to the release candidate version.
       operationId: manualFinalizeConnectorRollout
+      tags:
+        - connector_rollout
+
+  /v1/connector_rollout/manual_pause:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorRolloutUpdateStateRequestBody"
+      responses:
+        "200":
+          description: Updated connector rollout object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRolloutResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update rollout state to paused
+      operationId: manualPauseConnectorRollout
       tags:
         - connector_rollout
 
@@ -5601,6 +5729,82 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
 
+  # Tags
+  /v1/tags/list:
+    post:
+      summary: List tags in a workspace
+      tags:
+        - tag
+      operationId: listTags
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagListRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved list of tags.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+  /v1/tags/update:
+    post:
+      summary: Update a tag
+      tags:
+        - tag
+      operationId: updateTag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagUpdateRequestBody"
+      responses:
+        "200":
+          description: Successfully updated tag.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+  /v1/tags/delete:
+    post:
+      summary: Delete a tag
+      tags:
+        - tag
+      operationId: deleteTag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagDeleteRequestBody"
+      responses:
+        "200":
+          description: Successfully deleted tag.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+  /v1/tags/create:
+    post:
+      summary: Create a tag
+      tags:
+        - tag
+      operationId: createTag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagCreateRequestBody"
+      responses:
+        "200":
+          description: Successfully created tag.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+
   /v1/diagnostic_tool/generate_report:
     post:
       summary: Generate a diagnostic report
@@ -5639,6 +5843,205 @@ paths:
           description: Successful operation
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/create:
+    post:
+      summary: Create a dataplane group
+      tags:
+        - dataplane_group
+      operationId: createDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/update:
+    post:
+      summary: Update a dataplane group
+      tags:
+        - dataplane_group
+      operationId: updateDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/delete:
+    post:
+      summary: Delete a dataplane group
+      tags:
+        - dataplane_group
+      operationId: deleteDataplaneGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplane_group/list:
+    post:
+      summary: List dataplane groups for the organization
+      tags:
+        - dataplane_group
+      operationId: listDataplaneGroups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGroupListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplane groups for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneGroupListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/create:
+    post:
+      summary: Create a dataplane
+      tags:
+        - dataplane
+      operationId: createDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/update:
+    post:
+      summary: Update a dataplane
+      tags:
+        - dataplane
+      operationId: updateDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/delete:
+    post:
+      summary: Delete a dataplane
+      tags:
+        - dataplane
+      operationId: deleteDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneDeleteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully deleted dataplane
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/list:
+    post:
+      summary: List dataplanes for the dataplane group
+      tags:
+        - dataplane
+      operationId: listDataplanes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: List of dataplanes for the dataplane group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/get_dataplane_id:
+    post:
+      summary: Get a dataplane ID given the provided request body params
+      tags:
+        - dataplane
+      operationId: getDataplaneId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneGetIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneReadId"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -6699,6 +7102,15 @@ paths:
               type: string
           in: query
           required: false
+        - name: tagIds
+          description: The UUIDs of the tags you wish to list connections for. Empty list will retrieve all connections.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
         - name: includeDeleted
           description: Include deleted connections in the returned results.
           schema:
@@ -7306,6 +7718,141 @@ paths:
       x-sdk-alias: listUsersWithinAnOrganization
       x-sdk-group: Users
 
+  # Public APIs - Tags
+  /public/v1/tags:
+    get:
+      tags:
+        - public_tags
+        - public
+        - Tags
+      summary: List all tags
+      description: Lists all tags
+      parameters:
+        - name: workspaceIds
+          in: query
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsResponse"
+          description: List Tags.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListTags
+      x-sdk-alias: listTags
+      x-sdk-group: Tags
+    post:
+      tags:
+        - public_tags
+        - public
+        - Tags
+      summary: Create a tag
+      description: Create a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagCreateRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagResponse"
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "409":
+          description: Tag with same name already exists
+      operationId: publicCreateTag
+      x-sdk-alias: createTag
+      x-sdk-group: Tags
+  /public/v1/tags/{tagId}:
+    parameters:
+      - name: tagId
+        schema:
+          $ref: "#/components/schemas/TagId"
+        in: path
+        required: true
+    get:
+      tags:
+        - public_tags
+        - public
+        - Tags
+      summary: Get a tag
+      description: Get a tag
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetTag
+      x-sdk-alias: getTag
+      x-sdk-group: Tags
+    delete:
+      tags:
+        - public_tags
+        - public
+        - Tags
+      summary: Delete a tag
+      description: Delete a tag
+      responses:
+        "204":
+          description: The resource was deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteTag
+      x-sdk-alias: deleteTag
+      x-sdk-group: Tags
+    patch:
+      tags:
+        - public_tags
+        - public
+        - Tags
+      summary: Update a tag
+      description: Update a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagPatchRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagResponse"
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateTag
+      x-sdk-alias: updateTag
+      x-sdk-group: Tags
 components:
   securitySchemes:
     bearerAuth:
@@ -7568,13 +8115,15 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
         rollout_strategy:
           $ref: "#/components/schemas/ConnectorRolloutStrategy"
         actor_selection_info:
           $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
         actor_syncs:
-          type: array
-          items:
+          type: object
+          additionalProperties:
             $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutState:
@@ -7711,6 +8260,9 @@ components:
         updated_by:
           type: string
           format: uuid
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutStartResponse:
       type: object
@@ -7772,6 +8324,11 @@ components:
           type: string
         failed_reason:
           type: string
+        paused_reason:
+          type: string
+        updated_by:
+          type: string
+          format: uuid
 
     ConnectorRolloutFinalizeRequestBody:
       type: object
@@ -7794,6 +8351,9 @@ components:
         updated_by:
           type: string
           format: uuid
+        retain_pins_on_cancellation:
+          type: boolean
+          default: true
 
     ConnectorRolloutGetActorSyncInfoRequestBody:
       type: object
@@ -7815,41 +8375,49 @@ components:
             actor_selection_info:
               $ref: "#/components/schemas/ConnectorRolloutActorSelectionInfo"
             syncs:
-              type: array
-              items:
+              type: object
+              additionalProperties:
                 $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
 
     ConnectorRolloutActorSelectionInfo:
       type: object
       required:
-        - n_actors
-        - n_actors_eligible_or_already_pinned
-        - n_pinned_to_connector_rollout
+        - num_actors
+        - num_actors_eligible_or_already_pinned
+        - num_pinned_to_connector_rollout
       properties:
-        n_actors:
+        num_actors:
           type: integer
-        n_actors_eligible_or_already_pinned:
+        num_actors_eligible_or_already_pinned:
           type: integer
-        n_pinned_to_connector_rollout:
+        num_pinned_to_connector_rollout:
           type: integer
 
     ConnectorRolloutActorSyncInfo:
       type: object
       required:
         - actor_id
-        - n_succeeded
-        - n_failed
-        - n_connections
+        - num_succeeded
+        - num_failed
+        - num_connections
       properties:
         actor_id:
           type: string
           format: uuid
-        n_succeeded:
+        num_succeeded:
           type: integer
-        n_failed:
+        num_failed:
           type: integer
-        n_connections:
+        num_connections:
           type: integer
+
+    ConnectorRolloutManualRolloutResponse:
+      type: object
+      required:
+        - data
+      properties:
+        status:
+          type: string
 
     ConnectorRolloutManualFinalizeResponse:
       type: object
@@ -7898,6 +8466,9 @@ components:
           minimum: 0
           maximum: 100
           format: int32
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutManualRolloutRequestBody:
       type: object
@@ -7930,6 +8501,9 @@ components:
           format: int32
           minimum: 1
           maximum: 100
+        migrate_pins:
+          type: boolean
+          default: true
 
     ConnectorRolloutManualFinalizeRequestBody:
       type: object
@@ -7960,6 +8534,9 @@ components:
           type: string
         failed_reason:
           type: string
+        retain_pins_on_cancellation:
+          type: boolean
+          default: true
 
     # WORKSPACE
     WorkspaceId:
@@ -8172,6 +8749,10 @@ components:
         includeDeleted:
           type: boolean
           default: false
+        tagIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagId"
     ListResourcesForWorkspacesRequestBody:
       type: object
       required:
@@ -8250,13 +8831,27 @@ components:
           $ref: "#/components/schemas/OrganizationId"
         tombstone:
           type: boolean
+        workspaceLimits:
+          $ref: "#/components/schemas/WorkspaceLimits"
+    WorkspaceLimits:
+      type: object
+      required:
+        - sources
+        - destinations
+        - activeConnections
+      properties:
+        sources:
+          $ref: "#/components/schemas/Limit"
+        destinations:
+          $ref: "#/components/schemas/Limit"
+        activeConnections:
+          $ref: "#/components/schemas/Limit"
     WorkspaceOrganizationInfoRead:
       type: object
       description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
       required:
         - organizationId
         - organizationName
-        - pba
         - sso
       properties:
         organizationId:
@@ -8264,8 +8859,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
         sso:
           type: boolean
         billing:
@@ -8273,6 +8866,12 @@ components:
           required:
             - paymentStatus
           properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
             paymentStatus:
               type: string
               enum:
@@ -8333,6 +8932,8 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
         email:
           type: string
           format: email
@@ -8352,6 +8953,8 @@ components:
             $ref: "#/components/schemas/Notification"
         notificationSettings:
           $ref: "#/components/schemas/NotificationSettings"
+        notificationsConfig:
+          $ref: "#/components/schemas/NotificationsConfig"
         defaultGeography:
           $ref: "#/components/schemas/Geography"
         webhookConfigs:
@@ -8532,6 +9135,8 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         yamlManifest:
           type: string
+        componentsFileContent:
+          type: string
         baseActorDefinitionVersionId:
           $ref: "#/components/schemas/NullableActorDefinitionVersionId"
         contributionPullRequestUrl:
@@ -8547,6 +9152,7 @@ components:
         - name
         - builderProjectId
         - hasDraft
+        - updatedAt
       properties:
         name:
           type: string
@@ -8558,10 +9164,15 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
+        updatedAt:
+          type: integer
+          format: int64
         baseActorDefinitionVersionInfo:
           $ref: "#/components/schemas/BaseActorDefinitionVersionInfo"
         contributionInfo:
           $ref: "#/components/schemas/ContributionInfo"
+        componentsFileContent:
+          type: string
     BaseActorDefinitionVersionInfo:
       type: object
       required:
@@ -8696,6 +9307,8 @@ components:
           type: string
         initialDeclarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+        componentsFileContent:
+          type: string
     ConnectorBuilderProjectTestingValuesUpdate:
       type: object
       required:
@@ -8814,27 +9427,18 @@ components:
                 items:
                   type: object
                   description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
+              auxiliary_requests:
+                type: array
+                description: Non-data requests made at the slice level, e.g. creation / polling requests for async stream slices
+                items:
+                  $ref: "#/components/schemas/ConnectorBuilderAuxiliaryRequest"
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
         auxiliary_requests:
           type: array
           items:
-            type: object
-            required:
-              - description
-              - request
-              - response
-              - title
-            properties:
-              description:
-                type: string
-              request:
-                $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
-              response:
-                $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
-              title:
-                type: string
+            $ref: "#/components/schemas/ConnectorBuilderAuxiliaryRequest"
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
@@ -8844,6 +9448,35 @@ components:
         latest_config_update:
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
           $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderAuxiliaryRequest:
+      type: object
+      required:
+        - description
+        - request
+        - response
+        - title
+        - type
+      properties:
+        description:
+          type: string
+        request:
+          $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
+        response:
+          $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            [
+              "HTTP",
+              "AUTH",
+              "PARENT_STREAM",
+              "ASYNC_CREATE",
+              "ASYNC_POLL",
+              "ASYNC_ABORT",
+              "ASYNC_DELETE",
+            ]
     ConnectorBuilderHttpRequest:
       type: object
       required:
@@ -8960,7 +9593,7 @@ components:
         icon:
           type: string
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceDefinitionUpdate:
       type: object
       description: Update the SourceDefinition. Currently, the only allowed attribute to update is the default docker image version.
@@ -8975,7 +9608,7 @@ components:
         dockerImageTag:
           type: string
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceDefinitionRead:
       type: object
       required:
@@ -9004,6 +9637,10 @@ components:
           description: Whether the connector is custom or not
           type: boolean
           default: false
+        enterprise:
+          description: Whether the connector is an enterprise connector
+          type: boolean
+          default: false
         supportLevel:
           $ref: "#/components/schemas/SupportLevel"
         releaseStage:
@@ -9021,7 +9658,7 @@ components:
             - database
             - custom
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
         maxSecondsBetweenMessages:
           description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
           type: integer
@@ -9058,6 +9695,9 @@ components:
         id:
           type: string
           description: The id of the enterprise source connector stub. We use "source-<name>-enterprise" as the ID since these connectors do not necessarily exist yet, and do not have a guaranteed definitionId
+        definitionId:
+          type: string
+          description: The id of the source definition associated with the enterprise connector, if one exists
         name:
           type: string
           description: The name of the enterprise connector
@@ -9196,6 +9836,8 @@ components:
           type: boolean
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+        componentsFileContent:
+          type: string
     UpdateActiveManifestRequestBody:
       type: object
       required:
@@ -9247,6 +9889,8 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"
     # SOURCE
@@ -9315,6 +9959,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceDiscoverSchemaRequestBody:
       type: object
       required:
@@ -9367,6 +10013,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceUpdate:
       type: object
       required:
@@ -9383,6 +10031,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     SourceRead:
       type: object
       required:
@@ -9410,6 +10060,8 @@ components:
           type: string
         isVersionOverrideApplied:
           type: boolean
+        isEntitled:
+          type: boolean
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
         supportState:
@@ -9419,6 +10071,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string
@@ -9554,7 +10208,7 @@ components:
         icon:
           type: string
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationDefinitionUpdate:
       type: object
       required:
@@ -9568,7 +10222,7 @@ components:
         dockerImageTag:
           type: string
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationDefinitionRead:
       type: object
       required:
@@ -9598,6 +10252,10 @@ components:
           description: Whether the connector is custom or not
           type: boolean
           default: false
+        enterprise:
+          description: Whether the connector is an enterprise connector
+          type: boolean
+          default: false
         supportLevel:
           $ref: "#/components/schemas/SupportLevel"
         releaseStage:
@@ -9607,7 +10265,7 @@ components:
           type: string
           format: date
         resourceRequirements:
-          $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+          $ref: "#/components/schemas/ScopedResourceRequirements"
         lastPublished:
           description: The time the connector was modified in the codebase.
           $ref: "#/components/schemas/ISO8601DateTime"
@@ -9690,6 +10348,8 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionSpecification"
         advancedAuth:
           $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
         jobInfo:
           $ref: "#/components/schemas/SynchronousJobRead"
         supportedDestinationSyncModes:
@@ -9742,6 +10402,8 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionId"
         connectionConfiguration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationUpdate:
       type: object
       required:
@@ -9755,6 +10417,8 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         name:
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     PartialDestinationUpdate:
       type: object
       properties:
@@ -9764,6 +10428,8 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         name:
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationCloneRequestBody:
       description: The values required to configure the destination. The schema for this should have an id of the existing destination along with the configuration you want to change in case.
       type: object
@@ -9808,6 +10474,8 @@ components:
           type: string
         isVersionOverrideApplied:
           type: boolean
+        isEntitled:
+          type: boolean
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
         supportState:
@@ -9817,6 +10485,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
     DestinationSnippetRead:
       type: object
       required:
@@ -10145,6 +10815,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendConnectionCreate:
       type: object
       required:
@@ -10200,6 +10874,10 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -10263,6 +10941,11 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
+        tags:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionUpdateWithReason:
       type: object
       required:
@@ -10328,6 +11011,11 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        tags:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionRead:
       type: object
       required:
@@ -10393,6 +11081,10 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     ConnectionStatusesRequestBody:
       type: object
       required:
@@ -10466,6 +11158,38 @@ components:
           format: int64
         configType:
           $ref: "#/components/schemas/JobConfigType"
+    ConnectionContextRead:
+      description: Ids of related contextual domain models for a connection given connection.
+      type: object
+      properties:
+        connectionId:
+          description: The ID of the relevant connection.
+          type: string
+          format: uuid
+        sourceId:
+          description: The ID of the relevant source.
+          type: string
+          format: uuid
+        destinationId:
+          description: The ID of the relevant destination.
+          type: string
+          format: uuid
+        sourceDefinitionId:
+          description: The ID of the relevant source definition.
+          type: string
+          format: uuid
+        destinationDefinitionId:
+          description: The ID of the relevant destination definition.
+          type: string
+          format: uuid
+        workspaceId:
+          description: The ID of the workspace related to this workflow
+          type: string
+          format: uuid
+        organizationId:
+          description: The ID of the organization related to this workflow
+          type: string
+          format: uuid
     StreamSyncProgressReadItem:
       type: object
       required:
@@ -10666,6 +11390,22 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
+    ConnectionEventMinimal:
+      type: object
+      required:
+        - id
+        - connectionId
+        - createdAt
+        - eventType
+      properties:
+        eventId:
+          $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        createdAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        eventType:
+          $ref: "#/components/schemas/ConnectionEventType"
     ConnectionEventWithDetails:
       type: object
       required:
@@ -10693,7 +11433,6 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserReadInConnectionEvent"
-
     ConnectionEventList:
       type: object
       required:
@@ -10703,6 +11442,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionEvent"
+    ConnectionEventListMinimal:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventMinimal"
     ConnectionEventsRequestBody:
       type: object
       required:
@@ -10717,6 +11465,31 @@ components:
             $ref: "#/components/schemas/ConnectionEventType"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        createdAtStart:
+          description: The start datetime of a time range to filter by
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to filter by
+          type: string
+          format: date-time
+    ConnectionEventsListMinimalRequestBody:
+      type: object
+      required:
+        - connectionIds
+        - eventTypes
+        - createdAtStart
+        - createdAtEnd
+      properties:
+        connectionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionId"
+        eventTypes:
+          description: filter events by event types
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventType"
         createdAtStart:
           description: The start datetime of a time range to filter by
           type: string
@@ -10947,6 +11720,29 @@ components:
       properties:
         propagatedDiff:
           $ref: "#/components/schemas/CatalogDiff"
+    TagId:
+      type: string
+      format: uuid
+      x-sdk-component: true
+    Tag:
+      description: A tag that can be associated with a connection. Useful for grouping and organizing connections in a workspace.
+      type: object
+      x-sdk-component: true
+      required:
+        - tagId
+        - workspaceId
+        - name
+        - color
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        color:
+          type: string
+
     # Operations
     OperationId:
       type: string
@@ -11104,6 +11900,7 @@ components:
           enum:
             - portal
             - payment_method
+            - setup
           default: portal
     CustomerPortalRead:
       type: object
@@ -11209,22 +12006,22 @@ components:
               $ref: "#/components/schemas/AddressRead"
             defaultPaymentMethod:
               $ref: "#/components/schemas/PaymentMethodRead"
-    OrganizationBalanceRead:
+    OrganizationSubscriptionInfoRead:
       type: object
       required:
-        - hidden
-        - planType
+        - name
+        - selfServeSubscription
+        - balanceHidden
       properties:
-        hidden:
+        name:
+          type: string
+        selfServeSubscription:
+          type: boolean
+        cancellationDate:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        balanceHidden:
           description: Whether the organization balance is hidden and should not be shown to the user.
           type: boolean
-        planType:
-          description: Whether the customer is on a prepaid or in_arrears type plan. This is only used during the migration and will be removed after the migration again.
-          type: string
-          enum:
-            - in_arrears
-            - prepaid
-          deprecated: true
         upcomingInvoice:
           type: object
           description: Describe the current state of the upcoming invoice. If `hidden` is `true`, this will be `null`, since no balance should be shown.
@@ -11281,9 +12078,50 @@ components:
             - The organization has left the trial already
         trialEndsAt:
           $ref: "#/components/schemas/ISO8601DateTime"
+    CancelSubscriptionRead:
+      type: object
+      required:
+        - subscriptionEndsAt
+      properties:
+        subscriptionEndsAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
 
     # Organization payment config
     OrganizationPaymentConfigRead:
+      type: object
+      required:
+        - organizationId
+        - paymentStatus
+        - subscriptionStatus
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum:
+            - uninitialized
+            - okay
+            - grace_period
+            - disabled
+            - locked
+            - manual
+        subscriptionStatus:
+          type: string
+          enum:
+            - pre_subscription
+            - subscribed
+            - unsubscribed
+        paymentProviderId:
+          type: string
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        usageCategoryOverwrite:
+          type: string
+          enum:
+            - free
+            - internal
+    OrganizationPaymentConfigUpdateRequestBody:
       type: object
       required:
         - organizationId
@@ -11303,16 +12141,15 @@ components:
             - manual
         paymentProviderId:
           type: string
-        gracePeriodEndAt:
-          $ref: "#/components/schemas/ISO8601DateTime"
         usageCategoryOverwrite:
           type: string
           enum:
             - free
             - internal
-    OrganizationPaymentConfigUpdateRequestBody:
-      $ref: "#/components/schemas/OrganizationPaymentConfigRead"
-
+        gracePeriodEndAt:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        newGracePeriodReason:
+          type: string
     # ORGANIZATIONS
     OrganizationId:
       type: string
@@ -11336,10 +12173,6 @@ components:
           format: uuid
         organizationName:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         email:
           type: string
     OrganizationCreateRequestBody:
@@ -11355,18 +12188,12 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
     OrganizationRead:
       type: object
       required:
         - organizationId
         - organizationName
         - email
-        - pba
-        - orgLevelBilling
       properties:
         organizationId:
           type: string
@@ -11375,12 +12202,29 @@ components:
           type: string
         email:
           type: string
-        pba:
-          type: boolean
-        orgLevelBilling:
-          type: boolean
         ssoRealm:
           type: string
+        organizationLimits:
+          $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationLimits:
+      type: object
+      properties:
+        users:
+          $ref: "#/components/schemas/Limit"
+        workspaces:
+          $ref: "#/components/schemas/Limit"
+    Limit:
+      type: object
+      required:
+        - current
+        - max
+      properties:
+        current:
+          type: integer
+          format: int64
+        max:
+          type: integer
+          format: int64
     OrganizationReadList:
       type: object
       required:
@@ -11924,6 +12768,190 @@ components:
     MapperConfiguration:
       type: object
       description: The values required to configure the mapper.
+      oneOf:
+        - $ref: "#/components/schemas/HashingMapperConfiguration"
+        - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
+        - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperConfiguration"
+      x-sdk-component: true
+    HashingMapperConfiguration:
+      title: "Hashing"
+      type: "object"
+      properties:
+        fieldNameSuffix:
+          type: "string"
+          title: "Field name suffix"
+          description: "The suffix to append to the field name after hashing."
+        method:
+          type: "string"
+          enum:
+            - "MD2"
+            - "MD5"
+            - "SHA-1"
+            - "SHA-224"
+            - "SHA-256"
+            - "SHA-384"
+            - "SHA-512"
+          title: "Hashing method"
+          description: "The hashing algorithm to use."
+        targetField:
+          type: "string"
+          title: "Original Field Name"
+          description: "The name of the field to be hashed."
+      required:
+        - "fieldNameSuffix"
+        - "method"
+        - "targetField"
+      x-sdk-component: true
+    FieldRenamingMapperConfiguration:
+      title: "Field Renaming"
+      type: "object"
+      properties:
+        newFieldName:
+          type: "string"
+          title: "New Field Name"
+          description: "The new name for the field after renaming."
+        originalFieldName:
+          type: "string"
+          title: "Original Field Name"
+          description: "The current name of the field to rename."
+      required:
+        - "newFieldName"
+        - "originalFieldName"
+      x-sdk-component: true
+    RowFilteringOperationType:
+      type: "string"
+      enum:
+        - "EQUAL"
+        - "NOT"
+      x-sdk-component: true
+    RowFilteringOperationEqual:
+      type: "object"
+      title: "EQUAL"
+      required:
+        - "comparisonValue"
+        - "fieldName"
+        - "type"
+      properties:
+        comparisonValue:
+          type: "string"
+          title: "Comparison Value"
+          description: "The value to compare the field against."
+        fieldName:
+          type: "string"
+          title: "Field Name"
+          description: "The name of the field to apply the operation on."
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-sdk-component: true
+    RowFilteringOperationNot:
+      type: "object"
+      title: "NOT"
+      required:
+        - "conditions"
+        - "type"
+      properties:
+        conditions:
+          title: "Sub-Conditions (NOT)"
+          description: "Conditions to evaluate with the NOT operator."
+          minItems: 1
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RowFilteringOperation"
+        type:
+          $ref: "#/components/schemas/RowFilteringOperationType"
+      x-sdk-component: true
+    RowFilteringOperation:
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/RowFilteringOperationEqual"
+        - $ref: "#/components/schemas/RowFilteringOperationNot"
+      discriminator:
+        propertyName: type
+        mapping:
+          EQUAL: "#/components/schemas/RowFilteringOperationEqual"
+          NOT: "#/components/schemas/RowFilteringOperationNot"
+      x-sdk-component: true
+      x-airbyte-circular-ref: true
+    RowFilteringMapperConfiguration:
+      title: "Row Filtering"
+      type: "object"
+      properties:
+        conditions:
+          $ref: "#/components/schemas/RowFilteringOperation"
+      required:
+        - "conditions"
+      x-sdk-component: true
+    EncryptionMapperAlgorithm:
+      type: string
+      enum:
+        - RSA
+        - AES
+      x-sdk-component: true
+    EncryptionMapperConfiguration:
+      title: Encryption
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/EncryptionMapperRSAConfiguration"
+        - $ref: "#/components/schemas/EncryptionMapperAESConfiguration"
+      discriminator:
+        propertyName: algorithm
+        mapping:
+          RSA: "#/components/schemas/EncryptionMapperRSAConfiguration"
+          AES: "#/components/schemas/EncryptionMapperAESConfiguration"
+      x-sdk-component: true
+    EncryptionMapperRSAConfiguration:
+      title: "Encryption - RSA"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        publicKey:
+          type: "string"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "publicKey"
+        - "targetField"
+        - "fieldNameSuffix"
+      x-sdk-component: true
+    EncryptionMapperAESConfiguration:
+      title: "Encryption - AES"
+      type: "object"
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/EncryptionMapperAlgorithm"
+        fieldNameSuffix:
+          type: "string"
+        key:
+          type: string
+          x-sdk-param-sensitive: true
+        mode:
+          type: "string"
+          enum:
+            - "CBC"
+            - "CFB"
+            - "OFB"
+            - "CTR"
+            - "GCM"
+            - "ECB"
+        padding:
+          type: "string"
+          enum:
+            - "NoPadding"
+            - "PKCS5Padding"
+        targetField:
+          type: "string"
+      required:
+        - "algorithm"
+        - "key"
+        - "mode"
+        - "padding"
+        - "targetField"
+        - "fieldNameSuffix"
       x-sdk-component: true
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
@@ -11958,9 +12986,12 @@ components:
       type: object
       required:
         - connectionId
+        - isScheduled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+        isScheduled:
+          type: boolean
     JobListRequestBody:
       type: object
       required:
@@ -12455,8 +13486,6 @@ components:
       type: object
       required:
         - attempt
-        - logType
-        - logs
       properties:
         attempt:
           $ref: "#/components/schemas/AttemptRead"
@@ -12879,8 +13908,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieldName"
-    ActorDefinitionResourceRequirements:
-      description: actor definition specific resource requirements. if default is set, these are the requirements that should be set for ALL jobs run for this actor definition. it is overriden by the job type specific configurations. if not set, the platform will use defaults. these values will be overriden by configuration at the connection level.
+    ScopedResourceRequirements:
+      description: actor or actor definition specific resource requirements. if default is set, these are the requirements that should be set for ALL jobs run for this actor definition. it is overriden by the job type specific configurations. if not set, the platform will use defaults. these values will be overriden by configuration at the connection level.
       type: object
       additionalProperties: false
       properties:
@@ -12910,7 +13939,7 @@ components:
       type: string
       format: uuid
     JobTypeResourceLimit:
-      description: sets resource requirements for a specific job type for an actor definition. these values override the default, if both are set.
+      description: sets resource requirements for a specific job type for an actor or actor definition. these values override the default, if both are set.
       type: object
       additionalProperties: false
       required:
@@ -13345,9 +14374,14 @@ components:
       type: object
       required:
         - initialFields
+        - outputFields
         - mappers
       properties:
         initialFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        outputFields:
           type: array
           items:
             $ref: "#/components/schemas/FieldSpec"
@@ -13360,9 +14394,15 @@ components:
       required:
         - name
         - type
+        - isSelectedPrimaryKey
+        - isSelectedCursor
       properties:
         name:
           type: string
+        isSelectedPrimaryKey:
+          type: boolean
+        isSelectedCursor:
+          type: boolean
         type:
           type: string
           enum:
@@ -13383,11 +14423,16 @@ components:
       type: object
       required:
         - outputFields
+        - inputFields
       properties:
         id:
           type: string
           format: uuid
         outputFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldSpec"
+        inputFields:
           type: array
           items:
             $ref: "#/components/schemas/FieldSpec"
@@ -13438,6 +14483,7 @@ components:
         - schemaChange
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13465,6 +14511,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendConnectionRead:
       type: object
       required:
@@ -13483,6 +14533,7 @@ components:
         - nonBreakingChangesPreference
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
+        - tags
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -13556,6 +14607,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
         destinationActorDefinitionVersion:
           $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
     WebBackendDescribeCronExpressionRequestBody:
       type: object
       required:
@@ -13882,6 +14937,8 @@ components:
         defaultRealm:
           type: string
           default: "airbyte"
+        authorizationServerUrl:
+          type: string
     LicenseStatus:
       type: string
       enum:
@@ -14234,6 +15291,52 @@ components:
         mode:
           type: string
         version:
+          type: string
+    TagListRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    TagUpdateRequestBody:
+      type: object
+      required:
+        - tagId
+        - workspaceId
+        - name
+        - color
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        color:
+          type: string
+    TagDeleteRequestBody:
+      type: object
+      required:
+        - tagId
+        - workspaceId
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    TagCreateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - name
+        - color
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        color:
           type: string
 
     NotFoundKnownExceptionInfo:
@@ -14681,10 +15784,15 @@ components:
         prefix:
           type: string
           description: Prefix that will be prepended to the name of each stream when it is written to the destination (ex. “airbyte_” causes “projects” => “airbyte_projects”).
+          default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
       x-sdk-entity: Connection
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -14714,6 +15822,10 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
       x-sdk-entity: Connection
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -14811,6 +15923,33 @@ components:
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
+    TagCreateRequest:
+      required:
+        - name
+        - color
+        - workspaceId
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      x-sdk-entity: Tag
+      x-sdk-component: true
+    TagPatchRequest:
+      required:
+        - name
+        - color
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+      x-sdk-entity: Tag
+      x-sdk-component: true
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       required:
@@ -14881,6 +16020,7 @@ components:
         - dataResidency
         - configurations
         - createdAt
+        - tags
       properties:
         connectionId:
           format: UUID
@@ -14915,6 +16055,10 @@ components:
         createdAt:
           format: int64
           type: integer
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
       x-sdk-entity: Connection
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -15120,6 +16264,31 @@ components:
         - source
         - destination
       x-sdk-component: true
+    TagResponse:
+      title: Root Type for TagResponse
+      description: Provides details of a single tag.
+      type: object
+      required:
+        - tagId
+        - name
+        - color
+        - workspaceId
+      properties:
+        tagId:
+          $ref: "#/components/schemas/TagId"
+        name:
+          type: string
+        color:
+          description: A hexadecimal color value
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+      example:
+        tagId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Analytics Team
+        color: FF5733
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
     DestinationCreateRequest:
       required:
         - name
@@ -15180,20 +16349,23 @@ components:
           description: ID of organization to add workspace to.
           format: uuid
           type: string
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
     WorkspaceUpdateRequest:
-      required:
-        - name
       type: object
       properties:
         name:
           description: Name of the workspace
           type: string
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
+
     WorkspaceResponse:
       title: Root Type for WorkspaceResponse
       description: Provides details of a single workspace.
@@ -15202,6 +16374,7 @@ components:
         - workspaceId
         - name
         - dataResidency
+        - notifications
       properties:
         workspaceId:
           format: UUID
@@ -15210,6 +16383,62 @@ components:
           type: string
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    NotificationsConfig:
+      description: Configures workspace notifications.
+      type: object
+      properties:
+        failure:
+          $ref: "#/components/schemas/NotificationConfig"
+        success:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdate:
+          $ref: "#/components/schemas/NotificationConfig"
+        connectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabled:
+          $ref: "#/components/schemas/NotificationConfig"
+        syncDisabledWarning:
+          $ref: "#/components/schemas/NotificationConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    NotificationConfig:
+      description: Configures a notification.
+      type: object
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationConfig"
+        webhook:
+          $ref: "#/components/schemas/WebhookNotificationConfig"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    WebhookNotificationConfig:
+      description: Configures a webhook notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        url:
+          type: string
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    EmailNotificationConfig:
+      description: Configures an email notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -15494,6 +16723,18 @@ components:
           name: Acme Company
           dataResidency: auto
       x-sdk-component: true
+    TagsResponse:
+      title: Root Type for TagsResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagResponse"
+      x-sdk-component: true
     StreamConfiguration:
       description: Configurations for a single stream.
       type: object
@@ -15531,6 +16772,7 @@ components:
       properties:
         streams:
           type: array
+          format: set
           items:
             $ref: "#/components/schemas/StreamConfiguration"
       x-sdk-component: true
@@ -15572,6 +16814,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
         - full_refresh_overwrite
+        - full_refresh_overwrite_deduped
         - full_refresh_append
         - incremental_append
         - incremental_deduped_history
@@ -15610,6 +16853,200 @@ components:
           type: string
         workflowId:
           type: string
+    DataplaneGroupCreateRequestBody:
+      type: object
+      required:
+        - organization_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneGroupDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneGroupListRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+    DataplaneGroupRead:
+      type: object
+      required:
+        # TODO: add dataplanes when those endpoints have been added
+        - name
+        - dataplane_group_id
+        - organization_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        # TODO: add dataplanes when those endpoints have been added
+        name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneGroupListResponse:
+      type: object
+      properties:
+        dataplaneGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneGroupRead"
+
+    DataplaneCreateRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+        - name
+        - enabled
+      properties:
+        organization_id:
+          type: string
+          format: UUID
+        dataplane_group_id:
+          type: string
+          format: UUID
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneCreateResponse:
+      type: object
+      required:
+        - dataplane_id
+        - client_id
+        - client_secret
+      properties:
+        dataplane_id:
+          type: string
+          format: UUID
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    DataplaneUpdateRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+    DataplaneDeleteRequestBody:
+      type: object
+      required:
+        - dataplane_id
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+    DataplaneListRequestBody:
+      type: object
+      required:
+        - dataplane_group_id
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneRead:
+      type: object
+      required:
+        - name
+        - dataplane_id
+        - dataplane_group_id
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_group_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DataplaneListResponse:
+      type: object
+      properties:
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneRead"
+    DataplaneGetIdRequestBody:
+      type: object
+      required:
+        - workloadPriority
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorId:
+          $ref: "#/components/schemas/ActorId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        workloadPriority:
+          $ref: "#/components/schemas/WorkloadPriority"
+    DataplaneReadId:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+
   responses:
     NotFoundResponse:
       description: Object with given id was not found.

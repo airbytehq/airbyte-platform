@@ -9,12 +9,14 @@ import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
 import { InputProps } from "components/ui/Input";
 import { ListBoxProps, Option } from "components/ui/ListBox";
 import { SwitchProps } from "components/ui/Switch/Switch";
+import { TagInputProps } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextAreaProps } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 
+import { ArrayWrapper } from "./ArrayWrapper";
 import { DatepickerWrapper } from "./DatepickerWrapper";
 import { FormValues } from "./Form";
 import styles from "./FormControl.module.scss";
@@ -27,13 +29,14 @@ type ControlProps<T extends FormValues> =
   | InputControlProps<T>
   | TextAreaControlProps<T>
   | DatepickerControlProps<T>
-  | SwitchControlProps<T>;
+  | SwitchControlProps<T>
+  | ArrayControlProps<T>;
 
 interface ControlBaseProps<T extends FormValues> {
   /**
    * fieldType determines what form element is rendered. Depending on the chosen fieldType, additional props may be optional or required.
    */
-  fieldType: "input" | "textarea" | "date" | "dropdown" | "switch";
+  fieldType: "input" | "textarea" | "date" | "dropdown" | "switch" | "array";
   /**
    * The field name must match any provided default value or validation schema.
    */
@@ -103,6 +106,12 @@ export interface SwitchControlProps<T extends FormValues> extends ControlBasePro
   fieldType: "switch";
 }
 
+export interface ArrayControlProps<T extends FormValues>
+  extends ControlBaseProps<T>,
+    Omit<TagInputProps, "name" | "fieldValue" | "onChange"> {
+  fieldType: "array";
+}
+
 export const FormControl = <T extends FormValues>({
   label,
   labelTooltip,
@@ -113,7 +122,6 @@ export const FormControl = <T extends FormValues>({
   footer,
   ...props
 }: ControlProps<T>) => {
-  const { formatMessage } = useIntl();
   // only retrieve new form state if form state of current field has changed
   const { errors } = useFormState<T>({ name: props.name });
   const error = get(errors, props.name);
@@ -153,6 +161,11 @@ export const FormControl = <T extends FormValues>({
       return <SwitchWrapper {...withoutFieldType} />;
     }
 
+    if (controlProps.fieldType === "array") {
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <ArrayWrapper {...withoutFieldType} />;
+    }
+
     throw new Error(`No matching form input found for type: ${props.fieldType}`);
   }
 
@@ -172,11 +185,7 @@ export const FormControl = <T extends FormValues>({
       <div className={styles.control__field}>{renderControl()}</div>
       {displayFooter && (
         <FormControlFooter>
-          {error && (
-            <FormControlFooterError>
-              {error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })}
-            </FormControlFooterError>
-          )}
+          <FormControlErrorMessage<FormValues> name={props.name} />
           {!error && footer && <FormControlFooterInfo>{footer}</FormControlFooterInfo>}
         </FormControlFooter>
       )}
@@ -227,6 +236,31 @@ export const FormControlFooterError: React.FC<React.PropsWithChildren> = ({ chil
   return (
     <Text color="red" size="xs" className={styles.control__footerText}>
       {children}
+    </Text>
+  );
+};
+
+interface FormControlErrorProps<TFormValues> {
+  // An override for the message. If it isn't provided, the error from the RHF schema validation will be shown.
+  message?: React.ReactNode;
+  name: Path<TFormValues>;
+}
+
+export const FormControlErrorMessage = <TFormValues extends FormValues>({
+  message,
+  name,
+}: FormControlErrorProps<TFormValues>) => {
+  const { formatMessage } = useIntl();
+  const { errors } = useFormState<TFormValues>({ name });
+  const error = get(errors, name);
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <Text color="red" size="xs" className={styles.control__footerText}>
+      {!message && (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message }))}
+      {message && message}
     </Text>
   );
 };

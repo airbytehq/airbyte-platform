@@ -36,8 +36,8 @@ properties:
     description: True if the discover catalog was not part of a sync
     type: boolean
     default: true
-  podLabels:
-    description: Additional labels to apply to the pods created for this job
+  networkSecurityTokens:
+    description: Workload launcher will use these to grant pods additional network access
     type: array
     items:
       type: string

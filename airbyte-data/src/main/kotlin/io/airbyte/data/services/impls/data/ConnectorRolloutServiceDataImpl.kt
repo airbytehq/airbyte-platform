@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ConfigSchema
@@ -17,25 +21,30 @@ import java.util.UUID
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRolloutRepository) : ConnectorRolloutService {
-  override fun getConnectorRollout(id: UUID): ConnectorRollout {
-    return repository.findById(id).orElseThrow {
-      ConfigNotFoundException(ConfigSchema.CONNECTOR_ROLLOUT, id)
-    }.toConfigModel()
-  }
+open class ConnectorRolloutServiceDataImpl(
+  private val repository: ConnectorRolloutRepository,
+) : ConnectorRolloutService {
+  override fun getConnectorRollout(id: UUID): ConnectorRollout =
+    repository
+      .findById(id)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigSchema.CONNECTOR_ROLLOUT, id)
+      }.toConfigModel()
 
   override fun insertConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout {
     // We only want to have a single initialized rollout per actor definition id and release candidate version id
     // (unless the previous rollout was canceled)
-    repository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
-      connectorRollout.actorDefinitionId,
-      connectorRollout.releaseCandidateVersionId,
-    ).firstOrNull { it.state != ConnectorRolloutStateType.canceled }?.let {
-      throw RuntimeException(
-        "A rollout in state ${it.state} already exists for actor definition id ${it.actorDefinitionId} " +
-          "and version id ${it.releaseCandidateVersionId}",
-      )
-    }
+    repository
+      .findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        connectorRollout.actorDefinitionId,
+        connectorRollout.releaseCandidateVersionId,
+      ).firstOrNull { it.state != ConnectorRolloutStateType.canceled }
+      ?.let {
+        throw RuntimeException(
+          "A rollout in state ${it.state} already exists for actor definition id ${it.actorDefinitionId} " +
+            "and version id ${it.releaseCandidateVersionId}",
+        )
+      }
 
     val existingConnectorRolloutOnActorDefinitionId = repository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(connectorRollout.actorDefinitionId)
 
@@ -68,29 +77,28 @@ open class ConnectorRolloutServiceDataImpl(private val repository: ConnectorRoll
     return repository.save(entity).toConfigModel()
   }
 
-  override fun listConnectorRollouts(): List<ConnectorRollout> {
-    return repository.findAllOrderByUpdatedAtDesc().map { unit ->
+  override fun listConnectorRollouts(): List<ConnectorRollout> =
+    repository.findAllOrderByUpdatedAtDesc().map { unit ->
       unit.toConfigModel()
     }
-  }
 
-  override fun listConnectorRollouts(actorDefinitionId: UUID): List<ConnectorRollout> {
-    return repository.findAllByActorDefinitionIdOrderByUpdatedAtDesc(
-      actorDefinitionId,
-    ).map { unit ->
-      unit.toConfigModel()
-    }
-  }
+  override fun listConnectorRollouts(actorDefinitionId: UUID): List<ConnectorRollout> =
+    repository
+      .findAllByActorDefinitionIdOrderByUpdatedAtDesc(
+        actorDefinitionId,
+      ).map { unit ->
+        unit.toConfigModel()
+      }
 
   override fun listConnectorRollouts(
     actorDefinitionId: UUID,
     releaseCandidateVersionId: UUID,
-  ): List<ConnectorRollout> {
-    return repository.findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
-      actorDefinitionId,
-      releaseCandidateVersionId,
-    ).map { unit ->
-      unit.toConfigModel()
-    }
-  }
+  ): List<ConnectorRollout> =
+    repository
+      .findAllByActorDefinitionIdAndReleaseCandidateVersionIdOrderByUpdatedAtDesc(
+        actorDefinitionId,
+        releaseCandidateVersionId,
+      ).map { unit ->
+        unit.toConfigModel()
+      }
 }

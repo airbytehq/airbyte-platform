@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.OrganizationAuthRole
@@ -22,13 +26,15 @@ open class PermissionServiceDataImpl(
   private val workspaceService: WorkspaceService,
   private val permissionRepository: PermissionRepository,
 ) : PermissionService {
-  override fun listPermissions(): List<Permission> {
-    return permissionRepository.find().map { it.toConfigModel() }
-  }
+  override fun getPermission(permissionId: UUID): Permission =
+    permissionRepository
+      .findById(permissionId)
+      .orElseThrow { ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId") }
+      .toConfigModel()
 
-  override fun getPermissionsForUser(userId: UUID): List<Permission> {
-    return permissionRepository.findByUserId(userId).map { it.toConfigModel() }
-  }
+  override fun listPermissions(): List<Permission> = permissionRepository.find().map { it.toConfigModel() }
+
+  override fun getPermissionsForUser(userId: UUID): List<Permission> = permissionRepository.findByUserId(userId).map { it.toConfigModel() }
 
   @Transactional("config")
   override fun deletePermission(permissionId: UUID) {
@@ -102,7 +108,8 @@ open class PermissionServiceDataImpl(
     permission: Permission,
     otherPermissions: Set<Permission>,
   ) {
-    otherPermissions.filter { isRedundantWorkspacePermission(it, otherPermissions - it + permission) }
+    otherPermissions
+      .filter { isRedundantWorkspacePermission(it, otherPermissions - it + permission) }
       .map { it.permissionId }
       .takeIf { it.isNotEmpty() }
       ?.let { permissionRepository.deleteByIdIn(it) }
@@ -115,8 +122,7 @@ open class PermissionServiceDataImpl(
     val orgIdToDeletedOrgAdminPermissionIds = deletedOrgAdminPermissions.groupBy({ it.organizationId!! }, { it.id!! })
 
     // for each group, make sure the last org-admin isn't being deleted
-    orgIdToDeletedOrgAdminPermissionIds.forEach {
-        (orgId, deletedOrgAdminIds) ->
+    orgIdToDeletedOrgAdminPermissionIds.forEach { (orgId, deletedOrgAdminIds) ->
       throwIfDeletingLastOrgAdminForOrg(orgId, deletedOrgAdminIds.toSet())
     }
   }
@@ -168,7 +174,8 @@ open class PermissionServiceDataImpl(
 
     // get the current state of the permission in the database
     val priorPermission =
-      permissionRepository.findById(updatedPermission.permissionId)
+      permissionRepository
+        .findById(updatedPermission.permissionId)
         .orElseThrow { ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: ${updatedPermission.permissionId}") }
 
     // return early if the permission was not an org admin prior to the update
@@ -202,8 +209,8 @@ open class PermissionServiceDataImpl(
     return getAuthority(permission.permissionType) <= getAuthority(existingOrgPermission.permissionType)
   }
 
-  private fun getAuthority(permissionType: Permission.PermissionType): Int {
-    return when (permissionType) {
+  private fun getAuthority(permissionType: Permission.PermissionType): Int =
+    when (permissionType) {
       Permission.PermissionType.INSTANCE_ADMIN -> throw IllegalArgumentException("INSTANCE_ADMIN permissions are not supported")
       Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.authority
       Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.authority
@@ -216,5 +223,4 @@ open class PermissionServiceDataImpl(
       Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.authority
       Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.authority
     }
-  }
 }
