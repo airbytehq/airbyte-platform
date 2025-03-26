@@ -14,7 +14,6 @@ import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.StandardDestinationDefinition
-import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -72,7 +71,6 @@ class DestinationServiceJooqImpl
   constructor(
     @Named("configDatabase") database: Database?,
     featureFlagClient: FeatureFlagClient,
-    secretsRepositoryReader: SecretsRepositoryReader,
     secretsRepositoryWriter: SecretsRepositoryWriter,
     secretPersistenceConfigService: SecretPersistenceConfigService,
     connectionService: ConnectionService,
@@ -81,7 +79,6 @@ class DestinationServiceJooqImpl
   ) : DestinationService {
     private val database: ExceptionWrappingDatabase
     private val featureFlagClient: FeatureFlagClient
-    private val secretsRepositoryReader: SecretsRepositoryReader
     private val secretsRepositoryWriter: SecretsRepositoryWriter
     private val secretPersistenceConfigService: SecretPersistenceConfigService
     private val connectionService: ConnectionService
@@ -92,7 +89,6 @@ class DestinationServiceJooqImpl
       this.database = ExceptionWrappingDatabase(database)
       this.connectionService = connectionService
       this.featureFlagClient = featureFlagClient
-      this.secretsRepositoryReader = secretsRepositoryReader
       this.secretsRepositoryWriter = secretsRepositoryWriter
       this.secretPersistenceConfigService = secretPersistenceConfigService
       this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
@@ -321,8 +317,7 @@ class DestinationServiceJooqImpl
     }
 
     /**
-     * Returns all destinations in the database. Does not contain secrets. To hydrate with secrets see
-     * { @link SecretsRepositoryReader#listDestinationConnectionWithSecrets() }.
+     * Returns all destinations in the database. Does not contain secrets.
      *
      * @return destinations
      * @throws IOException - you never know when you IO
@@ -778,31 +773,6 @@ class DestinationServiceJooqImpl
         )
 
       return result.map<DestinationConnection?>(RecordMapper { record: Record? -> DbConverter.buildDestinationConnection(record) }).stream()
-    }
-
-    /**
-     * Get Destination with secrets.
-     *
-     * @param destinationId destination id
-     * @return destination with secrets
-     */
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
-    override fun getDestinationConnectionWithSecrets(destinationId: UUID): DestinationConnection? {
-      val destination = getDestinationConnection(destinationId)
-      val organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId())
-      val hydratedConfig: JsonNode?
-      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-        val secretPersistenceConfig =
-          secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-        hydratedConfig =
-          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
-            destination.getConfiguration(),
-            RuntimeSecretPersistence(secretPersistenceConfig, metricClient),
-          )
-      } else {
-        hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration())
-      }
-      return Jsons.clone<DestinationConnection?>(destination).withConfiguration(hydratedConfig)
     }
 
     /**

@@ -121,7 +121,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
@@ -130,7 +129,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,

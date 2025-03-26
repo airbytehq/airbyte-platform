@@ -17,7 +17,6 @@ import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -122,7 +121,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
     truncateAllTables();
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
@@ -136,7 +134,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         new SourceServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
             connectionService,
@@ -151,7 +148,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         new DestinationServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
             connectionService,

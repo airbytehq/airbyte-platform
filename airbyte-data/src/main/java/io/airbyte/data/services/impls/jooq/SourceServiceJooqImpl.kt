@@ -14,7 +14,6 @@ import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
-import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -74,7 +73,6 @@ import java.util.stream.Stream
 class SourceServiceJooqImpl(
   @Named("configDatabase") database: Database?,
   featureFlagClient: FeatureFlagClient,
-  secretsRepositoryReader: SecretsRepositoryReader,
   secretsRepositoryWriter: SecretsRepositoryWriter,
   secretPersistenceConfigService: SecretPersistenceConfigService,
   connectionService: ConnectionService,
@@ -83,7 +81,6 @@ class SourceServiceJooqImpl(
 ) : SourceService {
   private val database: ExceptionWrappingDatabase
   private val featureFlagClient: FeatureFlagClient
-  private val secretRepositoryReader: SecretsRepositoryReader
   private val secretsRepositoryWriter: SecretsRepositoryWriter
   private val secretPersistenceConfigService: SecretPersistenceConfigService
   private val connectionService: ConnectionService
@@ -95,7 +92,6 @@ class SourceServiceJooqImpl(
     this.database = ExceptionWrappingDatabase(database)
     this.connectionService = connectionService
     this.featureFlagClient = featureFlagClient
-    this.secretRepositoryReader = secretsRepositoryReader
     this.secretsRepositoryWriter = secretsRepositoryWriter
     this.secretPersistenceConfigService = secretPersistenceConfigService
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
@@ -279,8 +275,7 @@ class SourceServiceJooqImpl(
   }
 
   /**
-   * Returns source with a given id. Does not contain secrets. To hydrate with secrets see { @link
-   * SecretsRepositoryReader#getSourceConnectionWithSecrets(final UUID sourceId) }.
+   * Returns source with a given id. Does not contain secrets.
    *
    * @param sourceId - id of source to fetch.
    * @return sources
@@ -791,31 +786,6 @@ class SourceServiceJooqImpl(
     } else {
       return tombstoneField.eq(false)
     }
-  }
-
-  /**
-   * Get source with secrets.
-   *
-   * @param sourceId source id
-   * @return source with secrets
-   */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
-  override fun getSourceConnectionWithSecrets(sourceId: UUID): SourceConnection? {
-    val source = getSourceConnection(sourceId)
-    val organizationId = getOrganizationIdFromWorkspaceId(source.getWorkspaceId())
-    val hydratedConfig: JsonNode?
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-      val secretPersistenceConfig =
-        secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-      hydratedConfig =
-        secretRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
-          source.getConfiguration(),
-          RuntimeSecretPersistence(secretPersistenceConfig, metricClient),
-        )
-    } else {
-      hydratedConfig = secretRepositoryReader.hydrateConfigFromDefaultSecretPersistence(source.getConfiguration())
-    }
-    return Jsons.clone<SourceConnection?>(source).withConfiguration(hydratedConfig)
   }
 
   /**

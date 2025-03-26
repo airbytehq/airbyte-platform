@@ -72,8 +72,6 @@ public interface SourceService {
                                     final io.airbyte.config.ScopeType scopeType)
       throws IOException;
 
-  SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
   void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 
   void tombstoneSource(

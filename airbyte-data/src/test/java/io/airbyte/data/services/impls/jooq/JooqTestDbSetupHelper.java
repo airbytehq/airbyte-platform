@@ -91,7 +91,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
@@ -99,7 +98,6 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         metricClient);
     this.sourceServiceJooqImpl = new SourceServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,

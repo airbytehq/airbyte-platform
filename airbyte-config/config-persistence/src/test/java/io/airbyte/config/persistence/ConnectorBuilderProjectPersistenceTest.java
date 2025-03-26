@@ -121,7 +121,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
           .withEnabled(true)
           .withTombstone(false));
     }
-    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, metricClient, dataplaneGroupService);

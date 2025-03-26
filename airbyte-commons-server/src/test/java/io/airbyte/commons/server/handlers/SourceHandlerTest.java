@@ -628,9 +628,6 @@ class SourceHandlerTest {
     when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
-        .thenReturn(sourceConnection)
-        .thenReturn(expectedSourceConnection);
     when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
         newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
@@ -648,7 +645,6 @@ class SourceHandlerTest {
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
-    verify(sourceService, times(0)).getSourceConnectionWithSecrets(any());
     verify(sourceService).tombstoneSource(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());

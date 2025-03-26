@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.converters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -18,10 +19,14 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.db.jdbc.JdbcUtils;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
@@ -41,6 +46,7 @@ class ConfigurationUpdateTest {
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final JsonNode SPEC = CatalogHelpers.fieldsToJsonSchema(
       Field.of(JdbcUtils.USERNAME_KEY, JsonSchemaType.STRING),
       Field.of(JdbcUtils.PASSWORD_KEY, JsonSchemaType.STRING));
@@ -85,6 +91,9 @@ class ConfigurationUpdateTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private SourceService sourceService;
   private DestinationService destinationService;
+  private WorkspaceHelper workspaceHelper;
+  private SecretPersistenceService secretPersistenceService;
+  private SecretsRepositoryReader secretsRepositoryReader;
 
   @BeforeEach
   void setup() {
@@ -92,17 +101,28 @@ class ConfigurationUpdateTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     sourceService = mock(SourceService.class);
     destinationService = mock(DestinationService.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
+    secretPersistenceService = mock(SecretPersistenceService.class);
+    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
 
     configurationUpdate = new ConfigurationUpdate(
         actorDefinitionVersionHelper,
         sourceService,
-        destinationService);
+        destinationService,
+        secretPersistenceService,
+        secretsRepositoryReader,
+        workspaceHelper);
+
+    final SecretPersistence secretPersistence = mock(SecretPersistence.class);
+    when(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID);
+    when(secretPersistenceService.getPersistenceFromConfig(any(), any())).thenReturn(secretPersistence);
+    when(secretsRepositoryReader.hydrateConfig(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
   }
 
   @Test
   void testSourceUpdate()
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
-    when(sourceService.getSourceConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION);
+    when(sourceService.getSourceConnection(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION);
     when(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
@@ -116,7 +136,7 @@ class ConfigurationUpdateTest {
   @Test
   void testDestinationUpdate()
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
-    when(destinationService.getDestinationConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION);
+    when(destinationService.getDestinationConnection(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION);
     when(destinationService.getStandardDestinationDefinition(UUID2)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
@@ -130,7 +150,7 @@ class ConfigurationUpdateTest {
   @Test
   void testPartialUpdateSourceNoUpdate()
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    when(sourceService.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(sourceService.getSourceConnection(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
     when(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
 
     // Test updating nothing
@@ -141,7 +161,7 @@ class ConfigurationUpdateTest {
   @Test
   void testPartialUpdateSourceName()
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    when(sourceService.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(sourceService.getSourceConnection(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
     when(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
 
     // Test only giving a name
@@ -152,7 +172,7 @@ class ConfigurationUpdateTest {
   @Test
   void testPartialUpdateSourceConfig()
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    when(sourceService.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(sourceService.getSourceConnection(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
     when(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
 
     // Test updating only configuration
@@ -163,7 +183,7 @@ class ConfigurationUpdateTest {
   @Test
   void testPartialUpdateSourcePartialConfig()
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    when(sourceService.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(sourceService.getSourceConnection(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
     when(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
 
     // Test partial configuration update

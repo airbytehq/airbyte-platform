@@ -77,8 +77,6 @@ public interface DestinationService {
 
   List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
-  DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
   void tombstoneDestination(
                             final String name,
                             final UUID workspaceId,

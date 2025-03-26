@@ -172,7 +172,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     sourceService = spy(new SourceServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
@@ -181,7 +180,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     destinationService = spy(new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,

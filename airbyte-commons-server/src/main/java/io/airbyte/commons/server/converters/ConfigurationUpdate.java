@@ -14,8 +14,13 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.domain.services.secrets.SecretHydrationContext;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -35,21 +40,34 @@ public class ConfigurationUpdate {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final SourceService sourceService;
   private final DestinationService destinationService;
+  private final WorkspaceHelper workspaceHelper;
+  private final SecretPersistenceService secretPersistenceService;
+  private final SecretsRepositoryReader secretsRepositoryReader;
 
   public ConfigurationUpdate(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final SourceService sourceService,
-                             final DestinationService destinationService) {
-    this(new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService);
+                             final DestinationService destinationService,
+                             final SecretPersistenceService secretPersistenceService,
+                             final SecretsRepositoryReader secretsRepositoryReader,
+                             final WorkspaceHelper workspaceHelper) {
+    this(new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService, secretPersistenceService,
+        secretsRepositoryReader, workspaceHelper);
   }
 
   public ConfigurationUpdate(final JsonSecretsProcessor secretsProcessor,
                              final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final SourceService sourceService,
-                             final DestinationService destinationService) {
+                             final DestinationService destinationService,
+                             final SecretPersistenceService secretPersistenceService,
+                             final SecretsRepositoryReader secretsRepositoryReader,
+                             final WorkspaceHelper workspaceHelper) {
     this.secretsProcessor = secretsProcessor;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
+    this.secretPersistenceService = secretPersistenceService;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.workspaceHelper = workspaceHelper;
   }
 
   /**
@@ -69,7 +87,7 @@ public class ConfigurationUpdate {
     // get existing source
     final SourceConnection persistedSource;
     try {
-      persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
+      persistedSource = getSourceWithSecrets(sourceId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -88,6 +106,17 @@ public class ConfigurationUpdate {
     return Jsons.clone(persistedSource).withConfiguration(updatedConfiguration);
   }
 
+  private SourceConnection getSourceWithSecrets(final UUID sourceId)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+    final SourceConnection source = sourceService.getSourceConnection(sourceId);
+    final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(
+        workspaceHelper.getOrganizationForWorkspace(source.getWorkspaceId()),
+        source.getWorkspaceId());
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(source.getConfiguration(), hydrationContext);
+    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(source.getConfiguration(), secretPersistence);
+    return Jsons.clone(source).withConfiguration(hydratedConfig);
+  }
+
   /**
    * Partially update the configuration object for a source.
    *
@@ -103,9 +132,7 @@ public class ConfigurationUpdate {
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
       throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing source
-    final SourceConnection persistedSource;
-    persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
-
+    final SourceConnection persistedSource = getSourceWithSecrets(sourceId);
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
@@ -132,7 +159,7 @@ public class ConfigurationUpdate {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
-      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+      persistedDestination = getDestinationWithSecrets(destinationId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -152,6 +179,17 @@ public class ConfigurationUpdate {
     return Jsons.clone(persistedDestination).withConfiguration(updatedConfiguration);
   }
 
+  private DestinationConnection getDestinationWithSecrets(final UUID destinationId)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+    final DestinationConnection destination = destinationService.getDestinationConnection(destinationId);
+    final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(
+        workspaceHelper.getOrganizationForWorkspace(destination.getWorkspaceId()),
+        destination.getWorkspaceId());
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(destination.getConfiguration(), hydrationContext);
+    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(destination.getConfiguration(), secretPersistence);
+    return Jsons.clone(destination).withConfiguration(hydratedConfig);
+  }
+
   /**
    * Partially update the configuration object for a destination.
    *
@@ -169,7 +207,7 @@ public class ConfigurationUpdate {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
-      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+      persistedDestination = getDestinationWithSecrets(destinationId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }

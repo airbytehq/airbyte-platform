@@ -162,7 +162,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
@@ -173,7 +172,6 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
@@ -364,7 +362,6 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
         connectionService,
@@ -375,7 +372,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
         connectionService,
@@ -703,7 +699,6 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
         connectionService,
@@ -714,7 +709,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryReader::class.java),
         Mockito.mock(SecretsRepositoryWriter::class.java),
         Mockito.mock(SecretPersistenceConfigService::class.java),
         connectionService,

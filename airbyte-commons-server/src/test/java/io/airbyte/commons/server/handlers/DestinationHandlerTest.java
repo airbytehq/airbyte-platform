@@ -573,9 +573,6 @@ class DestinationHandlerTest {
     when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
         .thenReturn(destinationConnection)
         .thenReturn(expectedSourceConnection);
-    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId()))
-        .thenReturn(destinationConnection)
-        .thenReturn(expectedSourceConnection);
     when(oAuthConfigSupplier.maskSourceOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
         destinationConnection.getWorkspaceId(),
         newConfiguration, destinationDefinitionVersion.getSpec())).thenReturn(newConfiguration);
@@ -598,7 +595,6 @@ class DestinationHandlerTest {
     // We should not no longer get secrets or write secrets anymore (since we are deleting the
     // destination).
     verify(destinationService, times(0)).writeDestinationConnectionNoSecrets(expectedSourceConnection);
-    verify(destinationService, times(0)).getDestinationConnectionWithSecrets(any());
     verify(destinationService).tombstoneDestination(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
