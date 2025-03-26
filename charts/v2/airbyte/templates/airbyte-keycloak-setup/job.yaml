@@ -1,4 +1,4 @@
-{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if (eq .Values.global.edition "enterprise") }}
 {{- if .Values.keycloakSetup.enabled }}
 ---
 apiVersion: batch/v1

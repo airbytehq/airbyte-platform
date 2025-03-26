@@ -36,6 +36,7 @@ micronaut:
     enabled: false
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   workload-id: ${WORKLOAD_ID:}
   connection-id: ${CONNECTION_ID:}
   job-id: ${JOB_ID:}

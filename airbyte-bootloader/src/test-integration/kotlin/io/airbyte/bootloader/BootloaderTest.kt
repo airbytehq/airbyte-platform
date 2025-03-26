@@ -315,10 +315,12 @@ internal class BootloaderTest {
 
     Assertions.assertNotEquals(Optional.empty<Any>(), jobsPersistence.deployment)
 
-    Assertions.assertEquals(
-      DEFAULT_REALM,
-      organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
-    )
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
+      Assertions.assertEquals(
+        DEFAULT_REALM,
+        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+      )
+    }
   }
 
   @ParameterizedTest
@@ -769,10 +771,12 @@ internal class BootloaderTest {
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())
-    Assertions.assertEquals(
-      DEFAULT_REALM,
-      organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
-    )
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
+      Assertions.assertEquals(
+        DEFAULT_REALM,
+        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+      )
+    }
   }
 
   private fun createConfigsFlyway(dataSource: DataSource?): Flyway =

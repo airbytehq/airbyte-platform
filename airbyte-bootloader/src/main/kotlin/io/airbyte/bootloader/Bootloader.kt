@@ -29,6 +29,7 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 private val log = KotlinLogging.logger {}
 
@@ -90,7 +91,9 @@ class Bootloader(
     createDeploymentIfNoneExists(jobPersistence)
 
     log.info { "assign default organization to sso realm config..." }
-    createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
+      createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
+    }
 
     val airbyteVersion = currentAirbyteVersion.serialize()
     log.info { "Setting Airbyte version to '$airbyteVersion'" }
@@ -153,14 +156,21 @@ class Bootloader(
   }
 
   private fun createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence: OrganizationPersistence) {
-    if (organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).isPresent) {
-      log.info { "SsoConfig already exists for the default organization." }
-      return
-    }
+    organizationPersistence
+      .getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+      .getOrNull()
+      ?.let {
+        if (it.keycloakRealm != defaultRealm) {
+          log.info { "SsoConfig already exists for the default organization, updating the config." }
+          organizationPersistence.updateSsoConfig(it.apply { it.keycloakRealm = defaultRealm })
+        }
+        return
+      }
     if (organizationPersistence.getSsoConfigByRealmName(defaultRealm).isPresent) {
       log.info { "An SsoConfig with realm $defaultRealm already exists, so one cannot be created for the default organization." }
       return
     }
+
     organizationPersistence.createSsoConfig(
       SsoConfig()
         .withSsoConfigId(UUID.randomUUID())

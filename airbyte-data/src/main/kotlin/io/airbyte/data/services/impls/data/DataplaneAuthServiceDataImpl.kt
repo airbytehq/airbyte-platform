@@ -35,7 +35,7 @@ class DataplaneAuthServiceDataImpl(
   private val jwtTokenGenerator: JwtTokenGenerator,
   private val dataplanePasswordEncoder: DataplanePasswordEncoder,
   private val tokenExpirationConfig: TokenExpirationConfig,
-  @Property(name = "micronaut.security.token.jwt.claims-validators.issuer") private val tokenIssuer: String,
+  @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : DataplaneAuthService {
   companion object {
     const val SECRET_LENGTH = 2096

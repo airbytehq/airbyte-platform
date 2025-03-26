@@ -65,8 +65,6 @@ micronaut:
     token:
       jwt:
         enabled: ${API_AUTHORIZATION_ENABLED:false}
-        claims-validators:
-          issuer: ${WEBAPP_URL:}
         signatures:
           secret:
             generator:
@@ -121,12 +119,22 @@ airbyte:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
       dataplane-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_DATAPLANE:5}
+    token-issuer: ${WEBAPP_URL}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
       first-name: ${INITIAL_USER_FIRST_NAME:}
       last-name: ${INITIAL_USER_LAST_NAME:}
       password: ${INITIAL_USER_PASSWORD:}
     identity-provider:
+      verify-issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER:false}
+      verify-audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE:false}
+      issuers:
+        - ${WEBAPP_URL}
+        - ${DEFAULT_REALM}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ISSUER:}
+      audiences:
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_AUDIENCE:airbyte-server}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
       type: ${IDENTITY_PROVIDER_TYPE:}
       oidc:
         client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID:}
