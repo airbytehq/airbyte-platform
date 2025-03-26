@@ -31,6 +31,7 @@ import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
+import io.airbyte.workload.repository.domain.Workload as DomainWorkload
 import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
 
 private val logger = KotlinLogging.logger {}
@@ -143,6 +144,7 @@ class WorkloadHandlerImpl(
     val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
     val claimed = workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
     if (claimed) {
+      workload?.let { emitTimeToTransitionMetric(it, WorkloadStatus.CLAIMED) }
       workloadQueueRepository.ackWorkloadQueueItem(workloadId)
     }
     return claimed
@@ -250,6 +252,7 @@ class WorkloadHandlerImpl(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
+    // TODO rework for atomicity and track time to transition to LAUNCHED from start
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
@@ -367,6 +370,22 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
+  private fun emitTimeToTransitionMetric(
+    workload: DomainWorkload,
+    status: WorkloadStatus,
+  ) {
+    workload.timeSinceCreateInMillis()?.let {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE,
+        it.toDouble(),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
+        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+        MetricAttribute(MetricTags.STATUS_TAG, status.name),
+      )
+    }
+  }
+
   private fun sendSignal(
     workloadType: DomainWorkloadType,
     signalPayload: String?,
@@ -425,4 +444,11 @@ class WorkloadHandlerImpl(
       }
     }
   }
+
+  private fun DomainWorkload.timeSinceCreateInMillis(): Long? =
+    createdAt?.let { createdAt ->
+      updatedAt?.let { updatedAt ->
+        updatedAt.toEpochSecond() - createdAt.toEpochSecond()
+      }
+    }
 }

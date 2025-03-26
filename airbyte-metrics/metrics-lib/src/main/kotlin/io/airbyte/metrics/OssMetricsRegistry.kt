@@ -751,6 +751,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_stage_duration",
     metricDescription = "a distribution of the duration of a workload stage",
   ),
+  WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE(
+    metricName = "workload_time_to_transition_from_create",
+    metricDescription = "time for a workload to transition to a given state",
+  ),
   PODS_DELETED_FOR_MUTEX_KEY(
     metricName = "workload_pods_deleted_for_mutex_key",
     metricDescription = "existing pods for the provided mutex key were found and deleted",
