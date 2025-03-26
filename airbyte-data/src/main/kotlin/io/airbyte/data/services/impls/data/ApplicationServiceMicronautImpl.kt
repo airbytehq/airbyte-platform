@@ -14,7 +14,6 @@ import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.config.InstanceAdminConfig
 import io.airbyte.data.services.ApplicationService
-import io.micronaut.context.annotation.Property
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import jakarta.ws.rs.BadRequestException
@@ -29,8 +28,6 @@ class ApplicationServiceMicronautImpl(
   private val instanceAdminConfig: InstanceAdminConfig,
   private val tokenExpirationConfig: TokenExpirationConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
-  @Property(name = "airbyte.auth.token-issuer")
-  private val tokenIssuer: String,
 ) : ApplicationService {
   override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
     listOf(
@@ -53,8 +50,7 @@ class ApplicationServiceMicronautImpl(
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to tokenIssuer,
-          "aud" to "airbyte-server",
+          "iss" to "airbyte-server",
           "sub" to DEFAULT_AUTH_USER_ID,
           "roles" to
             buildSet {

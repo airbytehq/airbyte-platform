@@ -11,7 +11,6 @@ import io.airbyte.data.repositories.entities.Application
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.data.services.impls.keycloak.ApplicationServiceKeycloakImpl
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
@@ -30,8 +29,6 @@ class ApplicationServiceDataImpl(
   private val applicationRepository: ApplicationRepository,
   private val tokenExpirationConfig: TokenExpirationConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
-  @Property(name = "airbyte.auth.token-issuer")
-  private val tokenIssuer: String,
 ) : ApplicationService {
   companion object {
     const val SECRET_LENGTH = 2096
@@ -116,8 +113,7 @@ class ApplicationServiceDataImpl(
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to tokenIssuer,
-          "aud" to "airbyte-server",
+          "iss" to "airbyte-server",
           "sub" to application.authUserId,
           "exp" to
             Instant

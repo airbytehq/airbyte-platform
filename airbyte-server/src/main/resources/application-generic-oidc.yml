@@ -3,15 +3,11 @@
 # value in MICRONAUT_ENVIRONMENTS.
 micronaut:
   security:
-    enabled: true
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
     token:
       jwt:
-        enabled: true
+        enabled: ${API_AUTHORIZATION_ENABLED:false}
         signatures:
           jwks:
             oidc:
               url: ${AB_AIRBYTE_AUTH_JWKS_ENDPOINT:}
-
-airbyte:
-  applications:
-    type: database

@@ -227,18 +227,6 @@ public class OrganizationPersistence {
     return ssoConfig;
   }
 
-  public SsoConfig updateSsoConfig(final SsoConfig ssoConfig) throws IOException {
-    database.transaction(ctx -> {
-      try {
-        updateSsoConfigInDB(ctx, ssoConfig);
-      } catch (final IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
-    return ssoConfig;
-  }
-
   public Optional<SsoConfig> getSsoConfigForOrganization(final UUID organizationId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
@@ -321,16 +309,6 @@ public class OrganizationPersistence {
         .set(SSO_CONFIG.KEYCLOAK_REALM, ssoConfig.getKeycloakRealm())
         .set(SSO_CONFIG.CREATED_AT, timestamp)
         .set(SSO_CONFIG.UPDATED_AT, timestamp)
-        .execute();
-  }
-
-  private void updateSsoConfigInDB(final DSLContext ctx, final SsoConfig ssoConfig) throws IOException {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    ctx.update(SSO_CONFIG)
-        .set(SSO_CONFIG.ORGANIZATION_ID, ssoConfig.getOrganizationId())
-        .set(SSO_CONFIG.KEYCLOAK_REALM, ssoConfig.getKeycloakRealm())
-        .set(SSO_CONFIG.UPDATED_AT, timestamp)
-        .where(SSO_CONFIG.ID.eq(ssoConfig.getSsoConfigId()))
         .execute();
   }
 

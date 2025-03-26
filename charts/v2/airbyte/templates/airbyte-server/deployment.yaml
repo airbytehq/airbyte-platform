@@ -74,7 +74,8 @@ spec:
           value: "Internal server"
         {{- end}}
 
-        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.security.envs" . | nindent 8 }}
+        {{- include "airbyte.common.envs" . | nindent 8 }} 
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}

@@ -42,8 +42,6 @@ class ApplicationServiceMicronautImplTests {
 
   private String token;
 
-  private final String issuer = "https://example.com";
-
   @BeforeEach
   void setup() throws IOException {
     token = MoreResources.readResource("test.token");
@@ -62,8 +60,7 @@ class ApplicationServiceMicronautImplTests {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
         tokenExpirationConfig,
-        tokenGenerator,
-        issuer);
+        tokenGenerator);
 
     final var expectedRoles = new HashSet<>();
     expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
@@ -82,8 +79,7 @@ class ApplicationServiceMicronautImplTests {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
         tokenExpirationConfig,
-        tokenGenerator,
-        issuer);
+        tokenGenerator);
 
     assertThrows(BadRequestException.class, () -> applicationServer.getToken("test-client-id", "wrong-secret"));
   }
@@ -93,8 +89,7 @@ class ApplicationServiceMicronautImplTests {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
         tokenExpirationConfig,
-        tokenGenerator,
-        issuer);
+        tokenGenerator);
 
     final var applications = applicationServer.listApplicationsByUser(new AuthenticatedUser().withName("Test User"));
     assertEquals(1, applications.size());
@@ -105,8 +100,7 @@ class ApplicationServiceMicronautImplTests {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
         tokenExpirationConfig,
-        tokenGenerator,
-        issuer);
+        tokenGenerator);
 
     assertThrows(UnsupportedOperationException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
   }
@@ -116,8 +110,7 @@ class ApplicationServiceMicronautImplTests {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
         tokenExpirationConfig,
-        tokenGenerator,
-        issuer);
+        tokenGenerator);
 
     assertThrows(UnsupportedOperationException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
   }
