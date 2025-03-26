@@ -30,10 +30,13 @@ import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -256,6 +259,7 @@ class PayloadKubeInputMapper(
     }
 
     val flagContext = Multi(contexts.toMutableList().also { contextList -> connectionId?.let { contextList.add(Connection(it)) } })
+    logger.info { "flag context: $flagContext" }
     val nodeSelectorOverride = featureFlagClient.stringVariation(NodeSelectorOverride, flagContext)
     return if (nodeSelectorOverride.isBlank()) {
       null
