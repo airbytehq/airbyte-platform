@@ -87,7 +87,8 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
        deadline = case
                     when status = 'pending' then :deadline
                     else deadline
-                  end
+                  end,
+       updated_at = now()
       WHERE id = :id AND (status = 'pending' OR (status = 'claimed' AND dataplane_id = :dataplaneId))
       RETURNING *
     """,
