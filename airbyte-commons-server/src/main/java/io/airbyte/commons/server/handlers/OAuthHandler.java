@@ -41,8 +41,7 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.secrets.SecretCoordinate;
-import io.airbyte.config.secrets.SecretsHelpers;
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -589,7 +588,7 @@ public class OAuthHandler {
     try {
       final String payloadString = Jackson.getObjectMapper().writeValueAsString(payload);
       final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
-      final SecretCoordinate secretCoordinate;
+      final AirbyteManagedSecretCoordinate secretCoordinate;
       if (organizationId.isPresent()
           && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
         try {
@@ -615,11 +614,14 @@ public class OAuthHandler {
   }
 
   /**
-   * Generate OAuthSecretCoordinates. Always assume V1 and do not support secret updates
+   * Generate OAuthSecretCoordinates. Always use the default version and do not support secret updates
    */
-  private SecretCoordinate generateOAuthSecretCoordinate(final UUID workspaceId) {
-    final String coordinateBase = SecretsHelpers.INSTANCE.getCoordinatorBase("airbyte_oauth_workspace_", workspaceId, UUID::randomUUID);
-    return new SecretCoordinate(coordinateBase, 1);
+  private AirbyteManagedSecretCoordinate generateOAuthSecretCoordinate(final UUID workspaceId) {
+    return new AirbyteManagedSecretCoordinate(
+        "oauth_workspace_",
+        workspaceId,
+        AirbyteManagedSecretCoordinate.DEFAULT_VERSION,
+        UUID::randomUUID);
   }
 
   /**

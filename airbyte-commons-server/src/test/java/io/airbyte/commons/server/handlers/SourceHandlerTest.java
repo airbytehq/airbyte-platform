@@ -60,7 +60,7 @@ import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
-import io.airbyte.config.secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -751,7 +751,7 @@ class SourceHandlerTest {
     verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any(), any());
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
-    final SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
+    final AirbyteManagedSecretCoordinate secretCoordinate = new AirbyteManagedSecretCoordinate("airbyte_test", 1);
     sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);

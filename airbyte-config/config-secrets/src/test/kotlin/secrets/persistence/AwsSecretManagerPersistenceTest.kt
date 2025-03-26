@@ -15,7 +15,7 @@ import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
-import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -27,7 +27,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test reading secret from cache`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -41,7 +41,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test reading secret from client`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockAwsClient: AWSSecretsManager = mockk()
     val mockResult: DescribeSecretResult = mockk()
@@ -63,7 +63,7 @@ class AwsSecretManagerPersistenceTest {
 
   @Test
   fun `test reading secret from cache that is not found`() {
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -77,7 +77,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing a secret via the client creates the secret`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -99,7 +99,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing a secret with tags via the client creates the secret`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -129,7 +129,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing a secret via the client with serialized config creates the secret`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -158,7 +158,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing a secret via the client updates an existing secret`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -180,7 +180,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test deleting a secret via the client deletes the secret`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -202,7 +202,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test reading secret with version`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -219,7 +219,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test reading coordinate with no version falls back to base coordinate`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -238,7 +238,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test updating coordinate with no version falls back to base coordinate`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -261,7 +261,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing secret updates secret if it exists`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -284,7 +284,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing secret creates secret if it doesn't exist at all`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()
@@ -312,7 +312,7 @@ class AwsSecretManagerPersistenceTest {
   @Test
   fun `test writing secret creates secret if baseCoordinate exists`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
     val mockClient: AwsClient = mockk()
     val mockCache: AwsCache = mockk()
     val mockAwsCache: SecretCache = mockk()

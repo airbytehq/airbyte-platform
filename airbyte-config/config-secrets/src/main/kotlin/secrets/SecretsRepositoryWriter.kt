@@ -6,6 +6,7 @@ package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.JsonPaths
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.featureflag.FeatureFlagClient
@@ -60,7 +61,8 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
-  ): JsonNode = createFromConfig(workspaceId, fullConfig, connSpec, runtimeSecretPersistence, SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX)
+  ): JsonNode =
+    createFromConfig(workspaceId, fullConfig, connSpec, runtimeSecretPersistence, AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX)
 
   /**
    * Detects secrets in the configuration. Writes them to the secrets store. It returns the config
@@ -80,7 +82,7 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
-    secretBasePrefix: String = SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): JsonNode {
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
     return splitSecretConfig(secretBaseId, secretBasePrefix, fullConfig, connSpec, activePersistence)
@@ -102,25 +104,27 @@ open class SecretsRepositoryWriter(
     val pathToSecrets = SecretsHelpers.getSortedSecretPaths(spec)
     pathToSecrets.forEach { path ->
       JsonPaths.getValues(config, path).forEach { jsonWithCoordinate ->
-        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinate ->
-          val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
-          logger.info { "Deleting: ${secretCoord.fullCoordinate}" }
-          try {
-            (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
-            metricClient.count(
-              metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
-              attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "true")),
-            )
-          } catch (e: Exception) {
-            // Multiple versions within one secret is a legacy concern. This is no longer
-            // possible moving forward. Catch the exception to best-effort disable other secret versions.
-            // The other reason to catch this is propagating the exception prevents the database
-            // from being updated with the new coordinates.
-            metricClient.count(
-              metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
-              attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "false")),
-            )
-            logger.error(e) { "Error deleting secret: ${secretCoord.fullCoordinate}" }
+        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinateText ->
+          // Only delete secrets that are managed by Airbyte.
+          AirbyteManagedSecretCoordinate.fromFullCoordinate(coordinateText)?.let { airbyteManagedCoordinate ->
+            logger.info { "Deleting: ${airbyteManagedCoordinate.fullCoordinate}" }
+            try {
+              (runtimeSecretPersistence ?: secretPersistence).delete(airbyteManagedCoordinate)
+              metricClient.count(
+                metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
+                attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "true")),
+              )
+            } catch (e: Exception) {
+              // Multiple versions within one secret is a legacy concern. This is no longer
+              // possible moving forward. Catch the exception to best-effort disable other secret versions.
+              // The other reason to catch this is propagating the exception prevents the database
+              // from being updated with the new coordinates.
+              metricClient.count(
+                metric = OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE,
+                attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "false")),
+              )
+              logger.error(e) { "Error deleting secret: ${airbyteManagedCoordinate.fullCoordinate}" }
+            }
           }
         }
       }
@@ -159,7 +163,7 @@ open class SecretsRepositoryWriter(
       fullConfig,
       spec,
       runtimeSecretPersistence,
-      SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
+      AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
     )
 
   /**
@@ -187,7 +191,7 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
-    secretBasePrefix: String = SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): JsonNode {
     validator.ensure(spec, fullConfig)
 
@@ -196,7 +200,7 @@ open class SecretsRepositoryWriter(
 
     updatedSplitConfig
       .getCoordinateToPayload()
-      .forEach { (coordinate: SecretCoordinate, payload: String) ->
+      .forEach { (coordinate: AirbyteManagedSecretCoordinate, payload: String) ->
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
         metricClient.count(metric = OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE)
       }
@@ -230,8 +234,8 @@ open class SecretsRepositoryWriter(
   ): JsonNode {
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
     return splitSecretConfig(
-      NO_WORKSPACE,
-      SecretsHelpers.DEFAULT_SECRET_BASE_PREFIX,
+      AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_ID,
+      AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
       fullConfig,
       connSpec,
       activePersistence,
@@ -256,7 +260,7 @@ open class SecretsRepositoryWriter(
         secretBasePrefix,
       )
     // modify this to add expire time
-    splitSecretConfig.getCoordinateToPayload().forEach { (coordinate: SecretCoordinate, payload: String) ->
+    splitSecretConfig.getCoordinateToPayload().forEach { (coordinate: AirbyteManagedSecretCoordinate, payload: String) ->
       secretPersistence.writeWithExpiry(coordinate, payload, expireTime)
     }
     return splitSecretConfig.partialConfig
@@ -268,15 +272,11 @@ open class SecretsRepositoryWriter(
    * @param runtimeSecretPersistence to use as an override
    */
   fun store(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
-  ): SecretCoordinate {
+  ): AirbyteManagedSecretCoordinate {
     runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
     return coordinate
-  }
-
-  companion object {
-    private val NO_WORKSPACE = UUID.fromString("00000000-0000-0000-0000-000000000000")
   }
 }

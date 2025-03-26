@@ -87,8 +87,8 @@ internal class SecretsHelpersTest {
           "Invalid character in key: $key",
         )
         Assertions.assertTrue(
-          key.toString().length <= 255,
-          "Key is too long: " + key.toString().length,
+          key.fullCoordinate.length <= 255,
+          "Key is too long: " + key.fullCoordinate.length,
         )
       },
     )
@@ -113,7 +113,7 @@ internal class SecretsHelpersTest {
     // check every key starts with the custom secret prefix
     splitConfig.getCoordinateToPayload().keys.forEach(
       Consumer { key: SecretCoordinate ->
-        key.fullCoordinate.shouldStartWith("$customSecretPrefix${SecretsTestCase.WORKSPACE_ID}")
+        key.fullCoordinate.shouldStartWith("airbyte_$customSecretPrefix${SecretsTestCase.WORKSPACE_ID}")
       },
     )
   }
@@ -247,36 +247,38 @@ internal class SecretsHelpersTest {
   }
 
   @Test
-  fun testGetSecretCoordinateEmptyOldSecret() {
+  fun testGetAirbyteManagedSecretCoordinateEmptyOldSecret() {
     val secretPersistence: ReadOnlySecretPersistence = mockk()
     every { secretPersistence.read(any()) } returns ""
 
+    val newSecretBaseId = UUID.randomUUID()
+
     val secretCoordinate =
-      SecretsHelpers.getSecretCoordinate(
-        "secretBasePrefix",
+      SecretsHelpers.getAirbyteManagedSecretCoordinate(
+        "newSecretBasePrefix",
         secretPersistence,
-        UUID.randomUUID(),
+        newSecretBaseId,
         { UUID.randomUUID() },
-        "oldSecretFullCoordinate_v2",
+        "airbyte_oldSecretFullCoordinate_v2",
       )
-    Assertions.assertEquals("oldSecretFullCoordinate", secretCoordinate.coordinateBase)
-    Assertions.assertEquals(1L, secretCoordinate.version)
+    Assertions.assertTrue(secretCoordinate.coordinateBase.startsWith("airbyte_newSecretBasePrefix$newSecretBaseId"))
+    Assertions.assertEquals(SecretCoordinate.AirbyteManagedSecretCoordinate.DEFAULT_VERSION, secretCoordinate.version)
   }
 
   @Test
-  fun testGetSecretCoordinateNonEmptyOldSecret() {
+  fun testGetAirbyteManagedSecretCoordinateNonEmptyOldSecret() {
     val secretPersistence: ReadOnlySecretPersistence = mockk()
     every { secretPersistence.read(any()) } returns "nonempty"
 
     val secretCoordinate =
-      SecretsHelpers.getSecretCoordinate(
+      SecretsHelpers.getAirbyteManagedSecretCoordinate(
         "secretBasePrefix",
         secretPersistence,
         UUID.randomUUID(),
         { UUID.randomUUID() },
-        "oldSecretFullCoordinate_v2",
+        "airbyte_oldSecretFullCoordinate_v2",
       )
-    Assertions.assertEquals("oldSecretFullCoordinate", secretCoordinate.coordinateBase)
+    Assertions.assertEquals("airbyte_oldSecretFullCoordinate", secretCoordinate.coordinateBase)
     Assertions.assertEquals(3L, secretCoordinate.version)
   }
 

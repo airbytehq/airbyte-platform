@@ -14,6 +14,7 @@ import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -48,7 +49,6 @@ private val logger = KotlinLogging.logger {}
 object SecretsHelpers {
   private const val COORDINATE_FIELD = "_secret"
   private const val SECRET_STORAGE_ID_FIELD = "_secret_storage_id"
-  const val DEFAULT_SECRET_BASE_PREFIX = "airbyte_workspace_"
 
   /**
    * Used to separate secrets out of some configuration. This will output a partial config that
@@ -66,7 +66,7 @@ object SecretsHelpers {
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
-    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
@@ -96,7 +96,7 @@ object SecretsHelpers {
     fullConfig: JsonNode,
     spec: JsonNode?,
     secretPersistence: SecretPersistence,
-    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       uuidSupplier,
@@ -130,7 +130,7 @@ object SecretsHelpers {
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
-    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
       { UUID.randomUUID() },
@@ -153,7 +153,7 @@ object SecretsHelpers {
     newFullConfig: JsonNode,
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
-    secretBasePrefix: String = DEFAULT_SECRET_BASE_PREFIX,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(uuidSupplier, secretBaseId, secretReader, oldPartialConfig, newFullConfig, spec, secretBasePrefix)
 
@@ -258,7 +258,7 @@ object SecretsHelpers {
     secretBasePrefix: String,
   ): SplitSecretConfig {
     var fullConfigCopy = newFullConfig.deepCopy<JsonNode>()
-    val secretMap: HashMap<SecretCoordinate, String> = HashMap()
+    val secretMap: HashMap<AirbyteManagedSecretCoordinate, String> = HashMap()
     val paths = getSortedSecretPaths(spec)
     logger.debug { "SortedSecretPaths: $paths" }
     for (path in paths) {
@@ -266,7 +266,7 @@ object SecretsHelpers {
         JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
           val persistedNode = JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode).orElse(null)
           val existingCoordinate = getExistingCoordinateIfExists(persistedNode)
-          val coordinate: SecretCoordinate = getCoordinate(secretReader, secretBaseId, uuidSupplier, existingCoordinate, secretBasePrefix)
+          val coordinate = getAirbyteManagedSecretCoordinate(secretBasePrefix, secretReader, secretBaseId, uuidSupplier, existingCoordinate)
           secretMap[coordinate] = json.asText()
           Jsons.jsonNode(mapOf(COORDINATE_FIELD to coordinate.fullCoordinate))
         }
@@ -304,24 +304,6 @@ object SecretsHelpers {
   private fun getCoordinateFromTextNode(node: JsonNode): SecretCoordinate = SecretCoordinate.fromFullCoordinate(node.asText())
 
   /**
-   * Same as #getCoordinate but with a consistent base. For Production use.
-   */
-  internal fun getCoordinate(
-    secretReader: ReadOnlySecretPersistence,
-    secretBaseId: UUID,
-    uuidSupplier: Supplier<UUID>,
-    oldSecretFullCoordinate: String?,
-    secretBasePrefix: String,
-  ): SecretCoordinate =
-    getSecretCoordinate(
-      secretBasePrefix,
-      secretReader,
-      secretBaseId,
-      uuidSupplier,
-      oldSecretFullCoordinate,
-    )
-
-  /**
    * Determines which coordinate base and version to use based off of an old version that may exist in
    * the secret persistence.
    *
@@ -339,39 +321,29 @@ object SecretsHelpers {
    * @return a coordinate (versioned reference to where the secret is stored in the persistence)
    */
   @VisibleForTesting
-  fun getSecretCoordinate(
+  fun getAirbyteManagedSecretCoordinate(
     secretBasePrefix: String,
     secretReader: ReadOnlySecretPersistence,
     secretBaseId: UUID,
     uuidSupplier: Supplier<UUID>,
     oldSecretFullCoordinate: String?,
-  ): SecretCoordinate {
-    var coordinateBase: String? = null
-    var version = 1L
+  ): AirbyteManagedSecretCoordinate {
+    // Convert the full coordinate to a SecretCoordinate (if present) and ensure it’s an AirbyteManagedSecretCoordinate.
+    val oldCoordinate = oldSecretFullCoordinate?.let { SecretCoordinate.fromFullCoordinate(it) } as? AirbyteManagedSecretCoordinate
 
-    if (oldSecretFullCoordinate != null) {
-      val oldCoordinate: SecretCoordinate = SecretCoordinate.fromFullCoordinate(oldSecretFullCoordinate)
-      coordinateBase = oldCoordinate.coordinateBase
-      val oldSecretValue: String = secretReader.read(oldCoordinate)
-      if (oldSecretValue.isNotEmpty()) {
-        version = oldCoordinate.version.inc()
-      }
+    // If an old coordinate exists and the secret value isn't empty, increment its version.
+    if (oldCoordinate != null && secretReader.read(oldCoordinate).isNotEmpty()) {
+      return oldCoordinate.copy(version = oldCoordinate.version.inc())
     }
 
-    if (coordinateBase == null) {
-      // IMPORTANT: format of this cannot be changed without introducing migrations for secrets
-      // persistence
-      coordinateBase = getCoordinatorBase(secretBasePrefix, secretBaseId, uuidSupplier)
-    }
-
-    return SecretCoordinate(coordinateBase, version)
+    // Otherwise, create a new coordinate with the default version.
+    return AirbyteManagedSecretCoordinate(
+      secretBasePrefix = secretBasePrefix,
+      secretBaseId = secretBaseId,
+      version = AirbyteManagedSecretCoordinate.DEFAULT_VERSION,
+      uuidSupplier = uuidSupplier,
+    )
   }
-
-  fun getCoordinatorBase(
-    secretBasePrefix: String,
-    secretBaseId: UUID,
-    uuidSupplier: Supplier<UUID>,
-  ): String = "${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
 
   /**
    * Takes in the secret coordinate in form of a JSON and fetches the secret from the store.
