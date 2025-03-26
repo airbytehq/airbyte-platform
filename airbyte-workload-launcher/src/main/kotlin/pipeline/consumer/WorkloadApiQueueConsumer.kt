@@ -23,12 +23,13 @@ class WorkloadApiQueueConsumer(
   @Named("defaultPriorityQueuePoller") private val defaultPriorityQueuePoller: WorkloadApiQueuePoller,
   @Value("\${airbyte.workload-launcher.parallelism.default-queue}") private val defaultPriorityParallelism: Int,
   @Value("\${airbyte.workload-launcher.parallelism.high-priority-queue}") private val highPriorityParallelism: Int,
+  @Value("\${airbyte.workload-launcher.consumer.queue-task-cap}") private val queueTaskCap: Int,
 ) {
   fun initialize(dataplaneGroupId: String) {
     logger.info { "Initializing ApiQueueConsumer for $dataplaneGroupId" }
 
-    val defaultPriorityThreadPool = Schedulers.newBoundedElastic(defaultPriorityParallelism, defaultPriorityParallelism, "default")
-    val highPriorityThreadPool = Schedulers.newBoundedElastic(highPriorityParallelism, highPriorityParallelism, "high")
+    val defaultPriorityThreadPool = Schedulers.newBoundedElastic(defaultPriorityParallelism, queueTaskCap, "default")
+    val highPriorityThreadPool = Schedulers.newBoundedElastic(highPriorityParallelism, queueTaskCap, "high")
 
     val defaultPriorityQueuePollerFlux =
       defaultPriorityQueuePoller

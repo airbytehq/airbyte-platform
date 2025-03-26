@@ -106,6 +106,7 @@ airbyte:
         workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
     network-policy-introspection: false
     consumer:
+      queue-task-cap: ${WORKLOAD_CONSUMER_QUEUE_TASK_CAP:5}
       default-queue:
         poll-interval-seconds: ${WORKLOAD_DEFAULT_PRIO_POLL_FREQUENCY:1}
         poll-size-items: ${WORKLOAD_DEFAULT_PRIO_POLL_SIZE:30}
