@@ -448,7 +448,7 @@ class WorkloadHandlerImpl(
   private fun DomainWorkload.timeSinceCreateInMillis(): Long? =
     createdAt?.let { createdAt ->
       updatedAt?.let { updatedAt ->
-        updatedAt.toEpochSecond() - createdAt.toEpochSecond()
+        updatedAt.toInstant().toEpochMilli() - createdAt.toInstant().toEpochMilli()
       }
     }
 }
