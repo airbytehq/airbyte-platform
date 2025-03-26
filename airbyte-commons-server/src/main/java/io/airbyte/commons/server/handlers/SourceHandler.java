@@ -504,7 +504,7 @@ public class SourceHandler {
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
 
-    final SourceConnection sourceConnection = new SourceConnection()
+    final SourceConnection newSourceConnection = new SourceConnection()
         .withName(name)
         .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(workspaceId)
@@ -516,29 +516,41 @@ public class SourceHandler {
     final Optional<JsonNode> previousSourceConfig =
         sourceService.getSourceConnectionIfExists(sourceId).map(SourceConnection::getConfiguration);
 
+    final JsonNode updatedConnectionConfiguration =
+        persistSecretsAndUpdateSourceConnection(previousSourceConfig, newSourceConnection.getConfiguration(), workspaceId, spec);
+    newSourceConnection.setConfiguration(updatedConnectionConfiguration);
+
+    sourceService.writeSourceConnectionNoSecrets(newSourceConnection);
+  }
+
+  public JsonNode persistSecretsAndUpdateSourceConnection(
+                                                          final Optional<JsonNode> previousSourceConfig,
+                                                          final JsonNode newSourceConfig,
+                                                          final UUID workspaceId,
+                                                          final ConnectorSpecification spec)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
+
     RuntimeSecretPersistence secretPersistence = null;
     if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
     }
-    final JsonNode partialConfig;
+
     if (previousSourceConfig.isPresent()) {
-      partialConfig = secretsRepositoryWriter.updateFromConfig(
+      return secretsRepositoryWriter.updateFromConfig(
           workspaceId,
           previousSourceConfig.get(),
-          sourceConnection.getConfiguration(),
+          newSourceConfig,
           spec.getConnectionSpecification(),
           secretPersistence);
     } else {
-      partialConfig = secretsRepositoryWriter.createFromConfig(
+      return secretsRepositoryWriter.createFromConfig(
           workspaceId,
-          sourceConnection.getConfiguration(),
+          newSourceConfig,
           spec.getConnectionSpecification(),
           secretPersistence);
     }
-    sourceConnection.setConfiguration(partialConfig);
-
-    sourceService.writeSourceConnectionNoSecrets(sourceConnection);
   }
 
   protected SourceRead toSourceRead(final SourceConnection sourceConnection,
