@@ -7,8 +7,8 @@ package io.airbyte.server.apis.publicapi.mappers
 import io.airbyte.api.model.generated.NotificationItem
 import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
-import io.airbyte.publicApi.server.generated.models.GeographyEnum
 import io.airbyte.publicApi.server.generated.models.NotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationsConfig
 import io.airbyte.publicApi.server.generated.models.WebhookNotificationConfig
@@ -28,10 +28,7 @@ object WorkspaceResponseMapper {
     WorkspaceResponse(
       workspaceId = workspaceRead.workspaceId.toString(),
       name = workspaceRead.name,
-      dataResidency =
-        workspaceRead.defaultGeography?.let { defaultGeography ->
-          GeographyEnum.valueOf(defaultGeography.toString().uppercase())
-        } ?: GeographyEnum.AUTO,
+      dataResidency = workspaceRead.defaultGeography ?: GEOGRAPHY_AUTO,
       notifications =
         NotificationsConfig(
           failure = workspaceRead.notificationSettings?.sendOnFailure?.toNotificationConfig(),

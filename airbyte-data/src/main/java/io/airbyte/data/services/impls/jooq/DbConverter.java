@@ -44,7 +44,6 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
@@ -150,8 +149,6 @@ public class DbConverter {
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
         .withGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
-            .map(String::toLowerCase)
-            .map(Geography::fromValue)
             .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
         .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
 
@@ -201,8 +198,6 @@ public class DbConverter {
         .withFirstCompletedSync(record.get(WORKSPACE.FIRST_SYNC_COMPLETE))
         .withFeedbackDone(record.get(WORKSPACE.FEEDBACK_COMPLETE))
         .withDefaultGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
-            .map(String::toLowerCase)
-            .map(Geography::fromValue)
             .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
         .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null

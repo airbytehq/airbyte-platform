@@ -12,11 +12,11 @@ import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.Tag
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
-import io.airbyte.publicApi.server.generated.models.GeographyEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
@@ -90,7 +90,7 @@ object ConnectionReadMapper {
       workspaceId = workspaceId.toString(),
       status = ConnectionStatusEnum.valueOf(connectionRead.status.toString().uppercase()),
       schedule = connectionScheduleResponse,
-      dataResidency = connectionRead.geography?.let { g -> GeographyEnum.valueOf(g.toString().uppercase()) } ?: GeographyEnum.AUTO,
+      dataResidency = connectionRead.geography ?: GEOGRAPHY_AUTO,
       configurations = streamConfigurations,
       nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },

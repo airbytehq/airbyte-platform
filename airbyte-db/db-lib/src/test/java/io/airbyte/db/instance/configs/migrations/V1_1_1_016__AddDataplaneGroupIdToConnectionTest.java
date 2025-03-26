@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations;
 
-import io.airbyte.config.Geography;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
@@ -112,7 +112,7 @@ class V1_1_1_016__AddDataplaneGroupIdToConnectionTest extends AbstractConfigsDat
             JSONB.valueOf("{}"),
             OffsetDateTime.now(),
             OffsetDateTime.now(),
-            DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.getDataType(), Geography.AUTO.name()))
+            DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.getDataType(), DataplaneConstantsKt.GEOGRAPHY_AUTO))
         .execute();
 
     V1_1_1_016__AddDataplaneGroupIdToConnection.doMigration(ctx);

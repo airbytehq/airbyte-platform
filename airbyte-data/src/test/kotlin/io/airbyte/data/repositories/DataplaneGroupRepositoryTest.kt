@@ -4,7 +4,9 @@
 
 package io.airbyte.data.repositories
 
-import io.airbyte.config.Geography
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -38,7 +40,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = Geography.AUTO.name,
+        name = GEOGRAPHY_AUTO,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -55,12 +57,12 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
 
   @Test
   fun `update dataplane group`() {
-    val updatedName = Geography.US.name
+    val updatedName = GEOGRAPHY_US
     val updatedEnabled = true
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = Geography.AUTO.name,
+        name = GEOGRAPHY_AUTO,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -83,7 +85,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = Geography.AUTO.name,
+        name = GEOGRAPHY_AUTO,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -99,8 +101,8 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
   fun `find dataplane groups by organization id and name`() {
     val organizationId = UUID.randomUUID()
     val otherOrganizationId = UUID.randomUUID()
-    val matchingName = Geography.AUTO.name
-    val nonMatchingName = Geography.EU.name
+    val matchingName = GEOGRAPHY_AUTO
+    val nonMatchingName = GEOGRAPHY_EU
 
     val dataplaneGroup1 =
       DataplaneGroup(
@@ -136,12 +138,45 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     dataplaneGroupRepository.save(dataplaneGroup2)
     dataplaneGroupRepository.save(dataplaneGroup3)
 
-    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdAndName(organizationId, matchingName)
+    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(organizationId, matchingName)
 
     assertEquals(1, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
       .containsExactly(matchingName)
+  }
+
+  @Test
+  fun `find dataplane groups by organization id and name ignores case`() {
+    val organizationId = UUID.randomUUID()
+    val matchingName1 = GEOGRAPHY_AUTO.uppercase()
+    val matchingName2 = GEOGRAPHY_AUTO.lowercase()
+
+    val dataplaneGroup =
+      DataplaneGroup(
+        organizationId = organizationId,
+        name = GEOGRAPHY_AUTO,
+        enabled = true,
+        updatedBy = UUID.randomUUID(),
+        tombstone = false,
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    dataplaneGroupRepository.save(dataplaneGroup)
+
+    val retrievedDataplaneGroups1 = dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(organizationId, matchingName1)
+
+    assertEquals(1, retrievedDataplaneGroups1.size)
+    assertThat(retrievedDataplaneGroups1)
+      .extracting("name")
+      .containsExactly(GEOGRAPHY_AUTO)
+
+    val retrievedDataplaneGroups2 = dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(organizationId, matchingName1)
+
+    assertEquals(1, retrievedDataplaneGroups2.size)
+    assertThat(retrievedDataplaneGroups2)
+      .extracting("name")
+      .containsExactly(GEOGRAPHY_AUTO)
   }
 
   @Test
@@ -151,7 +186,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = Geography.AUTO.name,
+        name = GEOGRAPHY_AUTO,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -160,7 +195,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = Geography.US.name,
+        name = GEOGRAPHY_US,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = true,
@@ -169,7 +204,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = Geography.EU.name,
+        name = GEOGRAPHY_EU,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -184,7 +219,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(2, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly(Geography.US.name, Geography.AUTO.name)
+      .containsExactly(GEOGRAPHY_US, GEOGRAPHY_AUTO)
   }
 
   @Test
@@ -194,7 +229,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = Geography.AUTO.name,
+        name = GEOGRAPHY_AUTO,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -203,7 +238,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = Geography.EU.name,
+        name = GEOGRAPHY_EU,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = true,
@@ -212,7 +247,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = Geography.US.name,
+        name = GEOGRAPHY_US,
         enabled = false,
         updatedBy = UUID.randomUUID(),
         tombstone = false,
@@ -227,6 +262,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(1, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly(Geography.AUTO.name)
+      .containsExactly(GEOGRAPHY_AUTO)
   }
 }

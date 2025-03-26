@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.config.Geography
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.db.Database
@@ -59,7 +58,7 @@ class DataplaneGroupServiceTestJooqImpl(
 
   override fun getDataplaneGroupByOrganizationIdAndGeography(
     organizationId: UUID,
-    geography: Geography,
+    geography: String,
   ): DataplaneGroup {
     val result =
       database
@@ -69,7 +68,7 @@ class DataplaneGroupServiceTestJooqImpl(
               Tables.DATAPLANE_GROUP.asterisk(),
             ).from(Tables.DATAPLANE_GROUP)
             .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.eq(organizationId))
-            .and(Tables.DATAPLANE_GROUP.NAME.eq(geography.name))
+            .and(Tables.DATAPLANE_GROUP.NAME.equalIgnoreCase(geography))
         })
         .fetch()
     return result.first().into(DataplaneGroup::class.java)

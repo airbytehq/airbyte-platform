@@ -11,11 +11,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -294,7 +294,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     return new DataplaneGroup()
         .withId(UUID.randomUUID())
         .withOrganizationId(ORGANIZATION_ID)
-        .withName(Geography.US.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_US)
         .withEnabled(true)
         .withTombstone(false);
   }
@@ -307,7 +307,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
   }
 
   private StandardWorkspace createSecondWorkspace() {
@@ -318,7 +318,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("second-workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
   }
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {

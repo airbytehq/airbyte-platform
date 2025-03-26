@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.Geography;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
@@ -492,7 +491,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    * @throws IOException exception while interacting with the db
    */
   @Override
-  public Geography getGeographyForWorkspace(final UUID workspaceId) throws IOException {
+  public String getGeographyForWorkspace(final UUID workspaceId) throws IOException {
     final List<String> geographyString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
         .from(WORKSPACE)
         .join(DATAPLANE_GROUP)
@@ -504,7 +503,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       throw new RuntimeException(String.format("Geography wasn't resolved for workspaceId %s",
           workspaceId));
     }
-    return Geography.fromValue(geographyString.getFirst().toLowerCase());
+    return geographyString.getFirst();
   }
 
   /**
@@ -781,7 +780,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   @VisibleForTesting
-  UUID getDataplaneGroupIdFromGeography(UUID organizationId, Geography geography) {
+  UUID getDataplaneGroupIdFromGeography(UUID organizationId, String geography) {
     try {
       return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(organizationId, geography).getId();
     } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {

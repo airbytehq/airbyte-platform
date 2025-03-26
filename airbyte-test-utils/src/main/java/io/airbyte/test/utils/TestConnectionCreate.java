@@ -7,7 +7,7 @@ package io.airbyte.test.utils;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
-import io.airbyte.api.client.model.generated.Geography;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,7 +27,7 @@ public class TestConnectionCreate {
   private final ConnectionScheduleType scheduleType;
   private final ConnectionScheduleData scheduleData;
   private final List<UUID> operationIds;
-  private final Geography geography;
+  private final String geography;
   private final String nameSuffix;
 
   /**
@@ -51,7 +51,7 @@ public class TestConnectionCreate {
                                ConnectionScheduleType scheduleType,
                                ConnectionScheduleData scheduleData,
                                List<UUID> operationIds,
-                               Geography geography,
+                               String geography,
                                String nameSuffix) {
     this.srcId = srcId;
     this.dstId = dstId;
@@ -92,7 +92,7 @@ public class TestConnectionCreate {
     return operationIds;
   }
 
-  public Geography getGeography() {
+  public String getGeography() {
     return geography;
   }
 
@@ -116,7 +116,7 @@ public class TestConnectionCreate {
     private ConnectionScheduleType scheduleType;
     private ConnectionScheduleData scheduleData;
 
-    private Geography geography;
+    private String geography;
     private String nameSuffix;
 
     /**
@@ -135,7 +135,7 @@ public class TestConnectionCreate {
       this.catalogId = catalogId;
       additionalOperationIds = Collections.emptyList();
       scheduleType = ConnectionScheduleType.MANUAL;
-      geography = Geography.AUTO;
+      geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
     }
 
     /**
@@ -182,7 +182,7 @@ public class TestConnectionCreate {
      * @param geography - geography
      * @return the builder
      */
-    public Builder setGeography(Geography geography) {
+    public Builder setGeography(String geography) {
       this.geography = geography;
       return this;
     }

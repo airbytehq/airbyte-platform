@@ -13,11 +13,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
@@ -80,7 +80,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(UUID.randomUUID())
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
     final ConnectionService connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);

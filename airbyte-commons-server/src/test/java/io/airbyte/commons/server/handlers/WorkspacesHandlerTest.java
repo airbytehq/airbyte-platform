@@ -43,6 +43,7 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -52,7 +53,6 @@ import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.config.Configs;
 import io.airbyte.config.CustomerioNotificationConfiguration;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
@@ -110,10 +110,6 @@ class WorkspacesHandlerTest {
   private static final String TEST_WORKSPACE_NAME = "test workspace";
   private static final String TEST_WORKSPACE_SLUG = "test-workspace";
   private static final String TEST_ORGANIZATION_NAME = "test organization";
-  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_AUTO =
-      io.airbyte.api.model.generated.Geography.AUTO;
-  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_US =
-      io.airbyte.api.model.generated.Geography.US;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private ConnectionsHandler connectionsHandler;
   private DestinationHandler destinationHandler;
@@ -186,7 +182,7 @@ class WorkspacesHandlerTest {
         .withTombstone(false)
         .withNotifications(List.of(generateNotification()))
         .withNotificationSettings(generateNotificationSettings())
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(ORGANIZATION_ID);
   }
 
@@ -288,7 +284,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
         .organizationId(ORGANIZATION_ID);
 
@@ -308,7 +304,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)))
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -339,7 +335,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
         .organizationId(ORGANIZATION_ID);
 
@@ -360,7 +356,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)))
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -400,7 +396,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of())
         .notificationSettings(generateDefaultApiNotificationSettings())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(Collections.emptyList())
         .tombstone(false)
         .organizationId(ORGANIZATION_ID);
@@ -446,7 +442,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(Collections.emptyList())
         .notificationSettings(generateDefaultApiNotificationSettings())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(Collections.emptyList())
         .tombstone(false)
         .organizationId(ORGANIZATION_ID);
@@ -511,7 +507,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
 
@@ -528,7 +524,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace2.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
 
@@ -558,7 +554,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(WEBHOOK_CONFIG_ID).name(TEST_NAME)))
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -600,7 +596,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(workspace.getTombstone());
   }
@@ -657,7 +653,7 @@ class WorkspacesHandlerTest {
         .displaySetupWizard(false)
         .notifications(List.of(apiNotification))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken("test-auth-token")));
 
     final Notification expectedNotification = generateNotification();
@@ -677,7 +673,8 @@ class WorkspacesHandlerTest {
         .withTombstone(false)
         .withNotifications(List.of(expectedNotification))
         .withNotificationSettings(generateNotificationSettings())
-        .withDefaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO)
+        .withDefaultGeography(
+            airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
         .withOrganizationId(ORGANIZATION_ID);
 
@@ -707,7 +704,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(expectedNotificationRead))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().name(TEST_NAME).id(WEBHOOK_CONFIG_ID)))
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -726,7 +723,8 @@ class WorkspacesHandlerTest {
         .withTombstone(false)
         .withNotifications(List.of(expectedNotification))
         .withNotificationSettings(generateNotificationSettings())
-        .withDefaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO)
+        .withDefaultGeography(
+            airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withWebhookOperationConfigs(SECRET_WEBHOOK_CONFIGS)
         .withOrganizationId(ORGANIZATION_ID)
         .withTombstone(false);
@@ -761,7 +759,8 @@ class WorkspacesHandlerTest {
         .withDisplaySetupWizard(false)
         .withTombstone(false)
         .withNotifications(List.of(expectedNotification))
-        .withDefaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO)
+        .withDefaultGeography(
+            airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS);
 
     when(uuidSupplier.get()).thenReturn(WEBHOOK_CONFIG_ID);
@@ -796,7 +795,7 @@ class WorkspacesHandlerTest {
         .withTombstone(false)
         .withNotifications(workspace.getNotifications())
         .withNotificationSettings(workspace.getNotificationSettings())
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(ORGANIZATION_ID);
 
     when(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
@@ -818,7 +817,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
 
@@ -854,7 +853,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(newOrgId)
         .tombstone(false);
 
@@ -872,13 +871,14 @@ class WorkspacesHandlerTest {
     final WorkspaceUpdate workspaceUpdate = new WorkspaceUpdate()
         .workspaceId(workspace.getWorkspaceId())
         .anonymousDataCollection(true)
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .email(expectedNewEmail);
 
     final StandardWorkspace expectedWorkspace = Jsons.clone(workspace)
         .withEmail(expectedNewEmail)
         .withAnonymousDataCollection(true)
-        .withDefaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? Geography.US : Geography.AUTO)
+        .withDefaultGeography(
+            airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs()
             .withWebhookConfigs(Collections.emptyList())));
 
@@ -900,7 +900,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .webhookConfigs(List.of())
         .tombstone(false);
@@ -993,7 +993,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_AUTO)
+        .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID);
 
     final WorkspaceRead actualRead = workspacesHandler.createWorkspace(workspaceCreate);
@@ -1010,7 +1010,7 @@ class WorkspacesHandlerTest {
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
-        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? GEOGRAPHY_US : GEOGRAPHY_AUTO)
+        .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(Collections.emptyList())
         .tombstone(false)
         .organizationId(ORGANIZATION_ID);

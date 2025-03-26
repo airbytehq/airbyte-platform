@@ -5,7 +5,6 @@
 package io.airbyte.data.services;
 
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamDescriptorForDestination;
@@ -65,7 +64,7 @@ public interface ConnectionService {
 
   ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  Geography getGeographyForConnection(UUID connectionId) throws IOException;
+  String getGeographyForConnection(UUID connectionId) throws IOException;
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
 

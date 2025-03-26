@@ -9151,7 +9151,7 @@ components:
         displaySetupWizard:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -9188,7 +9188,7 @@ components:
         displaySetupWizard:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -9400,7 +9400,7 @@ components:
         feedbackDone:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         dataplaneGroupId:
           type: string
           format: uuid
@@ -9538,7 +9538,7 @@ components:
         notificationsConfig:
           $ref: "#/components/schemas/NotificationsConfig"
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -9659,7 +9659,7 @@ components:
         geographies:
           type: array
           items:
-            $ref: "#/components/schemas/Geography"
+            type: string
     # SLUG
     SlugRequestBody:
       type: object
@@ -9668,13 +9668,6 @@ components:
       properties:
         slug:
           type: string
-    # Geography
-    Geography:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
     # BuilderProject
     ConnectorBuilderProjectId:
       type: string
@@ -11391,7 +11384,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -11452,7 +11445,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         nonBreakingChangesPreference:
@@ -11515,7 +11508,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -11587,7 +11580,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -11650,7 +11643,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         breakingChange:
           type: boolean
         notifySchemaChanges:
@@ -15199,7 +15192,7 @@ components:
         catalogDiff:
           $ref: "#/components/schemas/CatalogDiff"
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
@@ -16424,7 +16417,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -16458,7 +16451,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -16698,7 +16691,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -16755,21 +16748,6 @@ components:
         - manual
         - cron
         - basic
-      x-sdk-component: true
-    GeographyEnum:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
-      default: "auto"
-      x-sdk-component: true
-    GeographyEnumNoDefault:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
       x-sdk-component: true
     ConnectionStatusEnum:
       type: string
@@ -17049,7 +17027,7 @@ components:
         name:
           type: string
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace

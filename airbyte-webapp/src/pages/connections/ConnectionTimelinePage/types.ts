@@ -14,7 +14,6 @@ import {
   FieldSchemaUpdate,
   FieldTransform,
   FieldTransformTransformType,
-  Geography,
   JobConfigType,
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
@@ -331,8 +330,8 @@ export const connectionSettingsUpdateEventSummaryPatchesShape = {
   namespaceFormat: z.object({ from: z.string(), to: z.string() }),
   prefix: z.object({ from: z.string(), to: z.string() }),
   geography: z.object({
-    from: z.nativeEnum(Geography),
-    to: z.nativeEnum(Geography),
+    from: z.string(),
+    to: z.string(),
   }),
   notifySchemaChanges: z.object({
     from: z.boolean(),

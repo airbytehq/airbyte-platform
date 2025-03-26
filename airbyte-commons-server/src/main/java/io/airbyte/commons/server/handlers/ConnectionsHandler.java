@@ -72,6 +72,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -106,7 +107,6 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
@@ -378,10 +378,10 @@ public class ConnectionsHandler {
     }
 
     if (patch.getGeography() != null) {
-      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && patch.getGeography().equals(io.airbyte.api.model.generated.Geography.AUTO)) {
-        sync.setGeography(apiPojoConverters.toPersistenceGeography(io.airbyte.api.model.generated.Geography.US));
+      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(patch.getGeography())) {
+        sync.setGeography(DataplaneConstantsKt.GEOGRAPHY_US);
       } else {
-        sync.setGeography(apiPojoConverters.toPersistenceGeography(patch.getGeography()));
+        sync.setGeography(patch.getGeography());
       }
     }
 
@@ -644,13 +644,13 @@ public class ConnectionsHandler {
   }
 
   @VisibleForTesting
-  Geography getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
+  String getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
 
-    Geography geography;
+    String geography;
 
     if (connectionCreate.getGeography() != null) {
-      geography = apiPojoConverters.toPersistenceGeography(connectionCreate.getGeography());
+      geography = connectionCreate.getGeography();
     } else {
       // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
       final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
@@ -660,12 +660,12 @@ public class ConnectionsHandler {
         geography = workspace.getDefaultGeography();
       } else {
         // if the workspace doesn't have a default geography, default to 'auto'
-        geography = Geography.AUTO;
+        geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
       }
     }
 
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && geography.equals(Geography.AUTO)) {
-      geography = Geography.US;
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(geography)) {
+      geography = DataplaneConstantsKt.GEOGRAPHY_US;
     }
 
     return geography;

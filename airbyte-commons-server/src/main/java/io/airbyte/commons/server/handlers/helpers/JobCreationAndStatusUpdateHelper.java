@@ -202,7 +202,7 @@ public class JobCreationAndStatusUpdateHelper {
 
     final List<MetricAttribute> baseMetricAttributes = new ArrayList<>();
     if (geography != null) {
-      baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, geography.toString()));
+      baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, geography));
     }
     if (parsedAttemptNumber != null) {
       baseMetricAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parsedAttemptNumber));

@@ -9,12 +9,12 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -100,11 +100,12 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     organizationService.writeOrganization(MockData.defaultOrganization());
 
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    for (final Geography geography : Geography.values()) {
+    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
+        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
       dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
           .withId(UUID.randomUUID())
           .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography.name())
+          .withName(geography)
           .withEnabled(true)
           .withTombstone(false));
     }

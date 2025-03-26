@@ -7,7 +7,6 @@ import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useInvalidateWorkspace, useUpdateWorkspace } from "core/api";
-import { Geography } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
@@ -15,7 +14,7 @@ import { useNotificationService } from "hooks/services/Notification";
 
 const ValidationSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),
-  defaultGeography: z.nativeEnum(Geography).optional(),
+  defaultGeography: z.string().optional(),
 });
 
 type WorkspaceFormValues = z.infer<typeof ValidationSchema>;

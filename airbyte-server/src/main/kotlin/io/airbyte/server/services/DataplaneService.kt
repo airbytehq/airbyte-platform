@@ -9,9 +9,11 @@ import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.Dataplane
-import io.airbyte.config.Geography
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DataplaneAuthService
@@ -103,12 +105,12 @@ open class DataplaneService(
   private fun getGeography(
     connection: StandardSync?,
     workspaceId: UUID?,
-  ): Geography {
+  ): String {
     try {
       return connection?.geography
         ?: workspaceId?.let {
           workspaceService.getGeographyForWorkspace(it)
-        } ?: Geography.AUTO
+        } ?: GEOGRAPHY_AUTO
     } catch (_: Exception) {
       throw BadRequestProblem(ProblemMessageData().message("Unable to find geography of for connection [$connection], workspace [$workspaceId]"))
     }
@@ -130,7 +132,7 @@ open class DataplaneService(
   private fun buildNetworkSecurityTokenFeatureFlagContext(
     workspaceId: UUID?,
     connectionId: UUID?,
-    geography: Geography,
+    geography: String,
     priority: WorkloadPriority = WorkloadPriority.DEFAULT,
   ): MutableList<Context> {
     val context =
@@ -222,7 +224,7 @@ open class DataplaneService(
 private fun buildFeatureFlagContext(
   workspaceId: UUID?,
   connectionId: UUID?,
-  geography: Geography,
+  geography: String,
   priority: WorkloadPriority = WorkloadPriority.DEFAULT,
 ): MutableList<Context> {
   val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
@@ -237,9 +239,13 @@ private fun buildFeatureFlagContext(
   return context
 }
 
-fun Geography.toGeographicRegion(): String =
+fun String.toGeographicRegion(): String =
   when (this) {
-    Geography.AUTO -> GeographicRegion.US
-    Geography.US -> GeographicRegion.US
-    Geography.EU -> GeographicRegion.EU
+    GEOGRAPHY_AUTO -> GeographicRegion.US
+    GEOGRAPHY_US -> GeographicRegion.US
+    GEOGRAPHY_EU -> GeographicRegion.EU
+    else -> {
+      // TODO: how is this used? will this interfere with the Privatelink dataplane?
+      throw IllegalArgumentException("Unknown geographic region: $this")
+    }
   }

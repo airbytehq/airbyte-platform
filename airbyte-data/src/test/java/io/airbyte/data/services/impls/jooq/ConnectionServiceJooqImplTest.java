@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
@@ -117,7 +117,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withGeography(Geography.AUTO)
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());

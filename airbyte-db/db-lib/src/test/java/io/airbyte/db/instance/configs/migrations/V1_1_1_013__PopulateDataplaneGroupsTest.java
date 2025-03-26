@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations;
 
-import io.airbyte.config.Geography;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
@@ -96,16 +96,16 @@ class V1_1_1_013__PopulateDataplaneGroupsTest extends AbstractConfigsDatabaseTes
             false,
             OffsetDateTime.now(),
             OffsetDateTime.now(),
-            DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.getDataType(), Geography.AUTO.name()),
+            DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.getDataType(), DataplaneConstantsKt.GEOGRAPHY_AUTO),
             UUID.randomUUID())
         .execute();
 
     V1_1_1_013__PopulateDataplaneGroups.doMigration(ctx);
 
     Set<String> dataplaneGroupNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetchSet(NAME);
-    Assertions.assertTrue(dataplaneGroupNames.contains(Geography.US.name()));
-    Assertions.assertTrue(dataplaneGroupNames.contains(Geography.EU.name()));
-    Assertions.assertTrue(dataplaneGroupNames.contains(Geography.AUTO.name()));
+    Assertions.assertTrue(dataplaneGroupNames.contains(DataplaneConstantsKt.GEOGRAPHY_US));
+    Assertions.assertTrue(dataplaneGroupNames.contains(DataplaneConstantsKt.GEOGRAPHY_EU));
+    Assertions.assertTrue(dataplaneGroupNames.contains(DataplaneConstantsKt.GEOGRAPHY_AUTO));
   }
 
   @Test
@@ -116,7 +116,7 @@ class V1_1_1_013__PopulateDataplaneGroupsTest extends AbstractConfigsDatabaseTes
 
     List<String> dataplaneNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetch(NAME);
     Assertions.assertEquals(1, dataplaneNames.size());
-    Assertions.assertEquals(Geography.AUTO.name(), dataplaneNames.get(0));
+    Assertions.assertEquals(DataplaneConstantsKt.GEOGRAPHY_AUTO, dataplaneNames.get(0));
   }
 
   @Test

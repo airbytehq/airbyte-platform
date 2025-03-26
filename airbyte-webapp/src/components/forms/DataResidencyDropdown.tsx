@@ -4,7 +4,6 @@ import { Path } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { useAvailableGeographies } from "core/api";
-import { Geography } from "core/api/types/AirbyteClient";
 
 import styles from "./DataResidencyDropdown.module.scss";
 import { FormValues } from "./Form";
@@ -32,8 +31,8 @@ export const DataResidencyDropdown = <T extends FormValues>({
   const { geographies } = useAvailableGeographies();
 
   const options = geographies.map((geography) => {
-    const Flag =
-      geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
+    const Flag = geography === "AUTO" ? Flags.US : Flags[geography as keyof typeof Flags] ?? Flags.US;
+
     return {
       label: formatMessage({
         id: `connection.geography.${geography}`,
@@ -66,8 +65,7 @@ export const StandaloneDataResidencyDropdown = <T extends FormValues>({
   const { geographies } = useAvailableGeographies();
 
   const options = geographies.map((geography) => {
-    const Flag =
-      geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
+    const Flag = geography === "AUTO" ? Flags.US : Flags[geography as keyof typeof Flags] ?? Flags.US;
     return {
       label: formatMessage({
         id: `connection.geography.${geography}`,

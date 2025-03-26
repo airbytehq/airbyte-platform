@@ -43,7 +43,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldAdd;
 import io.airbyte.api.model.generated.FieldRemove;
 import io.airbyte.api.model.generated.FieldTransform;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobRead;
@@ -76,6 +75,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -787,7 +787,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
-        .geography(Geography.US)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .tags(tags);
 
@@ -805,7 +805,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
-        .geography(Geography.US)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .tags(tags);
 
@@ -836,7 +836,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .name(standardSync.getName())
         .syncCatalog(catalog)
-        .geography(Geography.US)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
         .notifySchemaChangesByEmail(true)
@@ -854,7 +854,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .name(standardSync.getName())
         .syncCatalog(catalog)
-        .geography(Geography.US)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
         .notifySchemaChangesByEmail(true)

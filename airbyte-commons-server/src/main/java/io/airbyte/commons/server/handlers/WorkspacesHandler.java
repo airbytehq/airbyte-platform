@@ -40,6 +40,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem;
 import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.random.RandomKt;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -180,9 +181,9 @@ public class WorkspacesHandler {
     final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.api.model.generated.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
+    final String defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
         ? workspaceCreateWithId.getDefaultGeography()
-        : io.airbyte.api.model.generated.Geography.AUTO;
+        : DataplaneConstantsKt.GEOGRAPHY_AUTO;
 
     // NotificationSettings from input will be patched with default values.
     final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
@@ -200,7 +201,7 @@ public class WorkspacesHandler {
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
-        .withDefaultGeography(apiPojoConverters.toPersistenceGeography(defaultGeography))
+        .withDefaultGeography(getDefaultGeographyForAirbyteEdition(defaultGeography))
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
         .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
@@ -623,7 +624,7 @@ public class WorkspacesHandler {
     }
 
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+      workspace.setDefaultGeography(getDefaultGeographyForAirbyteEdition(workspacePatch.getDefaultGeography()));
     }
     if (workspacePatch.getName() != null) {
       workspace.setName(workspacePatch.getName());
@@ -725,6 +726,13 @@ public class WorkspacesHandler {
 
     workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
     return WorkspaceConverter.domainToApiModel(workspace);
+  }
+
+  private String getDefaultGeographyForAirbyteEdition(final String geography) {
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(geography)) {
+      return DataplaneConstantsKt.GEOGRAPHY_US;
+    }
+    return geography;
   }
 
 }

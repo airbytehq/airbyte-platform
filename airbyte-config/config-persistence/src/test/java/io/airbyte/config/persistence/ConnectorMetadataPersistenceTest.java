@@ -20,13 +20,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.DataplaneGroup;
-import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -154,7 +154,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID));
   }
 

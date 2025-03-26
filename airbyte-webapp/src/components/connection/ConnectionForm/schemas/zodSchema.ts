@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import {
   NonBreakingChangesPreference,
-  Geography,
   SchemaChangeBackfillPreference,
   SyncMode,
   DestinationSyncMode,
@@ -103,7 +102,7 @@ export const useConnectionValidationZodSchema = () => {
           nonBreakingChangesPreference: allowAutoDetectSchema
             ? z.nativeEnum(NonBreakingChangesPreference)
             : z.nativeEnum(NonBreakingChangesPreference).optional(),
-          geography: z.nativeEnum(Geography).optional(),
+          geography: z.string().optional(),
           syncCatalog: syncCatalogZodSchema,
           notifySchemaChanges: z.boolean().optional(),
           backfillPreference: z.nativeEnum(SchemaChangeBackfillPreference).optional(),

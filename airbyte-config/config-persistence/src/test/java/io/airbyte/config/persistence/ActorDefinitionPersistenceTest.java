@@ -15,10 +15,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -55,6 +55,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -98,11 +99,12 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(DEFAULT_ORGANIZATION_ID).withName("Test Organization").withEmail("test@test.com"));
 
     dataplaneGroupService = spy(new DataplaneGroupServiceTestJooqImpl(database));
-    for (final Geography geography : Geography.values()) {
+    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
+        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
       dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
           .withId(UUID.randomUUID())
           .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography.name())
+          .withName(geography)
           .withEnabled(true)
           .withTombstone(false));
     }
@@ -236,7 +238,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
         .withBreakingChange(false)
-        .withGeography(Geography.US);
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
 
     connectionService.writeStandardSync(connection);
 
@@ -326,7 +328,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
         .withBreakingChange(false)
-        .withGeography(Geography.US);
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
 
     connectionService.writeStandardSync(connection);
 
@@ -573,7 +575,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 

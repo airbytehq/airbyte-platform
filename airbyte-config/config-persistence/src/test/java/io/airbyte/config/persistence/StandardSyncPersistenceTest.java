@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -25,7 +26,6 @@ import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationSyncMode;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
@@ -122,7 +122,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(dataplaneGroupId)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
 
@@ -464,7 +464,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testGetDataplaneGroupIdFromGeography() throws IOException, JsonValidationException {
-    Geography geography = Geography.AUTO;
+    String geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
     UUID newDataplaneGroupId = UUID.randomUUID();
     UUID newWorkspaceId = UUID.randomUUID();
     UUID newOrganizationId = UUID.randomUUID();
@@ -474,7 +474,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(newDataplaneGroupId)
         .withOrganizationId(newOrganizationId)
-        .withName(geography.name())
+        .withName(geography)
         .withEnabled(true)
         .withTombstone(false));
 
@@ -510,7 +510,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final UUID newOrganizationId = UUID.randomUUID();
     OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(new Organization().withOrganizationId(newOrganizationId).withEmail("test@test.test").withName("test"));
-    final Geography geography = Geography.AUTO;
+    final String geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
 
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(newWorkspaceId)
@@ -548,7 +548,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
@@ -662,7 +662,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withNamespaceFormat("")
         .withPrefix("")
         .withStatus(Status.ACTIVE)
-        .withGeography(Geography.AUTO)
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withCreatedAt(OffsetDateTime.now().toEpochSecond())
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)

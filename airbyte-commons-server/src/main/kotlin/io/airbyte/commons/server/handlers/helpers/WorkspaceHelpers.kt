@@ -8,12 +8,12 @@ import io.airbyte.api.model.generated.NotificationItem
 import io.airbyte.api.model.generated.NotificationSettings
 import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter
 import io.airbyte.config.Configs
-import io.airbyte.config.Geography
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import java.util.Optional
@@ -29,7 +29,7 @@ fun buildStandardWorkspace(
   uuidSupplier: Supplier<UUID>,
 ): StandardWorkspace {
   // if not set on the workspaceCreate, set the defaultGeography to AUTO
-  val geography: Geography = workspaceCreateWithId.defaultGeography?.let { Enums.convertTo(it, Geography::class.java) } ?: Geography.AUTO
+  val geography: String = workspaceCreateWithId.defaultGeography ?: GEOGRAPHY_AUTO
 
   return StandardWorkspace().apply {
     workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
@@ -109,12 +109,12 @@ fun getWorkspaceWithFixedGeography(
 
 private fun getDefaultGeographyForAirbyteEdition(
   airbyteEdition: Configs.AirbyteEdition,
-  geography: Geography?,
-): Geography {
-  if (airbyteEdition == Configs.AirbyteEdition.CLOUD && (geography == Geography.AUTO || geography == null)) {
-    return Geography.US
+  geography: String?,
+): String {
+  if (airbyteEdition == Configs.AirbyteEdition.CLOUD && (geography == GEOGRAPHY_AUTO || geography == null)) {
+    return GEOGRAPHY_US
   } else if (geography == null) {
-    return Geography.AUTO
+    return GEOGRAPHY_AUTO
   }
   return geography
 }

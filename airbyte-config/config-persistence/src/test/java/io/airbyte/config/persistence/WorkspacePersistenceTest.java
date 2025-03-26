@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -20,7 +21,6 @@ import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
@@ -125,25 +125,25 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(MockData.DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(MockData.DATAPLANE_GROUP_ID_ORG_1)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(MockData.DATAPLANE_GROUP_ID_ORG_2)
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(MockData.DATAPLANE_GROUP_ID_ORG_3)
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
-        .withName(Geography.AUTO.name())
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false));
 
@@ -182,7 +182,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
         .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_DEFAULT);
   }

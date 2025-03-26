@@ -7,10 +7,12 @@ package io.airbyte.server.services
 import io.airbyte.api.model.generated.ActorType
 import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
 import io.airbyte.config.DestinationConnection
-import io.airbyte.config.Geography
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
@@ -35,7 +37,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
-import org.junit.Assert.assertEquals
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -68,9 +69,9 @@ class DataplaneServiceTest {
   fun setup() {
     // Setup all fallbacks/base cases
     connectionService = mockk()
-    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withGeography(Geography.EU).withDestinationId((destinationId))
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withGeography(GEOGRAPHY_EU).withDestinationId((destinationId))
     workspaceService = mockk()
-    every { workspaceService.getGeographyForWorkspace(workspaceId) } returns Geography.US
+    every { workspaceService.getGeographyForWorkspace(workspaceId) } returns GEOGRAPHY_US
     sourceService = mockk()
     every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withWorkspaceId(workspaceId)
     destinationService = mockk()
@@ -105,7 +106,7 @@ class DataplaneServiceTest {
 
     val expectedContext =
       listOf(
-        FeatureFlagGeography(Geography.EU.toString()),
+        FeatureFlagGeography(GEOGRAPHY_EU),
         Workspace(workspaceId),
         Connection(connectionId.toString()),
         Priority(HIGH_PRIORITY),
@@ -121,7 +122,7 @@ class DataplaneServiceTest {
     verify(exactly = 1) { sourceService.getSourceConnection(sourceId) }
     verify(exactly = 1) { workspaceService.getGeographyForWorkspace(workspaceId) }
 
-    val expectedContext = listOf(FeatureFlagGeography(Geography.US.toString()), Workspace(workspaceId), Priority(HIGH_PRIORITY))
+    val expectedContext = listOf(FeatureFlagGeography(GEOGRAPHY_US), Workspace(workspaceId), Priority(HIGH_PRIORITY))
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
 
@@ -133,7 +134,7 @@ class DataplaneServiceTest {
     verify(exactly = 1) { destinationService.getDestinationConnection(destinationId) }
     verify(exactly = 1) { workspaceService.getGeographyForWorkspace(workspaceId) }
 
-    val expectedContext = listOf(FeatureFlagGeography(Geography.US.toString()), Workspace(workspaceId))
+    val expectedContext = listOf(FeatureFlagGeography(GEOGRAPHY_US), Workspace(workspaceId))
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedContext)) }
   }
 
@@ -190,7 +191,7 @@ class DataplaneServiceTest {
 
     val expectedWithConnection =
       listOf(
-        FeatureFlagGeography(Geography.AUTO.toString()),
+        FeatureFlagGeography(GEOGRAPHY_AUTO),
         Priority(HIGH_PRIORITY),
       )
     verify(exactly = 1) { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(expectedWithConnection)) }

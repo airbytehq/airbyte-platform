@@ -22,7 +22,7 @@ import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
 import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
-import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
+import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -35,7 +35,7 @@ import { StateBlock } from "./StateBlock";
 
 export interface ConnectionSettingsFormValues {
   connectionName: string;
-  geography?: Geography;
+  geography?: string;
   notifySchemaChanges?: boolean;
 }
 
@@ -125,9 +125,7 @@ export const ConnectionSettingsPage: React.FC = () => {
 
   const isDeprecated = connection.status === "deprecated";
   const hasConfiguredGeography =
-    connection.geography !== undefined &&
-    connection.geography !== defaultGeography &&
-    connection.geography !== Geography.auto;
+    connection.geography !== undefined && connection.geography !== defaultGeography && connection.geography !== "AUTO";
 
   return (
     <ScrollParent>

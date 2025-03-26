@@ -21,7 +21,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
-import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -393,7 +392,7 @@ public class StandardSyncPersistence {
   }
 
   @VisibleForTesting
-  UUID getDataplaneGroupIdFromGeography(StandardSync connection, Geography geography) {
+  UUID getDataplaneGroupIdFromGeography(StandardSync connection, String geography) {
     UUID organizationId;
     try {
       organizationId = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)

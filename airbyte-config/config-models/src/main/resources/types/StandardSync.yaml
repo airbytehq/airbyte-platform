@@ -122,7 +122,7 @@ properties:
   resourceRequirements:
     "$ref": ResourceRequirements.yaml
   geography:
-    "$ref": Geography.yaml
+    type: string
   dataplaneGroupId:
     type: string
     format: uuid

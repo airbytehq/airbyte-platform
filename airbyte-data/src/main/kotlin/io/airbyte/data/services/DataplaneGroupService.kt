@@ -5,7 +5,6 @@
 package io.airbyte.data.services
 
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.config.Geography
 import java.util.UUID
 
 interface DataplaneGroupService {
@@ -19,7 +18,7 @@ interface DataplaneGroupService {
    */
   fun getDataplaneGroupByOrganizationIdAndGeography(
     organizationId: UUID,
-    geography: Geography,
+    geography: String,
   ): DataplaneGroup
 
   /**

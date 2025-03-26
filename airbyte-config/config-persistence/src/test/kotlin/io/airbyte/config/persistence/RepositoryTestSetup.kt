@@ -4,10 +4,12 @@
 
 package io.airbyte.config.persistence
 
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
-import io.airbyte.config.Geography
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
@@ -81,13 +83,13 @@ open class RepositoryTestSetup {
       val database = databaseProviders.createNewConfigsDatabase()
 
       val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database)
-      Geography.entries.forEach {
+      listOf(GEOGRAPHY_EU, GEOGRAPHY_US, GEOGRAPHY_AUTO).forEach {
         try {
           dataplaneGroupService.writeDataplaneGroup(
             DataplaneGroup()
               .withId(UUID.randomUUID())
               .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-              .withName(it.name)
+              .withName(it)
               .withEnabled(true)
               .withTombstone(false),
           )
@@ -110,7 +112,7 @@ open class RepositoryTestSetup {
       workspaceService.writeStandardWorkspaceNoSecrets(
         StandardWorkspace()
           .withWorkspaceId(workspaceId)
-          .withDefaultGeography(Geography.US)
+          .withDefaultGeography(GEOGRAPHY_US)
           .withName("")
           .withSlug("")
           .withInitialSetupComplete(true)
@@ -211,7 +213,7 @@ open class RepositoryTestSetup {
       connectionRepo.writeStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
-          .withGeography(Geography.US)
+          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
@@ -221,7 +223,7 @@ open class RepositoryTestSetup {
       connectionRepo.writeStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
-          .withGeography(Geography.US)
+          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")

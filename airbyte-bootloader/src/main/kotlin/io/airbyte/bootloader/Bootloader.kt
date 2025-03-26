@@ -5,12 +5,14 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.config.Geography
 import io.airbyte.config.SsoConfig
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
@@ -188,7 +190,7 @@ class Bootloader(
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withDefaultGeography(if (airbyteEdition == AirbyteEdition.CLOUD) Geography.US else Geography.AUTO)
+        .withDefaultGeography(if (airbyteEdition == AirbyteEdition.CLOUD) GEOGRAPHY_US else GEOGRAPHY_AUTO)
         // attach this new workspace to the Default Organization which should always exist at this point.
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
@@ -210,7 +212,7 @@ class Bootloader(
           DataplaneGroup()
             .withId(dataplaneGroupId)
             .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-            .withName(Geography.US.name)
+            .withName(GEOGRAPHY_US)
             .withEnabled(true)
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
@@ -222,7 +224,7 @@ class Bootloader(
           DataplaneGroup()
             .withId(dataplaneGroupId)
             .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-            .withName(Geography.EU.name)
+            .withName(GEOGRAPHY_EU)
             .withEnabled(true)
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
@@ -238,7 +240,7 @@ class Bootloader(
       DataplaneGroup()
         .withId(dataplaneGroupId)
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-        .withName(Geography.AUTO.name)
+        .withName(GEOGRAPHY_AUTO)
         .withEnabled(true)
         .withTombstone(false)
     dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)

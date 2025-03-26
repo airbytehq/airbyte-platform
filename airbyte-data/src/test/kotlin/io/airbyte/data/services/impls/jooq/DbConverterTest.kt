@@ -5,9 +5,9 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.google.common.io.Resources
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
-import io.airbyte.config.Geography
 import io.airbyte.config.Notification
 import io.airbyte.config.Notification.NotificationType
 import io.airbyte.config.NotificationSettings
@@ -135,7 +135,7 @@ internal class DbConverterTest {
     assertEquals(false, workspace.tombstone)
     assertEquals(true, workspace.firstCompletedSync)
     assertEquals(false, workspace.feedbackDone)
-    assertEquals(Geography.US, workspace.defaultGeography)
+    assertEquals(GEOGRAPHY_US, workspace.defaultGeography)
     assertEquals(organizationId, workspace.organizationId)
     assertEquals(createdAt.toEpochSecond(), workspace.createdAt)
     assertEquals(updatedAt.toEpochSecond(), workspace.updatedAt)

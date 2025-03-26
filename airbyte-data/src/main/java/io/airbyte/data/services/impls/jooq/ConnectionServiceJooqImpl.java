@@ -29,7 +29,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
@@ -561,7 +560,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException exception while interacting with the db
    */
   @Override
-  public Geography getGeographyForConnection(final UUID connectionId) throws IOException {
+  public String getGeographyForConnection(final UUID connectionId) throws IOException {
     final List<String> geographyString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(DATAPLANE_GROUP)
@@ -573,7 +572,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       throw new RuntimeException(String.format("Geography wasn't resolved for connectionId %s",
           connectionId));
     }
-    return Geography.fromValue(geographyString.getFirst().toLowerCase());
+    return geographyString.getFirst();
   }
 
   /**
@@ -1201,7 +1200,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   @VisibleForTesting
-  UUID getDataplaneGroupIdFromGeography(StandardSync connection, Geography geography) {
+  UUID getDataplaneGroupIdFromGeography(StandardSync connection, String geography) {
     UUID organizationId;
     try {
       organizationId = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)

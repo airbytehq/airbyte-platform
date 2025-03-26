@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import jakarta.inject.Singleton;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,14 +25,14 @@ public class WebBackendGeographiesHandler {
     // now we expect OSS deployments to use a single default Task Queue for scheduling syncs in a vast
     // majority of cases.
     return new WebBackendGeographiesListResult().geographies(
-        Collections.singletonList(Geography.AUTO));
+        Collections.singletonList(DataplaneConstantsKt.GEOGRAPHY_AUTO));
   }
 
   /**
    * Only called by the wrapped Cloud API to enable multi-cloud.
    */
   public WebBackendGeographiesListResult listGeographiesCloud() {
-    return new WebBackendGeographiesListResult().geographies(Arrays.asList(Geography.values()));
+    return new WebBackendGeographiesListResult().geographies(Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_US, DataplaneConstantsKt.GEOGRAPHY_EU));
   }
 
 }

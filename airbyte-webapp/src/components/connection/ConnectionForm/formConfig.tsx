@@ -9,7 +9,6 @@ import {
   SyncMode,
   ConnectionScheduleData,
   ConnectionScheduleType,
-  Geography,
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SchemaChangeBackfillPreference,
@@ -43,7 +42,7 @@ export interface FormConnectionFormValues {
   namespaceFormat?: string;
   prefix: string;
   nonBreakingChangesPreference?: NonBreakingChangesPreference;
-  geography?: Geography;
+  geography?: string;
   syncCatalog: AirbyteCatalog;
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
@@ -87,7 +86,7 @@ export const useConnectionValidationSchema = () => {
           nonBreakingChangesPreference: allowAutoDetectSchema
             ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
             : yup.mixed().notRequired(),
-          geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
+          geography: yup.string().optional(),
           syncCatalog: syncCatalogSchema,
           notifySchemaChanges: yup.boolean().optional(),
           backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),

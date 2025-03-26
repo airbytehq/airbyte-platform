@@ -4,13 +4,14 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
-import io.airbyte.config.Geography
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.ApplyDefinitionsHelper
 import io.airbyte.config.init.BreakingChangeNotificationHelper
@@ -308,7 +309,7 @@ internal class BootloaderTest {
 
     val workspaces = workspaceService.listStandardWorkspaces(false)
     Assertions.assertEquals(workspaces.size, 1)
-    Assertions.assertEquals(workspaces[0].defaultGeography, if (airbyteEdition == AirbyteEdition.CLOUD) Geography.US else Geography.AUTO)
+    Assertions.assertEquals(workspaces[0].defaultGeography, if (airbyteEdition == AirbyteEdition.CLOUD) GEOGRAPHY_US else GEOGRAPHY_AUTO)
 
     Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.version.get())
     Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.airbyteProtocolVersionMin.get())
