@@ -10,7 +10,7 @@ import io.airbyte.initContainer.system.FileClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.CheckConnectionInputHydrator
+import io.airbyte.workers.hydration.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants

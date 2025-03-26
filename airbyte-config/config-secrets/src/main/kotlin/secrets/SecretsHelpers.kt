@@ -47,6 +47,7 @@ private val logger = KotlinLogging.logger {}
  */
 object SecretsHelpers {
   private const val COORDINATE_FIELD = "_secret"
+  private const val SECRET_STORAGE_ID_FIELD = "_secret_storage_id"
   const val DEFAULT_SECRET_BASE_PREFIX = "airbyte_workspace_"
 
   /**
@@ -389,5 +390,26 @@ object SecretsHelpers {
         secretCoordinateAsJson[COORDINATE_FIELD],
       )
     return Jsons.deserialize(getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate))
+  }
+
+  /**
+   * Internal helper object for specifically dealing with SecretReferences in the context of
+   * configs.
+   */
+  object SecretReferenceHelpers {
+    /**
+     * This function will return all the secret store ids from the config.
+     */
+    fun getSecretStorageIdsFromConfig(config: JsonNode): Set<UUID> {
+      val secretStoreIds = mutableSetOf<UUID>()
+      config.fields().forEach { (key, value) ->
+        if (key == SECRET_STORAGE_ID_FIELD) {
+          secretStoreIds.add(UUID.fromString(value.asText()))
+        } else if (value.isObject) {
+          secretStoreIds.addAll(getSecretStorageIdsFromConfig(value))
+        }
+      }
+      return secretStoreIds
+    }
   }
 }

@@ -68,6 +68,7 @@ import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -193,6 +194,7 @@ class ReplicationInputHydratorTest {
 
   private static SecretsRepositoryReader secretsRepositoryReader;
   private static MapperSecretHydrationHelper mapperSecretHydrationHelper;
+  private static ConnectorSecretsHydrator connectorSecretsHydrator;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
@@ -210,6 +212,7 @@ class ReplicationInputHydratorTest {
   void setup() throws IOException {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     mapperSecretHydrationHelper = mock(MapperSecretHydrationHelper.class);
+    connectorSecretsHydrator = mock(ConnectorSecretsHydrator.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     attemptApi = mock(AttemptApi.class);
     connectionApi = mock(ConnectionApi.class);
@@ -240,12 +243,12 @@ class ReplicationInputHydratorTest {
     return new ReplicationInputHydrator(
         airbyteApiClient,
         resumableFullRefreshStatsHelper,
-        secretsRepositoryReader,
         mapperSecretHydrationHelper,
         backfillHelper,
         catalogClientConverters,
         new ReplicationInputMapper(),
         metricClient,
+        connectorSecretsHydrator,
         useRuntimePersistence);
   }
 
@@ -267,7 +270,7 @@ class ReplicationInputHydratorTest {
         "unused",
         "unused",
         null, // unused
-        new ConnectionContext().withOrganizationId(UUID.randomUUID()),
+        new ConnectionContext().withWorkspaceId(UUID.randomUUID()).withOrganizationId(UUID.randomUUID()),
         null,
         List.of());
   }

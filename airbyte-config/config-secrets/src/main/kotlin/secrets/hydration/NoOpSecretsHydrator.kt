@@ -29,4 +29,9 @@ class NoOpSecretsHydrator : SecretsHydrator {
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
   ): JsonNode = secretCoordinate
+
+  override fun hydrate(
+    config: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): JsonNode = config
 }

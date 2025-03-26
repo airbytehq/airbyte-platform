@@ -6,6 +6,7 @@ package io.airbyte.config.secrets.hydration
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.SecretPersistence
 
 /**
  * Adds secrets to a partial config.
@@ -35,5 +36,13 @@ interface SecretsHydrator {
   fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
+  ): JsonNode
+
+  /**
+   * Adds secrets to a partial config based off a given persistence.
+   */
+  fun hydrate(
+    config: JsonNode,
+    secretPersistence: SecretPersistence,
   ): JsonNode
 }

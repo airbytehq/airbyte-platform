@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers
+package io.airbyte.workers.hydration
 
 import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.ActorContext
@@ -25,14 +25,23 @@ class CheckConnectionInputHydratorTest {
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
     val input =
       StandardCheckConnectionInput()
-        .withActorContext(ActorContext().withOrganizationId(orgId))
+        .withActorContext(ActorContext().withWorkspaceId(workspaceId).withOrganizationId(orgId))
         .withActorType(ActorType.DESTINATION)
         .withActorId(UUID.randomUUID())
         .withConnectionConfiguration(unhydratedConfig)
 
-    every { base.hydrateConfig(unhydratedConfig, orgId) } returns hydratedConfig
+    every {
+      base.hydrateConfig(
+        unhydratedConfig,
+        SecretHydrationContext(
+          organizationId = orgId,
+          workspaceId = workspaceId,
+        ),
+      )
+    } returns hydratedConfig
 
     val result = hydrator.getHydratedStandardCheckInput(input)
 
