@@ -342,7 +342,6 @@ interface ContributeToAirbyteFormProps {
 }
 
 const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ imageNameError, setImageNameError }) => {
-  const isEdit = useWatch({ name: "isEditing" });
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   return (
@@ -355,25 +354,13 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
-        name="description"
+        name="connectorDescription"
         fieldType="textarea"
-        label={formatMessage({
-          id: isEdit
-            ? "connectorBuilder.contribution.modal.changeDescription.label"
-            : "connectorBuilder.contribution.modal.connectorDescription.label",
-        })}
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.label" })}
         labelTooltip={
           <LabelInfo
-            label={formatMessage({
-              id: isEdit
-                ? "connectorBuilder.contribution.modal.changeDescription.label"
-                : "connectorBuilder.contribution.modal.connectorDescription.label",
-            })}
-            description={formatMessage({
-              id: isEdit
-                ? "connectorBuilder.contribution.modal.changeDescription.tooltip"
-                : "connectorBuilder.contribution.modal.connectorDescription.tooltip",
-            })}
+            label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.label" })}
+            description={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.tooltip" })}
           />
         }
         onFocus={() => {
@@ -381,6 +368,18 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
             actionDescription: "User focused the description field in the Contribute to Airbyte modal",
           });
         }}
+        containerControlClassName={styles.formControl}
+      />
+      <FormControl<ContributeToAirbyteFormValues>
+        name="contributionDescription"
+        fieldType="textarea"
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.label" })}
+        labelTooltip={
+          <LabelInfo
+            label={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.label" })}
+            description={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.tooltip" })}
+          />
+        }
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
@@ -422,7 +421,8 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
 interface ContributeToAirbyteFormValues {
   name: string;
   connectorImageName: string;
-  description: string;
+  connectorDescription: string;
+  contributionDescription: string;
   githubToken: string;
   isEditing: boolean;
 }
@@ -507,14 +507,15 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
 
     const jsonManifestWithDescription = {
       ...jsonManifestWithCorrectedVersion,
-      description: values.description,
+      description: values.connectorDescription,
     };
     const yamlManifest = convertJsonToYaml(jsonManifestWithDescription);
 
     const contribution = await generateContribution({
       name: values.name,
       connector_image_name: values.connectorImageName,
-      description: values.description,
+      connector_description: values.connectorDescription,
+      contribution_description: values.contributionDescription,
       github_token: values.githubToken,
       manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
       base_image: baseImage,
@@ -552,7 +553,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
     if (mode === "yaml") {
       setValue("yaml", yamlManifest);
     } else {
-      setValue("formValues.description", values.description);
+      setValue("formValues.description", values.connectorDescription);
     }
 
     onClose();
@@ -563,7 +564,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       defaultValues={{
         name: connectorName,
         connectorImageName,
-        description: jsonManifest.description,
+        connectorDescription: jsonManifest.description,
         githubToken: "",
         isEditing: false,
       }}
@@ -577,7 +578,8 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
             message: imageNameError || "form.empty.error",
             params: { type: NON_I18N_ERROR_TYPE },
           }),
-        description: z.string().trim().nonempty("form.empty.error"),
+        connectorDescription: z.string().trim().nonempty("form.empty.error"),
+        contributionDescription: z.string().trim().nonempty("form.empty.error"),
         githubToken: z.string().trim().nonempty("form.empty.error"),
         isEditing: z.boolean(),
       } satisfies ToZodSchema<ContributeToAirbyteFormValues>)}
@@ -634,13 +636,15 @@ const ConnectorImageNameInput: React.FC<{
 
   const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
 
-  const updateErrorAndFooter = useCallback(
+  // update UI based on the result of checking the state of existing connector contributions
+  const handleContributionCheckRead = useCallback(
     (contributionCheck: CheckContributionRead) => {
       if (contributionCheck.connector_exists) {
         if (isContributeEditsEnabled) {
           setValue("isEditing", true);
-          // Set the name to match the existing name to avoid unnecessary changes
+          // Set the name and description to match the existing name to avoid unnecessary changes
           setValue("name", contributionCheck.connector_name);
+          setValue("connectorDescription", contributionCheck.connector_description);
           setFooter(
             formatMessage(
               { id: "connectorBuilder.contribution.modal.connectorAlreadyExists" },
@@ -696,7 +700,7 @@ const ConnectorImageNameInput: React.FC<{
 
     const cachedCheck = getCachedCheck({ connector_image_name: imageName });
     if (cachedCheck) {
-      updateErrorAndFooter(cachedCheck);
+      handleContributionCheckRead(cachedCheck);
       return;
     }
 
@@ -708,9 +712,16 @@ const ConnectorImageNameInput: React.FC<{
       if (result instanceof Error) {
         return;
       }
-      updateErrorAndFooter(result);
+      handleContributionCheckRead(result);
     });
-  }, [debouncedCheckContribution, formatMessage, getCachedCheck, imageName, setImageNameError, updateErrorAndFooter]);
+  }, [
+    debouncedCheckContribution,
+    formatMessage,
+    getCachedCheck,
+    imageName,
+    setImageNameError,
+    handleContributionCheckRead,
+  ]);
 
   // when imageNameError changes, trigger validation of the image name field
   useUpdateEffect(() => {

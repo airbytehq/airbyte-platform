@@ -4,7 +4,11 @@ This PR adds a new connector for source {{ connectorName }} ({{ connectorImageNa
 
 Contributor-provided connector description:
 
-{{ description }}
+{{ connectorDescription }}
+
+The contributor provided the following description of the change:
+
+{{ contributionDescription }}
 
 ## Details
 

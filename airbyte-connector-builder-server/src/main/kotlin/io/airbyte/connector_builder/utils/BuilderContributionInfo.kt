@@ -14,7 +14,8 @@ data class BuilderContributionInfo(
   val connectorName: String,
   val connectorImageName: String,
   val actorDefinitionId: String,
-  val description: String,
+  val connectorDescription: String,
+  val contributionDescription: String,
   val githubToken: String,
   val manifestYaml: String,
   val customComponents: String?, // optional

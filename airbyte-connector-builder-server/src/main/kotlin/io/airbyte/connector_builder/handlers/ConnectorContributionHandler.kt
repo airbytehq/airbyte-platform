@@ -40,11 +40,22 @@ class ConnectorContributionHandler(
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
-    val connectorName = githubContributionService.readConnectorMetadataValue("name")
-    val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
+
+    // only fetch connector name, description, and Github url if connector exists
+    val (connectorName, connectorDescription, connectorPath) =
+      if (connectorExists) {
+        Triple(
+          githubContributionService.readConnectorMetadataValue("name"),
+          githubContributionService.readConnectorDescription(),
+          "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}",
+        )
+      } else {
+        Triple(null, null, null)
+      }
 
     return CheckContributionRead().apply {
       this.connectorName = connectorName
+      this.connectorDescription = connectorDescription
       githubUrl = connectorPath
       this.connectorExists = connectorExists
     }
@@ -101,7 +112,8 @@ class ConnectorContributionHandler(
       connectorName = generateContributionRequestBody.name,
       connectorImageName = generateContributionRequestBody.connectorImageName,
       actorDefinitionId = actorDefinitionId,
-      description = generateContributionRequestBody.description,
+      connectorDescription = generateContributionRequestBody.connectorDescription,
+      contributionDescription = generateContributionRequestBody.contributionDescription,
       githubToken = generateContributionRequestBody.githubToken,
       manifestYaml = generateContributionRequestBody.manifestYaml,
       customComponents = generateContributionRequestBody.customComponents,

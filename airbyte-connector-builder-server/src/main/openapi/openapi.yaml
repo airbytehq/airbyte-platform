@@ -170,6 +170,9 @@ components:
         connector_name:
           type: string
           description: The name of the connector in Github, if it exists
+        connector_description:
+          type: string
+          description: The text description of the connector in Github, if it exists
         github_url:
           type: string
           description: The Github URL of the connector in the airbyte repository, if it exists
@@ -184,6 +187,8 @@ components:
         - github_token
         - manifest_yaml
         - base_image
+        - connector_description
+        - contribution_description
       properties:
         name:
           type: string
@@ -191,7 +196,7 @@ components:
         connector_image_name:
           type: string
           description: The name of the connector module, e.g. source-google-sheets
-        description:
+        connector_description:
           type: string
           description: Brief description of the connector and the API it integrates
         github_token:
@@ -206,6 +211,9 @@ components:
         base_image:
           type: string
           description: The base image to use for the connector
+        contribution_description:
+          type: string
+          description: Message describing the content of the contribution, including any changes to the connector
     GenerateContributionResponse:
       type: object
       required:

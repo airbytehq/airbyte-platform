@@ -132,6 +132,16 @@ class GithubContributionService(
     return yaml.load(rawYamlString)
   }
 
+  // TODO: Cache the manifest file
+  fun readConnectorManifest(): Map<String, Any>? {
+    val metadataFile = safeReadFileContent(connectorManifestPath, airbyteRepository) ?: return null
+    val rawYamlString = metadataFile.read().bufferedReader().use { it.readText() }
+
+    // Parse YAML
+    val yaml = Yaml()
+    return yaml.load(rawYamlString)
+  }
+
 /*
  * Read a top-level field from the connector metadata
  */
@@ -141,6 +151,12 @@ class GithubContributionService(
     // Extract a top-level field from the "data" section
     val dataSection = parsedYaml["data"] as? Map<*, *>
     return dataSection?.get(field) as? String
+  }
+
+  fun readConnectorDescription(): String? {
+    val parsedYaml = readConnectorManifest() ?: return null
+
+    return parsedYaml["description"] as? String
   }
 
   fun constructConnectorFilePath(fileName: String): String = "$connectorDirectoryPath/$fileName"
