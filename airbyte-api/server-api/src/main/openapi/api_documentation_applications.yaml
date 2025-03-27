@@ -192,6 +192,14 @@ components:
       type: "string"
       format: "uuid"
       x-speakeasy-component: true
+    DeclarativeManifest:
+      x-speakeasy-component: true
+      description: "Low code CDK manifest JSON object"
+      type: "object"
+    ManifestVersion:
+      x-speakeasy-component: true
+      type: "integer"
+      format: "int64"
     TagId:
       type: "string"
       format: "uuid"
@@ -503,6 +511,71 @@ components:
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
+    ScopedResourceRequirements:
+      x-speakeasy-component: true
+      description:
+        "actor or actor definition specific resource requirements. if default\
+        \ is set, these are the requirements that should be set for ALL jobs run for\
+        \ this actor definition. it is overriden by the job type specific configurations.\
+        \ if not set, the platform will use defaults. these values will be overriden\
+        \ by configuration at the connection level."
+      type: "object"
+      additionalProperties: false
+      properties:
+        default:
+          $ref: "#/components/schemas/ResourceRequirements"
+        jobSpecific:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/JobTypeResourceLimit"
+    JobTypeResourceLimit:
+      x-speakeasy-component: true
+      description:
+        "sets resource requirements for a specific job type for an actor\
+        \ or actor definition. these values override the default, if both are set."
+      type: "object"
+      additionalProperties: false
+      required:
+        - "jobType"
+        - "resourceRequirements"
+      properties:
+        jobType:
+          $ref: "#/components/schemas/JobType"
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+    JobType:
+      x-speakeasy-component: true
+      description:
+        "enum that describes the different types of jobs that the platform\
+        \ runs."
+      type: "string"
+      enum:
+        - "get_spec"
+        - "check_connection"
+        - "discover_schema"
+        - "sync"
+        - "reset_connection"
+        - "connection_updater"
+        - "replicate"
+    ResourceRequirements:
+      x-speakeasy-component: true
+      description:
+        "optional resource requirements to run workers (blank for unbounded\
+        \ allocations)"
+      type: "object"
+      properties:
+        cpu_request:
+          type: "string"
+        cpu_limit:
+          type: "string"
+        memory_request:
+          type: "string"
+        memory_limit:
+          type: "string"
+        ephemeral_storage_request:
+          type: "string"
+        ephemeral_storage_limit:
+          type: "string"
     OAuthConfiguration:
       description:
         "The values required to configure OAuth flows. The schema for this\

@@ -292,6 +292,14 @@ components:
       type: "string"
       format: "uuid"
       x-speakeasy-component: true
+    DeclarativeManifest:
+      x-speakeasy-component: true
+      description: "Low code CDK manifest JSON object"
+      type: "object"
+    ManifestVersion:
+      x-speakeasy-component: true
+      type: "integer"
+      format: "int64"
     TagId:
       type: "string"
       format: "uuid"
@@ -600,6 +608,67 @@ components:
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
+    ScopedResourceRequirements:
+      x-speakeasy-component: true
+      description: "actor or actor definition specific resource requirements. if default\
+        \ is set, these are the requirements that should be set for ALL jobs run for\
+        \ this actor definition. it is overriden by the job type specific configurations.\
+        \ if not set, the platform will use defaults. these values will be overriden\
+        \ by configuration at the connection level."
+      type: "object"
+      additionalProperties: false
+      properties:
+        default:
+          $ref: "#/components/schemas/ResourceRequirements"
+        jobSpecific:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/JobTypeResourceLimit"
+    JobTypeResourceLimit:
+      x-speakeasy-component: true
+      description: "sets resource requirements for a specific job type for an actor\
+        \ or actor definition. these values override the default, if both are set."
+      type: "object"
+      additionalProperties: false
+      required:
+      - "jobType"
+      - "resourceRequirements"
+      properties:
+        jobType:
+          $ref: "#/components/schemas/JobType"
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+    JobType:
+      x-speakeasy-component: true
+      description: "enum that describes the different types of jobs that the platform\
+        \ runs."
+      type: "string"
+      enum:
+      - "get_spec"
+      - "check_connection"
+      - "discover_schema"
+      - "sync"
+      - "reset_connection"
+      - "connection_updater"
+      - "replicate"
+    ResourceRequirements:
+      x-speakeasy-component: true
+      description: "optional resource requirements to run workers (blank for unbounded\
+        \ allocations)"
+      type: "object"
+      properties:
+        cpu_request:
+          type: "string"
+        cpu_limit:
+          type: "string"
+        memory_request:
+          type: "string"
+        memory_limit:
+          type: "string"
+        ephemeral_storage_request:
+          type: "string"
+        ephemeral_storage_limit:
+          type: "string"
     OAuthConfiguration:
       description: "The values required to configure OAuth flows. The schema for this\
         \ must match the `OAuthConfigSpecification.oauthUserInputFromConnectorConfigSpecification`\
@@ -13710,18 +13779,28 @@ components:
       required:
       - "accountid"
       - "api_key"
+      - "start_date"
       - "sourceType"
       properties:
-        accountid:
-          type: "string"
-          description: "The ID associated with your account."
-          order: 0
-          title: "Account ID"
         api_key:
           type: "string"
           description: "The API key associated with your account."
           order: 1
           title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        accountid:
+          type: "string"
+          description: "The ID associated with your account."
+          order: 0
+          title: "Account ID"
+        start_date:
+          type: "string"
+          description: "1970-01-01T00:00:00Z"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         sourceType:
           title: "cin7"
           const: "cin7"
@@ -13734,17 +13813,26 @@ components:
       required:
       - "accountid"
       - "api_key"
+      - "start_date"
       properties:
-        accountid:
-          type: "string"
-          description: "The ID associated with your account."
-          order: 0
-          title: "Account ID"
         api_key:
           type: "string"
           description: "The API key associated with your account."
           order: 1
           title: "API Key"
+          airbyte_secret: true
+        accountid:
+          type: "string"
+          description: "The ID associated with your account."
+          order: 0
+          title: "Account ID"
+        start_date:
+          type: "string"
+          description: "1970-01-01T00:00:00Z"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-looker:
       type: "object"
       required:
@@ -48126,6 +48214,19 @@ components:
           examples:
           - "2021-01-01"
           order: 2
+        date_ranges_end_date:
+          type: "string"
+          title: "End Date"
+          description: "The end date from which to replicate report data in the format\
+            \ YYYY-MM-DD. Data generated after this date will not be included in the\
+            \ report. Not applied to custom Cohort reports. When no date is provided\
+            \ or the date is in the future, the date from today is used."
+          format: "date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          pattern_descriptor: "YYYY-MM-DD"
+          examples:
+          - "2021-01-31"
+          order: 3
         custom_reports_array:
           title: "Custom Reports"
           description: "You can add your Custom Analytics report by creating one."
@@ -50168,6 +50269,19 @@ components:
           examples:
           - "2021-01-01"
           order: 2
+        date_ranges_end_date:
+          type: "string"
+          title: "End Date"
+          description: "The end date from which to replicate report data in the format\
+            \ YYYY-MM-DD. Data generated after this date will not be included in the\
+            \ report. Not applied to custom Cohort reports. When no date is provided\
+            \ or the date is in the future, the date from today is used."
+          format: "date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          pattern_descriptor: "YYYY-MM-DD"
+          examples:
+          - "2021-01-31"
+          order: 3
         custom_reports_array:
           title: "Custom Reports"
           description: "You can add your Custom Analytics report by creating one."
