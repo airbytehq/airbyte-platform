@@ -78,17 +78,6 @@ JAVA_OPTS_APPEND: {{ include "airbyte.keycloak.javaOpts" . | quote }}
 {{- end }}
 
 {{/*
-Renders the keycloak.admin.client secret name
-*/}}
-{{- define "airbyte.keycloak.admin.client.secretName" }}
-{{- if .Values.keycloak.secretName }}
-    {{- .Values.keycloak.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the keycloak.auth.adminRealm value
 */}}
 {{- define "airbyte.keycloak.admin.client.auth.adminRealm" }}
@@ -164,7 +153,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.deploymentMode "oss")) }}
+    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.edition "community")) }}
 {{- end }}
 
 {{/*
@@ -315,17 +304,6 @@ Renders the set of all keycloak.admin.user secret variables
 {{- define "airbyte.keycloak.admin.user.secrets" }}
 KEYCLOAK_ADMIN_USER: {{ include "airbyte.keycloak.admin.user.auth.adminUsername" . | quote }}
 KEYCLOAK_ADMIN_PASSWORD: {{ include "airbyte.keycloak.admin.user.auth.adminPassword" . | quote }}
-{{- end }}
-
-{{/*
-Renders the keycloak.client secret name
-*/}}
-{{- define "airbyte.keycloak.client.secretName" }}
-{{- if .Values.keycloak.secretName }}
-    {{- .Values.keycloak.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
 {{- end }}
 
 {{/*

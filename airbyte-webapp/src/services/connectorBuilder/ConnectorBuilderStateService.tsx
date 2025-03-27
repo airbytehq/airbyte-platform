@@ -89,7 +89,9 @@ interface FormStateContext {
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
-  previousManifestDraft: DeclarativeComponentSchema | undefined;
+  previousManifestDraft:
+    | { manifest: DeclarativeComponentSchema; componentsFileContent: string | undefined }
+    | undefined;
   displayedVersion: number | undefined;
   formValuesValid: boolean;
   formValuesDirty: boolean;
@@ -99,7 +101,11 @@ interface FormStateContext {
   isResolving: boolean;
   streamNames: string[];
   undoRedo: UndoRedo;
-  setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
+  setDisplayedVersion: (
+    value: number | undefined,
+    manifest: DeclarativeComponentSchema,
+    customComponentsCode: string | undefined
+  ) => void;
   updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -250,7 +256,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [displayedVersion, setDisplayedVersion] = useState<number | undefined>(
     builderProject.declarativeManifest?.version
   );
-  const [previousManifestDraft, setPreviousManifestDraft] = useState<ConnectorManifest | undefined>(undefined);
+  const [previousManifestDraft, setPreviousManifestDraft] = useState<
+    FormStateContext["previousManifestDraft"] | undefined
+  >(undefined);
   const [jsonManifest, setJsonManifest] = useState<ConnectorManifest>(
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) ?? DEFAULT_JSON_MANIFEST_VALUES
   );
@@ -303,6 +311,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       setDisplayedVersion(undefined);
     }
   }, [currentProject.name, name]);
+
+  useEffect(() => {
+    setPreviousManifestDraft(undefined);
+    setDisplayedVersion(undefined);
+  }, [customComponentsCode]);
 
   // use ref so that updateJsonManifest is not recreated on every change to jsonManifest
   const jsonManifestRef = useRef(jsonManifest);
@@ -419,11 +432,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   }));
 
   const setToVersion = useCallback(
-    (version: number | undefined, manifest: DeclarativeComponentSchema) => {
-      const updateManifestState = (
-        manifestToProcess: DeclarativeComponentSchema,
-        componentsFileContent: string | undefined
-      ) => {
+    (version: number | undefined, manifest: DeclarativeComponentSchema, componentsFileContent: string | undefined) => {
+      const updateManifestState = (manifestToProcess: DeclarativeComponentSchema) => {
         const cleanedManifest = removeEmptyProperties(manifestToProcess);
         if (version === undefined) {
           // set persisted state to the current state so that the draft is not saved when switching back to the staged draft
@@ -432,6 +442,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         // set json manifest first so that a save isn't triggered
         setJsonManifest(cleanedManifest);
         setValue("yaml", convertJsonToYaml(cleanedManifest));
+        setValue("customComponentsCode", componentsFileContent || undefined);
       };
 
       const view = getValues("view");
@@ -441,24 +452,23 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       }
 
       if (displayedVersion === undefined && version !== undefined) {
-        setPreviousManifestDraft(resolvedManifest);
+        setPreviousManifestDraft({ manifest: resolvedManifest, componentsFileContent: customComponentsCode });
       } else if (version === undefined) {
         setPreviousManifestDraft(undefined);
       }
 
       const mode = getValues("mode");
-      const componentsFileContent = customComponentsCode;
       if (mode === "ui") {
         try {
           const formValues = convertToBuilderFormValuesSync(manifest);
-          updateManifestState(convertToManifest(formValues), componentsFileContent);
+          updateManifestState(convertToManifest(formValues));
           setValue("formValues", formValues);
         } catch (e) {
-          updateManifestState(manifest, componentsFileContent);
+          updateManifestState(manifest);
           setValue("mode", "yaml");
         }
       } else {
-        updateManifestState(manifest, componentsFileContent);
+        updateManifestState(manifest);
       }
 
       setDisplayedVersion(version);

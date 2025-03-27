@@ -6,7 +6,6 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.JobReadList
-import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.publicApi.server.generated.models.JobResponse
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import io.airbyte.publicApi.server.generated.models.JobsResponse
@@ -43,13 +42,9 @@ object JobsResponseMapper {
   ): JobsResponse {
     val jobs: List<JobResponse> =
       jobsList.jobs
-        .stream()
-        .filter { j: JobWithAttemptsRead ->
-          ALLOWED_CONFIG_TYPES.contains(
-            j.job!!.configType,
-          )
-        }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }
-        .toList()
+        .filter { j ->
+          ALLOWED_CONFIG_TYPES.contains(j.job!!.configType)
+        }.map { obj -> JobResponseMapper.from(obj!!) }
     val uriBuilder =
       PaginationMapper
         .getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
@@ -83,13 +78,8 @@ object JobsResponseMapper {
   ): JobsResponse {
     val jobs: List<JobResponse> =
       jobsList.jobs
-        .stream()
-        .filter { j: JobWithAttemptsRead ->
-          ALLOWED_CONFIG_TYPES.contains(
-            j.job!!.configType,
-          )
-        }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }
-        .toList()
+        .filter { j -> ALLOWED_CONFIG_TYPES.contains(j.job!!.configType) }
+        .map { obj -> JobResponseMapper.from(obj!!) }
 
     val uriBuilder =
       PaginationMapper

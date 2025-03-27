@@ -4,10 +4,10 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.client.model.generated.TagCreateRequestBody
-import io.airbyte.api.client.model.generated.TagDeleteRequestBody
-import io.airbyte.api.client.model.generated.TagUpdateRequestBody
 import io.airbyte.api.model.generated.Tag
+import io.airbyte.api.model.generated.TagCreateRequestBody
+import io.airbyte.api.model.generated.TagDeleteRequestBody
+import io.airbyte.api.model.generated.TagUpdateRequestBody
 import io.airbyte.config.ConfigSchema
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.TagService
@@ -20,8 +20,8 @@ import java.util.UUID
 class TagHandler(
   private val tagService: TagService,
 ) {
-  fun getTagsForWorkspace(workspaceId: UUID): List<Tag> =
-    tagService.getTagsByWorkspaceId(workspaceId).map {
+  fun getTagsForWorkspaces(workspaceIds: List<UUID>): List<Tag> =
+    tagService.getTagsByWorkspaceIds(workspaceIds).map {
       Tag()
         .tagId(it.tagId)
         .workspaceId(it.workspaceId)
@@ -83,6 +83,15 @@ class TagHandler(
   fun deleteTag(tagDeleteRequestBody: TagDeleteRequestBody) {
     checkTagExists(tagDeleteRequestBody.tagId, tagDeleteRequestBody.workspaceId)
     tagService.deleteTag(tagDeleteRequestBody.tagId)
+  }
+
+  fun getTag(tagId: UUID): Tag {
+    val tag = tagService.getTagById(tagId)
+    return Tag()
+      .tagId(tag.tagId)
+      .workspaceId(tag.workspaceId)
+      .name(tag.name)
+      .color(tag.color)
   }
 
   private fun checkTagExists(

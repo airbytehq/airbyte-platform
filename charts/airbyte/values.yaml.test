@@ -6,8 +6,8 @@ global:
   
   ##  serviceAccountName -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
+  ##  edition -- Airbyte edition, whether or not render the default env vars and volumes in deployment spec
+  edition: "community"
   image:
     tag: dev
 
@@ -70,13 +70,20 @@ global:
       credentials: ""
       # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
       credentialsJson: ""
-  metrics:
-    ## These parameters are used in the airbyte-env ConfigMap, which is then mounted in deployments in the airbyte-worker and airbyte-metrics Charts.
-    ##  global.metrics.metricClient The metric client to configure globally. Supports "otel"
-    metricClient: ""
 
-    ##  global.metrics.otelCollectorEndpoint The open-telemetry-collector endpoint that metrics will be sent to.
-    otelCollectorEndpoint: ""
+  metrics:
+    enabled: "false"
+    step: ""
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
+
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -1354,24 +1361,6 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-1"
-## External PostgreSQL configuration
-## All of these values are only used when postgresql.enabled is set to false
-##  externalDatabase.host Database host
-##  externalDatabase.user non-root Username for Airbyte Database
-##  externalDatabase.password Database password
-##  externalDatabase.existingSecret Name of an existing secret resource containing the DB password
-##  externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the DB password
-##  externalDatabase.database Database name
-##  externalDatabase.port Database port number
-##
-externalDatabase:
-  host: localhost
-  user: airbyte
-  password: ""
-  existingSecret: ""
-  existingSecretPasswordKey: ""
-  database: db-airbyte
-  port: 5432
 
 ## @section Logs parameters
 

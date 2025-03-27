@@ -1,9 +1,7 @@
 global:
   # -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  # -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
-  # -- Edition; "community" or "pro"
+  # -- Edition; "community" or "enterprise"
   edition: "community"
 
   secretName: ""
@@ -266,12 +264,19 @@ global:
     opts: []
 
   metrics:
-    # -- The metric client to configure globally. Supports "otel"
-    metricClient: ""
+    enabled: "false"
+    step: ""
 
-    micrometer:
-      enabled: false
-      statsdFlavor: "datadog" # datadog
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
 
     otel:
       resourceAttributes: {}
@@ -285,10 +290,6 @@ global:
         timeout: "30000"
         metricExportInterval: "10000"
     
-    statsd:
-      host: ""
-      port: ""
-
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -1285,6 +1286,11 @@ workloadLauncher:
     # -- Workload init image
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
+
+  connectorProfiler:
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/async-profiler:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   ## current no exist documentations
   activityMaxAttempt: ""

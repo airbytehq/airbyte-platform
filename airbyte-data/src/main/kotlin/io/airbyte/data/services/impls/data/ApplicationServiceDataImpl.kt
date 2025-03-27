@@ -4,14 +4,13 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.AuthRole
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.repositories.ApplicationRepository
 import io.airbyte.data.repositories.entities.Application
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.data.services.impls.keycloak.ApplicationServiceKeycloakImpl
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
@@ -24,7 +23,8 @@ import kotlin.time.Duration.Companion.days
 import io.airbyte.config.Application as ApplicationDomain
 
 @Singleton
-@Requires(property = "airbyte.application.type", value = "database")
+@Requires(property = "airbyte.applications.type", value = "database")
+@Replaces(ApplicationServiceKeycloakImpl::class)
 class ApplicationServiceDataImpl(
   private val applicationRepository: ApplicationRepository,
   private val jwtTokenGenerator: JwtTokenGenerator,
@@ -51,7 +51,7 @@ class ApplicationServiceDataImpl(
       applicationRepository.save(
         Application(
           id = UUID.randomUUID(),
-          userId = user.userId,
+          authUserId = user.authUserId,
           name = name,
           clientId = generateClientId(),
           clientSecret = generateClientSecret(),
@@ -68,7 +68,7 @@ class ApplicationServiceDataImpl(
   override fun listApplicationsByUser(user: AuthenticatedUser): List<ApplicationDomain> {
     logger.debug { "Listing applications" }
     return applicationRepository
-      .findByUserId(userId = user.userId)
+      .findByAuthUserId(authUserId = user.authUserId)
       .map { application -> toDomain(application) }
       .toList()
   }
@@ -85,12 +85,12 @@ class ApplicationServiceDataImpl(
   ): ApplicationDomain {
     logger.debug { "Deleting application $applicationId" }
     val application: Application =
-      applicationRepository.findByUserIdAndId(
-        userId = user.userId,
+      applicationRepository.findByAuthUserIdAndId(
+        authUserId = user.authUserId,
         applicationId = UUID.fromString(applicationId),
       )
         ?: throw IllegalArgumentException("application was not found with the userId and applicationId provided")
-    if (application.userId != user.userId) throw IllegalArgumentException("applicationId must be owned by the user")
+    if (application.authUserId != user.authUserId) throw IllegalArgumentException("applicationId must be owned by the user")
     applicationRepository.delete(application)
     return toDomain(application)
   }
@@ -109,18 +109,12 @@ class ApplicationServiceDataImpl(
     val application =
       applicationRepository.findByClientIdAndClientSecret(clientId, clientSecret)
         ?: throw IllegalArgumentException("application was not found with the clientId and clientSecret provided")
-    val roles =
-      buildSet {
-        addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN))
-        addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
-        addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
-      }
+
     return jwtTokenGenerator
       .generateToken(
         mapOf(
           "iss" to "airbyte-server",
-          "sub" to application.userId,
-          "roles" to roles,
+          "sub" to application.authUserId,
           "exp" to Instant.now().plus(TOKEN_EXPIRATION_LENGTH, ChronoUnit.MINUTES).epochSecond,
         ),
       ) // Necessary now that this is no longer optional, but I don't know under what conditions we could

@@ -6,12 +6,14 @@ package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.DataplaneApi
-import io.airbyte.api.client.model.generated.DataplaneRead
+import io.airbyte.api.client.model.generated.DataplaneReadId
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
-import io.airbyte.workload.metrics.CustomMetricPublisher
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.micrometer.core.instrument.Counter
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -25,7 +27,7 @@ import java.util.stream.Stream
 
 class WorkloadServiceTest {
   private val messageProducer: TemporalMessageProducer<LauncherInputMessage> = mockk()
-  private val metricPublisher: CustomMetricPublisher = mockk()
+  private val metricClient: MetricClient = mockk()
   private val airbyteApiClient: AirbyteApiClient = mockk()
   private val dataplaneApi: DataplaneApi = mockk()
 
@@ -41,9 +43,9 @@ class WorkloadServiceTest {
   fun init() {
     clearAllMocks()
     every { messageProducer.publish(any(), any(), any()) } returns Unit
-    every { metricPublisher.count(any(), any(), any(), any()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg<MetricAttribute>()) } returns mockk<Counter>()
     every { airbyteApiClient.dataplaneApi } returns dataplaneApi
-    every { dataplaneApi.getDataplaneId(any()) } returns DataplaneRead(dataplaneId)
+    every { dataplaneApi.getDataplaneId(any()) } returns DataplaneReadId(dataplaneId)
   }
 
   @ParameterizedTest
@@ -53,7 +55,7 @@ class WorkloadServiceTest {
     priority: WorkloadPriority,
     expectedQueue: String,
   ) {
-    val workloadService = WorkloadService(messageProducer, metricPublisher, airbyteApiClient)
+    val workloadService = WorkloadService(messageProducer, metricClient, airbyteApiClient)
 
     workloadService.create(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, autoId, priority)
 

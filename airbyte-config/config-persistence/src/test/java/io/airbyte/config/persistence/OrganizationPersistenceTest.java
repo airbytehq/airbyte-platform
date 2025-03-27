@@ -23,6 +23,7 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -52,13 +53,15 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final var metricClient = mock(MetricClient.class);
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
     truncateAllTables();
 
     for (final Organization organization : MockData.organizations()) {

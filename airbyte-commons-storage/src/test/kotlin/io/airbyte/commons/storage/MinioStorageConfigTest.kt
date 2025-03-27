@@ -22,6 +22,7 @@ internal class MinioStorageConfigTest {
         activityPayload = "activity-payload",
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
+        profilerOutput = null,
       )
     val s3StorageConfig =
       MinioStorageConfig(
@@ -54,6 +55,7 @@ internal class MinioStorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val s3StorageConfig =
       MinioStorageConfig(
@@ -87,6 +89,7 @@ internal class MinioStorageConfigTest {
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
+        profilerOutput = null,
       )
     val s3StorageConfig =
       MinioStorageConfig(

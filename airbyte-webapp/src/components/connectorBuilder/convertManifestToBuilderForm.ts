@@ -10,6 +10,8 @@ import omit from "lodash/omit";
 import pick from "lodash/pick";
 import { match } from "ts-pattern";
 
+import { formatGraphqlQuery } from "components/ui/CodeEditor/GraphqlFormatter";
+
 import {
   ConnectorManifest,
   DeclarativeStream,
@@ -44,17 +46,18 @@ import {
   XmlDecoderType,
   IterableDecoderType,
   SimpleRetrieverDecoder,
-  GzipJsonDecoderType,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
   CheckDynamicStreamType,
+  JwtAuthenticator,
   RequestOptionInjectInto,
+  CsvDecoderType,
 } from "core/api/types/ConnectorManifest";
 
 import {
+  BuilderDecoderConfig,
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
-  BuilderDecoder,
   BuilderErrorHandler,
   BuilderFormAuthenticator,
   BuilderFormOAuthAuthenticator,
@@ -85,6 +88,7 @@ import {
   SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
   YamlString,
   YamlSupportedComponentName,
+  JWT_AUTHENTICATOR,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -390,6 +394,26 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (isString(requester.request_body_json)) {
     return { type: "string_freeform", value: requester.request_body_json };
   }
+
+  if (
+    isObject(requester.request_body_json) &&
+    Object.keys(requester.request_body_json).length === 1 &&
+    "query" in requester.request_body_json
+  ) {
+    try {
+      const formattedQuery = formatGraphqlQuery(requester.request_body_json.query);
+      return {
+        type: "graphql",
+        value: formattedQuery,
+      };
+    } catch {
+      return {
+        type: "graphql",
+        value: requester.request_body_json.query as string,
+      };
+    }
+  }
+
   if (
     isObject(requester.request_body_json) &&
     Object.values(requester.request_body_json).every((value) => isString(value))
@@ -402,14 +426,17 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   };
 }
 
-const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, streamName: string): BuilderDecoder => {
+const manifestDecoderToBuilder = (
+  decoder: SimpleRetrieverDecoder | undefined,
+  streamName: string
+): BuilderDecoderConfig => {
   const supportedDecoderTypes: Array<string | undefined> = [
     undefined,
     JsonDecoderType.JsonDecoder,
     JsonlDecoderType.JsonlDecoder,
     XmlDecoderType.XmlDecoder,
     IterableDecoderType.IterableDecoder,
-    GzipJsonDecoderType.GzipJsonDecoder,
+    CsvDecoderType.CsvDecoder,
   ];
   const decoderType = decoder?.type;
   if (!supportedDecoderTypes.includes(decoderType)) {
@@ -418,17 +445,17 @@ const manifestDecoderToBuilder = (decoder: SimpleRetrieverDecoder | undefined, s
 
   switch (decoderType) {
     case JsonDecoderType.JsonDecoder:
-      return "JSON";
+      return { type: "JSON" };
     case XmlDecoderType.XmlDecoder:
-      return "XML";
+      return { type: "XML" };
     case JsonlDecoderType.JsonlDecoder:
-      return "JSON Lines";
+      return { type: "JSON Lines" };
     case IterableDecoderType.IterableDecoder:
-      return "Iterable";
-    case GzipJsonDecoderType.GzipJsonDecoder:
-      return "gzip JSON";
+      return { type: "Iterable" };
+    case CsvDecoderType.CsvDecoder:
+      return { type: "CSV", delimiter: decoder?.delimiter, encoding: decoder?.encoding };
     default:
-      return "JSON";
+      return { type: "JSON" };
   }
 };
 
@@ -1091,6 +1118,7 @@ type SupportedAuthenticator =
   | BearerAuthenticator
   | OAuthAuthenticator
   | NoAuth
+  | JwtAuthenticator
   | SessionTokenAuthenticator;
 
 function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticator {
@@ -1099,6 +1127,7 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
     API_KEY_AUTHENTICATOR,
     BEARER_AUTHENTICATOR,
     BASIC_AUTHENTICATOR,
+    JWT_AUTHENTICATOR,
     OAUTH_AUTHENTICATOR,
     SESSION_TOKEN_AUTHENTICATOR,
   ];
@@ -1184,6 +1213,40 @@ export function manifestAuthenticatorToBuilder(
         ...basicAuth,
         username: interpolateConfigKey(extractAndValidateAuthKey(["username"], basicAuth, spec)),
         password: interpolateConfigKey(extractAndValidateAuthKey(["password"], basicAuth, spec)),
+      };
+    }
+
+    case JWT_AUTHENTICATOR: {
+      const jwtAuth = filterKnownFields(
+        authenticator,
+        [
+          "type",
+          "secret_key",
+          "algorithm",
+          "token_duration",
+          "additional_jwt_headers",
+          "additional_jwt_payload",
+          "jwt_headers",
+          "jwt_payload",
+          "header_prefix",
+          "base64_encode_secret_key",
+        ],
+        authenticator.type
+      );
+
+      const jwtHeaders = pick(jwtAuth.jwt_headers, ["kid", "typ", "cty"]);
+      const jwtPayload = pick(jwtAuth.jwt_payload, ["iss", "sub", "aud"]);
+      const headerPrefix = jwtAuth.header_prefix === "" ? undefined : jwtAuth.header_prefix;
+
+      return {
+        ...jwtAuth,
+        secret_key: interpolateConfigKey(extractAndValidateAuthKey(["secret_key"], jwtAuth, spec)),
+        additional_jwt_headers: Object.entries(jwtAuth.additional_jwt_headers ?? {}),
+        additional_jwt_payload: Object.entries(jwtAuth.additional_jwt_payload ?? {}),
+        jwt_headers: jwtHeaders,
+        jwt_payload: jwtPayload,
+        header_prefix: headerPrefix,
+        token_duration: jwtAuth.token_duration ?? undefined,
       };
     }
 

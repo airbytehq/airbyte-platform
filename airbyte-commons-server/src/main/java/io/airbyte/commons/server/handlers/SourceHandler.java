@@ -31,11 +31,11 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
-import io.airbyte.commons.server.entitlements.Entitlement;
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -62,6 +62,7 @@ import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -104,7 +105,8 @@ public class SourceHandler {
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
-  private final Configs.DeploymentMode deploymentMode;
+  private final MetricClient metricClient;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -126,7 +128,8 @@ public class SourceHandler {
                        final LicenseEntitlementChecker licenseEntitlementChecker,
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
-                       final Configs.DeploymentMode deploymentMode) {
+                       final MetricClient metricClient,
+                       final Configs.AirbyteEdition airbyteEdition) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -146,7 +149,8 @@ public class SourceHandler {
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
-    this.deploymentMode = deploymentMode;
+    this.metricClient = metricClient;
+    this.airbyteEdition = airbyteEdition;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -197,8 +201,8 @@ public class SourceHandler {
   @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (sourceCreate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (sourceCreate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     // validate configuration
@@ -224,8 +228,8 @@ public class SourceHandler {
 
   public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    if (partialSourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (partialSourceUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     final UUID sourceId = partialSourceUpdate.getSourceId();
@@ -255,8 +259,8 @@ public class SourceHandler {
   @Trace
   public SourceRead updateSource(final SourceUpdate sourceUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (sourceUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (sourceUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     final UUID sourceId = sourceUpdate.getSourceId();
@@ -619,7 +623,8 @@ public class SourceHandler {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
       secret =
-          secretsRepositoryReader.fetchSecretFromRuntimeSecretPersistence(secretCoordinate, new RuntimeSecretPersistence(secretPersistenceConfig));
+          secretsRepositoryReader.fetchSecretFromRuntimeSecretPersistence(secretCoordinate,
+              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
     } else {
       secret = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(secretCoordinate);
     }

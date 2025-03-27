@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
-
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
@@ -63,6 +61,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
+  private static final String WORKLOAD_LAUNCHER = "workload-launcher";
 
   private static final Set<String> WORKLOAD_MONITOR = Set.of("workload-monitor-start", "workload-monitor-claim", "workload-monitor-heartbeat");
 
@@ -126,7 +125,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
         null,
-        replicationInput.getSignalInput());
+        replicationInput.getSignalInput(),
+        null);
 
     // Create the workload
     try {
@@ -213,7 +213,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
         throw new SourceException(workload.getTerminationReason(), e);
       } else if (DESTINATION.equals(workload.getTerminationSource())) {
         throw new DestinationException(workload.getTerminationReason(), e);
-      } else if (WORKLOAD_LAUNCHER.getApplicationName().equals(workload.getTerminationSource())) {
+      } else if (WORKLOAD_LAUNCHER.equals(workload.getTerminationSource())) {
         throw new WorkloadLauncherException(workload.getTerminationReason());
       } else if (workload.getTerminationSource() != null && WORKLOAD_MONITOR.contains(workload.getTerminationSource())) {
         throw new WorkloadMonitorException(workload.getTerminationReason());

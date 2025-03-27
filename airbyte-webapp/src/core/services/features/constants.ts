@@ -11,6 +11,7 @@ export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
   FeatureItem.ConnectionHistoryGraphs,
+  FeatureItem.ConnectorResourceAllocation,
   FeatureItem.DiagnosticsExport,
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,

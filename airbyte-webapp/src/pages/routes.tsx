@@ -16,7 +16,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
 import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -34,6 +33,7 @@ import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/Workspace/GeneralWorkspaceSettingsPage";
+import { WorkspaceMembersPage } from "./SettingsPage/Workspace/WorkspaceMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -73,7 +73,6 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 };
 
 const MainViewRoutes: React.FC = () => {
-  const showConnectionTags = useExperiment("connection.tags");
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { applicationSupport } = useAuthService();
@@ -112,8 +111,9 @@ const MainViewRoutes: React.FC = () => {
             {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
-            {(canViewWorkspaceSettings && multiWorkspaceUI) || showConnectionTags ? (
-              <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
+            <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
+            {canViewWorkspaceSettings && multiWorkspaceUI ? (
+              <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
             ) : null}
             {canViewWorkspaceSettings && (
               <>

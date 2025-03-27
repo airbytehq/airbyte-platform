@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the datadog secret name
-*/}}
-{{- define "airbyte.datadog.secretName" }}
-{{- if .Values.global.datadog.secretName }}
-    {{- .Values.global.datadog.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.datadog.agentHost value
 */}}
 {{- define "airbyte.datadog.agentHost" }}

@@ -3,11 +3,9 @@
 @use "scss/variables";
 
 .workspaceItem__button {
-  @include mixins.shadow;
-
   background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
-  border: none;
+  border: variables.$border-thin solid colors.$border-color;
   padding: variables.$spacing-xl variables.$spacing-xl;
   width: 100%;
   min-height: 100px;

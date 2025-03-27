@@ -23,8 +23,12 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -85,7 +89,7 @@ airbyte:
       service-account:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -101,9 +105,6 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-  metric:
-    client: ${METRIC_CLIENT:}
-    should-publish: ${PUBLISH_METRICS:false}
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}

@@ -28,7 +28,7 @@ interface AirbyteCompatibleConnectorsValidator {
 }
 
 @Singleton
-@Requires(property = "airbyte.deployment-mode", value = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^cloud$")
 class AlwaysValidAirbyteCompatibleConnectorsValidator : AirbyteCompatibleConnectorsValidator {
   init {
     logger.info { "Airbyte connector <> platform compatibility validation disabled.  All connector versions will be considered valid." }
@@ -41,7 +41,7 @@ class AlwaysValidAirbyteCompatibleConnectorsValidator : AirbyteCompatibleConnect
 }
 
 @Singleton
-@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^community|enterprise$")
 class RealAirbyteCompatibleConnectorsValidator(
   private val airbyteCompatibleConnectorVersionsProvider: AirbyteCompatibleConnectorVersionsProvider,
   private val airbyteVersion: AirbyteVersion,

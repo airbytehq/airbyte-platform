@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the jobs secret name
-*/}}
-{{- define "airbyte.jobs.secretName" }}
-{{- if .Values.global.jobs.secretName }}
-    {{- .Values.global.jobs.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.jobs.kube.serviceAccount value
 */}}
 {{- define "airbyte.jobs.kube.serviceAccount" }}
@@ -186,17 +175,6 @@ JOB_KUBE_ANNOTATIONS: {{ include "airbyte.jobs.kube.annotations" . | quote }}
 JOB_KUBE_LABELS: {{ include "airbyte.jobs.kube.labels" . | quote }}
 JOB_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.kube.nodeSelector" . | quote }}
 JOB_KUBE_TOLERATIONS: {{ include "airbyte.jobs.kube.tolerations" . | quote }}
-{{- end }}
-
-{{/*
-Renders the jobs.errors secret name
-*/}}
-{{- define "airbyte.jobs.errors.secretName" }}
-{{- if .Values.global.jobs.errors.secretName }}
-    {{- .Values.global.jobs.errors.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
 {{- end }}
 
 {{/*

@@ -5,12 +5,12 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.initContainer.system.FileClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags.CONNECTION_ID
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
@@ -49,7 +49,7 @@ class DiscoverHydrationProcessor(
             ),
             MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
           )
-        metricClient.count(OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1, *attrs.toTypedArray())
+        metricClient.count(metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, attributes = attrs.toTypedArray())
         throw e
       }
 

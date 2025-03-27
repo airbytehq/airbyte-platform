@@ -14,6 +14,7 @@ import io.airbyte.config.CatalogDiff
  * extraneous exception wrapping / propagation. Written naively to allow interop with Java.
  */
 @JsonDeserialize(builder = PostprocessCatalogOutput.Builder::class)
+@ConsistentCopyVisibility
 data class PostprocessCatalogOutput private constructor(
   val diff: CatalogDiff?,
   val message: String?,

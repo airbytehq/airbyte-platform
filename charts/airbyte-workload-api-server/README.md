@@ -31,7 +31,7 @@ Helm chart to deploy the workload-api service
 | global.credVolumeOverride | string | `""` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
-| global.deploymentMode | string | `"oss"` |  |
+| global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |
 | global.extraSelectorLabels | object | `{}` |  |

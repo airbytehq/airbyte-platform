@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,6 +43,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
@@ -68,6 +70,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   private static final JsonNode A_MANIFEST;
   private static final String A_COMPONENTS_FILE_CONTENT = "a = 1";
   private static final JsonNode ANOTHER_MANIFEST;
+  private static final String UPDATED_AT = "updatedAt";
 
   static {
     try {
@@ -100,11 +103,12 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
+    final MetricClient metricClient = mock(MetricClient.class);
 
     sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater);
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService, metricClient);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
   }
@@ -112,14 +116,28 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testRead() throws IOException, ConfigNotFoundException {
     createBaseObjects();
-    assertEquals(project1, connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
+    ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true);
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(project1)
+        .usingRecursiveComparison()
+        .ignoringFields(UPDATED_AT)
+        .isEqualTo(project);
+    assertNotNull(project.getUpdatedAt());
   }
 
   @Test
   void testReadWithoutManifest() throws IOException, ConfigNotFoundException {
     createBaseObjects();
     project1.setManifestDraft(null);
-    assertEquals(project1, connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), false));
+    ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), false);
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(project1)
+        .usingRecursiveComparison()
+        .ignoringFields(UPDATED_AT)
+        .isEqualTo(project);
+    assertNotNull(project.getUpdatedAt());
   }
 
   @Test
@@ -132,7 +150,14 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project1.setActorDefinitionId(sourceDefinition.getSourceDefinitionId());
     project1.setActiveDeclarativeManifestVersion(MANIFEST_VERSION);
 
-    assertEquals(project1, connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
+    ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true);
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(project1)
+        .usingRecursiveComparison()
+        .ignoringFields(UPDATED_AT)
+        .isEqualTo(project);
+    assertNotNull(project.getUpdatedAt());
   }
 
   @Test
@@ -148,9 +173,19 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project1.setManifestDraft(null);
     project2.setManifestDraft(null);
 
-    assertEquals(new ArrayList<>(
-        // project2 comes first due to alphabetical ordering
-        Arrays.asList(project2, project1)), connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+    List<ConnectorBuilderProject> projects = connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList();
+
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(
+        new ArrayList<>(
+            // project2 comes first due to alphabetical ordering
+            Arrays.asList(project2, project1)))
+                .usingRecursiveComparison()
+                .ignoringFields(UPDATED_AT)
+                .isEqualTo(projects);
+    assertNotNull(projects.get(0).getUpdatedAt());
+    assertNotNull(projects.get(1).getUpdatedAt());
   }
 
   @Test
@@ -167,9 +202,19 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project1.setActiveDeclarativeManifestVersion(MANIFEST_VERSION);
     project1.setActorDefinitionId(sourceDefinition.getSourceDefinitionId());
 
-    assertEquals(new ArrayList<>(
-        // project2 comes first due to alphabetical ordering
-        Arrays.asList(project2, project1)), connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+    List<ConnectorBuilderProject> projects = connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList();
+
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(
+        new ArrayList<>(
+            // project2 comes first due to alphabetical ordering
+            Arrays.asList(project2, project1)))
+                .usingRecursiveComparison()
+                .ignoringFields(UPDATED_AT)
+                .isEqualTo(projects);
+    assertNotNull(projects.get(0).getUpdatedAt());
+    assertNotNull(projects.get(1).getUpdatedAt());
   }
 
   @Test
@@ -194,9 +239,19 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     // has draft is still truthy because there is a draft in the database
     project2.setHasDraft(true);
 
-    assertEquals(new ArrayList<>(
-        // project2 comes first due to alphabetical ordering
-        Arrays.asList(project2, project1)), connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+    List<ConnectorBuilderProject> projects = connectorBuilderService.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList();
+
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(
+        new ArrayList<>(
+            // project2 comes first due to alphabetical ordering
+            Arrays.asList(project2, project1)))
+                .usingRecursiveComparison()
+                .ignoringFields(UPDATED_AT)
+                .isEqualTo(projects);
+    assertNotNull(projects.get(0).getUpdatedAt());
+    assertNotNull(projects.get(1).getUpdatedAt());
   }
 
   @Test
@@ -208,7 +263,14 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         project1.getManifestDraft(), project1.getComponentsFileContent(),
         project1.getBaseActorDefinitionVersionId(), project1.getContributionPullRequestUrl(),
         project1.getContributionActorDefinitionId());
-    assertEquals(project1, connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
+    ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(project1.getBuilderProjectId(), true);
+    // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
+    // separately asserting it isn't null
+    assertThat(project1)
+        .usingRecursiveComparison()
+        .ignoringFields(UPDATED_AT)
+        .isEqualTo(project);
+    assertNotNull(project.getUpdatedAt());
   }
 
   @Test

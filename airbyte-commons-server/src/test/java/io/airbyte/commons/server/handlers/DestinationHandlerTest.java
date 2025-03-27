@@ -35,11 +35,11 @@ import io.airbyte.api.model.generated.ScopedResourceRequirements;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
-import io.airbyte.commons.server.entitlements.Entitlement;
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -160,7 +160,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.OSS);
+            Configs.AirbyteEdition.COMMUNITY);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -271,7 +271,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.CLOUD);
+            Configs.AirbyteEdition.CLOUD);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -411,7 +411,7 @@ class DestinationHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.CLOUD);
+            Configs.AirbyteEdition.CLOUD);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();

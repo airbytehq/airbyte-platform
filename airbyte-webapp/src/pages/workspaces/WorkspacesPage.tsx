@@ -87,7 +87,11 @@ export const WorkspacesPage: React.FC = () => {
               </Text>
             </Box>
             <Box pb="xl">
-              <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+              <SearchInput
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                data-testid="workspaces-page-search"
+              />
             </Box>
             <Box pb="lg">
               <WorkspacesCreateControl />

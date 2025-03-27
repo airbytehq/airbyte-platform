@@ -10,7 +10,7 @@ import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
@@ -42,7 +42,7 @@ class SupportStateUpdater(
   private val actorDefinitionService: ActorDefinitionService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
-  private val deploymentMode: DeploymentMode,
+  private val airbyteEdition: AirbyteEdition,
   private val breakingChangesHelper: BreakingChangesHelper,
   private val breakingChangeNotificationHelper: BreakingChangeNotificationHelper,
   private val featureFlagClient: FeatureFlagClient,
@@ -397,7 +397,7 @@ class SupportStateUpdater(
   private fun shouldNotifyBreakingChanges(): Boolean {
     // we only want to notify about these on Cloud
     return (
-      deploymentMode == DeploymentMode.CLOUD &&
+      airbyteEdition == AirbyteEdition.CLOUD &&
         featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate, Workspace(ANONYMOUS))
     )
   }

@@ -33,16 +33,16 @@ class IntentSecurityRule : SecurityRule<HttpRequest<*>> {
   ): Publisher<SecurityRuleResult> {
     val routeMatch = request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java).orElse(null)
     routeMatch?.let {
-      if (!routeMatch.isAnnotationPresent(RequiresIntent::class.java)) {
-        logger.debug { "[$routeMatch] RequiresIntent annotation not found on request, returning UNKNOWN" }
+      if (!it.isAnnotationPresent(RequiresIntent::class.java)) {
+        logger.debug { "[$it] RequiresIntent annotation not found on request, returning UNKNOWN" }
         return Flux.just(SecurityRuleResult.UNKNOWN)
       }
       val userRoles = authentication?.roles ?: return Flux.just(SecurityRuleResult.UNKNOWN)
-      val intentName = routeMatch.getAnnotation(RequiresIntent::class.java).stringValue().orElseThrow()
+      val intentName = it.getAnnotation(RequiresIntent::class.java).stringValue().orElseThrow()
       val intent = Intent.valueOf(intentName)
 
       if (intent.roles.isEmpty()) {
-        logger.debug { "[$routeMatch] No roles found for intent $intent, rejecting request" }
+        logger.debug { "[$it] No roles found for intent $intent, rejecting request" }
         return Flux.just(SecurityRuleResult.REJECTED)
       }
 

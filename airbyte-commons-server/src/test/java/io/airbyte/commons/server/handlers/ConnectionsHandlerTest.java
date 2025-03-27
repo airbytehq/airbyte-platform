@@ -83,19 +83,21 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
+import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
-import io.airbyte.commons.server.entitlements.Entitlement;
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -117,6 +119,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
@@ -183,6 +186,7 @@ import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGen
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperErrorType;
 import io.airbyte.mappers.transformations.HashingMapper;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -296,10 +300,12 @@ class ConnectionsHandlerTest {
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private ConnectionScheduleHelper connectionSchedulerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ContextBuilder contextBuilder;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
+  private MetricClient metricClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -415,8 +421,10 @@ class ConnectionsHandlerTest {
     statePersistence = mock(StatePersistence.class);
     mapperSecretHelper = mock(MapperSecretHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    contextBuilder = mock(ContextBuilder.class);
 
     featureFlagClient = mock(TestClient.class);
+    metricClient = mock(MetricClient.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -433,7 +441,7 @@ class ConnectionsHandlerTest {
             apiPojoConverters,
             workspaceHelper,
             licenseEntitlementChecker,
-            Configs.DeploymentMode.OSS);
+            Configs.AirbyteEdition.COMMUNITY);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -454,7 +462,8 @@ class ConnectionsHandlerTest {
         licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
-        Configs.DeploymentMode.OSS);
+        metricClient,
+        Configs.AirbyteEdition.COMMUNITY);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =
@@ -514,7 +523,9 @@ class ConnectionsHandlerTest {
           apiPojoConverters,
           connectionSchedulerHelper,
           mapperSecretHelper,
-          licenseEntitlementChecker);
+          metricClient,
+          licenseEntitlementChecker,
+          contextBuilder);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1977,7 +1988,9 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
+          metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2214,7 +2227,9 @@ class ConnectionsHandlerTest {
           connectionService,
           workspaceService,
           destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
+          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
+          metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test
@@ -3032,7 +3047,8 @@ class ConnectionsHandlerTest {
           workspaceService,
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, licenseEntitlementChecker);
+          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test
@@ -3322,6 +3338,23 @@ class ConnectionsHandlerTest {
       assertEquals(propagatedDiff, result.getAppliedDiff());
     }
 
+    @Test
+    void getConnectionContextReturnsConnectionContext() {
+      final var connectionId = UUID.randomUUID();
+      final var context = new ConnectionContext()
+          .withConnectionId(connectionId)
+          .withSourceId(UUID.randomUUID())
+          .withDestinationId(UUID.randomUUID())
+          .withSourceDefinitionId(UUID.randomUUID())
+          .withDestinationDefinitionId(UUID.randomUUID())
+          .withWorkspaceId(UUID.randomUUID())
+          .withOrganizationId(UUID.randomUUID());
+      doReturn(context).when(contextBuilder).fromConnectionId(connectionId);
+      final var result = connectionsHandler.getConnectionContext(connectionId);
+      final var expected = CommonConvertersKt.toServerApi(context);
+      assertEquals(expected, result);
+    }
+
   }
 
   @Nested
@@ -3358,8 +3391,9 @@ class ConnectionsHandlerTest {
           applySchemaChangeHelper,
           apiPojoConverters,
           connectionSchedulerHelper,
-          mapperSecretHelper,
-          licenseEntitlementChecker);
+          mapperSecretHelper, metricClient,
+          licenseEntitlementChecker,
+          contextBuilder);
     }
 
     @Test

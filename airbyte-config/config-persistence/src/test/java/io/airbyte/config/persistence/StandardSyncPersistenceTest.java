@@ -67,6 +67,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -114,6 +115,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final var metricClient = mock(MetricClient.class);
     connectionService = new ConnectionServiceJooqImpl(database);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -128,7 +130,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
@@ -136,13 +139,15 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient);
     operationService = new OperationServiceJooqImpl(database);
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -301,6 +306,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     standardSyncs = connectionService.listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
         List.of(workspaceId),
+        null,
         null,
         null,
         true,

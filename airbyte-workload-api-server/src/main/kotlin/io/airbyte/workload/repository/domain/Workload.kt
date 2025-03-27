@@ -17,7 +17,6 @@ import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import jakarta.inject.Singleton
-import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -59,6 +58,10 @@ data class Workload(
   var autoId: UUID? = null,
   @Nullable
   var signalInput: String? = null,
+  @Nullable
+  var dataplaneGroup: String? = null,
+  @Nullable
+  var priority: Int? = null,
 ) {
   @VisibleForTesting
   constructor(
@@ -101,7 +104,7 @@ enum class WorkloadStatus {
   CANCELLED,
   ;
 
-  override fun toString(): String = lowerCase(this.name)
+  override fun toString(): String = name.lowercase()
 }
 
 @Factory
@@ -125,7 +128,7 @@ enum class WorkloadType {
   SPEC,
   ;
 
-  override fun toString(): String = lowerCase(this.name)
+  override fun toString(): String = name.lowercase()
 
   @Factory
   class WorkloadTypeTypeConverters {

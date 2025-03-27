@@ -9,6 +9,7 @@ object FileConstants {
   const val SOURCE_DIR = "/source"
   const val DEST_DIR = "/dest"
   const val CONFIG_DIR = "/config"
+  const val TMP = "/tmp"
 
   // pipes
   const val STDIN_PIPE_FILE = "stdin"

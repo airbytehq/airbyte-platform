@@ -7,6 +7,7 @@ package io.airbyte.workload.api
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.WorkflowClientWrapped
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -14,6 +15,8 @@ import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
+import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
+import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -82,10 +85,10 @@ class WorkloadApiTest(
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
-    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
@@ -287,6 +290,37 @@ class WorkloadApiTest(
       HttpStatus.GONE,
       exceptionMessage,
     )
+  }
+
+  @Test
+  fun `poll workloads happy path`() {
+    val req =
+      WorkloadQueuePollRequest(
+        dataplaneGroup = "dataplane-group-1",
+        priority = WorkloadPriority.DEFAULT,
+        10,
+      )
+
+    every { workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, 10) }.returns(emptyList())
+    testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/poll", req), HttpStatus.OK)
+  }
+
+  @Test
+  fun `count queue depth happy path`() {
+    val req =
+      WorkloadQueueQueryRequest(
+        dataplaneGroup = "dataplane-group-1",
+        priority = WorkloadPriority.DEFAULT,
+      )
+
+    every { workloadHandler.countWorkloadQueueDepth(req.dataplaneGroup, req.priority) }.returns(1)
+    testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/depth", req), HttpStatus.OK)
+  }
+
+  @Test
+  fun `get queue stats happy path`() {
+    every { workloadHandler.getWorkloadQueueStats() }.returns(listOf())
+    testEndpointStatus(HttpRequest.GET("/api/v1/workload/queue/stats"), HttpStatus.OK)
   }
 
   private fun testEndpointStatus(

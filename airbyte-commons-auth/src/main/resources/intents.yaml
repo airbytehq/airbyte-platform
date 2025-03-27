@@ -1,4 +1,17 @@
 intents:
+  ViewConnection:
+    name: View connection
+    description: View a connection between a source and a destination
+    roles:
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_READER
+      - WORKSPACE_RUNNER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
   CreateOrEditConnection:
     name: Create or edit connection
     description: Create a connection between a source and a destination

@@ -5,12 +5,12 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.initContainer.system.FileClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags.CONNECTION_ID
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
@@ -40,15 +40,17 @@ class CheckHydrationProcessor(
         inputHydrator.getHydratedStandardCheckInput(parsed.checkConnectionInput)
       } catch (e: SecretCoordinateException) {
         metricClient.count(
-          OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
-          1,
-          MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
-          MetricAttribute(
-            CONNECTOR_TYPE,
-            parsed.checkConnectionInput.actorContext.actorType
-              .toString(),
-          ),
-          MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
+          metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+          attributes =
+            arrayOf(
+              MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
+              MetricAttribute(
+                CONNECTOR_TYPE,
+                parsed.checkConnectionInput.actorContext.actorType
+                  .toString(),
+              ),
+              MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
+            ),
         )
         throw e
       }

@@ -35,15 +35,17 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
+import io.temporal.api.filter.v1.StatusFilter
+import io.temporal.api.filter.v1.WorkflowTypeFilter
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest
 import io.temporal.client.WorkflowOptions
@@ -126,6 +128,8 @@ class TemporalClient(
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
         .setNamespace(workflowClientWrapped.getNamespace())
+        .setStatusFilter(StatusFilter.newBuilder().setStatus(executionStatus).build())
+        .setTypeFilter(WorkflowTypeFilter.newBuilder().setName(ConnectionManagerWorkflow::class.java.getSimpleName()).build())
         .build()
 
     val workflowExecutionInfos = mutableSetOf<UUID>()
@@ -136,7 +140,7 @@ class TemporalClient(
       listOpenWorkflowExecutionsRequest
         .executionsList
         .filterNotNull()
-        .filter { it.type == connectionManagerWorkflowType || it.status == executionStatus }
+        .filter { it.type == connectionManagerWorkflowType && it.status == executionStatus }
         .mapNotNull { extractConnectionIdFromWorkflowId(it.execution.workflowId) }
         .toSet()
         .also {
@@ -666,9 +670,8 @@ class TemporalClient(
       return
     } catch (e: UnreachableWorkflowException) {
       metricClient.count(
-        OssMetricsRegistry.WORFLOW_UNREACHABLE,
-        1,
-        MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        metric = OssMetricsRegistry.WORFLOW_UNREACHABLE,
+        attributes = arrayOf(MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString())),
       )
       logger.error(e) {
         "Failed to retrieve ConnectionManagerWorkflow for connection $connectionId. Repairing state by creating new workflow."

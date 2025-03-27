@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the otel secret name
-*/}}
-{{- define "airbyte.otel.secretName" }}
-{{- if .Values.global.metrics.otel.secretName }}
-    {{- .Values.global.metrics.otel.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.metrics.otel.exporter.endpoint value
 */}}
 {{- define "airbyte.otel.exporter.endpoint" }}

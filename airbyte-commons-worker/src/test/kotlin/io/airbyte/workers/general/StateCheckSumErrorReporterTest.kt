@@ -13,6 +13,7 @@ import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionRead
 import io.airbyte.api.client.model.generated.SourceRead
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
@@ -59,7 +60,7 @@ class StateCheckSumErrorReporterTest {
   private lateinit var stateCheckSumErrorReporter: StateCheckSumErrorReporter
 
   private val airbyteVersion = "0.1.0"
-  private val deploymentMode = "CLOUD"
+  private val airbyteEdition = Configs.AirbyteEdition.CLOUD
 
   @BeforeEach
   fun setup() {
@@ -68,7 +69,7 @@ class StateCheckSumErrorReporterTest {
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
         airbyteVersion,
-        deploymentMode,
+        airbyteEdition,
         airbyteApiClient,
         webUrlHelper,
       )
@@ -209,7 +210,7 @@ class StateCheckSumErrorReporterTest {
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
         airbyteVersion,
-        deploymentMode,
+        airbyteEdition,
         airbyteApiClient,
         webUrlHelper,
       )
@@ -264,7 +265,7 @@ class StateCheckSumErrorReporterTest {
     val metadata = stateCheckSumErrorReporter.airbyteMetadata()
 
     assert(metadata[JobErrorReporter.AIRBYTE_VERSION_META_KEY] == airbyteVersion)
-    assert(metadata[JobErrorReporter.DEPLOYMENT_MODE_META_KEY] == deploymentMode)
+    assert(metadata[JobErrorReporter.AIRBYTE_EDITION_META_KEY] == airbyteEdition.name)
   }
 
   @Test

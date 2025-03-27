@@ -88,11 +88,8 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
-import io.airbyte.api.client.model.generated.WebhookConfigWrite;
 import io.airbyte.api.client.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
-import io.airbyte.api.client.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.string.Strings;
@@ -124,6 +121,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -514,7 +512,9 @@ public class AcceptanceTestHarness {
   }
 
   private WorkflowClient getWorkflowClient() {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
+    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null,
+        null, null, null,
+        null, Optional.empty());
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
         TemporalWorkflowUtils.getAirbyteTemporalOptions(TEMPORAL_HOST, new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);
@@ -1270,11 +1270,6 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
             new DestinationDefinitionIdWithWorkspaceId(UUID.randomUUID(), UUID.randomUUID()));
-  }
-
-  public WorkspaceRead updateWorkspaceWebhookConfigs(final UUID workspaceId, final List<WebhookConfigWrite> webhookConfigs) throws Exception {
-    return Failsafe.with(retryPolicy).get(() -> apiClient.getWorkspaceApi()
-        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, null, webhookConfigs)));
   }
 
   public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId) throws IOException {

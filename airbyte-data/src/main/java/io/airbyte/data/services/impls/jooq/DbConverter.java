@@ -437,6 +437,7 @@ public class DbConverter {
   public static ConnectorBuilderProject buildConnectorBuilderProjectWithoutManifestDraft(final Record record) {
     return new ConnectorBuilderProject()
         .withWorkspaceId(record.get(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID))
+        .withUpdatedAt(record.get(CONNECTOR_BUILDER_PROJECT.UPDATED_AT).toEpochSecond())
         .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
         .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
         .withHasDraft((Boolean) record.get("hasDraft"))
@@ -472,7 +473,8 @@ public class DbConverter {
     return new DeclarativeManifest()
         .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
         .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
-        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
+        .withComponentsFileContent(record.get(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT));
   }
 
   /**

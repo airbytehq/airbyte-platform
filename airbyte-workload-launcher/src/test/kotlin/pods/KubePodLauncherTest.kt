@@ -5,9 +5,9 @@
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.launcher.config.ApplicationBeanFactory
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable
 import io.fabric8.kubernetes.client.dsl.MixedOperation
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
 import io.fabric8.kubernetes.client.dsl.PodResource
+import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -67,7 +68,7 @@ class KubePodLauncherTest {
 
     every { kubernetesClient.pods() } throws IllegalStateException()
     every { kubernetesClient.resource(any<Pod>()) } throws IllegalStateException()
-    every { metricClient.count(any(), any(), any()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
   }
 
   @Test

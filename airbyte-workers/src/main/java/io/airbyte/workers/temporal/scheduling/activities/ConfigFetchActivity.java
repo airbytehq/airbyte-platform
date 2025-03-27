@@ -6,6 +6,10 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.workers.temporal.activities.GetConnectionContextInput;
+import io.airbyte.workers.temporal.activities.GetConnectionContextOutput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput;
+import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Duration;
@@ -118,7 +122,21 @@ public interface ConfigFetchActivity {
    * of second the Workflow needs to await.
    */
   @ActivityMethod
-  ScheduleRetrieverOutput getTimeToWait(ScheduleRetrieverInput input);
+  ScheduleRetrieverOutput getTimeToWait(final ScheduleRetrieverInput input);
+
+  /**
+   * Return a fully hydrated connection context (all the domain object ids relevant to the
+   * connection).
+   */
+  @ActivityMethod
+  GetConnectionContextOutput getConnectionContext(final GetConnectionContextInput input);
+
+  /**
+   * Return how much time to wait before checking load shed status. Consumer will wait in a loop until
+   * this returns 0 or less.
+   */
+  @ActivityMethod
+  GetLoadShedBackoffOutput getLoadShedBackoff(final GetLoadShedBackoffInput input);
 
   /**
    * GetMaxAttemptOutput.

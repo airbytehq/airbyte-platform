@@ -222,6 +222,13 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
+    void setJobSuccessNullJobId() {
+      final var request =
+          new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(null, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
+      assertDoesNotThrow(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request));
+    }
+
+    @Test
     void setJobSuccessWrapException() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       final IOException exception = new IOException(TEST_EXCEPTION_MESSAGE);
@@ -243,6 +250,14 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
+    void setJobFailureNullJobId() {
+      assertDoesNotThrow(
+          () -> {
+            jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(null, 1, CONNECTION_ID, REASON));
+          });
+    }
+
+    @Test
     void setJobFailureWithNullJobSyncConfig() throws IOException {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.jobFailure(any())).thenThrow(new IOException());
@@ -259,6 +274,19 @@ class JobCreationAndStatusUpdateActivityTest {
       when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
       final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
           JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          standardSyncOutput,
+          failureSummary);
+
+      assertDoesNotThrow(
+          () -> jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input));
+    }
+
+    @Test
+    void attemptFailureWithAttemptNumberNullJobId() {
+      final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
+          null,
           ATTEMPT_NUMBER,
           CONNECTION_ID,
           standardSyncOutput,

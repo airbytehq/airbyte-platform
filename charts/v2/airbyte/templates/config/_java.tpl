@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the java secret name
-*/}}
-{{- define "airbyte.java.secretName" }}
-{{- if .Values.global.java.secretName }}
-    {{- .Values.global.java.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.java.opts value
 */}}
 {{- define "airbyte.java.opts" }}

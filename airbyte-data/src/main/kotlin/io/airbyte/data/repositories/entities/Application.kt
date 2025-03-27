@@ -13,7 +13,7 @@ import java.util.UUID
 open class Application(
   @field:Id
   var id: UUID? = null,
-  var userId: UUID? = null,
+  var authUserId: String? = null,
   var name: String,
   var clientId: String,
   var clientSecret: String,

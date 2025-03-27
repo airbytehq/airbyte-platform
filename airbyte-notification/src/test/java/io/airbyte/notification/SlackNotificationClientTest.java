@@ -26,15 +26,12 @@ import io.airbyte.notification.messages.SourceInfo;
 import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.messages.WorkspaceInfo;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -470,8 +467,7 @@ class SlackNotificationClientTest {
 
     @Override
     public void handle(final HttpExchange t) throws IOException {
-      final InputStream is = t.getRequestBody();
-      final String body = IOUtils.toString(is, Charset.defaultCharset());
+      final String body = new String(t.getRequestBody().readAllBytes());
       LOGGER.info("Received: '{}'", body);
       JsonNode message = null;
       try {

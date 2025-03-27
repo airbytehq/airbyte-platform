@@ -522,9 +522,6 @@ public class UserHandler {
   private AuthenticatedUser resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
     final AuthenticatedUser incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
-    if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
-      throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
-    }
     return incomingJwtUser;
   }
 

@@ -223,7 +223,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
 
-    val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(workloadId)
+    val runtimeEnvVars = runTimeEnvVarFactory.specConnectorEnvVars(input.launcherConfig, workloadId)
     val connectorReqs = resourceRequirementsFactory.specConnector()
     val initReqs = resourceRequirementsFactory.specInit()
 

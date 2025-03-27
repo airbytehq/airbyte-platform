@@ -84,6 +84,21 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         />
       ),
     },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery" }),
+      default: {
+        type: "graphql",
+        value: "query {\n  resource {\n    field \n  }\n}",
+      },
+      children: (
+        <BuilderField
+          type="graphql"
+          path={concatPath(props.basePath, "requestBody.value")}
+          label={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.value" })}
+          tooltip={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.tooltip" })}
+        />
+      ),
+    },
   ];
 
   const content = (

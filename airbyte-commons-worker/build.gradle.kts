@@ -26,11 +26,7 @@ dependencies {
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }
-  implementation(libs.apache.ant)
-  implementation(libs.apache.commons.text)
   implementation(libs.bundles.datadog)
-  implementation(libs.commons.io)
-  implementation(libs.bundles.apache)
   implementation(libs.failsafe.okhttp)
   implementation(libs.google.cloud.storage)
   implementation(libs.okhttp)
@@ -65,7 +61,6 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-  testAnnotationProcessor(libs.jmh.annotations)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
@@ -79,8 +74,6 @@ dependencies {
   testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
-  testImplementation(libs.jmh.core)
-  testImplementation(libs.jmh.annotations)
   testImplementation(libs.docker.java)
   testImplementation(libs.docker.java.transport.httpclient5)
   testImplementation(libs.reactor.test)

@@ -9,6 +9,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -104,6 +105,7 @@ class KubePodClientTest {
         checkPodFactory = checkPodFactory,
         discoverPodFactory = discoverPodFactory,
         specPodFactory = specPodFactory,
+        featureFlagClient = featureFlagClient,
       )
 
     replInput =
@@ -143,6 +145,8 @@ class KubePodClientTest {
       )
 
     every { labeler.getSharedLabels(any(), any(), any(), any(), any(), any()) } returns sharedLabels
+
+    every { featureFlagClient.boolVariation(EnableAsyncProfiler, any()) } returns false
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
@@ -206,6 +210,7 @@ class KubePodClientTest {
         kubeInput.destinationRuntimeEnvVars,
         false,
         workspaceId,
+        false,
       )
     } returns pod
     client.launchReplication(
@@ -237,6 +242,7 @@ class KubePodClientTest {
         any(),
         any(),
         any(),
+        false,
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -266,6 +272,7 @@ class KubePodClientTest {
         any(),
         any(),
         any(),
+        false,
       )
     } returns pod
     every { launcher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE) } throws TimeoutException("bang")

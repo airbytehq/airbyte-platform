@@ -57,6 +57,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
   @Nested
   inner class ListEventsTest {
     private val connectionId: UUID = UUID.randomUUID()
+    private val secondConnectionId: UUID = UUID.randomUUID()
     private val event1 =
       ConnectionTimelineEvent(
         connectionId = connectionId,
@@ -81,11 +82,23 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         eventType = ConnectionEvent.Type.REFRESH_SUCCEEDED.name,
         createdAt = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
       )
+    private val event5 =
+      ConnectionTimelineEvent(
+        connectionId = secondConnectionId,
+        eventType = ConnectionEvent.Type.REFRESH_SUCCEEDED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 3, 0, 0, 0, 0, ZoneOffset.UTC),
+      )
+    private val event6 =
+      ConnectionTimelineEvent(
+        connectionId = secondConnectionId,
+        eventType = ConnectionEvent.Type.SYNC_SUCCEEDED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
+      )
 
     @BeforeEach
     fun setup() {
       // save some events
-      val allEvents = listOf(event1, event2, event3, event4)
+      val allEvents = listOf(event1, event2, event3, event4, event5, event6)
       allEvents.forEach { event -> connectionTimelineEventRepository.save(event) }
     }
 
@@ -105,7 +118,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 0,
         )
-      assert(connectionTimelineEventRepository.count() == 4L)
+      assert(connectionTimelineEventRepository.count() == 6L)
       assert(res.size == 4)
       assert(res[0].id == event4.id)
     }
@@ -241,6 +254,68 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         )
       assert(res.size == 2)
       assert(res[0].id == event2.id)
+    }
+
+    @Test
+    fun `should list minimal representation of one connection`() {
+      val res =
+        connectionTimelineEventRepository.findByConnectionIdsMinimal(
+          connectionIds = listOf(connectionId),
+          eventTypes = listOf(ConnectionEvent.Type.REFRESH_SUCCEEDED),
+          createdAtStart = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
+          createdAtEnd = OffsetDateTime.of(2024, 9, 5, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+      assert(res.size == 1)
+    }
+
+    @Test
+    fun `should list minimal representation of two connections`() {
+      val res =
+        connectionTimelineEventRepository.findByConnectionIdsMinimal(
+          connectionIds = listOf(connectionId, secondConnectionId),
+          eventTypes = listOf(ConnectionEvent.Type.REFRESH_STARTED, ConnectionEvent.Type.REFRESH_SUCCEEDED),
+          createdAtStart = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
+          createdAtEnd = OffsetDateTime.of(2024, 9, 5, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+      assert(res.size == 3)
+    }
+
+    @Test
+    fun `should list minimal representation of two connections and multiple event types`() {
+      val res =
+        connectionTimelineEventRepository.findByConnectionIdsMinimal(
+          connectionIds = listOf(connectionId, secondConnectionId),
+          eventTypes =
+            listOf(
+              ConnectionEvent.Type.SYNC_SUCCEEDED,
+              ConnectionEvent.Type.REFRESH_SUCCEEDED,
+              ConnectionEvent.Type.REFRESH_STARTED,
+              ConnectionEvent.Type.SYNC_STARTED,
+              ConnectionEvent.Type.SYNC_CANCELLED,
+            ),
+          createdAtStart = OffsetDateTime.of(2023, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+          createdAtEnd = OffsetDateTime.of(2024, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+      assert(res.size == 6)
+    }
+
+    @Test
+    fun `should list minimal representation when filtering by createdAtStart`() {
+      val res =
+        connectionTimelineEventRepository.findByConnectionIdsMinimal(
+          connectionIds = listOf(connectionId, secondConnectionId),
+          eventTypes =
+            listOf(
+              ConnectionEvent.Type.SYNC_SUCCEEDED,
+              ConnectionEvent.Type.REFRESH_SUCCEEDED,
+              ConnectionEvent.Type.REFRESH_STARTED,
+              ConnectionEvent.Type.SYNC_STARTED,
+              ConnectionEvent.Type.SYNC_CANCELLED,
+            ),
+          createdAtStart = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
+          createdAtEnd = OffsetDateTime.of(2024, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+      assert(res.size == 2)
     }
   }
 

@@ -12,8 +12,7 @@ import io.airbyte.db.instance.DatabaseMigrator;
 import io.airbyte.db.instance.development.MigrationDevHelper;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import org.apache.commons.io.FileUtils;
+import java.nio.file.Files;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +29,7 @@ class JobsDatabaseMigratorTest extends AbstractJobsDatabaseTest {
     migrator.migrate();
     final String schema = migrator.dumpSchema();
     MigrationDevHelper.dumpSchema(schema, schemaDumpFile.getAbsolutePath(), false);
-    final String dumpedSchema = FileUtils.readFileToString(schemaDumpFile, StandardCharsets.UTF_8);
+    final String dumpedSchema = Files.readString(schemaDumpFile.toPath());
 
     assertTrue(schemaDumpFile.exists());
     assertEquals(schema.trim(), dumpedSchema.trim());

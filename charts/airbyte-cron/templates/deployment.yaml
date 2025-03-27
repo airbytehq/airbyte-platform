@@ -56,12 +56,17 @@ spec:
           image: {{ include "imageUrl" (list .Values.image $) }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
-          {{- if eq .Values.global.deploymentMode "oss"  }}
+          {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")  }}
           - name: AIRBYTE_VERSION
             valueFrom:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: AIRBYTE_VERSION
+          - name: AIRBYTE_EDITION
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: AIRBYTE_EDITION
           - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
             valueFrom:
               configMapKeyRef:
@@ -72,6 +77,26 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: MICROMETER_METRICS_ENABLED
+          - name: MICROMETER_METRICS_STEP
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: MICROMETER_METRICS_STEP
+          - name: MICROMETER_METRICS_OTLP_ENABLED
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: MICROMETER_METRICS_OTLP_ENABLED
+          - name: OTEL_COLLECTOR_ENDPOINT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: OTEL_COLLECTOR_ENDPOINT
+          - name: MICROMETER_METRICS_STATSD_ENABLED
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: MICROMETER_METRICS_STATSD_ENABLED
           - name: MICROMETER_METRICS_STATSD_FLAVOR
             valueFrom:
               configMapKeyRef:
@@ -135,6 +160,7 @@ spec:
 
           # Database
           {{- include "airbyte.database.envs" . | nindent 10 }}
+          {{- include "airbyte.enterprise.license" . | nindent 10 }}
 
           {{- end }}
 

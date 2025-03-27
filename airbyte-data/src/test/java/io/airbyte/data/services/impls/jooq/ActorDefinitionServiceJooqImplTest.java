@@ -27,6 +27,7 @@ import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -49,6 +50,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any())).thenReturn("3600");
 
+    final MetricClient metricClient = mock(MetricClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
@@ -59,7 +61,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
             connectionTimelineEventService);
     this.sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater);
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
 
     jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
     jooqTestDbSetupHelper.setUpDependencies();

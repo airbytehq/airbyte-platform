@@ -45,7 +45,6 @@ spec:
       image: {{ include "imageUrl" (list .Values.airbyteBootloader.image $) }}
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
       env:
-        {{- include "airbyte.common.deploymentMode.env" . | nindent 8 }}
         {{- include "airbyte.common.version.env" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
@@ -54,11 +53,11 @@ spec:
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
 
-        {{- if (eq .Values.global.edition "community") }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
         {{- end }}
 
-        {{- if (eq .Values.global.deploymentMode "cloud") }}
+        {{- if (eq .Values.global.edition "cloud") }}
         {{- include "airbyte.cloudDatabase.envs" . | nindent 8 }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
         {{- end }}

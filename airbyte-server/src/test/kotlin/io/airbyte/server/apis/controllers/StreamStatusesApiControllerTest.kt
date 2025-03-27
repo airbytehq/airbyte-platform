@@ -18,15 +18,17 @@ import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -44,15 +46,19 @@ private const val PATH_LATEST_PER_RUN_STATE = "$PATH_BASE/latest_per_run_state"
 
 @MicronautTest
 internal class StreamStatusesApiControllerTest {
+  @Factory
+  class TestFactory {
+    @Singleton
+    @Replaces(StreamStatusesHandler::class)
+    fun streamStatusHandler(): StreamStatusesHandler = mockk()
+  }
+
   @Inject
   lateinit var handler: StreamStatusesHandler
 
   @Inject
   @Client("/")
   lateinit var client: HttpClient
-
-  @MockBean(StreamStatusesHandler::class)
-  fun streamStatusesHandler(): StreamStatusesHandler = mockk()
 
   @Test
   fun testCreateSuccessful() {

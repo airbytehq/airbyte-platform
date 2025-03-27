@@ -3,13 +3,13 @@
  */
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.NotImplementedMetricClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.PodSweeper
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer
+import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -27,7 +27,7 @@ class PodSweeperTest {
   private val server: KubernetesServer = KubernetesServer(true, true)
 
   private val mockRetryPolicy: RetryPolicy<Any> = RetryPolicy.ofDefaults()
-  private val mockMetricClient: MetricClient = NotImplementedMetricClient()
+  private val mockMetricClient: MetricClient = mockk(relaxed = true)
 
   private lateinit var client: KubernetesClient
 

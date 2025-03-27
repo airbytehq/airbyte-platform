@@ -23,11 +23,11 @@ import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
-import io.airbyte.commons.server.entitlements.Entitlement;
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
@@ -76,7 +76,7 @@ public class DestinationHandler {
   private final ApiPojoConverters apiPojoConverters;
   private final WorkspaceHelper workspaceHelper;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
-  private final Configs.DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -92,7 +92,7 @@ public class DestinationHandler {
                             final ApiPojoConverters apiPojoConverters,
                             final WorkspaceHelper workspaceHelper,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
-                            final Configs.DeploymentMode deploymentMode) {
+                            final Configs.AirbyteEdition airbyteEdition) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -106,13 +106,13 @@ public class DestinationHandler {
     this.apiPojoConverters = apiPojoConverters;
     this.workspaceHelper = workspaceHelper;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    if (destinationCreate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (destinationCreate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     // validate configuration
@@ -173,8 +173,8 @@ public class DestinationHandler {
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (destinationUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (destinationUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     // get existing implementation
@@ -206,8 +206,8 @@ public class DestinationHandler {
 
   public DestinationRead partialDestinationUpdate(final PartialDestinationUpdate partialDestinationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    if (partialDestinationUpdate.getResourceAllocation() != null && deploymentMode != Configs.DeploymentMode.OSS) {
-      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", deploymentMode.toString()));
+    if (partialDestinationUpdate.getResourceAllocation() != null && airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      throw new BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition));
     }
 
     // get existing implementation

@@ -139,7 +139,7 @@ private inline fun <R> toStatus(
 ): Pair<String, Status> =
   runCatching { block() }
     .fold(
-      onSuccess = { PassStatus() },
+      onSuccess = { _ -> PassStatus() },
       onFailure = { FailStatus(throwable = it) },
     ).let {
       Pair(name, it)

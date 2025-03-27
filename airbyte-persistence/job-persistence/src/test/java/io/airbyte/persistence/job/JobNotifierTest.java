@@ -36,6 +36,7 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -90,6 +91,7 @@ class JobNotifierTest {
 
     ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
+    MetricClient metricClient = mock(MetricClient.class);
     jobNotifier = Mockito.spy(new JobNotifier(
         webUrlHelper,
         connectionService,
@@ -98,7 +100,8 @@ class JobNotifierTest {
         workspaceService,
         workspaceHelper,
         trackingClient,
-        actorDefinitionVersionHelper));
+        actorDefinitionVersionHelper,
+        metricClient));
     notificationClient = mock(NotificationClient.class);
     customerIoNotificationClient = mock(NotificationClient.class);
     when(jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem())).thenReturn(List.of(notificationClient));

@@ -4,9 +4,9 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.client.model.generated.TagCreateRequestBody
-import io.airbyte.api.client.model.generated.TagDeleteRequestBody
-import io.airbyte.api.client.model.generated.TagUpdateRequestBody
+import io.airbyte.api.model.generated.TagCreateRequestBody
+import io.airbyte.api.model.generated.TagDeleteRequestBody
+import io.airbyte.api.model.generated.TagUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.TagAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.TagInvalidHexColorProblem
 import io.airbyte.api.problems.throwable.generated.TagLimitForWorkspaceReachedProblem
@@ -56,8 +56,8 @@ class TagHandlerTest {
 
   @Test
   fun `getTagsForWorkspace returns tags`() {
-    every { tagService.getTagsByWorkspaceId(MOCK_WORKSPACE_ID) } returns listOf(MOCK_TAG_ONE, MOCK_TAG_TWO)
-    val tags = tagHandler.getTagsForWorkspace(MOCK_WORKSPACE_ID)
+    every { tagService.getTagsByWorkspaceIds(listOf(MOCK_WORKSPACE_ID)) } returns listOf(MOCK_TAG_ONE, MOCK_TAG_TWO)
+    val tags = tagHandler.getTagsForWorkspaces(listOf(MOCK_WORKSPACE_ID))
 
     assert(tags.size == 2)
     assert(tags[0].tagId == MOCK_TAG_ONE.tagId)
@@ -69,7 +69,7 @@ class TagHandlerTest {
   @Test
   fun `createTag returns the tag`() {
     every { tagService.createTag(any()) } returns MOCK_TAG_ONE
-    val tag = tagHandler.createTag(TagCreateRequestBody(MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color))
+    val tag = tagHandler.createTag(TagCreateRequestBody().workspaceId(MOCK_TAG_ONE.workspaceId).name(MOCK_TAG_ONE.name).color(MOCK_TAG_ONE.color))
 
     assert(tag.workspaceId == MOCK_TAG_ONE.workspaceId)
     assert(tag.name == MOCK_TAG_ONE.name)
@@ -80,7 +80,7 @@ class TagHandlerTest {
   fun `createTag returns a problem when the max number of tags in a workspace has been exceeded`() {
     every { tagService.createTag(any()) } throws IllegalStateException("Maximum 100 tags can be created in a workspace")
     val tagCreateRequestBody =
-      TagCreateRequestBody(MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color)
+      TagCreateRequestBody().workspaceId(MOCK_TAG_ONE.workspaceId).name(MOCK_TAG_ONE.name).color(MOCK_TAG_ONE.color)
 
     assertThrows<TagLimitForWorkspaceReachedProblem> {
       tagHandler.createTag(tagCreateRequestBody)
@@ -90,7 +90,7 @@ class TagHandlerTest {
   @Test
   fun `createTag with a long name returns a problem`() {
     val tagCreateRequestBody =
-      TagCreateRequestBody(MOCK_TAG_ONE.workspaceId, "a".repeat(101), MOCK_TAG_ONE.color)
+      TagCreateRequestBody().workspaceId(MOCK_TAG_ONE.workspaceId).name("a".repeat(101)).color(MOCK_TAG_ONE.color)
 
     assertThrows<TagNameTooLongProblem> {
       tagHandler.createTag(tagCreateRequestBody)
@@ -101,7 +101,7 @@ class TagHandlerTest {
   fun `createTag with a duplicate name returns a problem`() {
     every { tagService.createTag(any()) } throws DataAccessException(TAG_NAME_CONSTRAINT_VIOLATION_MESSAGE)
     val tagCreateRequestBody =
-      TagCreateRequestBody(MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color)
+      TagCreateRequestBody().workspaceId(MOCK_TAG_ONE.workspaceId).name(MOCK_TAG_ONE.name).color(MOCK_TAG_ONE.color)
 
     assertThrows<TagAlreadyExistsProblem> {
       tagHandler.createTag(tagCreateRequestBody)
@@ -112,7 +112,7 @@ class TagHandlerTest {
   fun `createTag with an invalid hex returns a problem`() {
     every { tagService.createTag(any()) } throws DataAccessException(HEX_COLOR_CONSTRAINT_VIOLATION_MESSAGE)
     val tagCreateRequestBody =
-      TagCreateRequestBody(MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, INVALID_HEX)
+      TagCreateRequestBody().workspaceId(MOCK_TAG_ONE.workspaceId).name(MOCK_TAG_ONE.name).color(INVALID_HEX)
 
     assertThrows<TagInvalidHexColorProblem> {
       tagHandler.createTag(tagCreateRequestBody)
@@ -123,7 +123,14 @@ class TagHandlerTest {
   fun `updateTag returns the tag`() {
     every { tagService.getTag(any(), any()) } returns MOCK_TAG_ONE
     every { tagService.updateTag(any()) } returns MOCK_TAG_ONE
-    val updatedTag = tagHandler.updateTag(TagUpdateRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color))
+    val updatedTag =
+      tagHandler.updateTag(
+        TagUpdateRequestBody()
+          .tagId(MOCK_TAG_ONE.tagId)
+          .workspaceId(MOCK_TAG_ONE.workspaceId)
+          .name(MOCK_TAG_ONE.name)
+          .color(MOCK_TAG_ONE.color),
+      )
 
     assert(updatedTag.tagId == MOCK_TAG_ONE.tagId)
     assert(updatedTag.workspaceId == MOCK_TAG_ONE.workspaceId)
@@ -135,7 +142,13 @@ class TagHandlerTest {
   fun `updateTag with a long name throws a problem`() {
     every { tagService.getTag(any(), any()) } returns MOCK_TAG_ONE
     val tagUpdateBody =
-      TagUpdateRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId, "a".repeat(101), MOCK_TAG_ONE.color)
+      TagUpdateRequestBody()
+        .tagId(MOCK_TAG_ONE.tagId)
+        .workspaceId(MOCK_TAG_ONE.workspaceId)
+        .name(
+          "a"
+            .repeat(101),
+        ).color(MOCK_TAG_ONE.color)
 
     assertThrows<TagNameTooLongProblem> {
       tagHandler.updateTag(tagUpdateBody)
@@ -147,7 +160,11 @@ class TagHandlerTest {
     every { tagService.getTag(any(), any()) } returns MOCK_TAG_ONE
     every { tagService.updateTag(any()) } throws DataAccessException(TAG_NAME_CONSTRAINT_VIOLATION_MESSAGE)
     val tagUpdateBody =
-      TagUpdateRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color)
+      TagUpdateRequestBody()
+        .tagId(MOCK_TAG_ONE.tagId)
+        .workspaceId(MOCK_TAG_ONE.workspaceId)
+        .name(MOCK_TAG_ONE.name)
+        .color(MOCK_TAG_ONE.color)
 
     assertThrows<TagAlreadyExistsProblem> {
       tagHandler.updateTag(tagUpdateBody)
@@ -159,7 +176,11 @@ class TagHandlerTest {
     every { tagService.getTag(any(), any()) } returns MOCK_TAG_ONE
     every { tagService.updateTag(any()) } throws DataAccessException(HEX_COLOR_CONSTRAINT_VIOLATION_MESSAGE)
     val tagUpdateBody =
-      TagUpdateRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, INVALID_HEX)
+      TagUpdateRequestBody()
+        .tagId(MOCK_TAG_ONE.tagId)
+        .workspaceId(MOCK_TAG_ONE.workspaceId)
+        .name(MOCK_TAG_ONE.name)
+        .color(INVALID_HEX)
 
     assertThrows<TagInvalidHexColorProblem> {
       tagHandler.updateTag(tagUpdateBody)
@@ -170,7 +191,11 @@ class TagHandlerTest {
   fun `updateTag handles an error when tag cannot be found`() {
     every { tagService.getTag(any(), any()) } throws EmptyResultException()
     val tagUpdateBody =
-      TagUpdateRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId, MOCK_TAG_ONE.name, MOCK_TAG_ONE.color)
+      TagUpdateRequestBody()
+        .tagId(MOCK_TAG_ONE.tagId)
+        .workspaceId(MOCK_TAG_ONE.workspaceId)
+        .name(MOCK_TAG_ONE.name)
+        .color(MOCK_TAG_ONE.color)
     assertThrows<ConfigNotFoundException> {
       tagHandler.updateTag(tagUpdateBody)
     }
@@ -180,7 +205,7 @@ class TagHandlerTest {
   fun `deleteTag handles an error when tag cannot be found `() {
     every { tagService.getTag(any(), any()) } throws EmptyResultException()
     val tagDeleteRequestBody =
-      TagDeleteRequestBody(MOCK_TAG_ONE.tagId, MOCK_TAG_ONE.workspaceId)
+      TagDeleteRequestBody().tagId(MOCK_TAG_ONE.tagId).workspaceId(MOCK_TAG_ONE.workspaceId)
     assertThrows<ConfigNotFoundException> {
       tagHandler.deleteTag(tagDeleteRequestBody)
     }

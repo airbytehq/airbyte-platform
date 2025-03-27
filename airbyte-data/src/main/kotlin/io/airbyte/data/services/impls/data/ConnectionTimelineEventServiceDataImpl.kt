@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.data.repositories.ConnectionTimelineEventRepository
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
+import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -77,4 +78,11 @@ class ConnectionTimelineEventServiceDataImpl(
     // In case we have duped events saved for a job (a known issue we have seen in the db), we want to return the first one.
     return userIds.firstOrNull()
   }
+
+  override fun listEventsMinimal(
+    connectionIds: List<UUID>,
+    eventTypes: List<ConnectionEvent.Type>,
+    createdAtStart: OffsetDateTime,
+    createdAtEnd: OffsetDateTime,
+  ): List<ConnectionTimelineEventMinimal> = repository.findByConnectionIdsMinimal(connectionIds, eventTypes, createdAtStart, createdAtEnd)
 }

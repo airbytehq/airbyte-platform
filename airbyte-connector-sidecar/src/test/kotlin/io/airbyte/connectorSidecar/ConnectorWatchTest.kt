@@ -11,6 +11,7 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
@@ -79,6 +80,9 @@ class ConnectorWatchTest {
 
   private lateinit var connectorWatcher: ConnectorWatcher
 
+  @MockK
+  private lateinit var metricClient: MetricClient
+
   val workloadId = "workloadId"
 
   val checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE)
@@ -104,6 +108,7 @@ class ConnectorWatchTest {
           jobOutputDocStore,
           logContextFactory,
           heartbeatMonitor,
+          metricClient = metricClient,
         ),
       )
 

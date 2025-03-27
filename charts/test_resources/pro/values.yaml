@@ -6,8 +6,6 @@
 global:
   ##  serviceAccountName -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
   edition: "pro"
 
   env_vars: {}
@@ -1241,26 +1239,6 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-1"
-## External PostgreSQL configuration
-## All of these values are only used when postgresql.enabled is set to false
-##  externalDatabase.host Database host
-##  externalDatabase.user non-root Username for Airbyte Database
-##  externalDatabase.password Database password
-##  externalDatabase.existingSecret Name of an existing secret resource containing the DB password
-##  externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the DB password
-##  externalDatabase.database Database name
-##  externalDatabase.port Database port number
-##  externalDatabase.jdbcUrl Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
-##
-externalDatabase:
-  host: localhost
-  user: airbyte
-  password: ""
-  existingSecret: ""
-  existingSecretPasswordKey: ""
-  database: db-airbyte
-  port: 5432
-  jdbcUrl: ""
 
 ## @section Logs parameters
 

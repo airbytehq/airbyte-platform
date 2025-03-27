@@ -69,6 +69,8 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
+object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
@@ -127,6 +129,8 @@ object WorkloadHeartbeatTimeout : Permanent<Int>(key = "workload.heartbeat.timeo
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
+
+object UseAllowCustomCode : Temporary<Boolean>(key = "platform.use-allow-custom-code", default = false)
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
@@ -187,3 +191,5 @@ object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.p
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
 
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
+
+object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)

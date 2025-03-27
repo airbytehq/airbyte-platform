@@ -34,6 +34,11 @@ public interface Configs {
   String getAirbyteRole();
 
   /**
+   * Defines the deployed edition of Airbyte.
+   */
+  String getAirbyteEdition();
+
+  /**
    * Defines the Airbyte deployment version.
    */
   AirbyteVersion getAirbyteVersion();
@@ -112,14 +117,6 @@ public interface Configs {
   List<String> getJobKubeMainContainerImagePullSecrets();
 
   /**
-   * Deployment type.
-   */
-  enum DeploymentMode {
-    OSS,
-    CLOUD
-  }
-
-  /**
    * Secret persistence type.
    */
   enum SecretPersistenceType {
@@ -144,8 +141,9 @@ public interface Configs {
    * activate additional features if valid.
    */
   enum AirbyteEdition {
+    CLOUD,
     COMMUNITY,
-    PRO
+    ENTERPRISE
   }
 
 }

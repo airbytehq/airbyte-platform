@@ -7,6 +7,7 @@ import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { ComboBox, OptionsConfig, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
 import { FlexContainer } from "components/ui/Flex";
@@ -88,6 +89,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
+    | { type: "graphql"; onChange?: (newValue: string) => void }
     | {
         type: "enum";
         onChange?: (newValue: string) => void;
@@ -388,6 +390,22 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           disabled={isDisabled}
           error={hasError}
         />
+      )}
+      {props.type === "graphql" && (
+        <div className={classNames(props.className, styles.graphqlEditor)}>
+          <GraphQLEditor
+            key={path}
+            value={fieldValue || ""}
+            onChange={(val: string | undefined) => {
+              if (isPreviewRef.current) {
+                return;
+              }
+              setValue(val);
+            }}
+            disabled={isDisabled}
+            paddingTop
+          />
+        </div>
       )}
       {hasError && (
         <Text className={styles.error}>

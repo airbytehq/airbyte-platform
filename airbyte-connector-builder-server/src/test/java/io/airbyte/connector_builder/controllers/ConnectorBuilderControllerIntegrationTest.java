@@ -30,6 +30,7 @@ import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.connector_builder.templates.ContributionTemplates;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import java.io.ByteArrayInputStream;
@@ -74,7 +75,7 @@ class ConnectorBuilderControllerIntegrationTest {
   void setup() {
     this.healthHandler = mock(HealthHandler.class);
     this.writer = new MockAirbyteFileWriterImpl();
-    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(mock(MetricClient.class));
     this.contributionTemplates = new ContributionTemplates();
     this.assistProxyHandler = mock(AssistProxyHandler.class);
   }

@@ -31,6 +31,7 @@ Helm chart to deploy airbyte-temporal
 | global.database.type | string | `"internal"` |  |
 | global.database.ssl.enabled | bool | `"true"` |  |
 | global.deploymentMode | string | `"oss"` |  |
+| global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |
 | global.extraSelectorLabels | object | `{}` |  |

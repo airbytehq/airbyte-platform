@@ -135,7 +135,7 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(isEnterprise);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(isEnterprise ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .edition(isEnterprise ? EditionEnum.ENTERPRISE : EditionEnum.COMMUNITY)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(isEnterprise ? LicenseStatus.EXCEEDED.PRO : null)
@@ -243,7 +243,7 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(EditionEnum.PRO)
+        .edition(EditionEnum.ENTERPRISE)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(LicenseStatus.PRO)
@@ -333,7 +333,7 @@ class InstanceConfigurationHandlerTest {
     final var handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -361,7 +361,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(license),
         mWorkspacePersistence,
@@ -381,7 +381,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -402,7 +402,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -451,7 +451,7 @@ class InstanceConfigurationHandlerTest {
     return new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        isEnterprise ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        isEnterprise ? AirbyteEdition.ENTERPRISE : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
         isEnterprise ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,

@@ -9,18 +9,17 @@ import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
-import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RESUME_CLAIMED_OPERATION_NAME
-import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.model.toLauncherInput
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
@@ -44,7 +43,7 @@ private val logger = KotlinLogging.logger {}
 class ClaimedProcessor(
   private val apiClient: WorkloadApiClient,
   private val pipe: LaunchPipeline,
-  private val metricPublisher: CustomMetricPublisher,
+  private val metricClient: MetricClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
   @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
   private val claimProcessorTracker: ClaimProcessorTracker,
@@ -82,9 +81,12 @@ class ClaimedProcessor(
   }
 
   private fun runOnClaimedScheduler(msg: LauncherInput): Mono<LaunchStageIO> {
-    metricPublisher.count(
-      WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED,
-      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    metricClient.count(
+      metric = OssMetricsRegistry.WORKLOAD_CLAIM_RESUMED,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+        ),
     )
     return pipe
       .buildPipeline(msg)
@@ -94,7 +96,7 @@ class ClaimedProcessor(
 
   private fun addTagsToTrace() {
     val commonTags = hashMapOf<String, Any>()
-    commonTags[DATA_PLANE_ID_TAG] = dataplaneId
+    commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
     ApmTraceUtils.addTagsToTrace(commonTags)
   }
 
@@ -104,7 +106,7 @@ class ClaimedProcessor(
         RetryPolicy
           .builder<Any>()
           .withBackoff(backoffDuration, backoffMaxDelay)
-          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+          .onRetry { _ -> logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
           .withMaxAttempts(-1)
           .abortOn { exception ->
             when (exception) {
@@ -118,8 +120,6 @@ class ClaimedProcessor(
             }
           }.build(),
       ).get(
-        object : CheckedSupplier<WorkloadListResponse> {
-          override fun get(): WorkloadListResponse = apiClient.workloadApi.workloadList(workloadListRequest)
-        },
+        CheckedSupplier { apiClient.workloadApi.workloadList(workloadListRequest) },
       )
 }

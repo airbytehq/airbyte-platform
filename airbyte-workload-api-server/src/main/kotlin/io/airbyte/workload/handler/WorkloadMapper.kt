@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
@@ -16,6 +17,8 @@ typealias ApiWorkload = io.airbyte.workload.api.domain.Workload
 typealias DomainWorkloadLabel = WorkloadLabel
 typealias ApiWorkloadLabel = io.airbyte.workload.api.domain.WorkloadLabel
 typealias ApiWorkloadType = io.airbyte.config.WorkloadType
+typealias ApiWorkloadQueueStats = io.airbyte.workload.api.domain.WorkloadQueueStats
+typealias DomainWorkloadQueueStats = io.airbyte.workload.repository.domain.WorkloadQueueStats
 
 fun ApiWorkloadStatus.toDomain(): WorkloadStatus =
   when (this) {
@@ -69,6 +72,8 @@ fun DomainWorkload.toApi(): ApiWorkload =
     terminationSource = this.terminationSource,
     autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
     signalInput = this.signalInput,
+    dataplaneGroup = this.dataplaneGroup,
+    priority = this.priority?.let { WorkloadPriority.fromInt(it) },
   )
 
 fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel =
@@ -81,4 +86,11 @@ fun ApiWorkloadLabel.toDomain(): DomainWorkloadLabel =
   DomainWorkloadLabel(
     key = this.key,
     value = this.value,
+  )
+
+fun DomainWorkloadQueueStats.toApi(): ApiWorkloadQueueStats =
+  ApiWorkloadQueueStats(
+    dataplaneGroup = dataplaneGroup,
+    priority = priority?.let { WorkloadPriority.fromInt(it) },
+    enqueuedCount = enqueuedCount,
   )

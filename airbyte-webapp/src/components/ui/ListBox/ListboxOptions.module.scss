@@ -1,12 +1,15 @@
+@use "scss/colors";
 @use "scss/variables";
 
 .listboxOptions {
-  min-width: 140px;
+  min-width: variables.$min-width-listbox-options-list;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-menu;
   display: flex;
   flex-direction: column;
   gap: 0;
+  background: colors.$foreground;
+  max-height: variables.$height-long-listbox-options-list;
   overflow: auto;
 
   &:focus-visible {

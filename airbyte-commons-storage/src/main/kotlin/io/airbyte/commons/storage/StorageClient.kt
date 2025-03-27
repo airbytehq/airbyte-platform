@@ -98,6 +98,7 @@ enum class DocumentType(
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
   ACTIVITY_PAYLOADS(prefix = Path.of("/activity-payloads")),
   AUDIT_LOGS(prefix = Path.of("audit-logging")),
+  PROFILER_OUTPUT(prefix = Path.of("/profiler/output")),
 }
 
 /**
@@ -278,7 +279,7 @@ class GcsStorageClient(
     return gcsClient
       .get(blobId)
       ?.takeIf { it.exists() }
-      ?.let { gcsClient.readAllBytes(blobId).toString(StandardCharsets.UTF_8) }
+      ?.let { gcsClient.readAllBytes(it.blobId).toString(StandardCharsets.UTF_8) }
   }
 
   override fun delete(id: String): Boolean = gcsClient.delete(BlobId.of(bucketName, key(id)))
@@ -566,4 +567,5 @@ fun StorageConfig.bucketName(type: DocumentType): String =
     DocumentType.LOGS -> this.buckets.log
     DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
     DocumentType.AUDIT_LOGS -> this.buckets.auditLogging?.takeIf { it.isNotBlank() } ?: ""
+    DocumentType.PROFILER_OUTPUT -> this.buckets.profilerOutput?.takeIf { it.isNotBlank() } ?: ""
   }

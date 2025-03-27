@@ -21,12 +21,26 @@ enum class WorkloadPriority(
   @JsonValue
   override fun toString(): String = value
 
+  fun toInt(): Int =
+    when (this) {
+      DEFAULT -> 0
+      HIGH -> 1
+    }
+
   companion object {
     @JvmStatic
     @JsonCreator
     fun fromValue(value: String): WorkloadPriority {
-      val result = values().firstOrNull { it.value.equals(value, true) }
+      val result = entries.firstOrNull { it.value.equals(value, true) }
       return result ?: throw IllegalArgumentException("Unexpected value '$value'")
     }
+
+    @JvmStatic
+    fun fromInt(value: Int): WorkloadPriority =
+      when (value) {
+        0 -> DEFAULT
+        1 -> HIGH
+        else -> throw IllegalArgumentException("Unexpected value '$value'")
+      }
   }
 }

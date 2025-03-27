@@ -69,11 +69,11 @@ class StreamRefreshesHandler(
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =
         ManuallyStartedEvent(
-          jobId = job.id,
-          startTimeEpochSeconds = job.createdAtInSecond,
+          jobId = it.id,
+          startTimeEpochSeconds = it.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            job.config.refresh.streamsToRefresh.map { refreshStream ->
+            it.config.refresh.streamsToRefresh.map { refreshStream ->
               refreshStream.streamDescriptor
             },
         )

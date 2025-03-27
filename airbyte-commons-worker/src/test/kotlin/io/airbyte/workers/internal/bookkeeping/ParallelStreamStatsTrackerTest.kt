@@ -15,8 +15,8 @@ import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.TestClient
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteGlobalState
 import io.airbyte.protocol.models.AirbyteMessage

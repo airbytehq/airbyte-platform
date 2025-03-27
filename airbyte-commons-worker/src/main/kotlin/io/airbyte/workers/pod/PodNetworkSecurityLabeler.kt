@@ -31,8 +31,8 @@ class PodNetworkSecurityLabeler(
     workspaceId: UUID?,
     networkSecurityTokens: List<String>,
   ): Map<String, String> {
-    return workspaceId?.let {
-      networkPolicyFetcher?.let {
+    return workspaceId?.let { workspaceId ->
+      networkPolicyFetcher?.let { networkPolicyFetcher ->
         if (networkSecurityTokens.isEmpty()) {
           // Short circuit if we have no tokens to fetch policies for
           return emptyMap()
@@ -40,6 +40,7 @@ class PodNetworkSecurityLabeler(
         try {
           val cachedLabels = cache.get(workspaceId, Map::class.java)
           if (cachedLabels.isPresent && cachedLabels.get().isNotEmpty()) {
+            @Suppress("UNCHECKED_CAST")
             return cachedLabels.get() as Map<String, String>
           }
           val matchingNetworkPolicies = networkPolicyFetcher.matchingNetworkPolicies(workspaceId, networkSecurityTokens, hasher)

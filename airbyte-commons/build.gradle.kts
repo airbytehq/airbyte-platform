@@ -12,8 +12,6 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
   implementation(libs.bundles.slf4j)
-  implementation(libs.commons.io)
-  implementation(libs.bundles.apache)
   implementation(libs.google.cloud.storage)
   implementation(libs.airbyte.protocol)
 

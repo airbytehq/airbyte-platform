@@ -8,7 +8,7 @@ import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
@@ -54,7 +54,7 @@ internal class SupportStateUpdaterTest {
         mActorDefinitionService,
         mSourceService,
         mDestinationService,
-        DeploymentMode.CLOUD,
+        Configs.AirbyteEdition.CLOUD,
         mBreakingChangesHelper,
         mBreakingChangeNotificationHelper,
         featureFlagClient,

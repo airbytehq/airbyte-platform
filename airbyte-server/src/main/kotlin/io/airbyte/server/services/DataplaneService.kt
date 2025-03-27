@@ -51,7 +51,7 @@ class DataplaneService(
     workspaceId: UUID?,
     priority: @NotNull WorkloadPriority,
   ): String {
-    val connection = connectionId?.let { connectionService.getStandardSync(connectionId) }
+    val connection = connectionId?.let { connectionService.getStandardSync(it) }
     val resolvedWorkspaceId = workspaceId ?: resolveWorkspaceId(connection, actorType, actorId)
     val geography = getGeography(connection, resolvedWorkspaceId)
 
@@ -82,13 +82,11 @@ class DataplaneService(
     actorId: UUID?,
   ): UUID? =
     connection?.let {
-      destinationService.getDestinationConnection(connection.destinationId).workspaceId
-    } ?: actorType?.let {
-      when (actorType) {
-        ActorType.SOURCE -> sourceService.getSourceConnection(actorId).workspaceId
-        ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
-        else -> null
-      }
+      destinationService.getDestinationConnection(it.destinationId).workspaceId
+    } ?: when (actorType) {
+      ActorType.SOURCE -> sourceService.getSourceConnection(actorId).workspaceId
+      ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
+      else -> null
     }
 
   /**
@@ -99,12 +97,11 @@ class DataplaneService(
     workspaceId: UUID?,
   ): Geography {
     try {
-      return connection?.let {
-        connection.geography
-      } ?: workspaceId?.let {
-        workspaceService.getGeographyForWorkspace(workspaceId)
-      } ?: Geography.AUTO
-    } catch (e: Exception) {
+      return connection?.geography
+        ?: workspaceId?.let {
+          workspaceService.getGeographyForWorkspace(it)
+        } ?: Geography.AUTO
+    } catch (_: Exception) {
       throw BadRequestProblem(ProblemMessageData().message("Unable to find geography of for connection [$connection], workspace [$workspaceId]"))
     }
   }
@@ -114,7 +111,7 @@ class DataplaneService(
       scopedConfigurationService
         .getScopedConfigurations(
           NetworkSecurityTokenKey,
-          mapOf(ConfigScopeType.WORKSPACE to workspaceId),
+          mapOf(ConfigScopeType.WORKSPACE to it),
         ).isNotEmpty()
     } ?: false
 
@@ -135,13 +132,8 @@ class DataplaneService(
         CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
       )
 
-    workspaceId?.let {
-      context.add(Workspace(workspaceId))
-    }
-
-    connectionId?.let {
-      context.add(Connection(connectionId))
-    }
+    workspaceId?.let { context.add(Workspace(it)) }
+    connectionId?.let { context.add(Connection(it)) }
 
     if (WorkloadPriority.HIGH == priority) {
       context.add(Priority(HIGH_PRIORITY))
@@ -163,13 +155,8 @@ private fun buildFeatureFlagContext(
 ): MutableList<Context> {
   val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
 
-  workspaceId?.let {
-    context.add(Workspace(workspaceId))
-  }
-
-  connectionId?.let {
-    context.add(Connection(connectionId))
-  }
+  workspaceId?.let { context.add(Workspace(it)) }
+  connectionId?.let { context.add(Connection(it)) }
 
   if (WorkloadPriority.HIGH == priority) {
     context.add(Priority(HIGH_PRIORITY))

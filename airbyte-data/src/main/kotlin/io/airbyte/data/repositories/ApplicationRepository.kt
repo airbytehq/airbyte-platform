@@ -12,10 +12,10 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ApplicationRepository : PageableRepository<Application, UUID> {
-  fun findByUserId(userId: UUID): List<Application>
+  fun findByAuthUserId(authUserId: String): List<Application>
 
-  fun findByUserIdAndId(
-    userId: UUID,
+  fun findByAuthUserIdAndId(
+    authUserId: String,
     applicationId: UUID,
   ): Application?
 

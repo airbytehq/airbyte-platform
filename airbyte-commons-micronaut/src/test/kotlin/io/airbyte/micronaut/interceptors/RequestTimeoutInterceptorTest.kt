@@ -39,7 +39,8 @@ internal class RequestTimeoutInterceptorTest {
     val applicationContext = ApplicationContext.run()
     val exampleBean = applicationContext.getBean(RequestTimeoutExample::class.java)
     assertDoesNotThrow {
-      exampleBean.functionTwo("a test string")
+      val result = exampleBean.functionTwo("a test string")
+      assertEquals("Doing something with a test string", result)
     }
     applicationContext.close()
   }
@@ -64,7 +65,7 @@ internal open class RequestTimeoutExample {
   }
 
   @RequestTimeout(timeout = "PT2S")
-  open fun functionTwo(with: String): Unit = println("Doing something with $with")
+  open fun functionTwo(with: String): String = "Doing something with $with"
 
   @RequestTimeout(timeout = "PT2S")
   open fun functionThree(): Unit = throw IOException("oops")

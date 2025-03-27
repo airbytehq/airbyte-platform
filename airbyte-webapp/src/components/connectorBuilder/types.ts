@@ -58,9 +58,12 @@ import {
   WaitTimeFromHeader,
   SimpleRetrieverDecoder,
   XmlDecoderType,
+  JwtAuthenticator,
+  JwtAuthenticatorType,
   RequestOptionType,
 } from "core/api/types/ConnectorManifest";
 
+import { DecoderTypeConfig } from "./Builder/DecoderConfig";
 import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
@@ -91,8 +94,75 @@ export interface BuilderFormInput {
 
 type BuilderHttpMethod = "GET" | "POST";
 
-export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "gzip JSON"] as const;
-export type BuilderDecoder = (typeof BUILDER_DECODER_TYPES)[number];
+export const BUILDER_DECODER_TYPES = ["JSON", "XML", "JSON Lines", "Iterable", "CSV"] as const;
+
+export type ManifestDecoderType = "JsonDecoder" | "XmlDecoder" | "JsonlDecoder" | "IterableDecoder" | "CsvDecoder";
+
+interface JSONDecoderConfig {
+  type: "JSON";
+}
+
+interface XMLDecoderConfig {
+  type: "XML";
+}
+
+interface JSONLinesDecoderConfig {
+  type: "JSON Lines";
+}
+
+interface IterableDecoderConfig {
+  type: "Iterable";
+}
+
+interface CSVDecoderConfig {
+  type: "CSV";
+  delimiter?: string;
+  encoding?: string;
+}
+
+export type BuilderDecoderConfig =
+  | JSONDecoderConfig
+  | XMLDecoderConfig
+  | JSONLinesDecoderConfig
+  | IterableDecoderConfig
+  | CSVDecoderConfig;
+
+// Intermediary mapping of builder -> manifest decoder types
+// TODO: find a way to abstract/simplify the decoder manifest -> UI typing so we don't have so many places to update when adding new decoders
+const DECODER_TYPE_MAP: Record<(typeof BUILDER_DECODER_TYPES)[number], ManifestDecoderType> = {
+  JSON: "JsonDecoder",
+  XML: "XmlDecoder",
+  "JSON Lines": "JsonlDecoder",
+  Iterable: "IterableDecoder",
+  CSV: "CsvDecoder",
+} as const;
+
+// Registry of decoder configurations. Additional configurations can be added here as more decoders are supported.
+export const DECODER_CONFIGS: Partial<Record<(typeof BUILDER_DECODER_TYPES)[number], DecoderTypeConfig>> = {
+  CSV: {
+    title: "connectorBuilder.decoder.csvDecoder.label",
+    fields: [
+      {
+        key: "delimiter",
+        type: "string",
+        label: "connectorBuilder.decoder.csvDecoder.delimiter.label",
+        tooltip: "connectorBuilder.decoder.csvDecoder.delimiter.tooltip",
+        manifestPath: "CsvDecoder.properties.delimiter",
+        placeholder: ",",
+        optional: true,
+      },
+      {
+        key: "encoding",
+        type: "string",
+        label: "connectorBuilder.decoder.csvDecoder.encoding.label",
+        tooltip: "connectorBuilder.decoder.csvDecoder.encoding.tooltip",
+        manifestPath: "CsvDecoder.properties.encoding",
+        placeholder: "utf-8",
+        optional: true,
+      },
+    ],
+  },
+};
 
 interface BuilderRequestOptions {
   requestParameters: Array<[string, string]>;
@@ -119,7 +189,13 @@ export type BuilderFormAuthenticator =
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
+  | BuilderJwtAuthenticator
   | BuilderSessionTokenAuthenticator;
+
+export type BuilderJwtAuthenticator = Omit<JwtAuthenticator, "additional_jwt_headers" | "additional_jwt_headers"> & {
+  additional_jwt_headers?: Array<[string, string]>;
+  additional_jwt_payload?: Array<[string, string]>;
+};
 
 export const DeclarativeOAuthAuthenticatorType = "DeclarativeOAuthAuthenticator" as const;
 
@@ -272,6 +348,10 @@ export type BuilderRequestBody =
   | {
       type: "string_freeform";
       value: string;
+    }
+  | {
+      type: "graphql";
+      value: string;
     };
 
 export interface BuilderRecordSelector {
@@ -289,7 +369,7 @@ export interface BuilderStream {
   urlPath: string;
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
-  decoder: BuilderDecoder;
+  decoder: BuilderDecoderConfig;
   requestOptions: BuilderRequestOptions;
   recordSelector?: BuilderRecordSelector | YamlString;
   paginator?: BuilderPaginator | YamlString;
@@ -401,7 +481,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   urlPath: "",
   primaryKey: [],
   httpMethod: "GET",
-  decoder: "JSON",
+  decoder: { type: "JSON" },
   schema: DEFAULT_SCHEMA,
   requestOptions: {
     requestParameters: [],
@@ -425,6 +505,7 @@ export const NO_AUTH: NoAuthType = "NoAuth";
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
 export const BEARER_AUTHENTICATOR: BearerAuthenticatorType = "BearerAuthenticator";
 export const BASIC_AUTHENTICATOR: BasicHttpAuthenticatorType = "BasicHttpAuthenticator";
+export const JWT_AUTHENTICATOR: JwtAuthenticatorType = "JwtAuthenticator";
 export const OAUTH_AUTHENTICATOR: OAuthAuthenticatorType = "OAuthAuthenticator";
 export const SESSION_TOKEN_AUTHENTICATOR: SessionTokenAuthenticatorType = "SessionTokenAuthenticator";
 export const SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR: SessionTokenRequestApiKeyAuthenticatorType = "ApiKey";
@@ -567,6 +648,14 @@ export function builderAuthenticatorToManifest(
       ...authenticator,
       username: authenticator.username,
       password: authenticator.password,
+    };
+  }
+  if (authenticator.type === "JwtAuthenticator") {
+    return {
+      ...authenticator,
+      secret_key: authenticator.secret_key,
+      additional_jwt_headers: fromEntriesOrUndefined(authenticator.additional_jwt_headers ?? []),
+      additional_jwt_payload: fromEntriesOrUndefined(authenticator.additional_jwt_payload ?? []),
     };
   }
   if (authenticator.type === "SessionTokenAuthenticator") {
@@ -917,6 +1006,8 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
             : Object.keys(parsedJson).length > 0
             ? parsedJson
             : undefined
+          : builderRequestBody.type === "graphql"
+          ? { query: builderRequestBody.value.replace(/\s+/g, " ").trim() }
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
@@ -958,20 +1049,29 @@ export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSel
   });
 }
 
-const builderDecoderToManifest = (decoder: BuilderDecoder): SimpleRetrieverDecoder | undefined => {
-  switch (decoder) {
-    case "JSON":
-      // JSON is the default decoder, so don't specify it to keep manifests lean
-      return undefined;
-    case "XML":
-      return { type: "XmlDecoder" };
-    case "JSON Lines":
-      return { type: "JsonlDecoder" };
-    case "Iterable":
-      return { type: "IterableDecoder" };
-    case "gzip JSON":
-      return { type: "GzipJsonDecoder" };
+const builderDecoderToManifest = (decoder: BuilderDecoderConfig): SimpleRetrieverDecoder | undefined => {
+  // No decoder is specified for JSON responses
+  if (decoder.type === "JSON") {
+    return undefined;
   }
+
+  if (decoder.type === "CSV") {
+    const result: SimpleRetrieverDecoder = {
+      type: "CsvDecoder" as const,
+    };
+
+    if (decoder.delimiter) {
+      result.delimiter = decoder.delimiter;
+    }
+
+    if (decoder.encoding) {
+      result.encoding = decoder.encoding;
+    }
+
+    return result;
+  }
+
+  return { type: DECODER_TYPE_MAP[decoder.type] };
 };
 
 type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;

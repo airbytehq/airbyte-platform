@@ -73,7 +73,7 @@ spec:
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
-        {{- if (ne .Values.global.deploymentMode "oss") }}
+        {{- if (ne (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise"))) }}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end }}
 
@@ -96,7 +96,7 @@ spec:
         {{- end }}
         {{- end }}
 
-        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        # Values from extraEnv for more compatibility (if you want to use external secret source or other stuff)
         {{- if .Values.connectorBuilderServer.extraEnv }}
         {{- toYaml .Values.connectorBuilderServer.extraEnv | nindent 8 }}
         {{- end }}

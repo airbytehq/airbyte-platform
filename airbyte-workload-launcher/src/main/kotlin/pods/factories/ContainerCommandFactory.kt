@@ -25,6 +25,7 @@ object ContainerCommandFactory {
   // WARNING: Fragile. Coupled to our conventions on building, unpacking and naming our executables.
   private const val SIDE_CAR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-connector-sidecar"
   private const val ORCHESTRATOR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-container-orchestrator"
+  private const val PROFILER_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-async-profiler"
   private const val TERMINATION_CHECK_INTERVAL_SECONDS = 10
 
   /**
@@ -34,6 +35,12 @@ object ContainerCommandFactory {
     """
     trap "touch $TERMINATION_MARKER_FILE" EXIT
     $SIDE_CAR_APPLICATION_EXECUTABLE
+    """.trimIndent()
+
+  fun profiler() =
+    """
+    trap "touch $TERMINATION_MARKER_FILE" EXIT
+    $PROFILER_APPLICATION_EXECUTABLE
     """.trimIndent()
 
   /**

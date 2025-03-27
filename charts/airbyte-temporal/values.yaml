@@ -1,6 +1,6 @@
 global:
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
+  edition: community
   configMapName: ""
   secretName: ""
   extraContainers: []

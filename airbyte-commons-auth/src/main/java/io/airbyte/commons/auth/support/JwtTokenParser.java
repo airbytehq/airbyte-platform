@@ -116,7 +116,7 @@ public class JwtTokenParser {
     // url,
     // for example in case it ends with "auth/realms/", then there is no ssoRealm attached.
     if (issValue == null || !issValue.contains(AUTH_REALM_VALUE) || issValue.endsWith(AUTH_REALM_VALUE)) {
-      return null;
+      return issValue;
     }
     String[] issValueParts = issValue.split(AUTH_REALM_VALUE);
     if (issValueParts.length != EXPECTED_SPLIT_LENGTH) {

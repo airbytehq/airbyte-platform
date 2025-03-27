@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.model.generated.Tag
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -96,6 +97,7 @@ object ConnectionReadMapper {
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,
       createdAt = connectionRead.createdAt,
+      tags = connectionRead.tags?.let { t -> convertTags(t) } ?: emptyList(),
     )
   }
 
@@ -137,6 +139,16 @@ object ConnectionReadMapper {
       )
     }
 
+  private fun convertTags(tags: List<Tag>): List<io.airbyte.publicApi.server.generated.models.Tag> =
+    tags.map {
+      io.airbyte.publicApi.server.generated.models.Tag(
+        tagId = it.tagId,
+        name = it.name,
+        color = it.color,
+        workspaceId = it.workspaceId,
+      )
+    }
+
   /**
    * Convert selected fields from airbyte_api model to public_api model
    * */
@@ -167,6 +179,10 @@ object ConnectionReadMapper {
             Pair(
               DestinationSyncMode.APPEND,
               ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
+            ),
+            Pair(
+              DestinationSyncMode.OVERWRITE_DEDUP,
+              ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
             ),
           ),
         SyncMode.INCREMENTAL to

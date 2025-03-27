@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the connectorBuilder secret name
-*/}}
-{{- define "airbyte.connectorBuilder.secretName" }}
-{{- if .Values.connectorBuilderServer.secretName }}
-    {{- .Values.connectorBuilderServer.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the connectorBuilderServer.aiAssistUrlBase value
 */}}
 {{- define "airbyte.connectorBuilder.aiAssistUrlBase" }}

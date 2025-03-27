@@ -21,4 +21,5 @@ data class WorkloadCreateRequest(
   var deadline: OffsetDateTime? = null,
   var priority: WorkloadPriority = WorkloadPriority.HIGH,
   var signalInput: String? = null,
+  var dataplaneGroup: String? = null,
 )

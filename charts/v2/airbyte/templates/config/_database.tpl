@@ -169,17 +169,6 @@ DATABASE_PASSWORD: {{ include "airbyte.database.password" . | quote }}
 {{- end }}
 
 {{/*
-Renders the database.migrations secret name
-*/}}
-{{- define "airbyte.database.migrations.secretName" }}
-{{- if .Values.global.migrations.secretName }}
-    {{- .Values.global.migrations.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.migrations.runAtStartup value
 */}}
 {{- define "airbyte.database.migrations.runAtStartup" }}

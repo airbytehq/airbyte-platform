@@ -2,7 +2,6 @@
 global:
   serviceAccountName: placeholderServiceAccount
   edition: community
-  deploymentMode: oss
   configMapName: ""
   secretName: ""
   credVolumeOverride: ""

@@ -41,11 +41,11 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
+import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
-import io.airbyte.commons.server.entitlements.Entitlement;
-import io.airbyte.commons.server.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -72,6 +72,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -110,6 +111,7 @@ class SourceHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
+  private MetricClient metricClient;
 
   private static final String API_KEY_FIELD = "apiKey";
   private static final String API_KEY_VALUE = "987-xyz";
@@ -155,6 +157,7 @@ class SourceHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
+    metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
@@ -201,7 +204,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, Configs.DeploymentMode.OSS);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.COMMUNITY);
   }
 
   @Test
@@ -296,7 +299,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -443,7 +446,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, Configs.DeploymentMode.CLOUD);
+        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();

@@ -121,13 +121,45 @@ export function useBuildForm(
                 group: ADVANCED_GROUP_ID,
                 order: Number.MAX_SAFE_INTEGER - 1,
                 properties: {
-                  cpu: {
-                    type: "string",
-                    title: formatMessage({ id: "form.resourceAllocation.cpu" }),
+                  default: {
+                    type: "object",
+                    title: formatMessage({ id: "form.resourceAllocation.default" }),
+                    properties: {
+                      cpu: {
+                        type: "string",
+                        title: formatMessage({ id: "form.resourceAllocation.cpu" }),
+                      },
+                      memory: {
+                        type: "string",
+                        title: formatMessage({ id: "form.resourceAllocation.memory" }),
+                      },
+                    },
                   },
-                  memory: {
-                    type: "string",
-                    title: formatMessage({ id: "form.resourceAllocation.memory" }),
+                  jobSpecific: {
+                    type: "array",
+                    title: formatMessage({ id: "form.resourceAllocation.jobSpecific" }),
+                    items: {
+                      type: "object",
+                      properties: {
+                        jobType: {
+                          type: "string",
+                          title: formatMessage({ id: "form.resourceAllocation.jobType" }),
+                        },
+                        resourceRequirements: {
+                          type: "object",
+                          properties: {
+                            cpu_request: {
+                              type: "string",
+                              title: formatMessage({ id: "form.resourceAllocation.cpuLimit" }),
+                            },
+                            memory_request: {
+                              type: "string",
+                              title: formatMessage({ id: "form.resourceAllocation.memoryLimit" }),
+                            },
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -154,6 +186,7 @@ export function useBuildForm(
       let baseValues = {
         name: "",
         connectionConfiguration: {},
+        resourceAllocation: { jobSpecific: [] },
         ...initialValues,
       };
 

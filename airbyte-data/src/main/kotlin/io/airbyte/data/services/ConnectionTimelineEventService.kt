@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
+import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.shared.ConnectionEvent
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -41,4 +42,11 @@ interface ConnectionTimelineEventService {
     job: JobRead,
     eventType: ConnectionEvent.Type? = null,
   ): UUID?
+
+  fun listEventsMinimal(
+    connectionIds: List<UUID>,
+    eventTypes: List<ConnectionEvent.Type>,
+    createdAtStart: OffsetDateTime,
+    createdAtEnd: OffsetDateTime,
+  ): List<ConnectionTimelineEventMinimal>
 }

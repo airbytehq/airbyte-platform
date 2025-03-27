@@ -15,7 +15,7 @@ import com.google.common.io.Resources;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.commons.yaml.Yamls;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.SupportLevel;
@@ -38,7 +38,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RemoteDefinitionsProviderTest {
@@ -46,7 +46,7 @@ class RemoteDefinitionsProviderTest {
   private MockWebServer webServer;
   private MockResponse validCatalogResponse;
   private String baseUrl;
-  private static final DeploymentMode DEPLOYMENT_MODE = DeploymentMode.OSS;
+  private static final Configs.AirbyteEdition AIRBYTE_EDITION = Configs.AirbyteEdition.COMMUNITY;
   private static final String CONNECTOR_REPOSITORY = "airbyte/source-stripe";
   private static final String CONNECTOR_VERSION = "0.2.1";
   private JsonNode jsonCatalog;
@@ -89,7 +89,7 @@ class RemoteDefinitionsProviderTest {
   void testGetSourceDefinition() throws Exception {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final UUID stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de");
     final ConnectorRegistrySourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
     assertEquals(stripeSourceId, stripeSource.getSourceDefinitionId());
@@ -109,7 +109,7 @@ class RemoteDefinitionsProviderTest {
   void testGetDestinationDefinition() throws Exception {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final UUID s3DestinationId = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362");
     final ConnectorRegistryDestinationDefinition s3Destination = remoteDefinitionsProvider
         .getDestinationDefinition(s3DestinationId);
@@ -130,7 +130,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validCatalogResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final UUID invalidDefinitionId = UUID.fromString("1a7c360c-1289-4b96-a171-2ac1c86fb7ca");
 
     assertThrows(
@@ -145,7 +145,7 @@ class RemoteDefinitionsProviderTest {
   void testGetSourceDefinitions() {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final List<ConnectorRegistrySourceDefinition> sourceDefinitions = remoteDefinitionsProvider.getSourceDefinitions();
     final int expectedNumberOfSources = MoreIterators.toList(jsonCatalog.get("sources").elements()).size();
     assertEquals(expectedNumberOfSources, sourceDefinitions.size());
@@ -156,7 +156,7 @@ class RemoteDefinitionsProviderTest {
   void testGetDestinationDefinitions() {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final List<ConnectorRegistryDestinationDefinition> destinationDefinitions = remoteDefinitionsProvider.getDestinationDefinitions();
     final int expectedNumberOfDestinations = MoreIterators.toList(jsonCatalog.get("destinations").elements()).size();
     assertEquals(expectedNumberOfDestinations, destinationDefinitions.size());
@@ -188,7 +188,7 @@ class RemoteDefinitionsProviderTest {
   void testBadResponseStatus() {
     webServer.enqueue(new MockResponse().setResponseCode(404));
     final RuntimeException ex = assertThrows(RuntimeException.class, () -> {
-      new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
+      new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
     });
 
     assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
@@ -199,7 +199,7 @@ class RemoteDefinitionsProviderTest {
   void testTimeOut() {
     // No request enqueued -> Timeout
     final RuntimeException ex = assertThrows(RuntimeException.class, () -> {
-      new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
+      new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
     });
 
     assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
@@ -211,23 +211,25 @@ class RemoteDefinitionsProviderTest {
     final MockResponse notJson = makeResponse(200, "not json");
     webServer.enqueue(notJson);
     assertThrows(RuntimeException.class, () -> {
-      new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
+      new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
     });
   }
 
   @ParameterizedTest
-  @CsvSource({"OSS", "CLOUD"})
-  void testGetPaths(final String deploymentMode) {
+  @EnumSource(Configs.AirbyteEdition.class)
+  void testGetPaths(final Configs.AirbyteEdition airbyteEdition) {
     final RemoteDefinitionsProvider definitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
+        new RemoteDefinitionsProvider(baseUrl, airbyteEdition, TimeUnit.SECONDS.toMillis(1));
     final String connectorName = "airbyte/source-github";
     final String version = "1.0.0";
 
     final String registryPath = definitionsProvider.getRegistryPath();
-    assertEquals(String.format("registries/v0/%s_registry.json", deploymentMode.toLowerCase()), registryPath);
+    assertEquals(String.format("registries/v0/%s_registry.json",
+        RemoteDefinitionsProvider.getRegistryName(airbyteEdition)), registryPath);
 
     final String metadataPath = definitionsProvider.getRegistryEntryPath(connectorName, version);
-    assertEquals(String.format("metadata/airbyte/source-github/1.0.0/%s.json", deploymentMode.toLowerCase()), metadataPath);
+    assertEquals(String.format("metadata/airbyte/source-github/1.0.0/%s.json",
+        RemoteDefinitionsProvider.getRegistryName(airbyteEdition)), metadataPath);
 
     final String docsPath = RemoteDefinitionsProvider.getDocPath(connectorName, version);
     assertEquals("metadata/airbyte/source-github/1.0.0/doc.md", docsPath);
@@ -240,7 +242,7 @@ class RemoteDefinitionsProviderTest {
   void getRemoteRegistryUrlForPath() {
     final String baseUrl = "https://connectors.airbyte.com/files/";
     final RemoteDefinitionsProvider definitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(1));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(1));
     final String registryPath = "registries/v0/oss_registry.json";
 
     final URL registryUrl = definitionsProvider.getRemoteRegistryUrlForPath(registryPath);
@@ -251,7 +253,7 @@ class RemoteDefinitionsProviderTest {
   void testGetMissingEntryByVersion() {
     webServer.enqueue(makeResponse(404, "not found"));
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<JsonNode> definition = remoteDefinitionsProvider.getConnectorRegistryEntryJson(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(definition.isEmpty());
   }
@@ -269,7 +271,7 @@ class RemoteDefinitionsProviderTest {
 
     webServer.enqueue(validResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<JsonNode> definition = remoteDefinitionsProvider.getConnectorRegistryEntryJson(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(definition.isPresent());
     assertEquals(Jsons.jsonNode(sourceDef), definition.get());
@@ -288,7 +290,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<ConnectorRegistrySourceDefinition> definition =
         remoteDefinitionsProvider.getSourceDefinitionByVersion(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(definition.isPresent());
@@ -308,7 +310,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<ConnectorRegistryDestinationDefinition> definition =
         remoteDefinitionsProvider.getDestinationDefinitionByVersion(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(definition.isPresent());
@@ -323,7 +325,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(documentationResult.isPresent());
     assertEquals(documentationResult.get(), connectorDocumentationBody);
@@ -333,7 +335,7 @@ class RemoteDefinitionsProviderTest {
   void testGetMissingConnectorDocumentation() {
     webServer.enqueue(makeResponse(404, "not found"));
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(documentationResult.isEmpty());
   }
@@ -346,7 +348,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<JsonNode> manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(manifestResult.isPresent());
     assertEquals(manifestResult.get(), Yamls.deserialize(connectorManifestBody));
@@ -366,7 +368,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> customComponentsResult =
         remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
 
@@ -378,7 +380,7 @@ class RemoteDefinitionsProviderTest {
   void testGetMissingConnectorCustomComponents() {
     webServer.enqueue(makeResponse(404, "not found"));
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> customComponentsResult =
         remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(customComponentsResult.isEmpty());
@@ -398,7 +400,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> customComponentsResult =
         remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
 
@@ -419,7 +421,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(invalidResponse);
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<String> customComponentsResult =
         remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
 
@@ -431,7 +433,7 @@ class RemoteDefinitionsProviderTest {
   void getMissingConnectorManifest() {
     webServer.enqueue(makeResponse(404, "not found"));
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
-        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+        new RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30));
     final Optional<JsonNode> manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(manifestResult.isEmpty());
   }

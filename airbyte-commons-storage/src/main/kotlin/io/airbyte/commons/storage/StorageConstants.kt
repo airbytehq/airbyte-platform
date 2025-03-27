@@ -37,8 +37,12 @@ const val STORAGE_BUCKET_ACTIVITY_PAYLOAD = "${STORAGE_BUCKET}.activity-payload"
 /** Audit logging. */
 const val AUDIT_LOGGING = "audit-logging"
 
+const val PROFILER_OUTPUT = "profiler-output"
+
 /** Specific setting for the audit log bucket. */
 const val STORAGE_BUCKET_AUDIT_LOGGING = "${STORAGE_BUCKET}.${AUDIT_LOGGING}"
+
+const val STORAGE_BUCKET_PROFILER_OUTPUT = "${STORAGE_BUCKET}.${PROFILER_OUTPUT}"
 
 /** The setting that contains what storage type the client represents. */
 const val STORAGE_TYPE = "$STORAGE_ROOT.type"

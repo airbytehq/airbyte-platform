@@ -27,14 +27,6 @@
     border: variables.$border-thin solid colors.$grey-200;
     box-shadow: none;
     border-radius: variables.$border-radius-sm;
-
-    tr & {
-      opacity: 0;
-    }
-
-    tr:hover & {
-      opacity: 1;
-    }
   }
 
   ul,
@@ -45,9 +37,13 @@
   }
 
   &__input {
-    border-radius: 0;
     border: none;
+    border-radius: 0;
     border-bottom: variables.$border-thin solid colors.$grey-100;
+
+    &:focus-within {
+      border-bottom: variables.$border-thin solid colors.$grey-100;
+    }
   }
 
   &__tags {

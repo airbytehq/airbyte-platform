@@ -18,5 +18,5 @@ class ActiveAirbyteLicense {
   var license: AirbyteLicense? = null
 
   val isPro: Boolean
-    get() = license?.takeIf { it.type == LicenseType.PRO }?.let { true } ?: false
+    get() = license?.takeIf { it.type == LicenseType.PRO }?.let { _ -> true } ?: false
 }

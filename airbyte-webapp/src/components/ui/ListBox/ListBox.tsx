@@ -122,7 +122,7 @@ export const ListBox = <T,>({
   id,
   isDisabled,
   placement,
-  flip,
+  flip = true,
   adaptiveWidth = true,
   footerOption,
   onFocus,

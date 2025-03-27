@@ -10,6 +10,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateTag, useTagsList, useUpdateConnectionOptimistically } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
 
+import styles from "./TagsCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
 
 export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Tag[]>> = (props) => {
@@ -18,7 +19,7 @@ export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Ta
   const { mutateAsync: createTag } = useCreateTag();
   const initialValue = props.getValue();
   const [selectedTags, setSelectedTags] = useState(props.getValue());
-  const { mutateAsync: updateConnectionTags } = useUpdateConnectionOptimistically();
+  const { mutateAsync: updateConnectionOptimistically } = useUpdateConnectionOptimistically();
 
   useEffect(() => {
     setSelectedTags(initialValue);
@@ -38,24 +39,27 @@ export const TagsCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, Ta
   };
 
   const updateTags = useCallback(() => {
-    updateConnectionTags({
+    updateConnectionOptimistically({
       connectionId: props.row.original.connectionId,
       tags: selectedTags,
+      skipReset: true,
     });
-  }, [props.row.original.connectionId, selectedTags, updateConnectionTags]);
+  }, [props.row.original.connectionId, selectedTags, updateConnectionOptimistically]);
 
   return (
     <Box py="md" px="lg">
       <FlexContainer gap="sm" alignItems="center" wrap="wrap">
         {selectedTags?.map((tag) => <TagBadge color={tag.color} key={tag.tagId} text={tag.name} />)}
-        <SelectConnectionTags
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          createTag={onCreateTag}
-          selectTag={onTagSelect}
-          deselectTag={onTagDeselect}
-          onClose={updateTags}
-        />
+        <span className={styles.tagsCell__selectButton}>
+          <SelectConnectionTags
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            createTag={onCreateTag}
+            selectTag={onTagSelect}
+            deselectTag={onTagDeselect}
+            onClose={updateTags}
+          />
+        </span>
       </FlexContainer>
     </Box>
   );

@@ -1,7 +1,7 @@
 import { autoUpdate, flip, offset, useFloating } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import classNames from "classnames";
-import { useDeferredValue, useState, useMemo, useCallback } from "react";
+import { useDeferredValue, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { CheckBox } from "components/ui/CheckBox";
@@ -12,7 +12,9 @@ import { TagBadge } from "components/ui/TagBadge";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { HttpProblem } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -42,6 +44,8 @@ export const THEMED_HEX_OPTIONS = [
 ];
 
 const CONNECTION_TAGS_LIMIT = 10;
+
+const CONNECTION_NAME_LENGTH_LIMIT = 30;
 
 const CreateTagControl: React.FC<{
   createTagLoading: boolean;
@@ -85,11 +89,6 @@ const TagRow: React.FC<TagRowProps> = ({ disabled, handleTagChange, isSelected, 
         [styles["selectConnectionTags__tagRow--disabled"]]: disabled,
       })}
       onClick={() => handleTagChange(!isSelected, tag)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          handleTagChange(isSelected, tag);
-        }
-      }}
       disabled={disabled}
     >
       <FlexContainer gap="md" alignItems="center">
@@ -129,6 +128,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   const [query, setQuery] = useState("");
   const [createTagLoading, setCreateTagLoading] = useState(false);
   const notificationService = useNotificationService();
+  const formatError = useFormatError();
 
   const onClosePopover = useCallback(() => {
     setQuery("");
@@ -156,7 +156,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   const filteredTags = useMemo(
     () =>
       availableTags
-        .filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.toLocaleLowerCase()))
+        .filter((tag) => tag.name.toLocaleLowerCase().includes(deferredQueryValue.trim().toLocaleLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [availableTags, deferredQueryValue]
   );
@@ -174,7 +174,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   }, [tagsSelectedOnOpen, filteredTags]);
 
   const tagDoesNotExist = useMemo(
-    () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue),
+    () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue.trim()),
     [availableTags, deferredQueryValue]
   );
 
@@ -188,10 +188,12 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     setCreateTagLoading(true);
     try {
       await createTag(deferredQueryValue, color);
-    } catch (e) {
+    } catch (error) {
       notificationService.registerNotification({
         id: "create-tag-error",
-        text: formatMessage({ id: "connection.tags.creationError" }),
+        text: HttpProblem.isInstanceOf(error)
+          ? formatError(error)
+          : formatMessage({ id: "connection.tags.creationError" }),
         type: "error",
       });
     } finally {
@@ -200,8 +202,21 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     }
   };
 
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value.length <= CONNECTION_NAME_LENGTH_LIMIT) {
+      setQuery(e.target.value);
+    }
+  };
+
+  const handleSearchFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (tagDoesNotExist && (!disabled || createTagLoading)) {
+      handleCreateTag(deferredQueryValue, color);
+    }
+  };
+
   return (
-    <Popover ref={targetRef}>
+    <Popover ref={targetRef} data-target="select-connection-tags-popover">
       {() => {
         return (
           <>
@@ -219,17 +234,12 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               }}
               className={styles.selectConnectionTags}
             >
-              <Input
-                inline
+              <SearchOrCreateInputForm
+                disabled={disabled || createTagLoading}
+                onChange={handleQueryChange}
+                onSubmit={handleSearchFormSubmit}
                 value={deferredQueryValue}
-                onChange={(e) => setQuery(e.target.value)}
-                containerClassName={styles.selectConnectionTags__input}
-                placeholder={formatMessage(
-                  {
-                    id: "connection.tags.selectOrCreateTag",
-                  },
-                  { hasTags: availableTags.length > 0 }
-                )}
+                hasTags={availableTags.length > 0}
               />
               {tagDoesNotExist &&
                 (!tagLimitReached ? (
@@ -288,5 +298,50 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
         );
       }}
     </Popover>
+  );
+};
+
+interface SearchOrCreateInputFormProps {
+  disabled?: boolean;
+  hasTags: boolean;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}
+
+const SearchOrCreateInputForm: React.FC<SearchOrCreateInputFormProps> = ({
+  disabled,
+  onChange,
+  onSubmit,
+  value,
+  hasTags,
+}) => {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const { formatMessage } = useIntl();
+
+  // This is a workaround for the fact that autoFocus does not work as expected with headless ui's floating popover.
+  // The initial rendered position popover causes the page to scroll and potentially close immediately if it gets
+  // virtualized away.
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+
+  return (
+    <form onSubmit={onSubmit}>
+      <Input
+        inline
+        ref={ref}
+        disabled={disabled}
+        value={value}
+        onChange={onChange}
+        containerClassName={styles.selectConnectionTags__input}
+        placeholder={formatMessage(
+          {
+            id: "connection.tags.selectOrCreateTag",
+          },
+          { hasTags }
+        )}
+      />
+    </form>
   );
 };

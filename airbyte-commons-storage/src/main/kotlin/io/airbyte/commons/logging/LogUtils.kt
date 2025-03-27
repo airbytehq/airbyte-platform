@@ -33,10 +33,10 @@ class LogUtils {
    * @return A stack trace representation of the throwable.
    */
   fun convertThrowableToStackTrace(throwable: Throwable?): String? =
-    throwable?.let {
+    throwable?.let { t ->
       val loggingEvent =
         object : LoggingEvent() {
-          override fun getThrowableProxy(): IThrowableProxy = ThrowableProxy(throwable)
+          override fun getThrowableProxy(): IThrowableProxy = ThrowableProxy(t)
         }
       throwableConverter.convert(loggingEvent)
     }

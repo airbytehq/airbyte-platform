@@ -56,7 +56,7 @@ spec:
         image: {{ include "imageUrl" (list .Values.image $) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")  }}
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:

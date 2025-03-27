@@ -17,7 +17,7 @@ class Sha256Hasher : Hasher {
     val bytes = value.toByteArray()
     val md = java.security.MessageDigest.getInstance("SHA-256")
     salt?.let {
-      md.update(salt.toByteArray())
+      md.update(it.toByteArray())
     }
     val digest = md.digest(bytes)
     return digest.fold("") { str, it -> str + "%02x".format(it) }

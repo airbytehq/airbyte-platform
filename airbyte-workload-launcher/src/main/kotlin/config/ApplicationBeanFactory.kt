@@ -8,12 +8,11 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.PlaneName
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.MetricClientFactory
-import io.airbyte.metrics.lib.MetricEmittingApps
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
@@ -32,12 +31,6 @@ import kotlin.time.toJavaDuration
 @Factory
 class ApplicationBeanFactory {
   @Singleton
-  fun metricClient(): MetricClient {
-    MetricClientFactory.initialize(MetricEmittingApps.SERVER)
-    return MetricClientFactory.getMetricClient()
-  }
-
-  @Singleton
   @Named("kubeHttpErrorRetryPredicate")
   fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean =
     { e: Throwable ->
@@ -53,52 +46,54 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
     @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
     @Named("kubeHttpErrorRetryPredicate") predicate: (Throwable) -> Boolean,
-    meterRegistry: MeterRegistry?,
-  ): RetryPolicy<Any> {
-    val metricTags = arrayOf("max_retries", maxRetries.toString())
-
-    return RetryPolicy
+    metricClient: MetricClient,
+  ): RetryPolicy<Any> =
+    RetryPolicy
       .builder<Any>()
       .handleIf(predicate)
       .onRetry { l ->
-        meterRegistry
-          ?.counter(
-            "kube_api_client.retry",
-            *metricTags,
-            *arrayOf(
-              "retry_attempt",
-              l.attemptCount.toString(),
-              "exception_message",
-              l.lastException.message,
-              "exception_type",
-              l.lastException.javaClass.name,
+        metricClient.count(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_RETRY,
+          attributes =
+            arrayOf(
+              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute("retry_attempt", l.attemptCount.toString()),
+              l.lastException.message?.let { m ->
+                MetricAttribute("exception_message", m)
+              },
+              MetricAttribute("exception_type", l.lastException.javaClass.name),
             ),
-          )?.increment()
+        )
       }.onAbort { l ->
-        meterRegistry
-          ?.counter(
-            "kube_api_client.abort",
-            *metricTags,
-            *arrayOf("retry_attempt", l.attemptCount.toString()),
-          )?.increment()
+        metricClient.count(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_ABORT,
+          attributes =
+            arrayOf(
+              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute("retry_attempt", l.attemptCount.toString()),
+            ),
+        )
       }.onFailedAttempt { l ->
-        meterRegistry
-          ?.counter(
-            "kube_api_client.failed",
-            *metricTags,
-            *arrayOf("retry_attempt", l.attemptCount.toString()),
-          )?.increment()
+        metricClient.count(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_FAILED,
+          attributes =
+            arrayOf(
+              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute("retry_attempt", l.attemptCount.toString()),
+            ),
+        )
       }.onSuccess { l ->
-        meterRegistry
-          ?.counter(
-            "kube_api_client.success",
-            *metricTags,
-            *arrayOf("retry_attempt", l.attemptCount.toString()),
-          )?.increment()
+        metricClient.count(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_SUCCESS,
+          attributes =
+            arrayOf(
+              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute("retry_attempt", l.attemptCount.toString()),
+            ),
+        )
       }.withDelay(Duration.ofSeconds(retryDelaySeconds))
       .withMaxRetries(maxRetries)
       .build()
-  }
 
   @Singleton
   @Named("infraFlagContexts")

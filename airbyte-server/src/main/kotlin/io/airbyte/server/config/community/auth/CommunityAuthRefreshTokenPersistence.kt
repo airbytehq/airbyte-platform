@@ -35,7 +35,7 @@ class CommunityAuthRefreshTokenPersistence(
         .refreshToken
         ?: throw UnprocessableEntityProblem(ProblemMessageData().message("Refresh token not found"))
 
-    event.let {
+    event.let { _ ->
       authRefreshTokenService.saveAuthRefreshToken(
         sessionId = sessionId,
         tokenValue = refreshToken,

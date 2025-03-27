@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the auth secret name
-*/}}
-{{- define "airbyte.auth.secretName" }}
-{{- if .Values.global.auth.secretName }}
-    {{- .Values.global.auth.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the auth.instanceAdmin.password secret key
 */}}
 {{- define "airbyte.auth.instanceAdmin.password.secretKey" }}
@@ -598,17 +587,6 @@ Renders the set of all auth.jwt environment variables
 */}}
 {{- define "airbyte.auth.jwt.envs" }}
 {{- include "airbyte.auth.jwt.jwtSignatureSecret.env" . }}
-{{- end }}
-
-{{/*
-Renders the auth.security secret name
-*/}}
-{{- define "airbyte.auth.security.secretName" }}
-{{- if .Values.global.auth.security.secretName }}
-    {{- .Values.global.auth.security.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
 {{- end }}
 
 {{/*

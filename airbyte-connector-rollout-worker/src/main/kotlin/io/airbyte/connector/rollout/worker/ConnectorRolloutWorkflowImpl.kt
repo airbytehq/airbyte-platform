@@ -38,7 +38,6 @@ import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
 import io.temporal.failure.ApplicationFailure
 import io.temporal.workflow.Workflow
-import java.lang.reflect.Field
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -437,9 +436,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun findRolloutValidator(input: ConnectorRolloutActivityInputFind) {
     logger.info { "findRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null)) {
-      "Cannot find rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun getRollout(input: ConnectorRolloutActivityInputGet): ConnectorRolloutOutput {
@@ -451,9 +447,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun getRolloutValidator(input: ConnectorRolloutActivityInputGet) {
     logger.info { "getRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot get rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
@@ -467,9 +460,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun pauseRolloutValidator(input: ConnectorRolloutActivityInputPause) {
     logger.info { "pauseRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot pause rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun progressRollout(input: ConnectorRolloutActivityInputRollout): ConnectorRolloutOutput {
@@ -482,9 +472,6 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun progressRolloutValidator(input: ConnectorRolloutActivityInputRollout) {
     logger.info { "progressRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(!(input.dockerRepository == null || input.dockerImageTag == null || input.actorDefinitionId == null || input.rolloutId == null)) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
@@ -546,35 +533,5 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   override fun finalizeRolloutValidator(input: ConnectorRolloutActivityInputFinalize) {
     logger.info { "finalizeRolloutValidator: ${input.dockerRepository}:${input.dockerImageTag}" }
-    require(
-      !(
-        input.dockerRepository == null ||
-          input.dockerImageTag == null ||
-          input.actorDefinitionId == null ||
-          input.rolloutId == null ||
-          input.result == null
-      ),
-    ) {
-      "Cannot do rollout; invalid input: ${mapAttributesToString(input)}"
-    }
-  }
-
-  companion object {
-    fun mapAttributesToString(obj: Any): String {
-      val result = StringBuilder()
-      val fields: Array<Field> = obj.javaClass.declaredFields
-      for (field in fields) {
-        try {
-          val value = field.get(obj)
-          result
-            .append("${field.name}=")
-            .append(value?.toString() ?: "null")
-            .append(" ")
-        } catch (e: IllegalAccessException) {
-          logger.error(e) { "Error mapping attributes to string: ${e.message}" }
-        }
-      }
-      return result.toString().trim()
-    }
   }
 }
