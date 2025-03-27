@@ -6,9 +6,11 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
+import { useFeature, FeatureItem } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { RegionsTable } from "./components/RegionsTable";
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
 
 const organizationValidationSchema = z.object({
@@ -27,6 +29,7 @@ export const UpdateOrganizationSettingsForm: React.FC = () => {
 const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {
   const organization = useOrganization(organizationId);
   const { mutateAsync: updateOrganization } = useUpdateOrganization();
+  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
@@ -78,6 +81,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         name="email"
         labelTooltip={formatMessage({ id: "settings.organizationSettings.email.description" })}
       />
+      {supportsRegionsTable && <RegionsTable />}
       {canUpdateOrganization && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );

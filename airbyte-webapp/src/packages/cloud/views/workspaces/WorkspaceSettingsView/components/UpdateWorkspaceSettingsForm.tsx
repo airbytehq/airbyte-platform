@@ -76,7 +76,7 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
           id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
         })}
       />
-      {supportsDataResidency && <DataResidencyDropdown labelId="settings.defaultGeography" name="defaultGeography" />}
+      {supportsDataResidency && <DataResidencyDropdown labelId="settings.region" name="defaultGeography" />}
       {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );
