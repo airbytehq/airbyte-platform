@@ -161,7 +161,7 @@ open class DataplaneController(
     val resp = DataplaneInitResponse()
     resp.dataplaneName = dataplane.name
     resp.dataplaneId = dataplane.id
-    resp.dataplaneEnabled = dataplane.enabled
+    resp.dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
     resp.dataplaneGroupName = dataplaneGroup.name
     resp.dataplaneGroupId = dataplaneGroup.id
 
@@ -180,7 +180,7 @@ open class DataplaneController(
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name
       dataplaneId = dataplane.id
-      dataplaneEnabled = dataplane.enabled
+      dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
       dataplaneGroupName = dataplaneGroup.name
       dataplaneGroupId = dataplaneGroup.id
     }

@@ -22,6 +22,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.server.services.DataplaneService as ServerDataplaneService
@@ -159,25 +161,91 @@ class DataplaneControllerTest {
     Assertions.assertEquals(expected, result)
   }
 
-  private fun createDataplane(id: UUID? = null): Dataplane =
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "true,true,true",
+      "true,false,false",
+      "false,true,false",
+      "false,false,false",
+    ],
+  )
+  fun `initialize returns enabled if both dataplane and dataplane groups are enabled`(
+    dataplaneEnabled: Boolean,
+    dataplaneGroupEnabled: Boolean,
+    expected: Boolean,
+  ) {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneInitRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.initializeDataplane(req)
+
+    Assertions.assertEquals(result.dataplaneEnabled, expected)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "true,true,true",
+      "true,false,false",
+      "false,true,false",
+      "false,false,false",
+    ],
+  )
+  fun `heartbeat returns enabled if both dataplane and dataplane groups are enabled`(
+    dataplaneEnabled: Boolean,
+    dataplaneGroupEnabled: Boolean,
+    expected: Boolean,
+  ) {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneHeartbeatRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.heartbeatDataplane(req)
+
+    Assertions.assertEquals(result.dataplaneEnabled, expected)
+  }
+
+  private fun createDataplane(
+    id: UUID? = null,
+    enabled: Boolean = false,
+  ): Dataplane =
     io.airbyte.data.repositories.entities
       .Dataplane(
         id = id ?: UUID.randomUUID(),
         dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID,
         name = "Test Dataplane",
-        enabled = false,
+        enabled = enabled,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
         tombstone = false,
       ).toConfigModel()
 
-  private fun createDataplaneGroup(id: UUID? = null): DataplaneGroup =
+  private fun createDataplaneGroup(
+    id: UUID? = null,
+    enabled: Boolean = false,
+  ): DataplaneGroup =
     io.airbyte.data.repositories.entities
       .DataplaneGroup(
         id = id ?: UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
         name = "Test Dataplane Group",
-        enabled = false,
+        enabled = enabled,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
         tombstone = false,
