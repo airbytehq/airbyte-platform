@@ -13,6 +13,8 @@ dependencies {
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-api:problems-api")) // TODO remove this once api-problems are refactored into domain-problems
+  implementation(libs.openai.java)
+  implementation(libs.bundles.datadog)
 
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.kotest)

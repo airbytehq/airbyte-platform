@@ -3862,6 +3862,30 @@ paths:
       responses:
         "204":
           description: Successfully delete stream reset records for job
+  /v1/jobs/explain:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Returns a LLM generated description of the result of a given job
+      operationId: explainJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobExplainRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # USERS
   /v1/users/get:
@@ -14067,6 +14091,16 @@ components:
             $ref: "#/components/schemas/AttemptInfoRead"
         workflowState:
           $ref: "#/components/schemas/WorkflowStateRead"
+    JobExplainRead:
+      type: object
+      required:
+        - jobId
+        - explanation
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        explanation:
+          type: string
     AttemptInfoRead:
       type: object
       required:

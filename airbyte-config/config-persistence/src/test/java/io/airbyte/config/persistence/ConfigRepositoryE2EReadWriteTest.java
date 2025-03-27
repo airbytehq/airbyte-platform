@@ -258,10 +258,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         sourceDefinitionId);
 
     final List<DestinationConnection> nullCreatedAtDestinationConnections = destinationConnections.stream()
-        .map(destinationConnection -> destinationConnection.withCreatedAt(null)).toList();
+        .map(destinationConnection -> destinationConnection.withCreatedAt(null).withUpdatedAt(null)).toList();
 
     final List<SourceConnection> nullCreatedAtSourceConnections = sourceConnections.stream()
-        .map(sourceConnection -> sourceConnection.withCreatedAt(null)).toList();
+        .map(sourceConnection -> sourceConnection.withCreatedAt(null).withUpdatedAt(null)).toList();
 
     assertThat(nullCreatedAtDestinationConnections)
         .containsExactlyElementsOf(MockData.destinationConnections().stream().filter(d -> d.getDestinationDefinitionId().equals(
@@ -603,7 +603,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<SourceConnection> expectedSources = MockData.sourceConnections().stream()
         .filter(source -> source.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
     final List<SourceConnection> sources = sourceService.listWorkspaceSourceConnection(workspaceId);
-    final List<SourceConnection> nullCreatedAtSources = sources.stream().map(sourceConnection -> sourceConnection.withCreatedAt(null)).toList();
+    final List<SourceConnection> nullCreatedAtSources =
+        sources.stream().map(sourceConnection -> sourceConnection.withCreatedAt(null).withUpdatedAt(null)).toList();
     assertThat(nullCreatedAtSources).hasSameElementsAs(expectedSources);
   }
 
@@ -614,7 +615,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .filter(destination -> destination.getWorkspaceId().equals(workspaceId)).collect(Collectors.toList());
     final List<DestinationConnection> destinations = destinationService.listWorkspaceDestinationConnection(workspaceId);
     final List<DestinationConnection> nullCreatedAtDestinations =
-        destinations.stream().map(destinationConnection -> destinationConnection.withCreatedAt(null)).toList();
+        destinations.stream().map(destinationConnection -> destinationConnection.withCreatedAt(null).withUpdatedAt(null)).toList();
     assertThat(nullCreatedAtDestinations).hasSameElementsAs(expectedDestinations);
   }
 
@@ -815,6 +816,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<SourceAndDefinition> result = actual.stream().map(sourceAndDefinition -> {
       final SourceAndDefinition copy = new SourceAndDefinition(sourceAndDefinition.source(), sourceAndDefinition.definition());
       copy.source().setCreatedAt(null);
+      copy.source().setUpdatedAt(null);
       return copy;
     }).toList();
 
@@ -835,6 +837,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
       final DestinationAndDefinition copy =
           new DestinationAndDefinition(destinationAndDefinition.destination(), destinationAndDefinition.definition());
       copy.destination().setCreatedAt(null);
+      copy.destination().setUpdatedAt(null);
       return copy;
     }).toList();
 

@@ -142,6 +142,7 @@ mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.
 mockk = { module = "io.mockk:mockk", version = "1.13.12" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
+openai-java = { module = "com.openai:openai-java", version = "0.36.0" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
 opentracing-util = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
 orb = { module = "com.withorb.api:orb-kotlin", version = "0.1.0-alpha.10" }

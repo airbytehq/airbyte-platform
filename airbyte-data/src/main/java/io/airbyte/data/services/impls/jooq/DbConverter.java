@@ -236,6 +236,7 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
         .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withUpdatedAt(record.get(ACTOR.UPDATED_AT).toEpochSecond())
         .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
@@ -256,6 +257,7 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
         .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withUpdatedAt(record.get(ACTOR.UPDATED_AT).toEpochSecond())
         .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));

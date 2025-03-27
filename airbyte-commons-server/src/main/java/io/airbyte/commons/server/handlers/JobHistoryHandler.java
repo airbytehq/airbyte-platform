@@ -295,13 +295,17 @@ public class JobHistoryHandler {
     return configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
   }
 
-  public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) throws IOException {
-    final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
+  public Job getJob(final Long jobId) throws IOException {
+    return jobPersistence.getJob(jobId);
+  }
+
+  public JobInfoRead getJobInfo(final Long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
     return jobConverter.getJobInfoRead(job);
   }
 
-  public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) throws IOException {
-    final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
+  public JobInfoRead getJobInfoWithoutLogs(final Long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
 
     final JobWithAttemptsRead jobWithAttemptsRead = JobConverter.getJobWithAttemptsRead(job);
     hydrateWithStats(List.of(jobWithAttemptsRead), List.of(job), true, jobPersistence);
@@ -330,9 +334,9 @@ public class JobHistoryHandler {
 
   }
 
-  public JobDebugInfoRead getJobDebugInfo(final JobIdRequestBody jobIdRequestBody)
+  public JobDebugInfoRead getJobDebugInfo(final Long jobId)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
+    final Job job = jobPersistence.getJob(jobId);
     final JobInfoRead jobinfoRead = jobConverter.getJobInfoRead(job);
 
     for (final AttemptInfoRead a : jobinfoRead.getAttempts()) {

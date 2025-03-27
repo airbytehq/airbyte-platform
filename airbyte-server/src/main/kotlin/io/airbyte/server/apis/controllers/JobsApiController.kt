@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.JobCreate
 import io.airbyte.api.model.generated.JobDebugInfoRead
+import io.airbyte.api.model.generated.JobExplainRead
 import io.airbyte.api.model.generated.JobFailureRequest
 import io.airbyte.api.model.generated.JobIdRequestBody
 import io.airbyte.api.model.generated.JobInfoLightRead
@@ -25,6 +26,7 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.model.generated.ReportJobStartRequest
 import io.airbyte.api.model.generated.SyncInput
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
@@ -93,21 +95,21 @@ open class JobsApiController(
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun getJobDebugInfo(
     @Body jobIdRequestBody: JobIdRequestBody,
-  ): JobDebugInfoRead? = execute { jobHistoryHandler.getJobDebugInfo(jobIdRequestBody) }
+  ): JobDebugInfoRead? = execute { jobHistoryHandler.getJobDebugInfo(jobIdRequestBody.id) }
 
   @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getJobInfo(
     @Body jobIdRequestBody: JobIdRequestBody,
-  ): JobInfoRead? = execute { jobHistoryHandler.getJobInfo(jobIdRequestBody) }
+  ): JobInfoRead? = execute { jobHistoryHandler.getJobInfo(jobIdRequestBody.id) }
 
   @Post("/get_without_logs")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getJobInfoWithoutLogs(
     @Body jobIdRequestBody: JobIdRequestBody,
-  ): JobInfoRead? = execute { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody) }
+  ): JobInfoRead? = execute { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody.id) }
 
   @Post("/get_input")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
@@ -190,6 +192,11 @@ open class JobsApiController(
         requestBody.jobId,
       )
     }
+
+  @Post("/explain")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @RequiresIntent(Intent.ViewConnection)
+  override fun explainJob(jobIdRequestBody: JobIdRequestBody): JobExplainRead = throw ApiNotImplementedInOssProblem()
 
   @Post("/persist_cancellation")
   @Secured(AuthRoleConstants.ADMIN)

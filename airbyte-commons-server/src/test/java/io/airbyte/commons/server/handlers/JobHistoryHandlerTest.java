@@ -563,8 +563,7 @@ class JobHistoryHandlerTest {
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
 
-    final JobIdRequestBody requestBody = new JobIdRequestBody().id(JOB_ID);
-    final JobInfoRead jobInfoActual = jobHistoryHandler.getJobInfo(requestBody);
+    final JobInfoRead jobInfoActual = jobHistoryHandler.getJobInfo(JOB_ID);
 
     final JobInfoRead exp = new JobInfoRead().job(toJobInfo(job)).attempts(toAttemptInfoList(List.of(testJobAttempt)));
 
@@ -619,8 +618,7 @@ class JobHistoryHandlerTest {
     when(jobPersistence.getAttemptStats(anyLong(), anyInt())).thenReturn(FIRST_ATTEMPT_STATS);
     when(logClientManager.getLogs(any())).thenReturn(new LogEvents(List.of(), "1"));
 
-    final JobIdRequestBody requestBody = new JobIdRequestBody().id(JOB_ID);
-    final JobDebugInfoRead jobDebugInfoActual = jobHistoryHandler.getJobDebugInfo(requestBody);
+    final JobDebugInfoRead jobDebugInfoActual = jobHistoryHandler.getJobDebugInfo(JOB_ID);
     final List<AttemptInfoRead> attemptInfoReads = toAttemptInfoList(List.of(testJobAttempt));
     attemptInfoReads.forEach(read -> read.getAttempt().totalStats(FIRST_ATTEMPT_STATS_API).streamStats(FIRST_ATTEMPT_STREAM_STATS));
     final JobDebugInfoRead exp = new JobDebugInfoRead().job(toDebugJobInfo(job)).attempts(attemptInfoReads);
@@ -899,7 +897,7 @@ class JobHistoryHandlerTest {
     when(jobPersistence.getAttemptStats(List.of(JOB_ID)))
         .thenReturn(Map.of(new JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()), FIRST_ATTEMPT_STATS));
 
-    final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(new JobIdRequestBody().id(JOB_ID));
+    final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(JOB_ID);
     assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getBytesCommitted());
     assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsCommitted());
 
