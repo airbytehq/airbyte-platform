@@ -10,8 +10,8 @@ import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toEntity
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID

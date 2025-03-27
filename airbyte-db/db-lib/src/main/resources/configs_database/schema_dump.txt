@@ -273,7 +273,6 @@ create table "public"."dataplane" (
   "enabled" boolean not null default true,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_by" uuid not null,
   "tombstone" boolean not null default false,
   constraint "dataplane_pkey" primary key ("id"),
   constraint "dataplane_dataplane_group_id_name_key" unique ("dataplane_group_id", "name")
@@ -284,7 +283,6 @@ create table "public"."dataplane_client_credentials" (
   "client_id" varchar(2147483647) not null,
   "client_secret" varchar(2147483647) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "created_by" uuid not null,
   constraint "dataplane_client_credentials_pkey" primary key ("id"),
   constraint "dataplane_client_credentials_client_id_key" unique ("client_id"),
   constraint "dataplane_client_credentials_dataplane_id_client_id_client__key" unique ("dataplane_id", "client_id", "client_secret")
@@ -296,7 +294,6 @@ create table "public"."dataplane_group" (
   "enabled" boolean not null default true,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_by" uuid,
   "tombstone" boolean not null default false,
   constraint "dataplane_group_pkey" primary key ("id"),
   constraint "dataplane_group_organization_id_name_key" unique ("organization_id", "name")
@@ -729,11 +726,8 @@ alter table "public"."connector_rollout" add constraint "fk_initial_version_id" 
 alter table "public"."connector_rollout" add constraint "fk_release_candidate_version_id" foreign key ("release_candidate_version_id") references "public"."actor_definition_version" ("id");
 alter table "public"."connector_rollout" add constraint "fk_updated_by" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."dataplane" add constraint "dataplane_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
-alter table "public"."dataplane" add constraint "dataplane_updated_by_fkey" foreign key ("updated_by") references "public"."user" ("id");
-alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_created_by_fkey" foreign key ("created_by") references "public"."user" ("id");
 alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
-alter table "public"."dataplane_group" add constraint "dataplane_group_updated_by_fkey" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");

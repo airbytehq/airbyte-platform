@@ -15,5 +15,4 @@ data class DataplaneClientCredentials(
   val clientId: String,
   val clientSecret: String,
   val createdAt: java.time.OffsetDateTime? = null,
-  val createdBy: UUID,
 )

@@ -12,18 +12,17 @@ import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
-import java.util.Optional
 import java.util.UUID
 import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
@@ -31,12 +30,10 @@ class DataplaneControllerTest {
   companion object {
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
-    private val currentUserService = mockk<CurrentUserService>()
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
-        currentUserService,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -47,8 +44,7 @@ class DataplaneControllerTest {
     val newName = "new name"
     val newEnabled = true
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataplaneService.updateDataplane(any(), any(), any(), any()) } returns
+    every { dataplaneService.updateDataplane(any(), any(), any()) } returns
       mockDataplane.apply {
         name = newName
         enabled = newEnabled
@@ -70,17 +66,15 @@ class DataplaneControllerTest {
   @Test
   fun `deleteDataplane tombstones dataplane`() {
     val mockDataplane = createDataplane()
-    val updatedById = UUID.randomUUID()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(updatedById)
-    every { dataplaneService.deleteDataplane(any(), any()) } returns mockDataplane
+    every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneDeleteRequestBody =
       DataplaneDeleteRequestBody().dataplaneId(mockDataplane.id)
 
     dataplaneController.deleteDataplane(dataplaneDeleteRequestBody)
 
-    verify { dataplaneService.deleteDataplane(mockDataplane.id, updatedById) }
+    verify { dataplaneService.deleteDataplane(mockDataplane.id) }
   }
 
   @Test
@@ -88,7 +82,6 @@ class DataplaneControllerTest {
     val dataplaneId1 = UUID.randomUUID()
     val dataplaneId2 = UUID.randomUUID()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneService.listDataplanes(MOCK_DATAPLANE_GROUP_ID) } returns
       listOf(
         createDataplane(dataplaneId1),
@@ -173,7 +166,6 @@ class DataplaneControllerTest {
         dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID,
         name = "Test Dataplane",
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
         tombstone = false,
@@ -188,7 +180,6 @@ class DataplaneControllerTest {
         enabled = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
       ).toConfigModel()
 }

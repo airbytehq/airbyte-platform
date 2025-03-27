@@ -15,7 +15,6 @@ import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.server.services.DataplaneService
@@ -37,7 +36,6 @@ import java.time.ZoneOffset
 class DataplaneGroupApiController(
   protected val dataplaneGroupService: DataplaneGroupService,
   protected val dataplaneService: DataplaneService,
-  protected val currentUserService: CurrentUserService,
 ) : DataplaneGroupApi {
   @Post("/create")
   @Secured(AuthRoleConstants.ADMIN)
@@ -50,10 +48,6 @@ class DataplaneGroupApiController(
         organizationId = dataplaneGroupCreateRequestBody.organizationId
         name = dataplaneGroupCreateRequestBody.name
         enabled = dataplaneGroupCreateRequestBody.enabled
-        updatedBy =
-          currentUserService.currentUserIdIfExists.orElseThrow {
-            IllegalStateException("No user ID found for creation request for organization ${dataplaneGroupCreateRequestBody.organizationId}")
-          }
       }
     return toDataplaneGroupRead(writeDataplaneGroup(createdDataplaneGroup))
   }
@@ -70,10 +64,6 @@ class DataplaneGroupApiController(
       updatedDataplaneGroup.apply {
         name = dataplaneGroupUpdateRequestBody.name
         enabled = dataplaneGroupUpdateRequestBody.enabled
-        updatedBy =
-          currentUserService.currentUserIdIfExists.orElseThrow {
-            IllegalStateException("No user ID found for update request for dataplane group ${dataplaneGroupUpdateRequestBody.dataplaneGroupId}")
-          }
       }
 
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
@@ -86,18 +76,13 @@ class DataplaneGroupApiController(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
   ): DataplaneGroupRead? {
     val deletedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupDeleteRequestBody.dataplaneGroupId)
-    val updatedById =
-      currentUserService.currentUserIdIfExists.orElseThrow {
-        IllegalStateException("No user ID found for deletion request for dataplane group ${dataplaneGroupDeleteRequestBody.dataplaneGroupId}")
-      }
 
     val tombstonedGroup =
       deletedDataplaneGroup.apply {
         tombstone = true
-        updatedBy = updatedById
       }
     dataplaneService.listDataplanes(dataplaneGroupDeleteRequestBody.dataplaneGroupId).forEach {
-      dataplaneService.deleteDataplane(it.id, updatedById)
+      dataplaneService.deleteDataplane(it.id)
     }
 
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))

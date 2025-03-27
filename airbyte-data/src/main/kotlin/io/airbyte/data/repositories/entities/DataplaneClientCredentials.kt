@@ -18,5 +18,4 @@ open class DataplaneClientCredentials(
   var clientSecret: String,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,
-  var createdBy: UUID,
 )

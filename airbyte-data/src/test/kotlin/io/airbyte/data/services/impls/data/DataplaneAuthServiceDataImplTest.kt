@@ -40,20 +40,18 @@ class DataplaneAuthServiceDataImplTest {
   @Test
   fun `should create credentials`() {
     val dataplaneId = UUID.randomUUID()
-    val createdById = UUID.randomUUID()
     val entity =
       DataplaneClientCredentials(
         id = UUID.randomUUID(),
         dataplaneId = dataplaneId,
         clientId = "test-client-id",
         clientSecret = "test-client-secret",
-        createdBy = createdById,
       )
 
     every { dataplaneClientCredentialsRepository.save(any()) } returns entity
     every { dataplanePasswordEncoder.encode(any()) } returns "password"
 
-    val result = service.createCredentials(dataplaneId, createdById)
+    val result = service.createCredentials(dataplaneId)
 
     result.dataplaneId shouldBe dataplaneId
     result.clientId shouldBe "test-client-id"
@@ -69,7 +67,6 @@ class DataplaneAuthServiceDataImplTest {
         dataplaneId = UUID.randomUUID(),
         clientId = "test-client-id",
         clientSecret = "test-client-secret",
-        createdBy = UUID.randomUUID(),
       )
 
     every { dataplaneClientCredentialsRepository.findById(credentialsId) } returns Optional.of(entity)
@@ -102,7 +99,6 @@ class DataplaneAuthServiceDataImplTest {
         dataplaneId = dataplaneId,
         clientId = clientId,
         clientSecret = clientSecret,
-        createdBy = UUID.randomUUID(),
       )
 
     every { dataplaneClientCredentialsRepository.findByClientId(clientId) } returns entity
@@ -135,7 +131,6 @@ class DataplaneAuthServiceDataImplTest {
         dataplaneId = dataplaneId,
         clientId = clientId,
         clientSecret = "secret",
-        createdBy = UUID.randomUUID(),
       )
 
     every { dataplaneClientCredentialsRepository.findByClientId(clientId) } returns creds

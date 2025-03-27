@@ -22,7 +22,6 @@ import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
 import io.airbyte.data.services.DataplaneAuthService
 import io.airbyte.data.services.DataplaneGroupService
@@ -47,7 +46,6 @@ import java.util.stream.Collectors
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
-  private val currentUserService: CurrentUserService,
 ) : DataplaneApi {
   @Post("/create")
   @Secured(ADMIN)
@@ -55,16 +53,14 @@ open class DataplaneController(
   override fun createDataplane(
     @Body dataplaneCreateRequestBody: DataplaneCreateRequestBody,
   ): DataplaneCreateResponse {
-    val updatedById = currentUserService.currentUserIdIfExists.orElseThrow { IllegalStateException("No current user is logged in.") }
     val dataplane =
       Dataplane().apply {
         dataplaneGroupId = dataplaneCreateRequestBody.dataplaneGroupId
         name = dataplaneCreateRequestBody.name
         enabled = dataplaneCreateRequestBody.enabled
-        updatedBy = updatedById
       }
     val createdDataplane = dataplaneService.writeDataplane(dataplane)
-    val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id, updatedById)
+    val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id)
     return DataplaneCreateResponse()
       .dataplaneId(createdDataplane.id)
       .clientId(dataplaneAuth.clientId)
@@ -82,9 +78,6 @@ open class DataplaneController(
         dataplaneUpdateRequestBody.dataplaneId,
         dataplaneUpdateRequestBody.name,
         dataplaneUpdateRequestBody.enabled,
-        currentUserService.currentUserIdIfExists.orElseThrow {
-          IllegalStateException("No user ID found for deletion request for dataplane ${dataplaneUpdateRequestBody.dataplaneId}")
-        },
       ),
     )
 
@@ -94,13 +87,7 @@ open class DataplaneController(
   override fun deleteDataplane(
     @Body dataplaneDeleteRequestBody: DataplaneDeleteRequestBody,
   ): DataplaneRead {
-    val tombstonedDataplane =
-      dataplaneService.deleteDataplane(
-        dataplaneDeleteRequestBody.dataplaneId,
-        currentUserService.currentUserIdIfExists.orElseThrow {
-          IllegalStateException("No user ID found for deletion request for dataplane ${dataplaneDeleteRequestBody.dataplaneId}")
-        },
-      )
+    val tombstonedDataplane = dataplaneService.deleteDataplane(dataplaneDeleteRequestBody.dataplaneId)
 
     return toDataplaneRead(tombstonedDataplane)
   }
@@ -124,12 +111,12 @@ open class DataplaneController(
   fun toDataplaneRead(dataplane: Dataplane): DataplaneRead {
     val dataplaneRead = DataplaneRead()
     dataplaneRead
-      .dataplaneId(dataplane.getId())
-      .name(dataplane.getName())
-      .dataplaneGroupId(dataplane.getDataplaneGroupId())
-      .enabled(dataplane.getEnabled())
-      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.getCreatedAt()), ZoneOffset.UTC))
-      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.getUpdatedAt()), ZoneOffset.UTC))
+      .dataplaneId(dataplane.id)
+      .name(dataplane.name)
+      .dataplaneGroupId(dataplane.dataplaneGroupId)
+      .enabled(dataplane.enabled)
+      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.createdAt), ZoneOffset.UTC))
+      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.updatedAt), ZoneOffset.UTC))
 
     return dataplaneRead
   }

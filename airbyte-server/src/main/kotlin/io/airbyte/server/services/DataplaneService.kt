@@ -152,10 +152,7 @@ open class DataplaneService(
     return context
   }
 
-  fun createCredentials(
-    dataplaneId: UUID,
-    createdById: UUID,
-  ): io.airbyte.config.DataplaneClientCredentials = dataplaneAuthService.createCredentials(dataplaneId, createdById)
+  fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials = dataplaneAuthService.createCredentials(dataplaneId)
 
   fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
 
@@ -163,7 +160,6 @@ open class DataplaneService(
     dataplaneId: UUID,
     updatedName: String,
     updatedEnabled: Boolean,
-    updatedById: UUID,
   ): Dataplane {
     val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
 
@@ -171,22 +167,17 @@ open class DataplaneService(
       existingDataplane.apply {
         name = updatedName
         enabled = updatedEnabled
-        updatedBy = updatedById
       }
 
     return writeDataplane(updatedDataplane)
   }
 
   @Transactional("config")
-  open fun deleteDataplane(
-    dataplaneId: UUID,
-    updatedById: UUID,
-  ): Dataplane {
+  open fun deleteDataplane(dataplaneId: UUID): Dataplane {
     val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
     val tombstonedDataplane =
       existingDataplane.apply {
         tombstone = true
-        updatedBy = updatedById
       }
 
     dataplaneAuthService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneAuthService.deleteCredentials(it.id) }

@@ -17,17 +17,13 @@ import java.util.UUID
 @Singleton
 @Requires(property = "micronaut.security.enabled", notEquals = "true")
 class DataplaneAuthServiceNoAuthImpl : DataplaneAuthService {
-  override fun createCredentials(
-    dataplaneId: UUID,
-    createdById: UUID,
-  ): DataplaneClientCredentials =
+  override fun createCredentials(dataplaneId: UUID): DataplaneClientCredentials =
     DataplaneClientCredentials(
       id = UUID.randomUUID(),
       dataplaneId = dataplaneId,
       clientId = "non-secure-client-${UUID.randomUUID()}",
       clientSecret = "non-secure-secret-${UUID.randomUUID()}",
       createdAt = OffsetDateTime.now(),
-      createdBy = createdById,
     )
 
   override fun deleteCredentials(dataplaneClientCredentialsId: UUID): DataplaneClientCredentials? = null

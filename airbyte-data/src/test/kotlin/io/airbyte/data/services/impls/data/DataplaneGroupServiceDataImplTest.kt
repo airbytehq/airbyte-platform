@@ -9,7 +9,7 @@ import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -95,7 +95,6 @@ class DataplaneGroupServiceDataImplTest {
         organizationId = mockOrganizationId,
         name = mockGeography,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
@@ -137,7 +136,6 @@ class DataplaneGroupServiceDataImplTest {
         organizationId = DEFAULT_ORGANIZATION_ID,
         name = mockGeography,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
@@ -191,7 +189,6 @@ class DataplaneGroupServiceDataImplTest {
       organizationId = MOCK_ORGANIZATION_ID,
       name = "Test Dataplane Group",
       enabled = true,
-      updatedBy = UUID.randomUUID(),
       tombstone = false,
       createdAt = OffsetDateTime.now(),
       updatedAt = OffsetDateTime.now(),

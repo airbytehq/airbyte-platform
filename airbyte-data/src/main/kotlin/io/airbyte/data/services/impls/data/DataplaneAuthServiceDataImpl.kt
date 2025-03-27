@@ -46,10 +46,7 @@ class DataplaneAuthServiceDataImpl(
    * @param dataplaneId The ID of the dataplane associated with the credentials
    * @return The newly created credentials as a domain object
    */
-  override fun createCredentials(
-    dataplaneId: UUID,
-    createdById: UUID,
-  ): io.airbyte.config.DataplaneClientCredentials {
+  override fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials {
     logger.debug { "Creating credentials for dataplane $dataplaneId" }
 
     val rawSecret = generateClientSecret()
@@ -60,7 +57,6 @@ class DataplaneAuthServiceDataImpl(
           dataplaneId = dataplaneId,
           clientId = generateClientId(),
           clientSecret = dataplanePasswordEncoder.encode(rawSecret),
-          createdBy = createdById,
         ),
       )
     return toDomain(dataplaneClient.apply { clientSecret = rawSecret })
@@ -169,7 +165,6 @@ class DataplaneAuthServiceDataImpl(
         clientId = dataplaneClientCredentials.clientId,
         clientSecret = dataplaneClientCredentials.clientSecret,
         createdAt = dataplaneClientCredentials.createdAt,
-        createdBy = dataplaneClientCredentials.createdBy,
       )
     return dataplaneClientCredentialsDomain
   }

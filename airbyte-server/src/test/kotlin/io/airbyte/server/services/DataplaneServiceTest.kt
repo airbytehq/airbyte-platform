@@ -22,7 +22,7 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.featureflag.CloudProvider
 import io.airbyte.featureflag.CloudProviderRegion
 import io.airbyte.featureflag.Connection
@@ -235,7 +235,6 @@ class DataplaneServiceTest {
         mockDataplane.id,
         newName,
         newEnabled,
-        UUID.randomUUID(),
       )
 
     assert(updatedDataplane.id == mockDataplane.id)
@@ -251,14 +250,14 @@ class DataplaneServiceTest {
     every { dataplaneDataService.writeDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
 
     assertThrows<DataplaneNameAlreadyExistsProblem> {
-      dataplaneService.updateDataplane(mockDataplane.id, "", true, UUID.randomUUID())
+      dataplaneService.updateDataplane(mockDataplane.id, "", true)
     }
   }
 
   @Test
   fun `deleteDataplane tombstones dataplane and deletes its credentials`() {
     val mockDataplane = createDataplane()
-    val mockCredentials = DataplaneClientCredentials(UUID.randomUUID(), UUID.randomUUID(), "", "", OffsetDateTime.now(), UUID.randomUUID())
+    val mockCredentials = DataplaneClientCredentials(UUID.randomUUID(), UUID.randomUUID(), "", "", OffsetDateTime.now())
 
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
     every { dataplaneDataService.listDataplanes(any(), false) } returns listOf(mockDataplane)
@@ -267,7 +266,7 @@ class DataplaneServiceTest {
     every { dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true }) } returns
       mockDataplane.apply { tombstone = true }
 
-    dataplaneService.deleteDataplane(mockDataplane.id, UUID.randomUUID())
+    dataplaneService.deleteDataplane(mockDataplane.id)
 
     verify {
       dataplaneAuthService.deleteCredentials(mockCredentials.id)
@@ -295,7 +294,6 @@ class DataplaneServiceTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "Test Dataplane",
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
         tombstone = false,

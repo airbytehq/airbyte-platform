@@ -58,6 +58,7 @@ abstract class MetricRepositoryTest {
     ctx.truncate(JOBS).cascade().execute();
     ctx.truncate(ATTEMPTS).cascade().execute();
     ctx.truncate(WORKSPACE).cascade().execute();
+    ctx.truncate(DATAPLANE_GROUP).cascade().execute();
   }
 
   @Nested

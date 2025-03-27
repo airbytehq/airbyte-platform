@@ -17,13 +17,9 @@ interface DataplaneAuthService {
    * persisted, ensuring that the provided [dataplaneId] is associated with valid authentication.
    *
    * @param dataplaneId The unique identifier of the dataplane for which credentials are being created.
-   * @param createdById The ID of the user creating these credentials.
    * @return A [DataplaneClientCredentials] object containing the created credentials.
    */
-  fun createCredentials(
-    dataplaneId: UUID,
-    createdById: UUID,
-  ): DataplaneClientCredentials
+  fun createCredentials(dataplaneId: UUID): DataplaneClientCredentials
 
   /**
    * Deletes the credentials associated with the provided [dataplaneClientCredentialsId], if they exist.

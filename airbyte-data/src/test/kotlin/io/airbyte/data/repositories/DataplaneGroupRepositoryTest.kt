@@ -25,13 +25,12 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     @BeforeAll
     @JvmStatic
     fun setup() {
-      // so we don't have to deal with making an organization and user
+      // so we don't have to deal with making an organization
       jooqDslContext
         .alterTable(
           Tables.DATAPLANE_GROUP,
         ).dropForeignKey(Keys.DATAPLANE_GROUP__DATAPLANE_GROUP_ORGANIZATION_ID_FKEY.constraint())
         .execute()
-      jooqDslContext.alterTable(Tables.DATAPLANE_GROUP).dropForeignKey(Keys.DATAPLANE_GROUP__DATAPLANE_GROUP_UPDATED_BY_FKEY.constraint()).execute()
     }
   }
 
@@ -42,7 +41,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = UUID.randomUUID(),
         name = GEOGRAPHY_AUTO,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
       )
     val savedDataplaneGroup = dataplaneGroupRepository.save(dataplaneGroup)
@@ -64,7 +62,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = UUID.randomUUID(),
         name = GEOGRAPHY_AUTO,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
       )
     val savedDataplaneGroup = dataplaneGroupRepository.save(dataplaneGroup)
@@ -87,7 +84,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = UUID.randomUUID(),
         name = GEOGRAPHY_AUTO,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
       )
     val savedDataplaneGroup = dataplaneGroupRepository.save(dataplaneGroup)
@@ -109,7 +105,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = matchingName,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -119,7 +114,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = nonMatchingName,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
       )
@@ -129,7 +123,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = otherOrganizationId,
         name = matchingName,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -157,7 +150,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = GEOGRAPHY_AUTO,
         enabled = true,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -188,7 +180,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = GEOGRAPHY_AUTO,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -197,7 +188,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = GEOGRAPHY_US,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = true,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
       )
@@ -206,7 +196,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = otherOrganizationId,
         name = GEOGRAPHY_EU,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -231,7 +220,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = GEOGRAPHY_AUTO,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
@@ -240,7 +228,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = organizationId,
         name = GEOGRAPHY_EU,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = true,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
       )
@@ -249,7 +236,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
         organizationId = otherOrganizationId,
         name = GEOGRAPHY_US,
         enabled = false,
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
       )
