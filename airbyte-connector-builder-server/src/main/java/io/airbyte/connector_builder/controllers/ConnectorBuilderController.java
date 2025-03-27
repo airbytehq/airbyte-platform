@@ -111,7 +111,17 @@ public class ConnectorBuilderController implements V1Api {
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public Map<String, Object> assistV1Process(@Body final Map<String, Object> requestBody) {
-    return assistProxyHandler.process(requestBody);
+    return assistProxyHandler.process(requestBody, true);
+  }
+
+  @Override
+  @Post(uri = "/v1/assist/v1/warm",
+        consumes = MediaType.APPLICATION_JSON,
+        produces = MediaType.APPLICATION_JSON)
+  @Secured(SecurityRule.IS_ANONYMOUS)
+  @ExecuteOn(TaskExecutors.IO)
+  public Map<String, Object> assistV1Warm(@Body final Map<String, Object> requestBody) {
+    return assistProxyHandler.process(requestBody, false);
   }
 
 }
