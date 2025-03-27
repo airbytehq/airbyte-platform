@@ -761,7 +761,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -799,7 +799,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -886,6 +886,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -900,6 +902,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -918,6 +922,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -985,7 +991,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -1044,21 +1050,6 @@ components:
       - "manual"
       - "cron"
       - "basic"
-      x-speakeasy-component: true
-    GeographyEnum:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
-      default: "auto"
-      x-speakeasy-component: true
-    GeographyEnumNoDefault:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: "string"
@@ -1136,6 +1127,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1174,6 +1167,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1257,6 +1252,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1268,6 +1265,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1282,6 +1281,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1330,7 +1331,7 @@ components:
         name:
           type: "string"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
@@ -1635,6 +1636,129 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-speakeasy-component: true
+    CreateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "workspaceId"
+      - "name"
+      - "manifest"
+      properties:
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "manifest"
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    DeclarativeSourceDefinitionsResponse:
+      title: "Root Type for DeclarativeSourceDefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+    DeclarativeSourceDefinitionResponse:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "manifest"
+      - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+    CreateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
+          format: "uri"
+    UpdateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+    DefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+    DefinitionResponse:
+      title: "Root Type for DefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
       description: ""
@@ -2108,231 +2232,197 @@ components:
                 airbyte_secret: true
                 order: 4
     destination-mssql:
-      title: "MS SQL Server Destination Spec"
+      title: "MSSQL Destination Specification"
       type: "object"
-      required:
-      - "host"
-      - "port"
-      - "username"
-      - "database"
-      - "schema"
-      - "destinationType"
       properties:
         host:
-          title: "Host"
-          description: "The host name of the MSSQL database."
           type: "string"
+          description: "The host name of the MSSQL database."
+          title: "Host"
           order: 0
         port:
-          title: "Port"
-          description: "The port of the MSSQL database."
           type: "integer"
+          description: "The port of the MSSQL database."
+          title: "Port"
           minimum: 0
           maximum: 65536
-          default: 1433
           examples:
           - "1433"
           order: 1
         database:
-          title: "DB Name"
-          description: "The name of the MSSQL database."
           type: "string"
+          description: "The name of the MSSQL database."
+          title: "DB Name"
           order: 2
         schema:
-          title: "Default Schema"
+          type: "string"
           description: "The default schema tables are written to if the source does\
             \ not specify a namespace. The usual value for this field is \"public\"\
             ."
-          type: "string"
+          title: "Default Schema"
           examples:
           - "public"
           default: "public"
           order: 3
-        username:
-          title: "User"
-          description: "The username which is used to access the database."
+        user:
           type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
           order: 4
         password:
-          title: "Password"
-          description: "The password associated with this username."
           type: "string"
+          description: "The password associated with this username."
+          title: "Password"
           airbyte_secret: true
           order: 5
           x-speakeasy-param-sensitive: true
         jdbc_url_params:
-          title: "JDBC URL Params"
+          type: "string"
           description: "Additional properties to pass to the JDBC URL string when\
             \ connecting to the database formatted as 'key=value' pairs separated\
             \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
-          type: "string"
+          title: "JDBC URL Params"
           order: 6
         ssl_method:
-          title: "SSL Method"
-          type: "object"
-          description: "The encryption method which is used to communicate with the\
-            \ database."
-          order: 7
           oneOf:
           - title: "Unencrypted"
-            description: "The data transfer will not be encrypted."
-            required:
-            - "ssl_method"
             type: "object"
+            additionalProperties: true
+            description: "The data transfer will not be encrypted."
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "unencrypted"
                 enum:
                 - "unencrypted"
                 default: "unencrypted"
+            required:
+            - "name"
           - title: "Encrypted (trust server certificate)"
+            type: "object"
+            additionalProperties: true
             description: "Use the certificate provided by the server without verification.\
               \ (For testing purposes only!)"
-            required:
-            - "ssl_method"
-            type: "object"
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "encrypted_trust_server_certificate"
                 enum:
                 - "encrypted_trust_server_certificate"
                 default: "encrypted_trust_server_certificate"
-          - title: "Encrypted (verify certificate)"
-            description: "Verify and use the certificate provided by the server."
             required:
-            - "ssl_method"
-            - "trustStoreName"
-            - "trustStorePassword"
+            - "name"
+          - title: "Encrypted (verify certificate)"
             type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "encrypted_verify_certificate"
                 enum:
                 - "encrypted_verify_certificate"
                 default: "encrypted_verify_certificate"
+              trustStoreName:
+                type: "string"
+                description: "Specifies the name of the trust store."
+                title: "Trust Store Name"
+                order: 1
+              trustStorePassword:
+                type: "string"
+                description: "Specifies the password of the trust store."
+                title: "Trust Store Password"
+                airbyte_secret: true
+                order: 2
+                x-speakeasy-param-sensitive: true
               hostNameInCertificate:
-                title: "Host Name In Certificate"
                 type: "string"
                 description: "Specifies the host name of the server. The value of\
                   \ this property must match the subject property of the certificate."
-                order: 8
-        raw_data_schema:
-          type: "string"
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          title: "Raw Table Schema Name"
+                title: "Host Name In Certificate"
+                order: 3
+            required:
+            - "name"
+          description: "The encryption method which is used to communicate with the\
+            \ database."
+          title: "SSL Method"
           order: 7
-        tunnel_method:
           type: "object"
-          title: "SSH Tunnel Method"
-          description: "Whether to initiate an SSH tunnel before connecting to the\
-            \ database, and if so, which kind of authentication to use."
+        load_type:
           oneOf:
-          - title: "No Tunnel"
-            required:
-            - "tunnel_method"
+          - title: "Insert Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the INSERT loading mechanism."
             properties:
-              tunnel_method:
-                description: "No ssh tunnel needed to connect to database"
+              load_type:
                 type: "string"
-                const: "NO_TUNNEL"
-                order: 0
                 enum:
-                - "NO_TUNNEL"
-          - title: "SSH Key Authentication"
+                - "INSERT"
+                default: "INSERT"
             required:
-            - "tunnel_method"
-            - "tunnel_host"
-            - "tunnel_port"
-            - "tunnel_user"
-            - "ssh_key"
+            - "load_type"
+          - title: "Bulk Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the BULK loading mechanism."
             properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
+              load_type:
                 type: "string"
-                const: "SSH_KEY_AUTH"
-                order: 0
                 enum:
-                - "SSH_KEY_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
+                - "BULK"
+                default: "BULK"
+              azure_blob_storage_account_name:
                 type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
+                description: "The name of the Azure Blob Storage account. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts"
+                title: "Azure Blob Storage Account Name"
                 examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host."
+                - "mystorageaccount"
+              azure_blob_storage_container_name:
                 type: "string"
-                order: 3
-              ssh_key:
-                title: "SSH Private Key"
-                description: "OS-level user account ssh key credentials in RSA PEM\
-                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
-                type: "string"
-                airbyte_secret: true
-                multiline: true
-                order: 4
-                x-speakeasy-param-sensitive: true
-          - title: "Password Authentication"
-            required:
-            - "tunnel_method"
-            - "tunnel_host"
-            - "tunnel_port"
-            - "tunnel_user"
-            - "tunnel_user_password"
-            properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                type: "string"
-                const: "SSH_PASSWORD_AUTH"
-                order: 0
-                enum:
-                - "SSH_PASSWORD_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
-                type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
+                description: "The name of the Azure Blob Storage container. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers"
+                title: "Azure Blob Storage Container Name"
                 examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host"
+                - "mycontainer"
+              shared_access_signature:
                 type: "string"
-                order: 3
-              tunnel_user_password:
-                title: "Password"
-                description: "OS-level password for logging into the jump server host"
-                type: "string"
+                description: "A shared access signature (SAS) provides secure delegated\
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                title: "Shared Access Signature"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
                 airbyte_secret: true
-                order: 4
+                always_show: true
                 x-speakeasy-param-sensitive: true
+              bulk_load_data_source:
+                type: "string"
+                description: "Specifies the external data source name configured in\
+                  \ MSSQL, which references the Azure Blob container. See: https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql"
+                title: "BULK Load Data Source"
+                examples:
+                - "MyAzureBlobStorage"
+                order: 4
+                always_show: true
+              bulk_load_validate_values_pre_load:
+                type: "boolean"
+                description: "When enabled, Airbyte will validate all values before\
+                  \ loading them into the destination table. This provides stronger\
+                  \ data integrity guarantees but may significantly impact performance."
+                title: "Pre-Load Value Validation"
+                examples:
+                - "false"
+                default: false
+                order: 5
+                always_show: false
+            required:
+            - "load_type"
+            - "azure_blob_storage_account_name"
+            - "azure_blob_storage_container_name"
+            - "shared_access_signature"
+            - "bulk_load_data_source"
+          description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
+            \ and its associated configuration."
+          title: "Load Type"
+          always_show: true
+          order: 8
+          type: "object"
         destinationType:
           title: "mssql"
           const: "mssql"
@@ -2340,228 +2430,212 @@ components:
           - "mssql"
           order: 0
           type: "string"
-    destination-mssql-update:
-      title: "MS SQL Server Destination Spec"
-      type: "object"
       required:
       - "host"
       - "port"
-      - "username"
       - "database"
       - "schema"
+      - "user"
+      - "ssl_method"
+      - "load_type"
+      - "destinationType"
+    destination-mssql-update:
+      title: "MSSQL Destination Specification"
+      type: "object"
       properties:
         host:
-          title: "Host"
-          description: "The host name of the MSSQL database."
           type: "string"
+          description: "The host name of the MSSQL database."
+          title: "Host"
           order: 0
         port:
-          title: "Port"
-          description: "The port of the MSSQL database."
           type: "integer"
+          description: "The port of the MSSQL database."
+          title: "Port"
           minimum: 0
           maximum: 65536
-          default: 1433
           examples:
           - "1433"
           order: 1
         database:
-          title: "DB Name"
-          description: "The name of the MSSQL database."
           type: "string"
+          description: "The name of the MSSQL database."
+          title: "DB Name"
           order: 2
         schema:
-          title: "Default Schema"
+          type: "string"
           description: "The default schema tables are written to if the source does\
             \ not specify a namespace. The usual value for this field is \"public\"\
             ."
-          type: "string"
+          title: "Default Schema"
           examples:
           - "public"
           default: "public"
           order: 3
-        username:
-          title: "User"
-          description: "The username which is used to access the database."
+        user:
           type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
           order: 4
         password:
-          title: "Password"
-          description: "The password associated with this username."
           type: "string"
+          description: "The password associated with this username."
+          title: "Password"
           airbyte_secret: true
           order: 5
         jdbc_url_params:
-          title: "JDBC URL Params"
+          type: "string"
           description: "Additional properties to pass to the JDBC URL string when\
             \ connecting to the database formatted as 'key=value' pairs separated\
             \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
-          type: "string"
+          title: "JDBC URL Params"
           order: 6
         ssl_method:
-          title: "SSL Method"
-          type: "object"
-          description: "The encryption method which is used to communicate with the\
-            \ database."
-          order: 7
           oneOf:
           - title: "Unencrypted"
-            description: "The data transfer will not be encrypted."
-            required:
-            - "ssl_method"
             type: "object"
+            additionalProperties: true
+            description: "The data transfer will not be encrypted."
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "unencrypted"
                 enum:
                 - "unencrypted"
                 default: "unencrypted"
+            required:
+            - "name"
           - title: "Encrypted (trust server certificate)"
+            type: "object"
+            additionalProperties: true
             description: "Use the certificate provided by the server without verification.\
               \ (For testing purposes only!)"
-            required:
-            - "ssl_method"
-            type: "object"
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "encrypted_trust_server_certificate"
                 enum:
                 - "encrypted_trust_server_certificate"
                 default: "encrypted_trust_server_certificate"
-          - title: "Encrypted (verify certificate)"
-            description: "Verify and use the certificate provided by the server."
             required:
-            - "ssl_method"
-            - "trustStoreName"
-            - "trustStorePassword"
+            - "name"
+          - title: "Encrypted (verify certificate)"
             type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
             properties:
-              ssl_method:
+              name:
                 type: "string"
-                const: "encrypted_verify_certificate"
                 enum:
                 - "encrypted_verify_certificate"
                 default: "encrypted_verify_certificate"
+              trustStoreName:
+                type: "string"
+                description: "Specifies the name of the trust store."
+                title: "Trust Store Name"
+                order: 1
+              trustStorePassword:
+                type: "string"
+                description: "Specifies the password of the trust store."
+                title: "Trust Store Password"
+                airbyte_secret: true
+                order: 2
               hostNameInCertificate:
-                title: "Host Name In Certificate"
                 type: "string"
                 description: "Specifies the host name of the server. The value of\
                   \ this property must match the subject property of the certificate."
-                order: 8
-        raw_data_schema:
-          type: "string"
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          title: "Raw Table Schema Name"
+                title: "Host Name In Certificate"
+                order: 3
+            required:
+            - "name"
+          description: "The encryption method which is used to communicate with the\
+            \ database."
+          title: "SSL Method"
           order: 7
-        tunnel_method:
           type: "object"
-          title: "SSH Tunnel Method"
-          description: "Whether to initiate an SSH tunnel before connecting to the\
-            \ database, and if so, which kind of authentication to use."
+        load_type:
           oneOf:
-          - title: "No Tunnel"
-            required:
-            - "tunnel_method"
+          - title: "Insert Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the INSERT loading mechanism."
             properties:
-              tunnel_method:
-                description: "No ssh tunnel needed to connect to database"
+              load_type:
                 type: "string"
-                const: "NO_TUNNEL"
-                order: 0
                 enum:
-                - "NO_TUNNEL"
-          - title: "SSH Key Authentication"
+                - "INSERT"
+                default: "INSERT"
             required:
-            - "tunnel_method"
-            - "tunnel_host"
-            - "tunnel_port"
-            - "tunnel_user"
-            - "ssh_key"
+            - "load_type"
+          - title: "Bulk Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the BULK loading mechanism."
             properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
+              load_type:
                 type: "string"
-                const: "SSH_KEY_AUTH"
-                order: 0
                 enum:
-                - "SSH_KEY_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
+                - "BULK"
+                default: "BULK"
+              azure_blob_storage_account_name:
                 type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
+                description: "The name of the Azure Blob Storage account. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts"
+                title: "Azure Blob Storage Account Name"
                 examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host."
+                - "mystorageaccount"
+              azure_blob_storage_container_name:
                 type: "string"
-                order: 3
-              ssh_key:
-                title: "SSH Private Key"
-                description: "OS-level user account ssh key credentials in RSA PEM\
-                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
-                type: "string"
-                airbyte_secret: true
-                multiline: true
-                order: 4
-          - title: "Password Authentication"
-            required:
-            - "tunnel_method"
-            - "tunnel_host"
-            - "tunnel_port"
-            - "tunnel_user"
-            - "tunnel_user_password"
-            properties:
-              tunnel_method:
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                type: "string"
-                const: "SSH_PASSWORD_AUTH"
-                order: 0
-                enum:
-                - "SSH_PASSWORD_AUTH"
-              tunnel_host:
-                title: "SSH Tunnel Jump Server Host"
-                description: "Hostname of the jump server host that allows inbound\
-                  \ ssh tunnel."
-                type: "string"
-                order: 1
-              tunnel_port:
-                title: "SSH Connection Port"
-                description: "Port on the proxy/jump server that accepts inbound ssh\
-                  \ connections."
-                type: "integer"
-                minimum: 0
-                maximum: 65536
-                default: 22
+                description: "The name of the Azure Blob Storage container. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers"
+                title: "Azure Blob Storage Container Name"
                 examples:
-                - "22"
-                order: 2
-              tunnel_user:
-                title: "SSH Login Username"
-                description: "OS-level username for logging into the jump server host"
+                - "mycontainer"
+              shared_access_signature:
                 type: "string"
-                order: 3
-              tunnel_user_password:
-                title: "Password"
-                description: "OS-level password for logging into the jump server host"
-                type: "string"
+                description: "A shared access signature (SAS) provides secure delegated\
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                title: "Shared Access Signature"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
                 airbyte_secret: true
+                always_show: true
+              bulk_load_data_source:
+                type: "string"
+                description: "Specifies the external data source name configured in\
+                  \ MSSQL, which references the Azure Blob container. See: https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql"
+                title: "BULK Load Data Source"
+                examples:
+                - "MyAzureBlobStorage"
                 order: 4
+                always_show: true
+              bulk_load_validate_values_pre_load:
+                type: "boolean"
+                description: "When enabled, Airbyte will validate all values before\
+                  \ loading them into the destination table. This provides stronger\
+                  \ data integrity guarantees but may significantly impact performance."
+                title: "Pre-Load Value Validation"
+                examples:
+                - "false"
+                default: false
+                order: 5
+                always_show: false
+            required:
+            - "load_type"
+            - "azure_blob_storage_account_name"
+            - "azure_blob_storage_container_name"
+            - "shared_access_signature"
+            - "bulk_load_data_source"
+          description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
+            \ and its associated configuration."
+          title: "Load Type"
+          always_show: true
+          order: 8
+          type: "object"
+      required:
+      - "host"
+      - "port"
+      - "database"
+      - "schema"
+      - "user"
+      - "ssl_method"
+      - "load_type"
     destination-mysql:
       title: "MySQL Destination Spec"
       type: "object"
@@ -6630,32 +6704,63 @@ components:
           - "https://docs.google.com/spreadsheets/d/1hLd9Qqti3UyLXZB2aFfUWDT7BG/edit"
         credentials:
           type: "object"
-          title: "Authentication via Google (OAuth)"
-          description: "Google API Credentials for connecting to Google Sheets and\
-            \ Google Drive APIs"
-          required:
-          - "client_id"
-          - "client_secret"
-          - "refresh_token"
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your Google Sheets developer application."
-              airbyte_secret: true
-              x-speakeasy-param-sensitive: true
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The Client Secret of your Google Sheets developer application."
-              airbyte_secret: true
-              x-speakeasy-param-sensitive: true
-            refresh_token:
-              title: "Refresh Token"
-              type: "string"
-              description: "The token for obtaining new access token."
-              airbyte_secret: true
-              x-speakeasy-param-sensitive: true
+          title: "Authentication"
+          description: "Authentication method to access Google Sheets"
+          oneOf:
+          - title: "Authenticate via Google (OAuth)"
+            type: "object"
+            required:
+            - "auth_type"
+            - "client_id"
+            - "client_secret"
+            - "refresh_token"
+            properties:
+              auth_type:
+                type: "string"
+                const: "oauth2.0"
+                default: "oauth2.0"
+                order: 0
+                enum:
+                - "oauth2.0"
+              client_id:
+                title: "Client ID"
+                type: "string"
+                description: "The Client ID of your Google Sheets developer application."
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+              client_secret:
+                title: "Client Secret"
+                type: "string"
+                description: "The Client Secret of your Google Sheets developer application."
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+              refresh_token:
+                title: "Refresh Token"
+                type: "string"
+                description: "The token for obtaining new access token."
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+          - title: "Service Account Key Authentication"
+            type: "object"
+            required:
+            - "auth_type"
+            - "service_account_info"
+            properties:
+              auth_type:
+                type: "string"
+                const: "service"
+                default: "service"
+                order: 0
+                enum:
+                - "service"
+              service_account_info:
+                title: "Service Account Information"
+                type: "string"
+                description: "Enter your service account key in JSON format. See the\
+                  \ <a href='https://docs.airbyte.com/integrations/destinations/google-sheets#service-account'>docs</a>\
+                  \ for more information on how to generate this key."
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
         destinationType:
           title: "google-sheets"
           const: "google-sheets"
@@ -6679,35 +6784,64 @@ components:
           - "https://docs.google.com/spreadsheets/d/1hLd9Qqti3UyLXZB2aFfUWDT7BG/edit"
         credentials:
           type: "object"
-          title: "Authentication via Google (OAuth)"
-          description: "Google API Credentials for connecting to Google Sheets and\
-            \ Google Drive APIs"
-          required:
-          - "client_id"
-          - "client_secret"
-          - "refresh_token"
-          properties:
-            client_id:
-              title: "Client ID"
-              type: "string"
-              description: "The Client ID of your Google Sheets developer application."
-              airbyte_secret: true
-            client_secret:
-              title: "Client Secret"
-              type: "string"
-              description: "The Client Secret of your Google Sheets developer application."
-              airbyte_secret: true
-            refresh_token:
-              title: "Refresh Token"
-              type: "string"
-              description: "The token for obtaining new access token."
-              airbyte_secret: true
+          title: "Authentication"
+          description: "Authentication method to access Google Sheets"
+          oneOf:
+          - title: "Authenticate via Google (OAuth)"
+            type: "object"
+            required:
+            - "auth_type"
+            - "client_id"
+            - "client_secret"
+            - "refresh_token"
+            properties:
+              auth_type:
+                type: "string"
+                const: "oauth2.0"
+                default: "oauth2.0"
+                order: 0
+                enum:
+                - "oauth2.0"
+              client_id:
+                title: "Client ID"
+                type: "string"
+                description: "The Client ID of your Google Sheets developer application."
+                airbyte_secret: true
+              client_secret:
+                title: "Client Secret"
+                type: "string"
+                description: "The Client Secret of your Google Sheets developer application."
+                airbyte_secret: true
+              refresh_token:
+                title: "Refresh Token"
+                type: "string"
+                description: "The token for obtaining new access token."
+                airbyte_secret: true
+          - title: "Service Account Key Authentication"
+            type: "object"
+            required:
+            - "auth_type"
+            - "service_account_info"
+            properties:
+              auth_type:
+                type: "string"
+                const: "service"
+                default: "service"
+                order: 0
+                enum:
+                - "service"
+              service_account_info:
+                title: "Service Account Information"
+                type: "string"
+                description: "Enter your service account key in JSON format. See the\
+                  \ <a href='https://docs.airbyte.com/integrations/destinations/google-sheets#service-account'>docs</a>\
+                  \ for more information on how to generate this key."
+                airbyte_secret: true
     destination-teradata:
       title: "Teradata Destination Spec"
       type: "object"
       required:
       - "host"
-      - "username"
       - "destinationType"
       properties:
         host:
@@ -6715,18 +6849,64 @@ components:
           description: "Hostname of the database."
           type: "string"
           order: 0
-        username:
-          title: "User"
-          description: "Username to use to access the database."
-          type: "string"
+        logmech:
+          title: "Authorization Mechanism"
+          description: ""
+          type: "object"
           order: 1
-        password:
-          title: "Password"
-          description: "Password associated with the username."
-          type: "string"
-          airbyte_secret: true
-          order: 2
-          x-speakeasy-param-sensitive: true
+          oneOf:
+          - title: "TD2"
+            type: "object"
+            order: 0
+            required:
+            - "username"
+            - "password"
+            properties:
+              auth_type:
+                type: "string"
+                const: "TD2"
+                enum:
+                - "TD2"
+                default: "TD2"
+                order: 0
+              username:
+                title: "User"
+                description: "Username to use to access the database."
+                type: "string"
+                order: 1
+              password:
+                description: "Enter the password associated with the username."
+                type: "string"
+                airbyte_secret: true
+                title: "Password"
+                order: 2
+                x-speakeasy-param-sensitive: true
+          - title: "LDAP"
+            type: "object"
+            required:
+            - "username"
+            - "password"
+            order: 1
+            properties:
+              auth_type:
+                type: "string"
+                const: "LDAP"
+                enum:
+                - "LDAP"
+                default: "LDAP"
+                order: 0
+              username:
+                title: "User"
+                description: "Username to use to access the database."
+                type: "string"
+                order: 1
+              password:
+                description: "Enter the password associated with the username."
+                type: "string"
+                airbyte_secret: true
+                title: "Password"
+                order: 2
+                x-speakeasy-param-sensitive: true
         schema:
           title: "Default Schema"
           description: "The default schema tables are written to if the source does\
@@ -6736,14 +6916,14 @@ components:
           examples:
           - "airbyte_td"
           default: "airbyte_td"
-          order: 3
+          order: 2
         ssl:
           title: "SSL Connection"
           description: "Encrypt data using SSL. When activating SSL, please select\
-            \ one of the connection modes."
+            \ one of the SSL modes."
           type: "boolean"
           default: false
-          order: 5
+          order: 3
         ssl_mode:
           title: "SSL modes"
           description: "SSL connection modes. \n <b>disable</b> - Chose this mode\
@@ -6761,7 +6941,7 @@ components:
             \ - <a href=\"https://teradata-docs.s3.amazonaws.com/doc/connectivity/jdbc/reference/current/jdbcug_chapter_2.html#URL_SSLMODE\"\
             > in the docs</a>."
           type: "object"
-          order: 6
+          order: 4
           oneOf:
           - title: "disable"
             additionalProperties: false
@@ -6871,7 +7051,13 @@ components:
             \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
           title: "JDBC URL Params"
           type: "string"
-          order: 7
+          order: 5
+        query_band:
+          description: "Defines the custom session query band using name-value pairs.\
+            \ For example, 'org=Finance;report=Fin123;'"
+          title: "Query Band"
+          type: "string"
+          order: 6
         destinationType:
           title: "teradata"
           const: "teradata"
@@ -6884,24 +7070,68 @@ components:
       type: "object"
       required:
       - "host"
-      - "username"
       properties:
         host:
           title: "Host"
           description: "Hostname of the database."
           type: "string"
           order: 0
-        username:
-          title: "User"
-          description: "Username to use to access the database."
-          type: "string"
+        logmech:
+          title: "Authorization Mechanism"
+          description: ""
+          type: "object"
           order: 1
-        password:
-          title: "Password"
-          description: "Password associated with the username."
-          type: "string"
-          airbyte_secret: true
-          order: 2
+          oneOf:
+          - title: "TD2"
+            type: "object"
+            order: 0
+            required:
+            - "username"
+            - "password"
+            properties:
+              auth_type:
+                type: "string"
+                const: "TD2"
+                enum:
+                - "TD2"
+                default: "TD2"
+                order: 0
+              username:
+                title: "User"
+                description: "Username to use to access the database."
+                type: "string"
+                order: 1
+              password:
+                description: "Enter the password associated with the username."
+                type: "string"
+                airbyte_secret: true
+                title: "Password"
+                order: 2
+          - title: "LDAP"
+            type: "object"
+            required:
+            - "username"
+            - "password"
+            order: 1
+            properties:
+              auth_type:
+                type: "string"
+                const: "LDAP"
+                enum:
+                - "LDAP"
+                default: "LDAP"
+                order: 0
+              username:
+                title: "User"
+                description: "Username to use to access the database."
+                type: "string"
+                order: 1
+              password:
+                description: "Enter the password associated with the username."
+                type: "string"
+                airbyte_secret: true
+                title: "Password"
+                order: 2
         schema:
           title: "Default Schema"
           description: "The default schema tables are written to if the source does\
@@ -6911,14 +7141,14 @@ components:
           examples:
           - "airbyte_td"
           default: "airbyte_td"
-          order: 3
+          order: 2
         ssl:
           title: "SSL Connection"
           description: "Encrypt data using SSL. When activating SSL, please select\
-            \ one of the connection modes."
+            \ one of the SSL modes."
           type: "boolean"
           default: false
-          order: 5
+          order: 3
         ssl_mode:
           title: "SSL modes"
           description: "SSL connection modes. \n <b>disable</b> - Chose this mode\
@@ -6936,7 +7166,7 @@ components:
             \ - <a href=\"https://teradata-docs.s3.amazonaws.com/doc/connectivity/jdbc/reference/current/jdbcug_chapter_2.html#URL_SSLMODE\"\
             > in the docs</a>."
           type: "object"
-          order: 6
+          order: 4
           oneOf:
           - title: "disable"
             additionalProperties: false
@@ -7044,7 +7274,13 @@ components:
             \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
           title: "JDBC URL Params"
           type: "string"
-          order: 7
+          order: 5
+        query_band:
+          description: "Defines the custom session query band using name-value pairs.\
+            \ For example, 'org=Finance;report=Fin123;'"
+          title: "Query Band"
+          type: "string"
+          order: 6
     destination-duckdb:
       title: "Destination Duckdb"
       type: "object"
@@ -7937,6 +8173,84 @@ components:
           title: "SSL Method"
           order: 7
           type: "object"
+        load_type:
+          oneOf:
+          - title: "Insert Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the INSERT loading mechanism."
+            properties:
+              load_type:
+                type: "string"
+                enum:
+                - "INSERT"
+                default: "INSERT"
+            required:
+            - "load_type"
+          - title: "Bulk Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the BULK loading mechanism."
+            properties:
+              load_type:
+                type: "string"
+                enum:
+                - "BULK"
+                default: "BULK"
+              azure_blob_storage_account_name:
+                type: "string"
+                description: "The name of the Azure Blob Storage account. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts"
+                title: "Azure Blob Storage Account Name"
+                examples:
+                - "mystorageaccount"
+              azure_blob_storage_container_name:
+                type: "string"
+                description: "The name of the Azure Blob Storage container. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers"
+                title: "Azure Blob Storage Container Name"
+                examples:
+                - "mycontainer"
+              shared_access_signature:
+                type: "string"
+                description: "A shared access signature (SAS) provides secure delegated\
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                title: "Shared Access Signature"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                airbyte_secret: true
+                always_show: true
+                x-speakeasy-param-sensitive: true
+              bulk_load_data_source:
+                type: "string"
+                description: "Specifies the external data source name configured in\
+                  \ MSSQL, which references the Azure Blob container. See: https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql"
+                title: "BULK Load Data Source"
+                examples:
+                - "MyAzureBlobStorage"
+                order: 4
+                always_show: true
+              bulk_load_validate_values_pre_load:
+                type: "boolean"
+                description: "When enabled, Airbyte will validate all values before\
+                  \ loading them into the destination table. This provides stronger\
+                  \ data integrity guarantees but may significantly impact performance."
+                title: "Pre-Load Value Validation"
+                examples:
+                - "false"
+                default: false
+                order: 5
+                always_show: false
+            required:
+            - "load_type"
+            - "azure_blob_storage_account_name"
+            - "azure_blob_storage_container_name"
+            - "shared_access_signature"
+            - "bulk_load_data_source"
+          description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
+            \ and its associated configuration."
+          title: "Load Type"
+          always_show: true
+          order: 8
+          type: "object"
         destinationType:
           title: "mssql-v2"
           const: "mssql-v2"
@@ -7951,6 +8265,7 @@ components:
       - "schema"
       - "user"
       - "ssl_method"
+      - "load_type"
       - "destinationType"
     destination-mssql-v2-update:
       title: "MSSQL V2 Destination Specification"
@@ -8064,6 +8379,83 @@ components:
           title: "SSL Method"
           order: 7
           type: "object"
+        load_type:
+          oneOf:
+          - title: "Insert Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the INSERT loading mechanism."
+            properties:
+              load_type:
+                type: "string"
+                enum:
+                - "INSERT"
+                default: "INSERT"
+            required:
+            - "load_type"
+          - title: "Bulk Load"
+            type: "object"
+            additionalProperties: true
+            description: "Configuration details for using the BULK loading mechanism."
+            properties:
+              load_type:
+                type: "string"
+                enum:
+                - "BULK"
+                default: "BULK"
+              azure_blob_storage_account_name:
+                type: "string"
+                description: "The name of the Azure Blob Storage account. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts"
+                title: "Azure Blob Storage Account Name"
+                examples:
+                - "mystorageaccount"
+              azure_blob_storage_container_name:
+                type: "string"
+                description: "The name of the Azure Blob Storage container. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers"
+                title: "Azure Blob Storage Container Name"
+                examples:
+                - "mycontainer"
+              shared_access_signature:
+                type: "string"
+                description: "A shared access signature (SAS) provides secure delegated\
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                title: "Shared Access Signature"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                airbyte_secret: true
+                always_show: true
+              bulk_load_data_source:
+                type: "string"
+                description: "Specifies the external data source name configured in\
+                  \ MSSQL, which references the Azure Blob container. See: https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql"
+                title: "BULK Load Data Source"
+                examples:
+                - "MyAzureBlobStorage"
+                order: 4
+                always_show: true
+              bulk_load_validate_values_pre_load:
+                type: "boolean"
+                description: "When enabled, Airbyte will validate all values before\
+                  \ loading them into the destination table. This provides stronger\
+                  \ data integrity guarantees but may significantly impact performance."
+                title: "Pre-Load Value Validation"
+                examples:
+                - "false"
+                default: false
+                order: 5
+                always_show: false
+            required:
+            - "load_type"
+            - "azure_blob_storage_account_name"
+            - "azure_blob_storage_container_name"
+            - "shared_access_signature"
+            - "bulk_load_data_source"
+          description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
+            \ and its associated configuration."
+          title: "Load Type"
+          always_show: true
+          order: 8
+          type: "object"
       required:
       - "host"
       - "port"
@@ -8071,6 +8463,7 @@ components:
       - "schema"
       - "user"
       - "ssl_method"
+      - "load_type"
     destination-sftp-json:
       title: "Destination SFTP JSON"
       type: "object"
@@ -12832,6 +13225,77 @@ components:
           description: "Number of bytes before the buffer is flushed"
           default: 1
           minimum: 1
+    destination-deepset:
+      title: "Deepset Destination Spec"
+      type: "object"
+      required:
+      - "api_key"
+      - "workspace"
+      - "destinationType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          description: "Your deepset cloud API key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        base_url:
+          type: "string"
+          title: "Base URL"
+          default: "https://api.cloud.deepset.ai"
+          description: "URL of deepset Cloud API (e.g. https://api.cloud.deepset.ai,\
+            \ https://api.us.deepset.ai, etc). Defaults to https://api.cloud.deepset.ai."
+          order: 1
+        workspace:
+          type: "string"
+          title: "Workspace Name"
+          description: "Name of workspace to which to sync the data."
+          order: 2
+        retries:
+          type: "number"
+          default: 5
+          title: "Retry Count"
+          description: "Number of times to retry an action before giving up."
+          order: 3
+        destinationType:
+          title: "deepset"
+          const: "deepset"
+          enum:
+          - "deepset"
+          order: 0
+          type: "string"
+    destination-deepset-update:
+      title: "Deepset Destination Spec"
+      type: "object"
+      required:
+      - "api_key"
+      - "workspace"
+      properties:
+        api_key:
+          type: "string"
+          title: "API Key"
+          description: "Your deepset cloud API key"
+          airbyte_secret: true
+          order: 0
+        base_url:
+          type: "string"
+          title: "Base URL"
+          default: "https://api.cloud.deepset.ai"
+          description: "URL of deepset Cloud API (e.g. https://api.cloud.deepset.ai,\
+            \ https://api.us.deepset.ai, etc). Defaults to https://api.cloud.deepset.ai."
+          order: 1
+        workspace:
+          type: "string"
+          title: "Workspace Name"
+          description: "Name of workspace to which to sync the data."
+          order: 2
+        retries:
+          type: "number"
+          default: 5
+          title: "Retry Count"
+          description: "Number of times to retry an action before giving up."
+          order: 3
     destination-weaviate:
       title: "Destination Config"
       description: "The configuration model for the Vector DB based destinations.\
@@ -18619,6 +19083,214 @@ components:
         title: "Indexing"
       - id: "advanced"
         title: "Advanced"
+    destination-cobra:
+      title: "Salesforce Destination Spec"
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "refresh_token"
+      - "stream_mappings"
+      - "stream_order"
+      - "print_record_content_on_error"
+      - "is_sandbox"
+      - "destinationType"
+      properties:
+        client_id:
+          title: "Client ID"
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client ID</a>"
+          type: "string"
+          order: 1
+        auth_type:
+          type: "string"
+          const: "Client"
+          enum:
+          - "Client"
+        client_secret:
+          title: "Client Secret"
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client secret</a>"
+          type: "string"
+          airbyte_secret: true
+          order: 2
+          x-speakeasy-param-sensitive: true
+        refresh_token:
+          title: "Refresh Token"
+          description: "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\"\
+            >Salesforce Refresh Token</a> used for Airbyte to access your Salesforce\
+            \ account."
+          type: "string"
+          airbyte_secret: true
+          order: 3
+          x-speakeasy-param-sensitive: true
+        stream_mappings:
+          title: "Stream Mapping to Salesforce"
+          type: "array"
+          items:
+            type: "object"
+            title: "Stream Mapping"
+            description: "Describes the relationship between a source stream and a\
+              \ destination table and how to update the information."
+            required:
+            - "source_stream"
+            - "destination_table"
+            - "update_mode"
+            properties:
+              source_stream:
+                title: "Source stream"
+                description: "The name for the input stream."
+                type: "string"
+              destination_table:
+                title: "Destination table"
+                description: "The name for the table to update the data in the destination."
+                type: "string"
+              update_mode:
+                title: "Update mode"
+                description: "How to update the data in the destination."
+                type: "string"
+                enum:
+                - "INSERT"
+                - "UPDATE"
+                - "UPSERT"
+                - "DELETE"
+              upsert_key:
+                title: "Upsert key"
+                description: "Given the operation is an upsert, a field representing\
+                  \ an external ID needs to be provided"
+                type: "string"
+          default: []
+          order: 4
+        stream_order:
+          title: "Stream Sync Order"
+          description: "The order in which the streams should be synced. Streams are\
+            \ synced in the order they are listed. Only those streams will be synced\
+            \ so make sure all the input streams are configured here."
+          type: "array"
+          items:
+            type: "string"
+          default: []
+          order: 5
+        print_record_content_on_error:
+          title: "Include Record Contents in Error Logs"
+          description: "If enabled, the records content will be printed as part of\
+            \ the log in case of failure which allows for easier debugging."
+          type: "boolean"
+          default: false
+          order: 6
+        is_sandbox:
+          title: "Sync to Salesforce Sandbox"
+          description: "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\"\
+            >Salesforce Sandbox</a>"
+          type: "boolean"
+          default: false
+          order: 7
+        destinationType:
+          title: "cobra"
+          const: "cobra"
+          enum:
+          - "cobra"
+          order: 0
+          type: "string"
+    destination-cobra-update:
+      title: "Salesforce Destination Spec"
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "refresh_token"
+      - "stream_mappings"
+      - "stream_order"
+      - "print_record_content_on_error"
+      - "is_sandbox"
+      properties:
+        client_id:
+          title: "Client ID"
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client ID</a>"
+          type: "string"
+          order: 1
+        auth_type:
+          type: "string"
+          const: "Client"
+          enum:
+          - "Client"
+        client_secret:
+          title: "Client Secret"
+          description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
+            >Client secret</a>"
+          type: "string"
+          airbyte_secret: true
+          order: 2
+        refresh_token:
+          title: "Refresh Token"
+          description: "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\"\
+            >Salesforce Refresh Token</a> used for Airbyte to access your Salesforce\
+            \ account."
+          type: "string"
+          airbyte_secret: true
+          order: 3
+        stream_mappings:
+          title: "Stream Mapping to Salesforce"
+          type: "array"
+          items:
+            type: "object"
+            title: "Stream Mapping"
+            description: "Describes the relationship between a source stream and a\
+              \ destination table and how to update the information."
+            required:
+            - "source_stream"
+            - "destination_table"
+            - "update_mode"
+            properties:
+              source_stream:
+                title: "Source stream"
+                description: "The name for the input stream."
+                type: "string"
+              destination_table:
+                title: "Destination table"
+                description: "The name for the table to update the data in the destination."
+                type: "string"
+              update_mode:
+                title: "Update mode"
+                description: "How to update the data in the destination."
+                type: "string"
+                enum:
+                - "INSERT"
+                - "UPDATE"
+                - "UPSERT"
+                - "DELETE"
+              upsert_key:
+                title: "Upsert key"
+                description: "Given the operation is an upsert, a field representing\
+                  \ an external ID needs to be provided"
+                type: "string"
+          default: []
+          order: 4
+        stream_order:
+          title: "Stream Sync Order"
+          description: "The order in which the streams should be synced. Streams are\
+            \ synced in the order they are listed. Only those streams will be synced\
+            \ so make sure all the input streams are configured here."
+          type: "array"
+          items:
+            type: "string"
+          default: []
+          order: 5
+        print_record_content_on_error:
+          title: "Include Record Contents in Error Logs"
+          description: "If enabled, the records content will be printed as part of\
+            \ the log in case of failure which allows for easier debugging."
+          type: "boolean"
+          default: false
+          order: 6
+        is_sandbox:
+          title: "Sync to Salesforce Sandbox"
+          description: "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\"\
+            >Salesforce Sandbox</a>"
+          type: "boolean"
+          default: false
+          order: 7
     destination-bigquery:
       title: "BigQuery Destination Spec"
       type: "object"
@@ -19979,10 +20651,14 @@ components:
           $ref: "#/components/schemas/destination-bigquery"
         - title: destination-clickhouse
           $ref: "#/components/schemas/destination-clickhouse"
+        - title: destination-cobra
+          $ref: "#/components/schemas/destination-cobra"
         - title: destination-convex
           $ref: "#/components/schemas/destination-convex"
         - title: destination-databricks
           $ref: "#/components/schemas/destination-databricks"
+        - title: destination-deepset
+          $ref: "#/components/schemas/destination-deepset"
         - title: destination-dev-null
           $ref: "#/components/schemas/destination-dev-null"
         - title: destination-duckdb

@@ -719,7 +719,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -757,7 +757,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -844,6 +844,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -858,6 +860,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -876,6 +880,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -943,7 +949,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -1002,21 +1008,6 @@ components:
       - "manual"
       - "cron"
       - "basic"
-      x-speakeasy-component: true
-    GeographyEnum:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
-      default: "auto"
-      x-speakeasy-component: true
-    GeographyEnumNoDefault:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: "string"
@@ -1094,6 +1085,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1132,6 +1125,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1215,6 +1210,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1226,6 +1223,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1240,6 +1239,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1288,7 +1289,7 @@ components:
         name:
           type: "string"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
@@ -1593,6 +1594,129 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-speakeasy-component: true
+    CreateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "workspaceId"
+      - "name"
+      - "manifest"
+      properties:
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "manifest"
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    DeclarativeSourceDefinitionsResponse:
+      title: "Root Type for DeclarativeSourceDefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+    DeclarativeSourceDefinitionResponse:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "manifest"
+      - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+    CreateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
+          format: "uri"
+    UpdateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+    DefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+    DefinitionResponse:
+      title: "Root Type for DefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
       description: ""
@@ -1853,15 +1977,15 @@ components:
           properties:
             client_id:
               type: "string"
-              title: "Client ID"
               description: "Client ID"
+              title: "Client ID"
               airbyte_secret: true
             client_secret:
               type: "string"
-              title: "Client Secret"
               description: "Client Secret"
+              title: "Client Secret"
               airbyte_secret: true
-      title: "Source Zendesk Talk Spec"
+      title: null
     linkedin-ads:
       properties:
         credentials:
@@ -2059,21 +2183,6 @@ components:
       title: "Config"
     trello:
       title: null
-    zendesk-chat:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of your OAuth application"
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of your OAuth application."
-              airbyte_secret: true
-      title: "Zendesk Chat Spec"
     google-ads:
       properties:
         credentials:
@@ -2475,8 +2584,6 @@ components:
           $ref: "#/components/schemas/typeform"
         - title: youtube-analytics
           $ref: "#/components/schemas/youtube-analytics"
-        - title: zendesk-chat
-          $ref: "#/components/schemas/zendesk-chat"
         - title: zendesk-support
           $ref: "#/components/schemas/zendesk-support"
         - title: zendesk-talk
@@ -2569,7 +2676,6 @@ components:
         - trello
         - typeform
         - youtube-analytics
-        - zendesk-chat
         - zendesk-support
         - zendesk-talk
   securitySchemes:

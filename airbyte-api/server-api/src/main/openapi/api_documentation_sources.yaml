@@ -774,7 +774,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -812,7 +812,7 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -899,6 +899,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -913,6 +915,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -931,6 +935,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -998,7 +1004,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -1057,21 +1063,6 @@ components:
       - "manual"
       - "cron"
       - "basic"
-      x-speakeasy-component: true
-    GeographyEnum:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
-      default: "auto"
-      x-speakeasy-component: true
-    GeographyEnumNoDefault:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: "string"
@@ -1149,6 +1140,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1187,6 +1180,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1270,6 +1265,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1281,6 +1278,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1295,6 +1294,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1343,7 +1344,7 @@ components:
         name:
           type: "string"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
@@ -1648,6 +1649,129 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-speakeasy-component: true
+    CreateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "workspaceId"
+      - "name"
+      - "manifest"
+      properties:
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "manifest"
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    DeclarativeSourceDefinitionsResponse:
+      title: "Root Type for DeclarativeSourceDefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+    DeclarativeSourceDefinitionResponse:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "manifest"
+      - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+    CreateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
+          format: "uri"
+    UpdateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+    DefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+    DefinitionResponse:
+      title: "Root Type for DefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
       description: ""
@@ -2015,7 +2139,6 @@ components:
           examples:
           - "YYYY-MM-DD"
     source-prestashop:
-      title: "PrestaShop Spec"
       type: "object"
       required:
       - "access_key"
@@ -2025,21 +2148,21 @@ components:
       properties:
         access_key:
           type: "string"
-          title: "Access Key"
           description: "Your PrestaShop access key. See <a href=\"https://devdocs.prestashop.com/1.7/webservice/tutorials/creating-access/#create-an-access-key\"\
             > the docs </a> for info on how to obtain this."
+          title: "Access Key"
           order: 0
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
         url:
           type: "string"
-          title: "Shop URL"
           description: "Shop URL without trailing slash."
+          title: "Shop URL"
           order: 1
         start_date:
           type: "string"
-          title: "Start date"
           description: "The Start date in the format YYYY-MM-DD."
+          title: "Start date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2022-01-01"
@@ -2053,7 +2176,6 @@ components:
           order: 0
           type: "string"
     source-prestashop-update:
-      title: "PrestaShop Spec"
       type: "object"
       required:
       - "access_key"
@@ -2062,20 +2184,20 @@ components:
       properties:
         access_key:
           type: "string"
-          title: "Access Key"
           description: "Your PrestaShop access key. See <a href=\"https://devdocs.prestashop.com/1.7/webservice/tutorials/creating-access/#create-an-access-key\"\
             > the docs </a> for info on how to obtain this."
+          title: "Access Key"
           order: 0
           airbyte_secret: true
         url:
           type: "string"
-          title: "Shop URL"
           description: "Shop URL without trailing slash."
+          title: "Shop URL"
           order: 1
         start_date:
           type: "string"
-          title: "Start date"
           description: "The Start date in the format YYYY-MM-DD."
+          title: "Start date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2022-01-01"
@@ -2433,23 +2555,25 @@ components:
           airbyte_secret: true
           order: 2
     source-klaviyo:
-      title: "Klaviyo Spec"
       type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
       properties:
         api_key:
           type: "string"
-          title: "Api Key"
           description: "Klaviyo API Key. See our <a href=\"https://docs.airbyte.com/integrations/sources/klaviyo\"\
             >docs</a> if you need help finding this key."
+          title: "Api Key"
           airbyte_secret: true
           order: 0
           x-speakeasy-param-sensitive: true
         start_date:
           type: "string"
-          title: "Start Date"
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
             \ data before this date will not be replicated. This field is optional\
             \ - if not provided, all data will be replicated."
+          title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2017-01-25T00:00:00Z"
@@ -2457,16 +2581,21 @@ components:
           order: 1
         disable_fetching_predictive_analytics:
           type: "boolean"
-          title: "Disable Fetching Predictive Analytics"
           description: "Certain streams like the profiles stream can retrieve predictive\
             \ analytics data from Klaviyo's API. However, at high volume, this can\
             \ lead to service availability issues on the API which can be improved\
             \ by not fetching this field. WARNING: Enabling this setting will stop\
             \ the  \"predictive_analytics\" column from being populated in your downstream\
             \ destination."
+          title: "Disable Fetching Predictive Analytics"
           order: 2
         num_workers:
           type: "integer"
+          description: "The number of worker threads to use for the sync. The performance\
+            \ upper boundary is based on the limit of your Klaviyo plan. More info\
+            \ about the rate limit plan tiers can be found on Klaviyo's API <a href=\"\
+            https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling\"\
+            >docs</a>."
           title: "Number of concurrent workers"
           minimum: 1
           maximum: 50
@@ -2475,11 +2604,6 @@ components:
           - 1
           - 2
           - 3
-          description: "The number of worker threads to use for the sync. The performance\
-            \ upper boundary is based on the limit of your Klaviyo plan. More info\
-            \ about the rate limit plan tiers can be found on Klaviyo's API <a href=\"\
-            https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling\"\
-            >docs</a>."
           order: 3
         sourceType:
           title: "klaviyo"
@@ -2488,26 +2612,24 @@ components:
           - "klaviyo"
           order: 0
           type: "string"
+    source-klaviyo-update:
+      type: "object"
       required:
       - "api_key"
-      - "sourceType"
-    source-klaviyo-update:
-      title: "Klaviyo Spec"
-      type: "object"
       properties:
         api_key:
           type: "string"
-          title: "Api Key"
           description: "Klaviyo API Key. See our <a href=\"https://docs.airbyte.com/integrations/sources/klaviyo\"\
             >docs</a> if you need help finding this key."
+          title: "Api Key"
           airbyte_secret: true
           order: 0
         start_date:
           type: "string"
-          title: "Start Date"
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
             \ data before this date will not be replicated. This field is optional\
             \ - if not provided, all data will be replicated."
+          title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2017-01-25T00:00:00Z"
@@ -2515,16 +2637,21 @@ components:
           order: 1
         disable_fetching_predictive_analytics:
           type: "boolean"
-          title: "Disable Fetching Predictive Analytics"
           description: "Certain streams like the profiles stream can retrieve predictive\
             \ analytics data from Klaviyo's API. However, at high volume, this can\
             \ lead to service availability issues on the API which can be improved\
             \ by not fetching this field. WARNING: Enabling this setting will stop\
             \ the  \"predictive_analytics\" column from being populated in your downstream\
             \ destination."
+          title: "Disable Fetching Predictive Analytics"
           order: 2
         num_workers:
           type: "integer"
+          description: "The number of worker threads to use for the sync. The performance\
+            \ upper boundary is based on the limit of your Klaviyo plan. More info\
+            \ about the rate limit plan tiers can be found on Klaviyo's API <a href=\"\
+            https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling\"\
+            >docs</a>."
           title: "Number of concurrent workers"
           minimum: 1
           maximum: 50
@@ -2533,14 +2660,7 @@ components:
           - 1
           - 2
           - 3
-          description: "The number of worker threads to use for the sync. The performance\
-            \ upper boundary is based on the limit of your Klaviyo plan. More info\
-            \ about the rate limit plan tiers can be found on Klaviyo's API <a href=\"\
-            https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling\"\
-            >docs</a>."
           order: 3
-      required:
-      - "api_key"
     source-datadog:
       type: "object"
       required:
@@ -2599,7 +2719,6 @@ components:
             \ syncs."
           order: 5
           title: "End date"
-          default: "2024-01-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
@@ -2706,7 +2825,6 @@ components:
             \ syncs."
           order: 5
           title: "End date"
-          default: "2024-01-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           examples:
           - "2022-10-01T00:00:00Z"
@@ -3456,6 +3574,16 @@ components:
           order: 4
           description: "Date in the format YYYY-MM-DD."
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        conversion_count:
+          title: "Definition of conversion count in reports."
+          description: "The definition of conversion count in reports. See <a href=\"\
+            https://amplifyv01.docs.apiary.io/#reference/performance-reporting/periodic/retrieve-performance-statistics-for-all-marketer-campaigns-by-periodic-breakdown\"\
+            >the docs</a>."
+          enum:
+          - "click/view_time"
+          - "conversion_time"
+          order: 5
+          type: "string"
         sourceType:
           title: "outbrain-amplify"
           const: "outbrain-amplify"
@@ -3546,6 +3674,16 @@ components:
           order: 4
           description: "Date in the format YYYY-MM-DD."
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        conversion_count:
+          title: "Definition of conversion count in reports."
+          description: "The definition of conversion count in reports. See <a href=\"\
+            https://amplifyv01.docs.apiary.io/#reference/performance-reporting/periodic/retrieve-performance-statistics-for-all-marketer-campaigns-by-periodic-breakdown\"\
+            >the docs</a>."
+          enum:
+          - "click/view_time"
+          - "conversion_time"
+          order: 5
+          type: "string"
     source-uppromote:
       type: "object"
       required:
@@ -4389,6 +4527,95 @@ components:
           - "opportunities"
           - "kases"
           order: 2
+    source-couchbase:
+      title: "Couchbase Source Spec"
+      type: "object"
+      required:
+      - "connection_string"
+      - "username"
+      - "password"
+      - "bucket"
+      - "sourceType"
+      properties:
+        connection_string:
+          type: "string"
+          title: "Connection String"
+          description: "The connection string for the Couchbase server (e.g., couchbase://localhost\
+            \ or couchbases://example.com)"
+          order: 0
+        username:
+          type: "string"
+          title: "Username"
+          description: "The username to use for authentication"
+          order: 1
+        password:
+          type: "string"
+          title: "Password"
+          description: "The password to use for authentication"
+          airbyte_secret: true
+          order: 2
+          x-speakeasy-param-sensitive: true
+        bucket:
+          type: "string"
+          title: "Bucket"
+          description: "The name of the bucket to sync data from"
+          order: 3
+        start_date:
+          type: "string"
+          title: "Start Date"
+          description: "The date from which you'd like to replicate data for incremental\
+            \ streams, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
+            \ this date will be replicated. If not set, all data will be replicated."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          format: "date-time"
+          order: 4
+        sourceType:
+          title: "couchbase"
+          const: "couchbase"
+          enum:
+          - "couchbase"
+          order: 0
+          type: "string"
+    source-couchbase-update:
+      title: "Couchbase Source Spec"
+      type: "object"
+      required:
+      - "connection_string"
+      - "username"
+      - "password"
+      - "bucket"
+      properties:
+        connection_string:
+          type: "string"
+          title: "Connection String"
+          description: "The connection string for the Couchbase server (e.g., couchbase://localhost\
+            \ or couchbases://example.com)"
+          order: 0
+        username:
+          type: "string"
+          title: "Username"
+          description: "The username to use for authentication"
+          order: 1
+        password:
+          type: "string"
+          title: "Password"
+          description: "The password to use for authentication"
+          airbyte_secret: true
+          order: 2
+        bucket:
+          type: "string"
+          title: "Bucket"
+          description: "The name of the bucket to sync data from"
+          order: 3
+        start_date:
+          type: "string"
+          title: "Start Date"
+          description: "The date from which you'd like to replicate data for incremental\
+            \ streams, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
+            \ this date will be replicated. If not set, all data will be replicated."
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          format: "date-time"
+          order: 4
     source-sigma-computing:
       type: "object"
       required:
@@ -5002,6 +5229,427 @@ components:
           order: 3
           title: "Kind"
           default: "group"
+    source-netsuite-enterprise:
+      title: "Netsuite Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 1708
+          description: "Port of the database."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 8
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        account_id:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "Account ID"
+          order: 6
+        role_id:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "Role Id"
+          order: 7
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+        sourceType:
+          title: "netsuite-enterprise"
+          const: "netsuite-enterprise"
+          enum:
+          - "netsuite-enterprise"
+          order: 0
+          type: "string"
+      required:
+      - "host"
+      - "port"
+      - "username"
+      - "tunnel_method"
+      - "cursor"
+      - "account_id"
+      - "role_id"
+      - "sourceType"
+    source-netsuite-enterprise-update:
+      title: "Netsuite Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 1708
+          description: "Port of the database."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 8
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        account_id:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "Account ID"
+          order: 6
+        role_id:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "Role Id"
+          order: 7
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+      required:
+      - "host"
+      - "port"
+      - "username"
+      - "tunnel_method"
+      - "cursor"
+      - "account_id"
+      - "role_id"
     source-pingdom:
       type: "object"
       required:
@@ -7990,6 +8638,45 @@ components:
           type: "string"
           order: 1
           title: "subdomain"
+    source-thinkific-courses:
+      type: "object"
+      required:
+      - "api_key"
+      - "X-Auth-Subdomain"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        X-Auth-Subdomain:
+          type: "string"
+          order: 1
+          title: "subdomain"
+        sourceType:
+          title: "thinkific-courses"
+          const: "thinkific-courses"
+          enum:
+          - "thinkific-courses"
+          order: 0
+          type: "string"
+    source-thinkific-courses-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "X-Auth-Subdomain"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        X-Auth-Subdomain:
+          type: "string"
+          order: 1
+          title: "subdomain"
     source-linnworks:
       title: "Linnworks Spec"
       type: "object"
@@ -8634,6 +9321,13 @@ components:
           default: "."
           order: 4
           type: "string"
+        site_url:
+          title: "Site URL"
+          description: "Url of SharePoint site to search for files. Leave empty to\
+            \ search in the main site."
+          default: ""
+          order: 5
+          type: "string"
         sourceType:
           title: "microsoft-sharepoint"
           const: "microsoft-sharepoint"
@@ -9181,6 +9875,13 @@ components:
             \ apply to shared items."
           default: "."
           order: 4
+          type: "string"
+        site_url:
+          title: "Site URL"
+          description: "Url of SharePoint site to search for files. Leave empty to\
+            \ search in the main site."
+          default: ""
+          order: 5
           type: "string"
       required:
       - "streams"
@@ -10051,7 +10752,6 @@ components:
           order: 2
           title: "Employees ID"
     source-sentry:
-      title: "Sentry Spec"
       type: "object"
       required:
       - "auth_token"
@@ -10059,33 +10759,38 @@ components:
       - "project"
       - "sourceType"
       properties:
+        project:
+          type: "string"
+          description: "The name (slug) of the Project you want to sync."
+          order: 3
+          title: "Project"
+        hostname:
+          type: "string"
+          description: "Host name of Sentry API server.For self-hosted, specify your\
+            \ host name here. Otherwise, leave it empty."
+          order: 1
+          title: "Host Name"
+          default: "sentry.io"
         auth_token:
           type: "string"
-          title: "Authentication Tokens"
           description: "Log into Sentry and then <a href=\"https://sentry.io/settings/account/api/auth-tokens/\"\
             >create authentication tokens</a>.For self-hosted, you can find or create\
             \ authentication tokens by visiting \"{instance_url_prefix}/settings/account/api/auth-tokens/\""
+          order: 0
+          title: "Authentication Tokens"
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
-        hostname:
-          type: "string"
-          title: "Host Name"
-          description: "Host name of Sentry API server.For self-hosted, specify your\
-            \ host name here. Otherwise, leave it empty."
-          default: "sentry.io"
         organization:
           type: "string"
-          title: "Organization"
           description: "The slug of the organization the groups belong to."
-        project:
-          type: "string"
-          title: "Project"
-          description: "The name (slug) of the Project you want to sync."
+          order: 2
+          title: "Organization"
         discover_fields:
           type: "array"
-          item: "string"
-          title: "Discover Event Fields"
           description: "Fields to retrieve when fetching discover events"
+          item: "string"
+          order: 4
+          title: "Discover Event Fields"
         sourceType:
           title: "sentry"
           const: "sentry"
@@ -10094,39 +10799,43 @@ components:
           order: 0
           type: "string"
     source-sentry-update:
-      title: "Sentry Spec"
       type: "object"
       required:
       - "auth_token"
       - "organization"
       - "project"
       properties:
+        project:
+          type: "string"
+          description: "The name (slug) of the Project you want to sync."
+          order: 3
+          title: "Project"
+        hostname:
+          type: "string"
+          description: "Host name of Sentry API server.For self-hosted, specify your\
+            \ host name here. Otherwise, leave it empty."
+          order: 1
+          title: "Host Name"
+          default: "sentry.io"
         auth_token:
           type: "string"
-          title: "Authentication Tokens"
           description: "Log into Sentry and then <a href=\"https://sentry.io/settings/account/api/auth-tokens/\"\
             >create authentication tokens</a>.For self-hosted, you can find or create\
             \ authentication tokens by visiting \"{instance_url_prefix}/settings/account/api/auth-tokens/\""
+          order: 0
+          title: "Authentication Tokens"
           airbyte_secret: true
-        hostname:
-          type: "string"
-          title: "Host Name"
-          description: "Host name of Sentry API server.For self-hosted, specify your\
-            \ host name here. Otherwise, leave it empty."
-          default: "sentry.io"
         organization:
           type: "string"
-          title: "Organization"
           description: "The slug of the organization the groups belong to."
-        project:
-          type: "string"
-          title: "Project"
-          description: "The name (slug) of the Project you want to sync."
+          order: 2
+          title: "Organization"
         discover_fields:
           type: "array"
-          item: "string"
-          title: "Discover Event Fields"
           description: "Fields to retrieve when fetching discover events"
+          item: "string"
+          order: 4
+          title: "Discover Event Fields"
     source-yahoo-finance-price:
       type: "object"
       required:
@@ -12314,28 +13023,27 @@ components:
           airbyte_secret: true
     source-zendesk-talk:
       type: "object"
-      title: "Source Zendesk Talk Spec"
       required:
-      - "start_date"
       - "subdomain"
+      - "start_date"
       - "sourceType"
       properties:
         subdomain:
           type: "string"
-          order: 0
-          title: "Subdomain"
           description: "This is your Zendesk subdomain that can be found in your account\
             \ URL. For example, in https://{MY_SUBDOMAIN}.zendesk.com/, where MY_SUBDOMAIN\
             \ is the value of your subdomain."
+          order: 0
+          title: "Subdomain"
         credentials:
-          title: "Authentication"
           type: "object"
-          order: 1
           description: "Zendesk service provides two authentication methods. Choose\
             \ between: `OAuth2.0` or `API token`."
+          title: "Authentication"
+          order: 1
           oneOf:
-          - title: "OAuth2.0"
-            type: "object"
+          - type: "object"
+            title: "OAuth2.0"
             required:
             - "access_token"
             additionalProperties: true
@@ -12348,26 +13056,26 @@ components:
                 - "oauth2.0"
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "The value of the API token generated. See the <a href=\"\
                   https://docs.airbyte.com/integrations/sources/zendesk-talk\">docs</a>\
                   \ for more information."
+                title: "Access Token"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
               client_id:
                 type: "string"
-                title: "Client ID"
                 description: "Client ID"
+                title: "Client ID"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
               client_secret:
                 type: "string"
-                title: "Client Secret"
                 description: "Client Secret"
+                title: "Client Secret"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
-          - title: "API Token"
-            type: "object"
+          - type: "object"
+            title: "API Token"
             required:
             - "email"
             - "api_token"
@@ -12379,26 +13087,26 @@ components:
                 enum:
                 - "api_token"
               email:
-                title: "Email"
                 type: "string"
                 description: "The user email for your Zendesk account."
+                title: "Email"
               api_token:
-                title: "API Token"
                 type: "string"
                 description: "The value of the API token generated. See the <a href=\"\
                   https://docs.airbyte.com/integrations/sources/zendesk-talk\">docs</a>\
                   \ for more information."
+                title: "API Token"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
         start_date:
           type: "string"
+          description: "The date from which you'd like to replicate data for Zendesk\
+            \ Talk API, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
+            \ this date will be replicated."
           order: 2
           title: "Start Date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          description: "The date from which you'd like to replicate data for Zendesk\
-            \ Talk API, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
-            \ this date will be replicated."
           examples:
           - "2020-10-15T00:00:00Z"
         sourceType:
@@ -12410,27 +13118,26 @@ components:
           type: "string"
     source-zendesk-talk-update:
       type: "object"
-      title: "Source Zendesk Talk Spec"
       required:
-      - "start_date"
       - "subdomain"
+      - "start_date"
       properties:
         subdomain:
           type: "string"
-          order: 0
-          title: "Subdomain"
           description: "This is your Zendesk subdomain that can be found in your account\
             \ URL. For example, in https://{MY_SUBDOMAIN}.zendesk.com/, where MY_SUBDOMAIN\
             \ is the value of your subdomain."
+          order: 0
+          title: "Subdomain"
         credentials:
-          title: "Authentication"
           type: "object"
-          order: 1
           description: "Zendesk service provides two authentication methods. Choose\
             \ between: `OAuth2.0` or `API token`."
+          title: "Authentication"
+          order: 1
           oneOf:
-          - title: "OAuth2.0"
-            type: "object"
+          - type: "object"
+            title: "OAuth2.0"
             required:
             - "access_token"
             additionalProperties: true
@@ -12443,23 +13150,23 @@ components:
                 - "oauth2.0"
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "The value of the API token generated. See the <a href=\"\
                   https://docs.airbyte.com/integrations/sources/zendesk-talk\">docs</a>\
                   \ for more information."
+                title: "Access Token"
                 airbyte_secret: true
               client_id:
                 type: "string"
-                title: "Client ID"
                 description: "Client ID"
+                title: "Client ID"
                 airbyte_secret: true
               client_secret:
                 type: "string"
-                title: "Client Secret"
                 description: "Client Secret"
+                title: "Client Secret"
                 airbyte_secret: true
-          - title: "API Token"
-            type: "object"
+          - type: "object"
+            title: "API Token"
             required:
             - "email"
             - "api_token"
@@ -12471,25 +13178,25 @@ components:
                 enum:
                 - "api_token"
               email:
-                title: "Email"
                 type: "string"
                 description: "The user email for your Zendesk account."
+                title: "Email"
               api_token:
-                title: "API Token"
                 type: "string"
                 description: "The value of the API token generated. See the <a href=\"\
                   https://docs.airbyte.com/integrations/sources/zendesk-talk\">docs</a>\
                   \ for more information."
+                title: "API Token"
                 airbyte_secret: true
         start_date:
           type: "string"
+          description: "The date from which you'd like to replicate data for Zendesk\
+            \ Talk API, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
+            \ this date will be replicated."
           order: 2
           title: "Start Date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          description: "The date from which you'd like to replicate data for Zendesk\
-            \ Talk API, in the format YYYY-MM-DDT00:00:00Z. All data generated after\
-            \ this date will be replicated."
           examples:
           - "2020-10-15T00:00:00Z"
     source-thinkific:
@@ -20468,6 +21175,634 @@ components:
           description: "The playback id for your video asset shown in website details"
           order: 3
           title: "Playback ID"
+    source-sap-hana-enterprise:
+      title: "SapHana Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 443
+          description: "Port of the database.\nSapHana Corporations recommends the\
+            \ following port numbers:\n443 - Default listening port for SAP HANA cloud\
+            \ client connections to the listener."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        schemas:
+          type: "array"
+          items:
+            type: "string"
+          description: "The list of schemas to sync from. Defaults to user. Case sensitive."
+          title: "Schemas"
+          order: 6
+          always_show: true
+          uniqueItems: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        encryption:
+          oneOf:
+          - title: "Unencrypted"
+            type: "object"
+            additionalProperties: true
+            description: "Data transfer will not be encrypted."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "unencrypted"
+                default: "unencrypted"
+            required:
+            - "encryption_method"
+          - title: "Native Network Encryption (NNE)"
+            type: "object"
+            additionalProperties: true
+            description: "The native network encryption gives you the ability to encrypt\
+              \ database connections, without the configuration overhead of TCP/IP\
+              \ and SSL/TLS and without the need to open and listen on different ports."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "client_nne"
+                default: "client_nne"
+              encryption_algorithm:
+                type: "string"
+                default: "AES256"
+                description: "This parameter defines what encryption algorithm is\
+                  \ used."
+                title: "Encryption Algorithm"
+                enum:
+                - "AES256"
+                - "RC4_56"
+                - "3DES168"
+            required:
+            - "encryption_method"
+            - "encryption_algorithm"
+          - title: "TLS Encrypted (verify certificate)"
+            type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "encrypted_verify_certificate"
+                default: "encrypted_verify_certificate"
+              ssl_certificate:
+                type: "string"
+                description: "Privacy Enhanced Mail (PEM) files are concatenated certificate\
+                  \ containers frequently used in certificate installations."
+                title: "SSL PEM File"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "encryption_method"
+            - "ssl_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using change data capture feature. This must be enabled\
+              \ on your database."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "cdc"
+                default: "cdc"
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 1
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+                always_show: true
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC events."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 2
+                min: 4
+                max: 24
+                always_show: true
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+        sourceType:
+          title: "sap-hana-enterprise"
+          const: "sap-hana-enterprise"
+          enum:
+          - "sap-hana-enterprise"
+          order: 0
+          type: "string"
+      required:
+      - "host"
+      - "port"
+      - "username"
+      - "encryption"
+      - "tunnel_method"
+      - "cursor"
+      - "sourceType"
+    source-sap-hana-enterprise-update:
+      title: "SapHana Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 443
+          description: "Port of the database.\nSapHana Corporations recommends the\
+            \ following port numbers:\n443 - Default listening port for SAP HANA cloud\
+            \ client connections to the listener."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+        schemas:
+          type: "array"
+          items:
+            type: "string"
+          description: "The list of schemas to sync from. Defaults to user. Case sensitive."
+          title: "Schemas"
+          order: 6
+          always_show: true
+          uniqueItems: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        encryption:
+          oneOf:
+          - title: "Unencrypted"
+            type: "object"
+            additionalProperties: true
+            description: "Data transfer will not be encrypted."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "unencrypted"
+                default: "unencrypted"
+            required:
+            - "encryption_method"
+          - title: "Native Network Encryption (NNE)"
+            type: "object"
+            additionalProperties: true
+            description: "The native network encryption gives you the ability to encrypt\
+              \ database connections, without the configuration overhead of TCP/IP\
+              \ and SSL/TLS and without the need to open and listen on different ports."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "client_nne"
+                default: "client_nne"
+              encryption_algorithm:
+                type: "string"
+                default: "AES256"
+                description: "This parameter defines what encryption algorithm is\
+                  \ used."
+                title: "Encryption Algorithm"
+                enum:
+                - "AES256"
+                - "RC4_56"
+                - "3DES168"
+            required:
+            - "encryption_method"
+            - "encryption_algorithm"
+          - title: "TLS Encrypted (verify certificate)"
+            type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "encrypted_verify_certificate"
+                default: "encrypted_verify_certificate"
+              ssl_certificate:
+                type: "string"
+                description: "Privacy Enhanced Mail (PEM) files are concatenated certificate\
+                  \ containers frequently used in certificate installations."
+                title: "SSL PEM File"
+                airbyte_secret: true
+                multiline: true
+            required:
+            - "encryption_method"
+            - "ssl_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using change data capture feature. This must be enabled\
+              \ on your database."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "cdc"
+                default: "cdc"
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 1
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+                always_show: true
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC events."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 2
+                min: 4
+                max: 24
+                always_show: true
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+      required:
+      - "host"
+      - "port"
+      - "username"
+      - "encryption"
+      - "tunnel_method"
+      - "cursor"
     source-sendinblue:
       type: "object"
       required:
@@ -21357,11 +22692,12 @@ components:
         start_date:
           type: "string"
           description: "The date from which you'd like to replicate data for Outreach\
-            \ API, in the format YYYY-MM-DDT00:00:00Z. All data generated after this\
-            \ date will be replicated."
+            \ API, in the format YYYY-MM-DDT00:00:00.000Z. All data generated after\
+            \ this date will be replicated."
           title: "Start Date"
+          format: "date-time"
           examples:
-          - "2020-11-16T00:00:00Z"
+          - "2020-11-16T00:00:00.000Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 4
         sourceType:
@@ -21407,11 +22743,12 @@ components:
         start_date:
           type: "string"
           description: "The date from which you'd like to replicate data for Outreach\
-            \ API, in the format YYYY-MM-DDT00:00:00Z. All data generated after this\
-            \ date will be replicated."
+            \ API, in the format YYYY-MM-DDT00:00:00.000Z. All data generated after\
+            \ this date will be replicated."
           title: "Start Date"
+          format: "date-time"
           examples:
-          - "2020-11-16T00:00:00Z"
+          - "2020-11-16T00:00:00.000Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           order: 4
     source-primetric:
@@ -30403,35 +31740,35 @@ components:
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-zendesk-chat:
-      title: "Zendesk Chat Spec"
       type: "object"
       required:
-      - "subdomain"
       - "start_date"
+      - "subdomain"
       - "sourceType"
       properties:
         start_date:
           type: "string"
-          title: "Start Date"
           description: "The date from which you'd like to replicate data for Zendesk\
             \ Chat API, in the format YYYY-MM-DDT00:00:00Z."
+          title: "Start Date"
           examples:
           - "2021-02-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           format: "date-time"
+          order: 0
         subdomain:
           type: "string"
-          title: "Subdomain"
           description: "The unique subdomain of your Zendesk account (without https://).\
-            \ <a href=\"https://support.zendesk.com/hc/en-us/articles/4409381383578-Where-can-I-find-my-Zendesk-subdomain\"\
-            >See the Zendesk docs to find your subdomain</a>"
+            \ <a href=\\\"https://support.zendesk.com/hc/en-us/articles/4409381383578-Where-can-I-find-my-Zendesk-subdomain\\\
+            \">See the Zendesk docs to find your subdomain</a>."
+          title: "Subdomain"
+          order: 1
           pattern: "^(?!https://)"
           examples:
           - "myzendeskchat"
-          default: ""
         credentials:
-          title: "Authorization Method"
           type: "object"
+          title: "Authorization Method"
           oneOf:
           - type: "object"
             title: "OAuth2.0"
@@ -30446,27 +31783,27 @@ components:
                 - "oauth2.0"
               client_id:
                 type: "string"
-                title: "Client ID"
                 description: "The Client ID of your OAuth application"
+                title: "Client ID"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
               client_secret:
                 type: "string"
-                title: "Client Secret"
                 description: "The Client Secret of your OAuth application."
+                title: "Client Secret"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "Access Token for making authenticated requests."
+                title: "Access Token"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
               refresh_token:
                 type: "string"
-                title: "Refresh Token"
                 description: "Refresh Token to obtain new Access Token, when it's\
                   \ expired."
+                title: "Refresh Token"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
           - type: "object"
@@ -30483,10 +31820,11 @@ components:
                 - "access_token"
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "The Access Token to make authenticated requests."
+                title: "Access Token"
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
+          order: 2
         sourceType:
           title: "zendesk-chat"
           const: "zendesk-chat"
@@ -30495,34 +31833,34 @@ components:
           order: 0
           type: "string"
     source-zendesk-chat-update:
-      title: "Zendesk Chat Spec"
       type: "object"
       required:
-      - "subdomain"
       - "start_date"
+      - "subdomain"
       properties:
         start_date:
           type: "string"
-          title: "Start Date"
           description: "The date from which you'd like to replicate data for Zendesk\
             \ Chat API, in the format YYYY-MM-DDT00:00:00Z."
+          title: "Start Date"
           examples:
           - "2021-02-01T00:00:00Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           format: "date-time"
+          order: 0
         subdomain:
           type: "string"
-          title: "Subdomain"
           description: "The unique subdomain of your Zendesk account (without https://).\
-            \ <a href=\"https://support.zendesk.com/hc/en-us/articles/4409381383578-Where-can-I-find-my-Zendesk-subdomain\"\
-            >See the Zendesk docs to find your subdomain</a>"
+            \ <a href=\\\"https://support.zendesk.com/hc/en-us/articles/4409381383578-Where-can-I-find-my-Zendesk-subdomain\\\
+            \">See the Zendesk docs to find your subdomain</a>."
+          title: "Subdomain"
+          order: 1
           pattern: "^(?!https://)"
           examples:
           - "myzendeskchat"
-          default: ""
         credentials:
-          title: "Authorization Method"
           type: "object"
+          title: "Authorization Method"
           oneOf:
           - type: "object"
             title: "OAuth2.0"
@@ -30537,24 +31875,24 @@ components:
                 - "oauth2.0"
               client_id:
                 type: "string"
-                title: "Client ID"
                 description: "The Client ID of your OAuth application"
+                title: "Client ID"
                 airbyte_secret: true
               client_secret:
                 type: "string"
-                title: "Client Secret"
                 description: "The Client Secret of your OAuth application."
+                title: "Client Secret"
                 airbyte_secret: true
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "Access Token for making authenticated requests."
+                title: "Access Token"
                 airbyte_secret: true
               refresh_token:
                 type: "string"
-                title: "Refresh Token"
                 description: "Refresh Token to obtain new Access Token, when it's\
                   \ expired."
+                title: "Refresh Token"
                 airbyte_secret: true
           - type: "object"
             title: "Access Token"
@@ -30570,9 +31908,10 @@ components:
                 - "access_token"
               access_token:
                 type: "string"
-                title: "Access Token"
                 description: "The Access Token to make authenticated requests."
+                title: "Access Token"
                 airbyte_secret: true
+          order: 2
     source-my-hours:
       title: "My Hours Spec"
       type: "object"
@@ -31514,6 +32853,35 @@ components:
       type: "object"
       required: []
       properties: {}
+    source-customerly:
+      type: "object"
+      required:
+      - "api_key"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "customerly"
+          const: "customerly"
+          enum:
+          - "customerly"
+          order: 0
+          type: "string"
+    source-customerly-update:
+      type: "object"
+      required:
+      - "api_key"
+      properties:
+        api_key:
+          type: "string"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
     source-newsdata:
       type: "object"
       required:
@@ -35644,6 +37012,17 @@ components:
           airbyte_secret: true
           type: "string"
           x-speakeasy-param-sensitive: true
+        num_workers:
+          type: "integer"
+          title: "Number of concurrent workers"
+          minimum: 2
+          maximum: 40
+          default: 15
+          examples:
+          - 1
+          - 2
+          - 3
+          description: "The number of worker threads to use for the sync."
         sourceType:
           title: "instagram"
           const: "instagram"
@@ -35687,6 +37066,17 @@ components:
           description: "The Client Secret for your Oauth application"
           airbyte_secret: true
           type: "string"
+        num_workers:
+          type: "integer"
+          title: "Number of concurrent workers"
+          minimum: 2
+          maximum: 40
+          default: 15
+          examples:
+          - 1
+          - 2
+          - 3
+          description: "The number of worker threads to use for the sync."
       required:
       - "access_token"
     source-nutshell:
@@ -41616,6 +43006,63 @@ components:
           type: "string"
           order: 4
           title: "Module Name"
+    source-harness:
+      type: "object"
+      required:
+      - "api_key"
+      - "account_id"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          title: "API key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        api_url:
+          type: "string"
+          description: "The API URL for fetching data from Harness"
+          title: "API URL"
+          default: "https://app.harness.io"
+          examples:
+          - "https://my-harness-server.example.com"
+          order: 1
+        account_id:
+          type: "string"
+          description: "Harness Account ID"
+          title: "Account ID"
+          order: 2
+        sourceType:
+          title: "harness"
+          const: "harness"
+          enum:
+          - "harness"
+          order: 0
+          type: "string"
+    source-harness-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "account_id"
+      properties:
+        api_key:
+          type: "string"
+          title: "API key"
+          airbyte_secret: true
+          order: 0
+        api_url:
+          type: "string"
+          description: "The API URL for fetching data from Harness"
+          title: "API URL"
+          default: "https://app.harness.io"
+          examples:
+          - "https://my-harness-server.example.com"
+          order: 1
+        account_id:
+          type: "string"
+          description: "Harness Account ID"
+          title: "Account ID"
+          order: 2
     source-slack:
       title: "Slack Spec"
       type: "object"
@@ -44242,6 +45689,13 @@ components:
                 examples:
                 - "2022-07-28"
                 order: 9
+        account_id:
+          type: "string"
+          title: "Account ID"
+          description: "The Pinterest account ID you want to fetch data for. This\
+            \ ID must be provided to filter the data for a specific account."
+          examples:
+          - "1234567890"
         sourceType:
           title: "pinterest"
           const: "pinterest"
@@ -44565,6 +46019,13 @@ components:
                 examples:
                 - "2022-07-28"
                 order: 9
+        account_id:
+          type: "string"
+          title: "Account ID"
+          description: "The Pinterest account ID you want to fetch data for. This\
+            \ ID must be provided to filter the data for a specific account."
+          examples:
+          - "1234567890"
     source-spacex-api:
       type: "object"
       required:
@@ -44634,9 +46095,15 @@ components:
           title: "custom_reports_include_default_fields"
           default: true
           order: 3
+        employee_fields:
+          type: "string"
+          description: "Comma-separated list of fields to include for employees."
+          title: "employee_fields"
+          default: "firstName,lastName"
+          order: 4
         start_date:
           type: "string"
-          order: 4
+          order: 5
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -44676,9 +46143,15 @@ components:
           title: "custom_reports_include_default_fields"
           default: true
           order: 3
+        employee_fields:
+          type: "string"
+          description: "Comma-separated list of fields to include for employees."
+          title: "employee_fields"
+          default: "firstName,lastName"
+          order: 4
         start_date:
           type: "string"
-          order: 4
+          order: 5
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -45163,6 +46636,16 @@ components:
           type: "integer"
           minimum: 1
           default: 1000
+        export_lookback_window:
+          order: 10
+          title: "Export Lookback Window"
+          description: "The number of seconds to look back from the last synced timestamp\
+            \ during incremental syncs of the Export stream. This ensures no data\
+            \ is missed due to delays in event recording. Default is 0 seconds. Must\
+            \ be a non-negative integer."
+          type: "integer"
+          minimum: 0
+          default: 0
         sourceType:
           title: "mixpanel"
           const: "mixpanel"
@@ -45310,6 +46793,16 @@ components:
           type: "integer"
           minimum: 1
           default: 1000
+        export_lookback_window:
+          order: 10
+          title: "Export Lookback Window"
+          description: "The number of seconds to look back from the last synced timestamp\
+            \ during incremental syncs of the Export stream. This ensures no data\
+            \ is missed due to delays in event recording. Default is 0 seconds. Must\
+            \ be a non-negative integer."
+          type: "integer"
+          minimum: 0
+          default: 0
     source-rd-station-marketing:
       title: "RD Station Marketing Spec"
       type: "object"
@@ -46073,68 +47566,79 @@ components:
       - "client_id"
       - "start_date"
       - "client_secret"
+      - "timezone"
       - "sourceType"
       properties:
         org_id:
           type: "integer"
           description: "The identifier of the organization that owns the campaign.\
             \ Your Org Id is the same as your account in the Apple Search Ads UI."
-          title: "Org Id"
           order: 0
+          title: "Org Id"
         end_date:
           type: "string"
           description: "Data is retrieved until that date (included)"
+          order: 1
           title: "End Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2021-01-01"
-          order: 1
         client_id:
           type: "string"
           description: "A user identifier for the token request. See <a href=\"https://developer.apple.com/documentation/apple_search_ads/implementing_oauth_for_the_apple_search_ads_api\"\
             >here</a>"
+          order: 2
           title: "Client Id"
           airbyte_secret: true
-          order: 2
           x-speakeasy-param-sensitive: true
         start_date:
           type: "string"
           description: "Start getting data from that date."
+          order: 3
           title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2020-01-01"
-          order: 3
         client_secret:
           type: "string"
           description: "A string that authenticates the user’s setup request. See\
             \ <a href=\"https://developer.apple.com/documentation/apple_search_ads/implementing_oauth_for_the_apple_search_ads_api\"\
             >here</a>"
+          order: 4
           title: "Client Secret"
           airbyte_secret: true
-          order: 4
           x-speakeasy-param-sensitive: true
         lookback_window:
           type: "integer"
-          default: 30
           description: "Apple Search Ads uses a 30-day attribution window. However,\
             \ you may consider smaller values in order to shorten sync durations,\
             \ at the cost of missing late data attributions."
+          order: 5
           title: "Lookback Window"
+          default: 30
           pattern: "^(30|[1-2][0-9]|[1-9])$"
           examples:
           - 7
-          order: 5
         backoff_factor:
           type: "integer"
-          default: 5
           description: "This factor factor determines the delay increase factor between\
             \ retryable failures. Valid values are integers between 1 and 20."
+          order: 6
           title: "Exponential Backoff Factor"
+          default: 5
           pattern: "^(20|1[0-9]|[1-9])$"
           examples:
           - 10
-          order: 6
+        timezone:
+          type: "string"
+          default: "UTC"
+          description: "The timezone for the reporting data. Use 'ORTZ' for Organization\
+            \ Time Zone or 'UTC' for Coordinated Universal Time. Default is UTC."
+          enum:
+          - "ORTZ"
+          - "UTC"
+          order: 7
+          title: "Time Zone"
         sourceType:
           title: "apple-search-ads"
           const: "apple-search-ads"
@@ -46149,65 +47653,76 @@ components:
       - "client_id"
       - "start_date"
       - "client_secret"
+      - "timezone"
       properties:
         org_id:
           type: "integer"
           description: "The identifier of the organization that owns the campaign.\
             \ Your Org Id is the same as your account in the Apple Search Ads UI."
-          title: "Org Id"
           order: 0
+          title: "Org Id"
         end_date:
           type: "string"
           description: "Data is retrieved until that date (included)"
+          order: 1
           title: "End Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2021-01-01"
-          order: 1
         client_id:
           type: "string"
           description: "A user identifier for the token request. See <a href=\"https://developer.apple.com/documentation/apple_search_ads/implementing_oauth_for_the_apple_search_ads_api\"\
             >here</a>"
+          order: 2
           title: "Client Id"
           airbyte_secret: true
-          order: 2
         start_date:
           type: "string"
           description: "Start getting data from that date."
+          order: 3
           title: "Start Date"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
           examples:
           - "2020-01-01"
-          order: 3
         client_secret:
           type: "string"
           description: "A string that authenticates the user’s setup request. See\
             \ <a href=\"https://developer.apple.com/documentation/apple_search_ads/implementing_oauth_for_the_apple_search_ads_api\"\
             >here</a>"
+          order: 4
           title: "Client Secret"
           airbyte_secret: true
-          order: 4
         lookback_window:
           type: "integer"
-          default: 30
           description: "Apple Search Ads uses a 30-day attribution window. However,\
             \ you may consider smaller values in order to shorten sync durations,\
             \ at the cost of missing late data attributions."
+          order: 5
           title: "Lookback Window"
+          default: 30
           pattern: "^(30|[1-2][0-9]|[1-9])$"
           examples:
           - 7
-          order: 5
         backoff_factor:
           type: "integer"
-          default: 5
           description: "This factor factor determines the delay increase factor between\
             \ retryable failures. Valid values are integers between 1 and 20."
+          order: 6
           title: "Exponential Backoff Factor"
+          default: 5
           pattern: "^(20|1[0-9]|[1-9])$"
           examples:
           - 10
-          order: 6
+        timezone:
+          type: "string"
+          default: "UTC"
+          description: "The timezone for the reporting data. Use 'ORTZ' for Organization\
+            \ Time Zone or 'UTC' for Coordinated Universal Time. Default is UTC."
+          enum:
+          - "ORTZ"
+          - "UTC"
+          order: 7
+          title: "Time Zone"
     source-spotlercrm:
       type: "object"
       required:
@@ -51264,76 +52779,79 @@ components:
       properties:
         client_id:
           type: "string"
-          title: "Client ID"
           description: "The Client ID of your Paypal developer application."
+          title: "Client ID"
           airbyte_secret: true
           order: 0
           x-speakeasy-param-sensitive: true
         client_secret:
           type: "string"
-          title: "Client secret"
           description: "The Client Secret of your Paypal developer application."
+          title: "Client secret"
           airbyte_secret: true
           order: 1
           x-speakeasy-param-sensitive: true
         start_date:
-          title: "Start Date"
+          type: "string"
           description: "Start Date for data extraction in <a href=\\\"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\
             \">ISO format</a>. Date must be in range from 3 years till 12 hrs before\
             \ present time."
-          type: "string"
+          title: "Start Date"
           examples:
           - "2021-06-11T23:59:59Z"
           - "2021-06-11T23:59:59+00:00"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(|Z|[+-][0-9]{2}:[0-9]{2})$"
           format: "date-time"
           order: 2
-        is_sandbox:
-          title: "Sandbox"
-          description: "Determines whether to use the sandbox or production environment."
-          type: "boolean"
-          default: false
         dispute_start_date:
-          title: "Dispute Start Date Range"
+          type: "string"
           description: "Start Date parameter for the list dispute endpoint in <a href=\\\
             \"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\">ISO format</a>.\
             \ This Start Date must be in range within 180 days before present time,\
             \ and requires ONLY 3 miliseconds(mandatory). If you don't use this option,\
             \ it defaults to a start date set 180 days in the past."
-          type: "string"
+          title: "Dispute Start Date Range"
           examples:
           - "2021-06-11T23:59:59.000Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
           format: "date-time"
           order: 3
         end_date:
-          title: "End Date"
+          type: "string"
           description: "End Date for data extraction in <a href=\\\"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\
             \">ISO format</a>. This can be help you select specific range of time,\
             \ mainly for test purposes  or data integrity tests. When this is not\
             \ used, now_utc() is used by the streams. This does not apply to Disputes\
             \ and Product streams."
-          type: "string"
+          title: "End Date"
           examples:
           - "2021-06-11T23:59:59Z"
           - "2021-06-11T23:59:59+00:00"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(|Z|[+-][0-9]{2}:[0-9]{2})$"
           format: "date-time"
           order: 4
+        is_sandbox:
+          type: "boolean"
+          description: "Determines whether to use the sandbox or production environment."
+          title: "Sandbox"
+          default: false
+          order: 5
         refresh_token:
           type: "string"
-          title: "Refresh token"
           description: "The key to refresh the expired access token."
+          title: "Refresh token"
           airbyte_secret: true
+          order: 6
           x-speakeasy-param-sensitive: true
         time_window:
           type: "integer"
-          title: "Number of days per request"
           description: "The number of days per request. Must be a number between 1\
             \ and 31."
+          title: "Number of days per request"
           default: 7
           minimum: 1
           maximum: 31
+          order: 7
         sourceType:
           title: "paypal-transaction"
           const: "paypal-transaction"
@@ -51351,73 +52869,76 @@ components:
       properties:
         client_id:
           type: "string"
-          title: "Client ID"
           description: "The Client ID of your Paypal developer application."
+          title: "Client ID"
           airbyte_secret: true
           order: 0
         client_secret:
           type: "string"
-          title: "Client secret"
           description: "The Client Secret of your Paypal developer application."
+          title: "Client secret"
           airbyte_secret: true
           order: 1
         start_date:
-          title: "Start Date"
+          type: "string"
           description: "Start Date for data extraction in <a href=\\\"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\
             \">ISO format</a>. Date must be in range from 3 years till 12 hrs before\
             \ present time."
-          type: "string"
+          title: "Start Date"
           examples:
           - "2021-06-11T23:59:59Z"
           - "2021-06-11T23:59:59+00:00"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(|Z|[+-][0-9]{2}:[0-9]{2})$"
           format: "date-time"
           order: 2
-        is_sandbox:
-          title: "Sandbox"
-          description: "Determines whether to use the sandbox or production environment."
-          type: "boolean"
-          default: false
         dispute_start_date:
-          title: "Dispute Start Date Range"
+          type: "string"
           description: "Start Date parameter for the list dispute endpoint in <a href=\\\
             \"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\">ISO format</a>.\
             \ This Start Date must be in range within 180 days before present time,\
             \ and requires ONLY 3 miliseconds(mandatory). If you don't use this option,\
             \ it defaults to a start date set 180 days in the past."
-          type: "string"
+          title: "Dispute Start Date Range"
           examples:
           - "2021-06-11T23:59:59.000Z"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
           format: "date-time"
           order: 3
         end_date:
-          title: "End Date"
+          type: "string"
           description: "End Date for data extraction in <a href=\\\"https://datatracker.ietf.org/doc/html/rfc3339#section-5.6\\\
             \">ISO format</a>. This can be help you select specific range of time,\
             \ mainly for test purposes  or data integrity tests. When this is not\
             \ used, now_utc() is used by the streams. This does not apply to Disputes\
             \ and Product streams."
-          type: "string"
+          title: "End Date"
           examples:
           - "2021-06-11T23:59:59Z"
           - "2021-06-11T23:59:59+00:00"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(|Z|[+-][0-9]{2}:[0-9]{2})$"
           format: "date-time"
           order: 4
+        is_sandbox:
+          type: "boolean"
+          description: "Determines whether to use the sandbox or production environment."
+          title: "Sandbox"
+          default: false
+          order: 5
         refresh_token:
           type: "string"
-          title: "Refresh token"
           description: "The key to refresh the expired access token."
+          title: "Refresh token"
           airbyte_secret: true
+          order: 6
         time_window:
           type: "integer"
-          title: "Number of days per request"
           description: "The number of days per request. Must be a number between 1\
             \ and 31."
+          title: "Number of days per request"
           default: 7
           minimum: 1
           maximum: 31
+          order: 7
     source-pexels-api:
       type: "object"
       required:
@@ -53049,6 +54570,70 @@ components:
             >docs</a> for more information on where to find that key."
           airbyte_secret: true
           order: 0
+    source-partnerstack:
+      type: "object"
+      required:
+      - "public_key"
+      - "private_key"
+      - "sourceType"
+      properties:
+        public_key:
+          type: "string"
+          description: "The Live Public Key for a Partnerstack account."
+          title: "Partnerstack Public key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
+            \ data before this date will not be replicated."
+          title: "Start date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2017-01-25T00:00:00Z"
+          order: 1
+        private_key:
+          type: "string"
+          description: "The Live Private Key for a Partnerstack account."
+          title: "Partnerstack Private key"
+          airbyte_secret: true
+          order: 2
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "partnerstack"
+          const: "partnerstack"
+          enum:
+          - "partnerstack"
+          order: 0
+          type: "string"
+    source-partnerstack-update:
+      type: "object"
+      required:
+      - "public_key"
+      - "private_key"
+      properties:
+        public_key:
+          type: "string"
+          description: "The Live Public Key for a Partnerstack account."
+          title: "Partnerstack Public key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
+            \ data before this date will not be replicated."
+          title: "Start date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          examples:
+          - "2017-01-25T00:00:00Z"
+          order: 1
+        private_key:
+          type: "string"
+          description: "The Live Private Key for a Partnerstack account."
+          title: "Partnerstack Private key"
+          airbyte_secret: true
+          order: 2
     source-web-scrapper:
       type: "object"
       required:
@@ -53180,6 +54765,740 @@ components:
           title: "Password"
           airbyte_secret: true
           order: 1
+    source-oracle-enterprise:
+      title: "Oracle Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 1521
+          description: "Port of the database.\nOracle Corporations recommends the\
+            \ following port numbers:\n1521 - Default listening port for client connections\
+            \ to the listener. \n2484 - Recommended and officially registered listening\
+            \ port for client connections to the listener using TCP/IP with SSL."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        connection_data:
+          oneOf:
+          - title: "Service name"
+            type: "object"
+            additionalProperties: true
+            description: "Use service name."
+            properties:
+              connection_type:
+                type: "string"
+                enum:
+                - "service_name"
+                default: "service_name"
+              service_name:
+                type: "string"
+                title: "Service name"
+            required:
+            - "connection_type"
+            - "service_name"
+          - title: "System ID (SID)"
+            type: "object"
+            additionalProperties: true
+            description: "Use Oracle System Identifier."
+            properties:
+              connection_type:
+                type: "string"
+                enum:
+                - "sid"
+                default: "sid"
+              sid:
+                type: "string"
+                title: "System ID (SID)"
+            required:
+            - "connection_type"
+            - "sid"
+          description: "The scheme by which to establish a database connection."
+          title: "Connect by"
+          order: 3
+          type: "object"
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        schemas:
+          type: "array"
+          items:
+            type: "string"
+          description: "The list of schemas to sync from. Defaults to user. Case sensitive."
+          title: "Schemas"
+          order: 6
+          always_show: true
+          uniqueItems: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        encryption:
+          oneOf:
+          - title: "Unencrypted"
+            type: "object"
+            additionalProperties: true
+            description: "Data transfer will not be encrypted."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "unencrypted"
+                default: "unencrypted"
+            required:
+            - "encryption_method"
+          - title: "Native Network Encryption (NNE)"
+            type: "object"
+            additionalProperties: true
+            description: "The native network encryption gives you the ability to encrypt\
+              \ database connections, without the configuration overhead of TCP/IP\
+              \ and SSL/TLS and without the need to open and listen on different ports."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "client_nne"
+                default: "client_nne"
+              encryption_algorithm:
+                type: "string"
+                default: "AES256"
+                description: "This parameter defines what encryption algorithm is\
+                  \ used."
+                title: "Encryption Algorithm"
+                enum:
+                - "AES256"
+                - "AES192"
+                - "AES128"
+                - "3DES168"
+                - "3DES112"
+                - "DES"
+            required:
+            - "encryption_method"
+            - "encryption_algorithm"
+          - title: "TLS Encrypted (verify certificate)"
+            type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "encrypted_verify_certificate"
+                default: "encrypted_verify_certificate"
+              ssl_certificate:
+                type: "string"
+                description: "Privacy Enhanced Mail (PEM) files are concatenated certificate\
+                  \ containers frequently used in certificate installations."
+                title: "SSL PEM File"
+                airbyte_secret: true
+                multiline: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "encryption_method"
+            - "ssl_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using Oracle's <a href=\"https://docs.airbyte.com/integrations/enterprise-connectors/source-oracle#getting-started\"\
+              > change data capture feature</a>. This must be enabled on your database."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "cdc"
+                default: "cdc"
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 1
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+                always_show: true
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC events."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 2
+                min: 4
+                max: 24
+                always_show: true
+              debezium_shutdown_timeout_seconds:
+                type: "integer"
+                default: 60
+                description: "The amount of time to allow the Debezium Engine to shut\
+                  \ down, in seconds."
+                title: "Debezium Engine Shutdown Timeout in Seconds (Advanced)"
+                order: 3
+                min: 1
+                max: 3600
+                always_show: true
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+        sourceType:
+          title: "oracle-enterprise"
+          const: "oracle-enterprise"
+          enum:
+          - "oracle-enterprise"
+          order: 0
+          type: "string"
+      required:
+      - "host"
+      - "port"
+      - "connection_data"
+      - "username"
+      - "encryption"
+      - "tunnel_method"
+      - "cursor"
+      - "sourceType"
+    source-oracle-enterprise-update:
+      title: "Oracle Source Spec"
+      type: "object"
+      properties:
+        host:
+          type: "string"
+          description: "Hostname of the database."
+          title: "Host"
+          order: 1
+        port:
+          type: "integer"
+          default: 1521
+          description: "Port of the database.\nOracle Corporations recommends the\
+            \ following port numbers:\n1521 - Default listening port for client connections\
+            \ to the listener. \n2484 - Recommended and officially registered listening\
+            \ port for client connections to the listener using TCP/IP with SSL."
+          title: "Port"
+          order: 2
+          minimum: 0
+          maximum: 65536
+        connection_data:
+          oneOf:
+          - title: "Service name"
+            type: "object"
+            additionalProperties: true
+            description: "Use service name."
+            properties:
+              connection_type:
+                type: "string"
+                enum:
+                - "service_name"
+                default: "service_name"
+              service_name:
+                type: "string"
+                title: "Service name"
+            required:
+            - "connection_type"
+            - "service_name"
+          - title: "System ID (SID)"
+            type: "object"
+            additionalProperties: true
+            description: "Use Oracle System Identifier."
+            properties:
+              connection_type:
+                type: "string"
+                enum:
+                - "sid"
+                default: "sid"
+              sid:
+                type: "string"
+                title: "System ID (SID)"
+            required:
+            - "connection_type"
+            - "sid"
+          description: "The scheme by which to establish a database connection."
+          title: "Connect by"
+          order: 3
+          type: "object"
+        username:
+          type: "string"
+          description: "The username which is used to access the database."
+          title: "User"
+          order: 4
+        password:
+          type: "string"
+          description: "The password associated with the username."
+          title: "Password"
+          order: 5
+          always_show: true
+          airbyte_secret: true
+        schemas:
+          type: "array"
+          items:
+            type: "string"
+          description: "The list of schemas to sync from. Defaults to user. Case sensitive."
+          title: "Schemas"
+          order: 6
+          always_show: true
+          uniqueItems: true
+        jdbc_url_params:
+          type: "string"
+          description: "Additional properties to pass to the JDBC URL string when\
+            \ connecting to the database formatted as 'key=value' pairs separated\
+            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
+          title: "JDBC URL Params"
+          order: 7
+        encryption:
+          oneOf:
+          - title: "Unencrypted"
+            type: "object"
+            additionalProperties: true
+            description: "Data transfer will not be encrypted."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "unencrypted"
+                default: "unencrypted"
+            required:
+            - "encryption_method"
+          - title: "Native Network Encryption (NNE)"
+            type: "object"
+            additionalProperties: true
+            description: "The native network encryption gives you the ability to encrypt\
+              \ database connections, without the configuration overhead of TCP/IP\
+              \ and SSL/TLS and without the need to open and listen on different ports."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "client_nne"
+                default: "client_nne"
+              encryption_algorithm:
+                type: "string"
+                default: "AES256"
+                description: "This parameter defines what encryption algorithm is\
+                  \ used."
+                title: "Encryption Algorithm"
+                enum:
+                - "AES256"
+                - "AES192"
+                - "AES128"
+                - "3DES168"
+                - "3DES112"
+                - "DES"
+            required:
+            - "encryption_method"
+            - "encryption_algorithm"
+          - title: "TLS Encrypted (verify certificate)"
+            type: "object"
+            additionalProperties: true
+            description: "Verify and use the certificate provided by the server."
+            properties:
+              encryption_method:
+                type: "string"
+                enum:
+                - "encrypted_verify_certificate"
+                default: "encrypted_verify_certificate"
+              ssl_certificate:
+                type: "string"
+                description: "Privacy Enhanced Mail (PEM) files are concatenated certificate\
+                  \ containers frequently used in certificate installations."
+                title: "SSL PEM File"
+                airbyte_secret: true
+                multiline: true
+            required:
+            - "encryption_method"
+            - "ssl_certificate"
+          description: "The encryption method with is used when communicating with\
+            \ the database."
+          title: "Encryption"
+          order: 8
+          type: "object"
+        tunnel_method:
+          oneOf:
+          - title: "No Tunnel"
+            type: "object"
+            additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "NO_TUNNEL"
+                default: "NO_TUNNEL"
+            required:
+            - "tunnel_method"
+          - title: "SSH Key Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_KEY_AUTH"
+                default: "SSH_KEY_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              ssh_key:
+                type: "string"
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                title: "SSH Private Key"
+                order: 4
+                multiline: true
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_method:
+                type: "string"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                default: "SSH_PASSWORD_AUTH"
+              tunnel_host:
+                type: "string"
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                title: "SSH Tunnel Jump Server Host"
+                order: 1
+              tunnel_port:
+                type: "integer"
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                title: "SSH Connection Port"
+                order: 2
+                minimum: 0
+                maximum: 65536
+              tunnel_user:
+                type: "string"
+                description: "OS-level username for logging into the jump server host"
+                title: "SSH Login Username"
+                order: 3
+              tunnel_user_password:
+                type: "string"
+                description: "OS-level password for logging into the jump server host"
+                title: "Password"
+                order: 4
+                airbyte_secret: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          title: "SSH Tunnel Method"
+          order: 9
+          type: "object"
+        cursor:
+          oneOf:
+          - title: "Scan Changes with User Defined Cursor"
+            type: "object"
+            additionalProperties: true
+            description: "Incrementally detects new inserts and updates using the\
+              \ <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\"\
+              >cursor column</a> chosen when configuring a connection (e.g. created_at,\
+              \ updated_at)."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "user_defined"
+                default: "user_defined"
+            required:
+            - "cursor_method"
+          - title: "Read Changes using Change Data Capture (CDC)"
+            type: "object"
+            additionalProperties: true
+            description: "<i>Recommended</i> - Incrementally reads new inserts, updates,\
+              \ and deletes using Oracle's <a href=\"https://docs.airbyte.com/integrations/enterprise-connectors/source-oracle#getting-started\"\
+              > change data capture feature</a>. This must be enabled on your database."
+            properties:
+              cursor_method:
+                type: "string"
+                enum:
+                - "cdc"
+                default: "cdc"
+              invalid_cdc_cursor_position_behavior:
+                type: "string"
+                default: "Fail sync"
+                description: "Determines whether Airbyte should fail or re-sync data\
+                  \ in case of an stale/invalid cursor value in the mined logs. If\
+                  \ 'Fail sync' is chosen, a user will have to manually reset the\
+                  \ connection before being able to continue syncing data. If 'Re-sync\
+                  \ data' is chosen, Airbyte will automatically trigger a refresh\
+                  \ but could lead to higher cloud costs and data loss."
+                title: "Invalid CDC Position Behavior (Advanced)"
+                order: 1
+                enum:
+                - "Fail sync"
+                - "Re-sync data"
+                always_show: true
+              initial_load_timeout_hours:
+                type: "integer"
+                default: 8
+                description: "The amount of time an initial load is allowed to continue\
+                  \ for before catching up on CDC events."
+                title: "Initial Load Timeout in Hours (Advanced)"
+                order: 2
+                min: 4
+                max: 24
+                always_show: true
+              debezium_shutdown_timeout_seconds:
+                type: "integer"
+                default: 60
+                description: "The amount of time to allow the Debezium Engine to shut\
+                  \ down, in seconds."
+                title: "Debezium Engine Shutdown Timeout in Seconds (Advanced)"
+                order: 3
+                min: 1
+                max: 3600
+                always_show: true
+            required:
+            - "cursor_method"
+          description: "Configures how data is extracted from the database."
+          title: "Update Method"
+          order: 10
+          display_type: "radio"
+          type: "object"
+        checkpoint_target_interval_seconds:
+          type: "integer"
+          default: 300
+          description: "How often (in seconds) a stream should checkpoint, when possible."
+          title: "Checkpoint Target Time Interval"
+          order: 11
+        concurrency:
+          type: "integer"
+          default: 1
+          description: "Maximum number of concurrent queries to the database."
+          title: "Concurrency"
+          order: 12
+        check_privileges:
+          type: "boolean"
+          default: true
+          description: "When this feature is enabled, during schema discovery the\
+            \ connector will query each table or view individually to check access\
+            \ privileges and inaccessible tables, views, or columns therein will be\
+            \ removed. In large schemas, this might cause schema discovery to take\
+            \ too long, in which case it might be advisable to disable this feature."
+          title: "Check Table and Column Access Privileges"
+          order: 13
+      required:
+      - "host"
+      - "port"
+      - "connection_data"
+      - "username"
+      - "encryption"
+      - "tunnel_method"
+      - "cursor"
     source-insightly:
       type: "object"
       required:
@@ -55539,6 +57858,14 @@ components:
                 description: "API Token for making authenticated requests."
                 airbyte_secret: true
                 x-speakeasy-param-sensitive: true
+        board_ids:
+          type: "array"
+          title: "Boards to sync"
+          description: "The IDs of the boards that the Items and Boards streams will\
+            \ extract records from. When left empty, streams will extract records\
+            \ from all boards that exist within the account."
+          items:
+            type: "integer"
         sourceType:
           title: "monday"
           const: "monday"
@@ -55608,6 +57935,14 @@ components:
                 title: "Personal API Token"
                 description: "API Token for making authenticated requests."
                 airbyte_secret: true
+        board_ids:
+          type: "array"
+          title: "Boards to sync"
+          description: "The IDs of the boards that the Items and Boards streams will\
+            \ extract records from. When left empty, streams will extract records\
+            \ from all boards that exist within the account."
+          items:
+            type: "integer"
     source-onepagecrm:
       type: "object"
       required:
@@ -55888,27 +58223,28 @@ components:
           default: "title:Our first Epic"
           order: 2
     source-pipedrive:
-      title: "Pipedrive Spec"
       type: "object"
       required:
-      - "replication_start_date"
       - "api_token"
+      - "replication_start_date"
       - "sourceType"
       properties:
         api_token:
-          title: "API Token"
           type: "string"
           description: "The Pipedrive API Token."
+          title: "API Token"
           airbyte_secret: true
+          order: 0
           x-speakeasy-param-sensitive: true
         replication_start_date:
-          title: "Start Date"
+          type: "string"
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
             \ data before this date will not be replicated. When specified and not\
             \ None, then stream will behave as incremental"
+          title: "Start Date"
           examples:
           - "2017-01-25 00:00:00Z"
-          type: "string"
+          order: 1
         sourceType:
           title: "pipedrive"
           const: "pipedrive"
@@ -55917,25 +58253,26 @@ components:
           order: 0
           type: "string"
     source-pipedrive-update:
-      title: "Pipedrive Spec"
       type: "object"
       required:
-      - "replication_start_date"
       - "api_token"
+      - "replication_start_date"
       properties:
         api_token:
-          title: "API Token"
           type: "string"
           description: "The Pipedrive API Token."
+          title: "API Token"
           airbyte_secret: true
+          order: 0
         replication_start_date:
-          title: "Start Date"
+          type: "string"
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
             \ data before this date will not be replicated. When specified and not\
             \ None, then stream will behave as incremental"
+          title: "Start Date"
           examples:
           - "2017-01-25 00:00:00Z"
-          type: "string"
+          order: 1
     source-gocardless:
       type: "object"
       required:
@@ -57022,6 +59359,171 @@ components:
           order: 0
           title: "API Key"
           airbyte_secret: true
+    source-pagerduty:
+      type: "object"
+      required:
+      - "token"
+      - "sourceType"
+      properties:
+        cutoff_days:
+          type: "integer"
+          description: "Fetch pipelines updated in the last number of days"
+          order: 0
+          title: "Cutoff Days"
+          default: 90
+        default_severity:
+          type: "string"
+          description: "A default severity category if not present"
+          order: 1
+          title: "Severity category"
+          pattern: "^(Sev[0-5])?(Custom)?$"
+          examples:
+          - "Sev1"
+          - "Sev2"
+          - "Sev3"
+          - "Sev4"
+          - "Sev5"
+          - "Custom"
+        exclude_services:
+          type: "array"
+          description: "List of PagerDuty service names to ignore incidents from.\
+            \ If not set, all incidents will be pulled."
+          items:
+            type: "string"
+          order: 2
+          title: "Exclude Services"
+          examples:
+          - "service-1"
+          - "service-2"
+        incident_log_entries_overview:
+          type: "boolean"
+          description: "If true, will return a subset of log entries that show only\
+            \ the most important changes to the incident."
+          order: 3
+          title: "Incident Log Entries Overview"
+          default: true
+        max_retries:
+          type: "integer"
+          description: "Maximum number of PagerDuty API request retries to perform\
+            \ upon connection errors. The source will pause for an exponentially increasing\
+            \ number of seconds before retrying."
+          order: 4
+          title: "Max Retries"
+          default: 5
+          maximum: 8
+          minimum: 0
+        page_size:
+          type: "integer"
+          description: "page size to use when querying PagerDuty API"
+          order: 5
+          title: "Page Size"
+          default: 25
+          maximum: 25
+          minimum: 1
+        service_details:
+          type: "array"
+          description: "List of PagerDuty service additional details to include."
+          items:
+            type: "string"
+            enum:
+            - "escalation_policies"
+            - "teams"
+            - "integrations"
+            - "auto_pause_notifications_parameters"
+          order: 6
+          title: "Service Details"
+        token:
+          type: "string"
+          description: "API key for PagerDuty API authentication"
+          order: 7
+          title: "API key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "pagerduty"
+          const: "pagerduty"
+          enum:
+          - "pagerduty"
+          order: 0
+          type: "string"
+    source-pagerduty-update:
+      type: "object"
+      required:
+      - "token"
+      properties:
+        cutoff_days:
+          type: "integer"
+          description: "Fetch pipelines updated in the last number of days"
+          order: 0
+          title: "Cutoff Days"
+          default: 90
+        default_severity:
+          type: "string"
+          description: "A default severity category if not present"
+          order: 1
+          title: "Severity category"
+          pattern: "^(Sev[0-5])?(Custom)?$"
+          examples:
+          - "Sev1"
+          - "Sev2"
+          - "Sev3"
+          - "Sev4"
+          - "Sev5"
+          - "Custom"
+        exclude_services:
+          type: "array"
+          description: "List of PagerDuty service names to ignore incidents from.\
+            \ If not set, all incidents will be pulled."
+          items:
+            type: "string"
+          order: 2
+          title: "Exclude Services"
+          examples:
+          - "service-1"
+          - "service-2"
+        incident_log_entries_overview:
+          type: "boolean"
+          description: "If true, will return a subset of log entries that show only\
+            \ the most important changes to the incident."
+          order: 3
+          title: "Incident Log Entries Overview"
+          default: true
+        max_retries:
+          type: "integer"
+          description: "Maximum number of PagerDuty API request retries to perform\
+            \ upon connection errors. The source will pause for an exponentially increasing\
+            \ number of seconds before retrying."
+          order: 4
+          title: "Max Retries"
+          default: 5
+          maximum: 8
+          minimum: 0
+        page_size:
+          type: "integer"
+          description: "page size to use when querying PagerDuty API"
+          order: 5
+          title: "Page Size"
+          default: 25
+          maximum: 25
+          minimum: 1
+        service_details:
+          type: "array"
+          description: "List of PagerDuty service additional details to include."
+          items:
+            type: "string"
+            enum:
+            - "escalation_policies"
+            - "teams"
+            - "integrations"
+            - "auto_pause_notifications_parameters"
+          order: 6
+          title: "Service Details"
+        token:
+          type: "string"
+          description: "API key for PagerDuty API authentication"
+          order: 7
+          title: "API key"
+          airbyte_secret: true
     source-bigmailer:
       type: "object"
       required:
@@ -57542,12 +60044,9 @@ components:
       type: "object"
       required:
       - "username"
+      - "start_date"
       - "sourceType"
       properties:
-        username:
-          type: "string"
-          order: 0
-          title: "API Key"
         password:
           type: "string"
           order: 1
@@ -57555,6 +60054,16 @@ components:
           always_show: true
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
+        username:
+          type: "string"
+          order: 0
+          title: "API Key"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         sourceType:
           title: "shipstation"
           const: "shipstation"
@@ -57566,17 +60075,24 @@ components:
       type: "object"
       required:
       - "username"
+      - "start_date"
       properties:
-        username:
-          type: "string"
-          order: 0
-          title: "API Key"
         password:
           type: "string"
           order: 1
           title: "API Secret"
           always_show: true
           airbyte_secret: true
+        username:
+          type: "string"
+          order: 0
+          title: "API Key"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-braintree:
       title: "Braintree Spec"
       type: "object"
@@ -58924,15 +61440,15 @@ components:
           properties:
             client_id:
               type: "string"
-              title: "Client ID"
               description: "Client ID"
+              title: "Client ID"
               airbyte_secret: true
             client_secret:
               type: "string"
-              title: "Client Secret"
               description: "Client Secret"
+              title: "Client Secret"
               airbyte_secret: true
-      title: "Source Zendesk Talk Spec"
+      title: null
     linkedin-ads:
       properties:
         credentials:
@@ -59130,21 +61646,6 @@ components:
       title: "Config"
     trello:
       title: null
-    zendesk-chat:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              type: "string"
-              title: "Client ID"
-              description: "The Client ID of your OAuth application"
-              airbyte_secret: true
-            client_secret:
-              type: "string"
-              title: "Client Secret"
-              description: "The Client Secret of your OAuth application."
-              airbyte_secret: true
-      title: "Zendesk Chat Spec"
     google-ads:
       properties:
         credentials:
@@ -59546,8 +62047,6 @@ components:
           $ref: "#/components/schemas/typeform"
         - title: youtube-analytics
           $ref: "#/components/schemas/youtube-analytics"
-        - title: zendesk-chat
-          $ref: "#/components/schemas/zendesk-chat"
         - title: zendesk-support
           $ref: "#/components/schemas/zendesk-support"
         - title: zendesk-talk
@@ -59728,10 +62227,14 @@ components:
           $ref: "#/components/schemas/source-convex"
         - title: source-copper
           $ref: "#/components/schemas/source-copper"
+        - title: source-couchbase
+          $ref: "#/components/schemas/source-couchbase"
         - title: source-countercyclical
           $ref: "#/components/schemas/source-countercyclical"
         - title: source-customer-io
           $ref: "#/components/schemas/source-customer-io"
+        - title: source-customerly
+          $ref: "#/components/schemas/source-customerly"
         - title: source-datadog
           $ref: "#/components/schemas/source-datadog"
         - title: source-datascope
@@ -59906,6 +62409,8 @@ components:
           $ref: "#/components/schemas/source-gutendex"
         - title: source-hardcoded-records
           $ref: "#/components/schemas/source-hardcoded-records"
+        - title: source-harness
+          $ref: "#/components/schemas/source-harness"
         - title: source-harvest
           $ref: "#/components/schemas/source-harvest"
         - title: source-height
@@ -60076,6 +62581,8 @@ components:
           $ref: "#/components/schemas/source-navan"
         - title: source-netsuite
           $ref: "#/components/schemas/source-netsuite"
+        - title: source-netsuite-enterprise
+          $ref: "#/components/schemas/source-netsuite-enterprise"
         - title: source-news-api
           $ref: "#/components/schemas/source-news-api"
         - title: source-newsdata
@@ -60120,6 +62627,8 @@ components:
           $ref: "#/components/schemas/source-opsgenie"
         - title: source-oracle
           $ref: "#/components/schemas/source-oracle"
+        - title: source-oracle-enterprise
+          $ref: "#/components/schemas/source-oracle-enterprise"
         - title: source-orb
           $ref: "#/components/schemas/source-orb"
         - title: source-oura
@@ -60132,6 +62641,8 @@ components:
           $ref: "#/components/schemas/source-oveit"
         - title: source-pabbly-subscriptions-billing
           $ref: "#/components/schemas/source-pabbly-subscriptions-billing"
+        - title: source-pagerduty
+          $ref: "#/components/schemas/source-pagerduty"
         - title: source-pandadoc
           $ref: "#/components/schemas/source-pandadoc"
         - title: source-paperform
@@ -60140,6 +62651,8 @@ components:
           $ref: "#/components/schemas/source-papersign"
         - title: source-pardot
           $ref: "#/components/schemas/source-pardot"
+        - title: source-partnerstack
+          $ref: "#/components/schemas/source-partnerstack"
         - title: source-payfit
           $ref: "#/components/schemas/source-payfit"
         - title: source-paypal-transaction
@@ -60266,6 +62779,8 @@ components:
           $ref: "#/components/schemas/source-salesloft"
         - title: source-sap-fieldglass
           $ref: "#/components/schemas/source-sap-fieldglass"
+        - title: source-sap-hana-enterprise
+          $ref: "#/components/schemas/source-sap-hana-enterprise"
         - title: source-savvycal
           $ref: "#/components/schemas/source-savvycal"
         - title: source-scryfall
@@ -60378,6 +62893,8 @@ components:
           $ref: "#/components/schemas/source-the-guardian-api"
         - title: source-thinkific
           $ref: "#/components/schemas/source-thinkific"
+        - title: source-thinkific-courses
+          $ref: "#/components/schemas/source-thinkific-courses"
         - title: source-ticketmaster
           $ref: "#/components/schemas/source-ticketmaster"
         - title: source-tickettailor
@@ -60611,7 +63128,6 @@ components:
         - trello
         - typeform
         - youtube-analytics
-        - zendesk-chat
         - zendesk-support
         - zendesk-talk
   securitySchemes:
