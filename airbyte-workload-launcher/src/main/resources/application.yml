@@ -109,10 +109,10 @@ airbyte:
       queue-task-cap: ${WORKLOAD_CONSUMER_QUEUE_TASK_CAP:5}
       default-queue:
         poll-interval-seconds: ${WORKLOAD_DEFAULT_PRIO_POLL_FREQUENCY:1}
-        poll-size-items: ${WORKLOAD_DEFAULT_PRIO_POLL_SIZE:30}
+        poll-size-items: ${WORKLOAD_DEFAULT_PRIO_POLL_SIZE:10}
       high-priority-queue:
         poll-interval-seconds: ${WORKLOAD_HIGH_PRIO_POLL_FREQUENCY:1}
-        poll-size-items: ${WORKLOAD_HIGH_PRIO_POLL_SIZE:30}
+        poll-size-items: ${WORKLOAD_HIGH_PRIO_POLL_SIZE:10}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
