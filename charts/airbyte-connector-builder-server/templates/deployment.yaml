@@ -198,7 +198,7 @@ spec:
         {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      volumes:
       {{- if .Values.extraVolumes }}
+      volumes:
 {{ toYaml .Values.extraVolumes | nindent 6 }}
       {{- end }}
