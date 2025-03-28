@@ -30,7 +30,7 @@ class WorkloadApiQueueConsumer(
   @Value("\${airbyte.workload-launcher.consumer.queue-task-cap}") private val queueTaskCap: Int,
 ) {
   companion object {
-    const val QUEUE_CONSUMER_METRIC_PREFIX = "workload-queue-consumer"
+    const val QUEUE_CONSUMER_METRIC_PREFIX = "workload_queue_consumer"
     const val DEFAULT_PRIORITY_NAME = "default"
     const val HIGH_PRIORITY_NAME = "high"
   }
