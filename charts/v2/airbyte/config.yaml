@@ -1238,20 +1238,6 @@ workloadApiServer:
 
 workloadLauncher:
   config:
-    - env: RUNNING_TTL_MINUTES
-      key: running
-      keyBasePath: podSweeper.timeToDeletePods
-
-    - env: SUCCEEDED_TTL_MINUTES
-      key: succeeded
-      keyBasePath: podSweeper.timeToDeletePods
-      defaultValue: 10
-
-    - env: UNSUCCESSFUL_TTL_MINUTES
-      key: unsuccessful
-      keyBasePath: podSweeper.timeToDeletePods
-      defaultValue: 120
-
     - env: WORKLOAD_LAUNCHER_ENABLED
       key: enabled
       defaultValue: true
