@@ -729,7 +729,7 @@ public class WorkspacesHandler {
   }
 
   private String getDefaultGeographyForAirbyteEdition(final String geography) {
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(geography)) {
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(geography)) {
       return DataplaneConstantsKt.GEOGRAPHY_US;
     }
     return geography;

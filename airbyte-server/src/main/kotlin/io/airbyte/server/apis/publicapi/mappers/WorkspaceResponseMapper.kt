@@ -28,7 +28,7 @@ object WorkspaceResponseMapper {
     WorkspaceResponse(
       workspaceId = workspaceRead.workspaceId.toString(),
       name = workspaceRead.name,
-      dataResidency = workspaceRead.defaultGeography ?: GEOGRAPHY_AUTO,
+      dataResidency = (workspaceRead.defaultGeography ?: GEOGRAPHY_AUTO).lowercase(),
       notifications =
         NotificationsConfig(
           failure = workspaceRead.notificationSettings?.sendOnFailure?.toNotificationConfig(),

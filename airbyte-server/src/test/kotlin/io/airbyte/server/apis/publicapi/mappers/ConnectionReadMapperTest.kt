@@ -35,7 +35,7 @@ internal class ConnectionReadMapperTest {
     assertEquals(connectionResponse.connectionId, connectionRead.connectionId.toString())
     assertEquals(connectionResponse.name, connectionRead.name)
     assertEquals(connectionResponse.status.toString(), connectionRead.status.toString())
-    assertEquals(connectionResponse.dataResidency, connectionRead.geography)
+    assertEquals(connectionResponse.dataResidency, connectionRead.geography.lowercase())
     assertEquals(connectionResponse.schedule.scheduleType.toString(), connectionRead.scheduleType.toString())
     assertEquals(connectionResponse.sourceId, connectionRead.sourceId.toString())
     assertEquals(connectionResponse.destinationId, connectionRead.destinationId.toString())

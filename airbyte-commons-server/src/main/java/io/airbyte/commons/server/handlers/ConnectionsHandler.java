@@ -378,7 +378,7 @@ public class ConnectionsHandler {
     }
 
     if (patch.getGeography() != null) {
-      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(patch.getGeography())) {
+      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(patch.getGeography())) {
         sync.setGeography(DataplaneConstantsKt.GEOGRAPHY_US);
       } else {
         sync.setGeography(patch.getGeography());
@@ -664,7 +664,7 @@ public class ConnectionsHandler {
       }
     }
 
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equals(geography)) {
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(geography)) {
       geography = DataplaneConstantsKt.GEOGRAPHY_US;
     }
 

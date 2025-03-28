@@ -111,7 +111,10 @@ private fun getDefaultGeographyForAirbyteEdition(
   airbyteEdition: Configs.AirbyteEdition,
   geography: String?,
 ): String {
-  if (airbyteEdition == Configs.AirbyteEdition.CLOUD && (geography == GEOGRAPHY_AUTO || geography == null)) {
+  if (
+    airbyteEdition == Configs.AirbyteEdition.CLOUD &&
+    (geography == null || geography.lowercase() == GEOGRAPHY_AUTO.lowercase())
+  ) {
     return GEOGRAPHY_US
   } else if (geography == null) {
     return GEOGRAPHY_AUTO
