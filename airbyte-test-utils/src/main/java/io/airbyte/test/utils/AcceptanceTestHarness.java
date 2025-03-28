@@ -246,7 +246,6 @@ public class AcceptanceTestHarness {
   private String cloudSqlInstanceId;
   private String cloudSqlInstanceUsername;
   private String cloudSqlInstancePassword;
-  private String cloudSqlInstancePrivateIp;
   private String cloudSqlInstancePublicIp;
   private final RetryPolicy<Object> retryPolicy;
 
@@ -373,12 +372,12 @@ public class AcceptanceTestHarness {
       sourceDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           sourceDatabaseName);
       destinationDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           destinationDatabaseName);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
@@ -507,7 +506,6 @@ public class AcceptanceTestHarness {
     cloudSqlInstanceId = System.getenv("CLOUD_SQL_INSTANCE_ID");
     cloudSqlInstanceUsername = System.getenv("CLOUD_SQL_INSTANCE_USERNAME");
     cloudSqlInstancePassword = System.getenv("CLOUD_SQL_INSTANCE_PASSWORD");
-    cloudSqlInstancePrivateIp = System.getenv("CLOUD_SQL_INSTANCE_PRIVATE_IP");
     cloudSqlInstancePublicIp = System.getenv("CLOUD_SQL_INSTANCE_PUBLIC_IP");
   }
 
