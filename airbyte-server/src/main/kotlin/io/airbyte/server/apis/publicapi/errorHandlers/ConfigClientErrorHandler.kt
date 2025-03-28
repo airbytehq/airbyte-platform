@@ -156,6 +156,10 @@ object ConfigClientErrorHandler {
         } else {
           UnexpectedProblem()
         }
+      is AbstractThrowableProblem -> {
+        // No need to do anything to these, they're ready to throw
+        throwable
+      }
       else -> UnexpectedProblem()
     }
 
