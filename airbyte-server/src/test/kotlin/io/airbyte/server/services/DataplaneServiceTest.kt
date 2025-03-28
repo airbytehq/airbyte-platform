@@ -17,7 +17,8 @@ import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.DataplaneAuthService
+import io.airbyte.data.services.DataplaneCredentialsService
+import io.airbyte.data.services.DataplaneTokenService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
@@ -55,7 +56,8 @@ class DataplaneServiceTest {
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var scopedConfigurationService: ScopedConfigurationService
   private lateinit var dataplaneDataService: io.airbyte.data.services.DataplaneService
-  private lateinit var dataplaneAuthService: DataplaneAuthService
+  private lateinit var dataplaneCredentialsService: DataplaneCredentialsService
+  private lateinit var dataplaneTokenService: DataplaneTokenService
   private lateinit var dataplaneService: DataplaneService
 
   private val connectionId = UUID.randomUUID()
@@ -82,7 +84,8 @@ class DataplaneServiceTest {
     scopedConfigurationService = mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns listOf()
     dataplaneDataService = mockk()
-    dataplaneAuthService = mockk()
+    dataplaneCredentialsService = mockk()
+    dataplaneTokenService = mockk()
     dataplaneService =
       DataplaneService(
         connectionService,
@@ -92,7 +95,8 @@ class DataplaneServiceTest {
         featureFlagClient,
         scopedConfigurationService,
         dataplaneDataService,
-        dataplaneAuthService,
+        dataplaneCredentialsService,
+        dataplaneTokenService,
       )
   }
 
@@ -312,15 +316,15 @@ class DataplaneServiceTest {
 
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
     every { dataplaneDataService.listDataplanes(any(), false) } returns listOf(mockDataplane)
-    every { dataplaneAuthService.listCredentialsByDataplaneId(mockDataplane.id) } returns listOf(mockCredentials)
-    every { dataplaneAuthService.deleteCredentials(mockCredentials.id) } returns mockCredentials
+    every { dataplaneCredentialsService.listCredentialsByDataplaneId(mockDataplane.id) } returns listOf(mockCredentials)
+    every { dataplaneCredentialsService.deleteCredentials(mockCredentials.id) } returns mockCredentials
     every { dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true }) } returns
       mockDataplane.apply { tombstone = true }
 
     dataplaneService.deleteDataplane(mockDataplane.id)
 
     verify {
-      dataplaneAuthService.deleteCredentials(mockCredentials.id)
+      dataplaneCredentialsService.deleteCredentials(mockCredentials.id)
       dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true })
     }
   }
@@ -330,7 +334,7 @@ class DataplaneServiceTest {
     val clientId = "test-client-id"
     val dataplaneId = UUID.randomUUID()
     val dataplane = createDataplane(dataplaneId)
-    every { dataplaneAuthService.getDataplaneId(clientId) } returns dataplaneId
+    every { dataplaneCredentialsService.getDataplaneId(clientId) } returns dataplaneId
     every { dataplaneDataService.getDataplane(dataplaneId) } returns dataplane
 
     val result = dataplaneService.getDataplaneFromClientId(clientId)

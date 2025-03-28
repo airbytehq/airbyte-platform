@@ -16,8 +16,9 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.Dataplane
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.DataplaneAuthService
+import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.data.services.DataplaneTokenService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
@@ -49,7 +50,8 @@ open class DataplaneService(
   private val featureFlagClient: FeatureFlagClient,
   private val scopedConfigurationService: ScopedConfigurationService,
   private val dataplaneDataService: DataplaneService,
-  private val dataplaneAuthService: DataplaneAuthService,
+  private val dataplaneCredentialsService: DataplaneCredentialsService,
+  private val dataplaneTokenService: DataplaneTokenService,
 ) {
   /**
    * Get queue name from given data. Pulled from the WorkloadService.
@@ -152,7 +154,7 @@ open class DataplaneService(
     return context
   }
 
-  fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials = dataplaneAuthService.createCredentials(dataplaneId)
+  fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials = dataplaneCredentialsService.createCredentials(dataplaneId)
 
   fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
 
@@ -180,17 +182,17 @@ open class DataplaneService(
         tombstone = true
       }
 
-    dataplaneAuthService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneAuthService.deleteCredentials(it.id) }
+    dataplaneCredentialsService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneCredentialsService.deleteCredentials(it.id) }
     return writeDataplane(tombstonedDataplane)
   }
 
   fun getToken(
     clientId: String,
     clientSecret: String,
-  ): String = dataplaneAuthService.getToken(clientId, clientSecret)
+  ): String = dataplaneTokenService.getToken(clientId, clientSecret)
 
   fun getDataplaneFromClientId(clientId: String): Dataplane {
-    val dataplaneId = dataplaneAuthService.getDataplaneId(clientId)
+    val dataplaneId = dataplaneCredentialsService.getDataplaneId(clientId)
     return dataplaneDataService.getDataplane(dataplaneId)
   }
 

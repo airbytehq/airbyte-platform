@@ -8,10 +8,9 @@ import io.airbyte.config.DataplaneClientCredentials
 import java.util.UUID
 
 /**
- * Provides an abstraction for managing and retrieving dataplane authentication credentials,
- * including creation, deletion, and token generation.
+ * Provides an abstraction for creating, managing, and retrieving dataplane authentication credentials.
  */
-interface DataplaneAuthService {
+interface DataplaneCredentialsService {
   /**
    * Creates credentials for a given dataplane. A new client ID and secret are generated and
    * persisted, ensuring that the provided [dataplaneId] is associated with valid authentication.
@@ -36,19 +35,6 @@ interface DataplaneAuthService {
    * @return A list of [DataplaneClientCredentials], which may be empty if none exist for the given dataplane.
    */
   fun listCredentialsByDataplaneId(dataplaneId: UUID): List<DataplaneClientCredentials>
-
-  /**
-   * Obtains an authentication token based on a provided [clientId] and [clientSecret]. The returned
-   * token can be used to authenticate subsequent requests.
-   *
-   * @param clientId The client identifier used to obtain the token.
-   * @param clientSecret The secret associated with the [clientId].
-   * @return A valid authentication token as a [String].
-   */
-  fun getToken(
-    clientId: String,
-    clientSecret: String,
-  ): String
 
   /**
    * Retrieves the dataplane id associated with a client id

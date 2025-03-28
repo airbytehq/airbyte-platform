@@ -5,14 +5,12 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.random.randomAlphanumeric
-import io.fabric8.kubernetes.api.model.SecretBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
-import java.util.Base64
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -29,46 +27,31 @@ class AuthKubernetesSecretInitializer(
 ) {
   fun initializeSecrets() {
     logger.info { "Initializing auth secret in Kubernetes..." }
-    val secretDataMap = getSecretDataMap()
-    val secret =
-      SecretBuilder()
-        .withNewMetadata()
-        .withName(secretName)
-        .endMetadata()
-        .addToData(secretDataMap)
-        .build()
-
-    if (kubernetesClient.secrets().withName(secretName).get() == null) {
-      logger.info { "No existing secret with name $secretName was found. Creating it..." }
-      kubernetesClient.resource(secret).create()
-    } else {
-      logger.info { "Secret with name $secretName already exists. Updating it..." }
-      kubernetesClient.resource(secret).update()
-    }
+    K8sSecretHelper.createOrUpdateSecret(kubernetesClient, secretName, getSecretDataMap())
     logger.info { "Finished initializing auth secret." }
   }
 
   private fun getSecretDataMap(): Map<String, String> {
     val passwordValue =
-      getOrCreateSecretEncodedValue(
+      getOrCreateSecretValue(
         secretKeysConfig.instanceAdminPasswordSecretKey,
         providedSecretValuesConfig.instanceAdminPassword,
         randomAlphanumeric(SECRET_LENGTH),
       )
     val clientIdValue =
-      getOrCreateSecretEncodedValue(
+      getOrCreateSecretValue(
         secretKeysConfig.instanceAdminClientIdSecretKey,
         providedSecretValuesConfig.instanceAdminClientId,
         UUID.randomUUID().toString(),
       )
     val clientSecretValue =
-      getOrCreateSecretEncodedValue(
+      getOrCreateSecretValue(
         secretKeysConfig.instanceAdminClientSecretSecretKey,
         providedSecretValuesConfig.instanceAdminClientSecret,
         randomAlphanumeric(SECRET_LENGTH),
       )
     val jwtSignatureValue =
-      getOrCreateSecretEncodedValue(
+      getOrCreateSecretValue(
         secretKeysConfig.jwtSignatureSecretKey,
         providedSecretValuesConfig.jwtSignatureSecret,
         randomAlphanumeric(SECRET_LENGTH),
@@ -81,27 +64,26 @@ class AuthKubernetesSecretInitializer(
     )
   }
 
-  private fun getOrCreateSecretEncodedValue(
+  private fun getOrCreateSecretValue(
     secretKey: String?,
     providedValue: String?,
     defaultValue: String,
   ): String {
     if (!providedValue.isNullOrBlank()) {
-      // if a value is provided directly, base64 encode it and return it, regardless of what may be
+      // if a value is provided directly, simply return it, regardless of what may be
       // present in the secret.
       logger.info { "Using provided value for secret key $secretKey" }
-      return providedValue.let { Base64.getEncoder().encodeToString(it.toByteArray()) }
+      return providedValue
     } else {
       val secret = kubernetesClient.secrets().withName(secretName).get()
       if (secret != null && secretKey != null && secret.data.containsKey(secretKey)) {
-        // if a value is present in the secret, just return it because it is already base64 encoded,
-        // and will not be overwritten.
+        // if a value is present in the secret, simply return it without overwriting it.
         logger.info { "Using existing value for secret key $secretKey" }
         return secret.data[secretKey]!!
       } else {
         // if no value is provided or present in the secret, generate a new value and return it.
         logger.info { "Using generated/default value for secret key $secretKey" }
-        return defaultValue.let { Base64.getEncoder().encodeToString(it.toByteArray()) }
+        return defaultValue
       }
     }
   }

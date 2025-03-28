@@ -52,6 +52,7 @@ class Bootloader(
   @param:Value("\${airbyte.auth.default-realm}") private val defaultRealm: String,
   private val postLoadExecution: PostLoadExecutor?,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val dataplaneInitializer: DataplaneInitializer,
   val airbyteEdition: AirbyteEdition,
 ) {
   /**
@@ -64,7 +65,6 @@ class Bootloader(
    *  * Create default workspace
    *  * Create default deployment
    *  * Perform post migration tasks
-   *
    *
    * @throws Exception if unable to perform any of the bootstrap operations.
    */
@@ -83,6 +83,9 @@ class Bootloader(
 
     log.info { "Creating dataplane group (if none exists)..." }
     createDataplaneGroupIfNoneExists(dataplaneGroupService, airbyteEdition)
+
+    log.info { "Registering dataplane (if none exists)..." }
+    dataplaneInitializer.createDataplaneIfNotExists()
 
     log.info { "Creating workspace (if none exists)..." }
     createWorkspaceIfNoneExists(workspaceService)
@@ -114,7 +117,7 @@ class Bootloader(
     // version in the database when the server main method is called. may be empty if this is the first
     // time the server is started.
     log.info { "Checking for illegal upgrade..." }
-    val initialAirbyteDatabaseVersion = jobPersistence.version.map { version: String? -> AirbyteVersion(version) }
+    val initialAirbyteDatabaseVersion = jobPersistence.version.map { version: String -> AirbyteVersion(version) }
     val requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion)
     if (requiredVersionUpgrade != null) {
       val attentionBanner = MoreResources.readResource("banner/attention-banner.txt")
@@ -134,13 +137,12 @@ class Bootloader(
     jobPersistence: JobPersistence,
     autoUpgradeConnectors: Boolean,
   ) {
-    val newProtocolRange = protocolVersionChecker.validate(autoUpgradeConnectors)
-    if (newProtocolRange == null) {
-      throw RuntimeException(
-        "Aborting bootloader to avoid breaking existing connection after an upgrade. " +
-          "Please address airbyte protocol version support issues in the connectors before retrying.",
-      )
-    }
+    val newProtocolRange =
+      protocolVersionChecker.validate(autoUpgradeConnectors)
+        ?: throw RuntimeException(
+          "Aborting bootloader to avoid breaking existing connection after an upgrade. " +
+            "Please address airbyte protocol version support issues in the connectors before retrying.",
+        )
     trackProtocolVersion(jobPersistence, newProtocolRange)
   }
 
@@ -227,6 +229,7 @@ class Bootloader(
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
       }
+
       if (!dataplaneGroups.any { it.name == "EU" }) {
         log.info { "Creating EU dataplane group." }
         val dataplaneGroupId = UUID.randomUUID()
@@ -239,6 +242,7 @@ class Bootloader(
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
       }
+
       return
     } else if (dataplaneGroups.isNotEmpty()) {
       log.info { "Dataplane group already exists for the deployment." }

@@ -46,6 +46,7 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
+  testImplementation(libs.bundles.kotest)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

@@ -31,7 +31,6 @@ import io.airbyte.config.specs.LocalDefinitionsProvider
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ConnectorRolloutService
-import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
@@ -55,6 +54,8 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DefaultJobPersistence
+import io.mockk.every
+import io.mockk.mockk
 import org.flywaydb.core.Flyway
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterEach
@@ -63,8 +64,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import org.testcontainers.containers.PostgreSQLContainer
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 import uk.org.webcompere.systemstubs.jupiter.SystemStub
@@ -74,16 +73,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
 
-/**
- * Test suite for the [Bootloader] class.
- */
 @ExtendWith(SystemStubsExtension::class)
 internal class BootloaderTest {
-  private var container: PostgreSQLContainer<*>? = null
-  private var configsDataSource: DataSource? = null
-  private var jobsDataSource: DataSource? = null
-  private var featureFlagClient: FeatureFlagClient? = null
-  private var metricClient = Mockito.mock<MetricClient>()
+  private lateinit var container: PostgreSQLContainer<*>
+  private lateinit var configsDataSource: DataSource
+  private lateinit var jobsDataSource: DataSource
+  private lateinit var featureFlagClient: FeatureFlagClient
+  private val metricClient: MetricClient = mockk(relaxed = true)
 
   @BeforeEach
   fun setup() {
@@ -92,13 +88,10 @@ internal class BootloaderTest {
         .withDatabaseName("public")
         .withUsername(DOCKER)
         .withPassword(DOCKER)
-    container!!.start()
+    container.start()
 
-    configsDataSource =
-      DataSourceFactory.create(container!!.username, container!!.password, container!!.driverClassName, container!!.jdbcUrl)
-    jobsDataSource =
-      DataSourceFactory.create(container!!.username, container!!.password, container!!.driverClassName, container!!.jdbcUrl)
-
+    configsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
+    jobsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
     featureFlagClient = TestClient(mapOf("heartbeat-max-seconds-between-messages" to "10800"))
   }
 
@@ -106,7 +99,7 @@ internal class BootloaderTest {
   fun cleanup() {
     closeDataSource(configsDataSource)
     closeDataSource(jobsDataSource)
-    container!!.stop()
+    container.stop()
   }
 
   @SystemStub
@@ -135,21 +128,15 @@ internal class BootloaderTest {
 
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
-    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService =
-      Mockito.mock(
-        SecretPersistenceConfigService::class.java,
-      )
+    val secretsRepositoryReader: SecretsRepositoryReader = mockk()
+    val secretsRepositoryWriter: SecretsRepositoryWriter = mockk()
+    val secretPersistenceConfigService: SecretPersistenceConfigService = mockk()
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
 
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineService =
-      Mockito.mock(
-        ConnectionTimelineEventService::class.java,
-      )
+    val scopedConfigurationService: ScopedConfigurationService = mockk()
+    val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient!!,
@@ -232,21 +219,13 @@ internal class BootloaderTest {
         breakingChangeNotificationHelper,
         featureFlagClient!!,
       )
-    val actorDefinitionVersionResolver =
-      Mockito.mock(
-        ActorDefinitionVersionResolver::class.java,
-      )
-    val airbyteCompatibleConnectorsValidator =
-      Mockito.mock(
-        AirbyteCompatibleConnectorsValidator::class.java,
-      )
-    val connectorRolloutService = Mockito.mock(ConnectorRolloutService::class.java)
-    Mockito
-      .`when`(airbyteCompatibleConnectorsValidator.validate(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
-      .thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
-    Mockito
-      .`when`(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(ArgumentMatchers.anyString()))
-      .thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+    val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
+    val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator =
+      mockk {
+        every { validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
+        every { validateDeclarativeManifest(any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
+      }
+    val connectorRolloutService: ConnectorRolloutService = mockk()
     val applyDefinitionsHelper =
       ApplyDefinitionsHelper(
         definitionsProvider,
@@ -265,37 +244,33 @@ internal class BootloaderTest {
     val declarativeSourceUpdater =
       DeclarativeSourceUpdater(
         declarativeManifestImageVersionsProvider,
-        Mockito.mock(
-          DeclarativeManifestImageVersionService::class.java,
-        ),
+        mockk(relaxed = true),
         actorDefinitionService,
         airbyteCompatibleConnectorsValidator,
         featureFlagClient!!,
       )
-    val authKubeSecretInitializer =
-      Mockito.mock(
-        AuthKubernetesSecretInitializer::class.java,
-      )
-    val postLoadExecutor =
-      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authKubeSecretInitializer)
+    val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
+    val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authKubeSecretInitializer)
+    val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
-        false,
-        workspaceService,
-        configDatabaseInitializer,
-        configsDatabaseMigrator,
-        currentAirbyteVersion,
-        jobsDatabaseInitializer,
-        jobsDatabaseMigrator,
-        jobsPersistence,
-        organizationPersistence,
-        protocolVersionChecker,
-        runMigrationOnStartup,
-        DEFAULT_REALM,
-        postLoadExecutor,
-        dataplaneGroupService,
-        airbyteEdition,
+        autoUpgradeConnectors = false,
+        workspaceService = workspaceService,
+        configsDatabaseInitializer = configDatabaseInitializer,
+        configsDatabaseMigrator = configsDatabaseMigrator,
+        currentAirbyteVersion = currentAirbyteVersion,
+        jobsDatabaseInitializer = jobsDatabaseInitializer,
+        jobsDatabaseMigrator = jobsDatabaseMigrator,
+        jobPersistence = jobsPersistence,
+        organizationPersistence = organizationPersistence,
+        protocolVersionChecker = protocolVersionChecker,
+        runMigrationOnStartup = runMigrationOnStartup,
+        defaultRealm = DEFAULT_REALM,
+        postLoadExecution = postLoadExecutor,
+        dataplaneGroupService = dataplaneGroupService,
+        dataplaneInitializer = dataplaneInitializer,
+        airbyteEdition = airbyteEdition,
       )
     bootloader.load()
 
@@ -347,11 +322,8 @@ internal class BootloaderTest {
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineService =
-      Mockito.mock(
-        ConnectionTimelineEventService::class.java,
-      )
+    val scopedConfigurationService: ScopedConfigurationService = mockk()
+    val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient!!,
@@ -364,8 +336,8 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryWriter::class.java),
-        Mockito.mock(SecretPersistenceConfigService::class.java),
+        mockk(),
+        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -374,8 +346,8 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryWriter::class.java),
-        Mockito.mock(SecretPersistenceConfigService::class.java),
+        mockk(),
+        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -384,9 +356,9 @@ internal class BootloaderTest {
       WorkspaceServiceJooqImpl(
         configDatabase,
         featureFlagClient,
-        Mockito.mock(SecretsRepositoryReader::class.java),
-        Mockito.mock(SecretsRepositoryWriter::class.java),
-        Mockito.mock(SecretPersistenceConfigService::class.java),
+        mockk(),
+        mockk(),
+        mockk(),
         metricClient,
         dataplaneGroupService,
       )
@@ -434,15 +406,9 @@ internal class BootloaderTest {
         sourceService,
         destinationService,
       )
-    val actorDefinitionVersionResolver =
-      Mockito.mock(
-        ActorDefinitionVersionResolver::class.java,
-      )
-    val airbyteCompatibleConnectorsValidator =
-      Mockito.mock(
-        AirbyteCompatibleConnectorsValidator::class.java,
-      )
-    val connectorRolloutService = Mockito.mock(ConnectorRolloutService::class.java)
+    val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
+    val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
+    val connectorRolloutService: ConnectorRolloutService = mockk()
     val applyDefinitionsHelper =
       ApplyDefinitionsHelper(
         definitionsProvider,
@@ -461,36 +427,33 @@ internal class BootloaderTest {
     val declarativeSourceUpdater =
       DeclarativeSourceUpdater(
         declarativeManifestImageVersionsProvider,
-        Mockito.mock(
-          DeclarativeManifestImageVersionService::class.java,
-        ),
+        mockk(relaxed = true),
         actorDefinitionService,
         airbyteCompatibleConnectorsValidator,
         featureFlagClient!!,
       )
-    val authKubeSecretInitializer =
-      Mockito.mock(
-        AuthKubernetesSecretInitializer::class.java,
-      )
+    val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authKubeSecretInitializer)
+    val dataplaneInitializer: DataplaneInitializer = mockk()
 
     val bootloader =
       Bootloader(
-        false,
-        workspaceService,
-        configDatabaseInitializer,
-        configsDatabaseMigrator,
-        currentAirbyteVersion,
-        jobsDatabaseInitializer,
-        jobsDatabaseMigrator,
-        jobsPersistence,
-        organizationPersistence,
-        protocolVersionChecker,
-        runMigrationOnStartup,
-        DEFAULT_REALM,
-        postLoadExecutor,
-        dataplaneGroupService,
-        airbyteEdition,
+        autoUpgradeConnectors = false,
+        workspaceService = workspaceService,
+        configsDatabaseInitializer = configDatabaseInitializer,
+        configsDatabaseMigrator = configsDatabaseMigrator,
+        currentAirbyteVersion = currentAirbyteVersion,
+        jobsDatabaseInitializer = jobsDatabaseInitializer,
+        jobsDatabaseMigrator = jobsDatabaseMigrator,
+        jobPersistence = jobsPersistence,
+        organizationPersistence = organizationPersistence,
+        protocolVersionChecker = protocolVersionChecker,
+        runMigrationOnStartup = runMigrationOnStartup,
+        defaultRealm = DEFAULT_REALM,
+        postLoadExecution = postLoadExecutor,
+        dataplaneGroupService = dataplaneGroupService,
+        dataplaneInitializer = dataplaneInitializer,
+        airbyteEdition = airbyteEdition,
       )
 
     // starting from no previous version is always legal.
@@ -668,11 +631,8 @@ internal class BootloaderTest {
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
     val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineService =
-      Mockito.mock(
-        ConnectionTimelineEventService::class.java,
-      )
+    val scopedConfigurationService: ScopedConfigurationService = mockk()
+    val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient!!,
@@ -681,12 +641,9 @@ internal class BootloaderTest {
         scopedConfigurationService,
         connectionTimelineService,
       )
-    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService =
-      Mockito.mock(
-        SecretPersistenceConfigService::class.java,
-      )
+    val secretsRepositoryReader: SecretsRepositoryReader = mockk()
+    val secretsRepositoryWriter: SecretsRepositoryWriter = mockk()
+    val secretPersistenceConfigService: SecretPersistenceConfigService = mockk()
     val workspaceService =
       WorkspaceServiceJooqImpl(
         configDatabase,
@@ -701,8 +658,8 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryWriter::class.java),
-        Mockito.mock(SecretPersistenceConfigService::class.java),
+        mockk(),
+        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -711,8 +668,8 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        Mockito.mock(SecretsRepositoryWriter::class.java),
-        Mockito.mock(SecretPersistenceConfigService::class.java),
+        mockk(),
+        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -751,23 +708,25 @@ internal class BootloaderTest {
           testTriggered.set(true)
         }
       }
+    val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
     val bootloader =
       Bootloader(
-        false,
-        workspaceService,
-        configDatabaseInitializer,
-        configsDatabaseMigrator,
-        currentAirbyteVersion,
-        jobsDatabaseInitializer,
-        jobsDatabaseMigrator,
-        jobsPersistence,
-        organizationPersistence,
-        protocolVersionChecker,
-        runMigrationOnStartup,
-        DEFAULT_REALM,
-        postLoadExecutor,
-        dataplaneGroupService,
-        airbyteEdition,
+        autoUpgradeConnectors = false,
+        workspaceService = workspaceService,
+        configsDatabaseInitializer = configDatabaseInitializer,
+        configsDatabaseMigrator = configsDatabaseMigrator,
+        currentAirbyteVersion = currentAirbyteVersion,
+        jobsDatabaseInitializer = jobsDatabaseInitializer,
+        jobsDatabaseMigrator = jobsDatabaseMigrator,
+        jobPersistence = jobsPersistence,
+        organizationPersistence = organizationPersistence,
+        protocolVersionChecker = protocolVersionChecker,
+        runMigrationOnStartup = runMigrationOnStartup,
+        defaultRealm = DEFAULT_REALM,
+        postLoadExecution = postLoadExecutor,
+        dataplaneGroupService = dataplaneGroupService,
+        dataplaneInitializer = dataplaneInitializer,
+        airbyteEdition = airbyteEdition,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())

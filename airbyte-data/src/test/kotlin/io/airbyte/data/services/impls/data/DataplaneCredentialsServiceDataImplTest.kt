@@ -2,15 +2,13 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-import io.airbyte.commons.auth.config.TokenExpirationConfig
+package io.airbyte.data.services.impls.data
+
 import io.airbyte.data.helpers.DataplanePasswordEncoder
 import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.repositories.entities.DataplaneClientCredentials
-import io.airbyte.data.services.impls.data.DataplaneAuthServiceDataImpl
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.micronaut.context.annotation.Property
-import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -21,19 +19,14 @@ import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 import java.util.UUID
 
-@Property(name = "micronaut.security.enabled", value = "true")
-class DataplaneAuthServiceDataImplTest {
+class DataplaneCredentialsServiceDataImplTest {
   companion object {
     val dataplaneClientCredentialsRepository = mockk<DataplaneClientCredentialsRepository>()
-    val jwtTokenGenerator = mockk<JwtTokenGenerator>()
     val dataplanePasswordEncoder = mockk<DataplanePasswordEncoder>()
     val service =
-      DataplaneAuthServiceDataImpl(
+      DataplaneCredentialsServiceDataImpl(
         dataplaneClientCredentialsRepository,
-        jwtTokenGenerator,
         dataplanePasswordEncoder,
-        TokenExpirationConfig(),
-        "test-issuer",
       )
   }
 
@@ -85,39 +78,6 @@ class DataplaneAuthServiceDataImplTest {
 
     assertThrows<IllegalArgumentException> {
       service.deleteCredentials(credentialsId)
-    }
-  }
-
-  @Test
-  fun `should get token`() {
-    val clientId = "test-client-id"
-    val clientSecret = "test-client-secret"
-    val dataplaneId = UUID.randomUUID()
-    val entity =
-      DataplaneClientCredentials(
-        id = UUID.randomUUID(),
-        dataplaneId = dataplaneId,
-        clientId = clientId,
-        clientSecret = clientSecret,
-      )
-
-    every { dataplaneClientCredentialsRepository.findByClientId(clientId) } returns entity
-    every { jwtTokenGenerator.generateToken(any()) } returns Optional.of("test-token")
-    every { dataplanePasswordEncoder.matches(any(), any()) } returns true
-
-    val token = service.getToken(clientId, clientSecret)
-    token shouldBe "test-token"
-  }
-
-  @Test
-  fun `should throw when credentials not found for token generation`() {
-    val clientId = "wrong-client-id"
-    val clientSecret = "wrong-secret"
-
-    every { dataplaneClientCredentialsRepository.findByClientId(clientId) } returns null
-
-    assertThrows<IllegalArgumentException> {
-      service.getToken(clientId, clientSecret)
     }
   }
 

@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
-import io.airbyte.data.services.DataplaneAuthService
+import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
@@ -42,7 +42,7 @@ import java.util.stream.Collectors
 @Context
 @Controller("/api/v1/dataplanes")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@Requires(bean = DataplaneAuthService::class)
+@Requires(bean = DataplaneCredentialsService::class)
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,

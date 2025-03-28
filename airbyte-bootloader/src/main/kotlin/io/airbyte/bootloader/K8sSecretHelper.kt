@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.bootloader
+
+import io.fabric8.kubernetes.api.model.SecretBuilder
+import io.fabric8.kubernetes.client.KubernetesClient
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
+
+private val logger = KotlinLogging.logger {}
+
+/**
+ * Contains helpers for dealing with Kubernetes secrets.
+ */
+object K8sSecretHelper {
+  /**
+   * Helper function for creating or updating Kubernetes secrets from a map of key-value pairs. If
+   * the secret does not exist, it will be created. If it does exist, the provided data will be
+   * merged with the existing data, with the provided data taking precedence.
+   *
+   * Any new or updated values will be base64-encoded before being stored in the secret.
+   */
+  fun createOrUpdateSecret(
+    kubernetesClient: KubernetesClient,
+    secretName: String,
+    secretData: Map<String, String>,
+  ) {
+    val base64EncodedSecretData = secretData.mapValues { (_, value) -> value.toBase64() }
+    val existingSecret = kubernetesClient.secrets().withName(secretName).get()
+    if (existingSecret == null) {
+      logger.info { "No existing secret with name $secretName was found. Creating it..." }
+      val secret =
+        SecretBuilder()
+          .withNewMetadata()
+          .withName(secretName)
+          .endMetadata()
+          .addToData(base64EncodedSecretData)
+          .build()
+      kubernetesClient.resource(secret).create()
+      logger.info { "Successfully created secret $secretName" }
+    } else {
+      logger.info { "Secret with name $secretName already exists. Updating it..." }
+      val data = existingSecret.data?.toMutableMap() ?: mutableMapOf()
+      // Merge new secret data into the existing data (overriding any keys that are provided)
+      base64EncodedSecretData.forEach { (key, value) ->
+        data[key] = value
+      }
+      val updatedSecret = SecretBuilder(existingSecret).withData<String, String>(data).build()
+      kubernetesClient.resource(updatedSecret).update()
+      logger.info { "Successfully updated secret $secretName" }
+    }
+  }
+
+  @OptIn(ExperimentalEncodingApi::class)
+  internal fun String.toBase64(): String = Base64.encode(this.toByteArray())
+}
