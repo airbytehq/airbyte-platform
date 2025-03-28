@@ -100,6 +100,7 @@ spec:
         {{- else if (eq .Values.global.edition "cloud") }}
         {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
