@@ -37,6 +37,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
+import org.junit.Assert.assertEquals
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -252,6 +253,56 @@ class DataplaneServiceTest {
     assertThrows<DataplaneNameAlreadyExistsProblem> {
       dataplaneService.updateDataplane(mockDataplane.id, "", true)
     }
+  }
+
+  @Test
+  fun `updateDataplane with only name set should preserve enabled`() {
+    val originalName = "original name"
+    val originalEnabled = true
+    val newName = "patched name"
+    val mockDataplane =
+      createDataplane().apply {
+        name = originalName
+        enabled = originalEnabled
+      }
+
+    every { dataplaneDataService.getDataplane(mockDataplane.id) } returns mockDataplane
+    every { dataplaneDataService.writeDataplane(any()) } answers { firstArg() }
+
+    val updated =
+      dataplaneService.updateDataplane(
+        dataplaneId = mockDataplane.id,
+        updatedName = newName,
+        updatedEnabled = null,
+      )
+
+    Assertions.assertEquals(newName, updated.name)
+    Assertions.assertEquals(originalEnabled, updated.enabled)
+  }
+
+  @Test
+  fun `updateDataplane with only enabled set should preserve name`() {
+    val originalName = "original name"
+    val originalEnabled = false
+    val newEnabled = true
+    val mockDataplane =
+      createDataplane().apply {
+        name = originalName
+        enabled = originalEnabled
+      }
+
+    every { dataplaneDataService.getDataplane(mockDataplane.id) } returns mockDataplane
+    every { dataplaneDataService.writeDataplane(any()) } answers { firstArg() }
+
+    val updated =
+      dataplaneService.updateDataplane(
+        dataplaneId = mockDataplane.id,
+        updatedName = null,
+        updatedEnabled = newEnabled,
+      )
+
+    assertEquals(originalName, updated.name)
+    assertEquals(newEnabled, updated.enabled)
   }
 
   @Test

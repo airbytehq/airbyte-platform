@@ -97,6 +97,16 @@ tags:
     description: Interactions with partial user configs, used in conjunction with config_templates to generate sources.
   - name: embedded
     description: Endpoints specific to workflows for Airbyte operators and their end-users.
+  - name: dataplanes
+    description: Endpoints for managing dataplanes.
+  - name: regions
+    description: Endpoints for managing regions (akad dataplane groups).
+  - name: public_health
+    description: Public health check endpoints.
+  - name: public_jobs
+    description: Public job-related endpoints.
+  - name: Jobs
+    description: Job management endpoints.
 
 paths:
   /v1/workspaces/create:
@@ -6653,6 +6663,279 @@ paths:
         schema:
           format: int64
           type: integer
+        in: path
+        required: true
+
+  # Regions endpoints
+  /public/v1/regions:
+    get:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionsResponse"
+          description: List all regions for the organization
+        "403":
+          description: Not allowed
+      operationId: publicListRegions
+      summary: List regions
+      x-sdk-alias: listRegions
+      x-sdk-group: Regions
+      parameters:
+        - name: organizationId
+          description: The UUID of the organization to list regions for
+          schema:
+            type: string
+            format: uuid
+          in: query
+          required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionCreateRequest"
+        required: true
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully created region
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateRegion
+      summary: Create a region
+      x-sdk-alias: createRegion
+      x-sdk-group: Dataplanes
+
+  /public/v1/regions/{regionId}:
+    get:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Get a region by the id in the path
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetRegion
+      x-sdk-alias: getRegion
+      x-sdk-group: Regions
+      summary: Get a region
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionPatchRequest"
+        required: true
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully updated region
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateRegion
+      x-sdk-alias: updateRegion
+      x-sdk-group: Dataplanes
+      summary: Update a region
+    delete:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully deleted region
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteRegion
+      x-sdk-alias: deleteRegion
+      x-sdk-group: Regions
+      summary: Delete a region
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
+  # Dataplanes endpoints
+  /public/v1/regions/{regionId}/dataplanes:
+    get:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplanesResponse"
+          description: List all dataplanes for the region
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDataplanes
+      summary: List dataplanes
+      x-sdk-alias: listDataplanes
+      x-sdk-group: Dataplanes
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneCreateRequest"
+        required: true
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneCreateResponseBody"
+          description: Successfully created dataplane
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicCreateDataplane
+      summary: Create a dataplane
+      x-sdk-alias: createDataplane
+      x-sdk-group: Dataplanes
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
+  /public/v1/regions/{regionId}/dataplanes/{dataplaneId}:
+    get:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Get a dataplane by the id in the path
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDataplane
+      x-sdk-alias: getDataplane
+      x-sdk-group: Dataplanes
+      summary: Get a dataplane
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplanePatchRequest"
+        required: true
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Successfully updated dataplane
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDataplane
+      x-sdk-alias: updateDataplane
+      x-sdk-group: Dataplanes
+      summary: Update a dataplane
+    delete:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Successfully deleted dataplane
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDataplane
+      x-sdk-alias: deleteDataplane
+      x-sdk-group: Dataplanes
+      summary: Delete a dataplane
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+      - name: dataplaneId
+        schema:
+          type: string
+          format: uuid
         in: path
         required: true
 
@@ -17036,6 +17319,9 @@ components:
           type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: string
+          format: uuid
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -17047,6 +17333,9 @@ components:
           type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: string
+          format: uuid
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -17932,6 +18221,155 @@ components:
         dataplane_group_id:
           type: string
           format: uuid
+
+    # Public Region Schemas
+    RegionCreateRequest:
+      type: object
+      required:
+        - name
+        - organizationId
+        - enabled
+      properties:
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionResponse:
+      type: object
+      required:
+        - regionId
+        - name
+        - organizationId
+        - enabled
+        - createdAt
+        - updatedAt
+      properties:
+        regionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegionResponse"
+      x-sdk-component: true
+
+    # Public Dataplane Schemas
+    DataplaneCreateRequest:
+      type: object
+      required:
+        - name
+        - enabled
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplaneCreateResponseBody:
+      type: object
+      required:
+        - dataplaneId
+        - clientId
+        - clientSecret
+      properties:
+        dataplaneId:
+          type: string
+          format: UUID
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+
+    DataplanePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplaneResponse:
+      type: object
+      required:
+        - dataplaneId
+        - name
+        - regionId
+        - enabled
+        - createdAt
+        - updatedAt
+      properties:
+        dataplaneId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        regionId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplanesResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneResponse"
+      x-sdk-component: true
 
     # CONFIG TEMPLATES
     ConfigTemplateListRequest:

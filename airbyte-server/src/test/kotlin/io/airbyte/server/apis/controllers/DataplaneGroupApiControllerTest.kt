@@ -96,6 +96,54 @@ class DataplaneGroupApiControllerTest {
   }
 
   @Test
+  fun `updateDataplaneGroup with only name set should preserve enabled`() {
+    val originalEnabled = true
+    val newName = "patched group name"
+    val mockDataplaneGroup =
+      createDataplaneGroup().apply {
+        enabled = originalEnabled
+      }
+
+    every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
+    every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+
+    val updated =
+      dataplaneGroupApiController.updateDataplaneGroup(
+        DataplaneGroupUpdateRequestBody()
+          .dataplaneGroupId(mockDataplaneGroup.id)
+          .name(newName),
+      )
+
+    assert(updated!!.name == newName)
+    assert(updated.enabled == originalEnabled)
+  }
+
+  @Test
+  fun `updateDataplaneGroup with only enabled set should preserve name`() {
+    val originalName = "Original Group"
+    val newEnabled = true
+    val mockDataplaneGroup =
+      createDataplaneGroup().apply {
+        name = originalName
+      }
+
+    every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
+    every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+
+    val updated =
+      dataplaneGroupApiController.updateDataplaneGroup(
+        DataplaneGroupUpdateRequestBody()
+          .dataplaneGroupId(mockDataplaneGroup.id)
+          .enabled(newEnabled),
+      )
+
+    assert(updated!!.enabled == newEnabled)
+    assert(updated.name == originalName)
+  }
+
+  @Test
   fun `deleteDataplaneGroup tombstones dataplane group `() {
     val mockDataplaneGroup = createDataplaneGroup()
     val mockDataplane =

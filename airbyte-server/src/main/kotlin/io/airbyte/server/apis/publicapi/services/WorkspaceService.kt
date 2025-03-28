@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationsConfig
@@ -93,6 +94,7 @@ open class WorkspaceServiceImpl(
   private val workspacesHandler: WorkspacesHandler,
   @Value("\${airbyte.api.host}") open val publicApiHost: String,
   private val currentUserService: CurrentUserService,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkspaceService {
   companion object {
     private val log = LoggerFactory.getLogger(WorkspaceServiceImpl::class.java)
@@ -111,6 +113,9 @@ open class WorkspaceServiceImpl(
         .email(currentUserService.currentUser.email)
         .organizationId(organizationId)
         .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
+    if (workspaceCreateRequest.regionId != null) {
+      workspaceCreate.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).name
+    }
 
     val result =
       kotlin
@@ -160,6 +165,11 @@ open class WorkspaceServiceImpl(
         this.workspaceId = workspaceId
         this.notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig()
       }
+    if (workspaceUpdateRequest.regionId != null) {
+      workspaceUpdate.apply {
+        this.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).name
+      }
+    }
 
     val result =
       kotlin

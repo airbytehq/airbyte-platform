@@ -57,13 +57,13 @@ class DataplaneGroupApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDataplaneGroup(
     @Body dataplaneGroupUpdateRequestBody: DataplaneGroupUpdateRequestBody,
-  ): DataplaneGroupRead? {
+  ): DataplaneGroupRead {
     val updatedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupUpdateRequestBody.dataplaneGroupId)
 
     val dataplaneGroup =
       updatedDataplaneGroup.apply {
-        name = dataplaneGroupUpdateRequestBody.name
-        enabled = dataplaneGroupUpdateRequestBody.enabled
+        dataplaneGroupUpdateRequestBody.name?.let { name = it }
+        dataplaneGroupUpdateRequestBody.enabled?.let { enabled = it }
       }
 
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
@@ -76,7 +76,6 @@ class DataplaneGroupApiController(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
   ): DataplaneGroupRead? {
     val deletedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupDeleteRequestBody.dataplaneGroupId)
-
     val tombstonedGroup =
       deletedDataplaneGroup.apply {
         tombstone = true
@@ -84,7 +83,6 @@ class DataplaneGroupApiController(
     dataplaneService.listDataplanes(dataplaneGroupDeleteRequestBody.dataplaneGroupId).forEach {
       dataplaneService.deleteDataplane(it.id)
     }
-
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))
   }
 

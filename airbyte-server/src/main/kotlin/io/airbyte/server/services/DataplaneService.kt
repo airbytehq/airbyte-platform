@@ -158,15 +158,15 @@ open class DataplaneService(
 
   fun updateDataplane(
     dataplaneId: UUID,
-    updatedName: String,
-    updatedEnabled: Boolean,
+    updatedName: String?,
+    updatedEnabled: Boolean?,
   ): Dataplane {
     val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
 
     val updatedDataplane =
       existingDataplane.apply {
-        name = updatedName
-        enabled = updatedEnabled
+        updatedName?.let { name = it }
+        updatedEnabled?.let { enabled = it }
       }
 
     return writeDataplane(updatedDataplane)
@@ -218,7 +218,7 @@ private fun buildFeatureFlagContext(
   geography: String,
   priority: WorkloadPriority = WorkloadPriority.DEFAULT,
 ): MutableList<Context> {
-  val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
+  val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography))
 
   workspaceId?.let { context.add(Workspace(it)) }
   connectionId?.let { context.add(Connection(it)) }

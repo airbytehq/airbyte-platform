@@ -164,6 +164,14 @@ open class ApiAuthorizationHelper(
     throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))
   }
 
+  fun isUserInstanceAdminOrThrow(userId: UUID) {
+    if (permissionHandler.isUserInstanceAdmin(userId)) {
+      logger.debug { "User $userId is an instance admin, short circuiting auth check." }
+      return
+    }
+    throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))
+  }
+
   private fun checkIfAnyPermissionGranted(
     resolvedWorkspaceIds: List<UUID>,
     userId: UUID,
