@@ -27,6 +27,7 @@ dependencies {
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.okhttp)
   implementation(libs.reactor.core)
+  implementation(libs.reactor.core.micrometer)
   implementation(libs.reactor.kotlin.extensions)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)

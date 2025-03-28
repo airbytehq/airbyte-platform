@@ -4,6 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.consumer
 
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.workload.launcher.metrics.ReactorMetricsWrapper
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -18,6 +21,7 @@ private val logger = KotlinLogging.logger { }
  */
 @Singleton
 class WorkloadApiQueueConsumer(
+  private val reactorMetricsWrapper: ReactorMetricsWrapper,
   private val pipeline: LaunchPipeline,
   @Named("highPriorityQueuePoller") private val highPriorityQueuePoller: WorkloadApiQueuePoller,
   @Named("defaultPriorityQueuePoller") private val defaultPriorityQueuePoller: WorkloadApiQueuePoller,
@@ -25,11 +29,31 @@ class WorkloadApiQueueConsumer(
   @Value("\${airbyte.workload-launcher.parallelism.high-priority-queue}") private val highPriorityParallelism: Int,
   @Value("\${airbyte.workload-launcher.consumer.queue-task-cap}") private val queueTaskCap: Int,
 ) {
+  companion object {
+    const val QUEUE_CONSUMER_METRIC_PREFIX = "workload-queue-consumer"
+    const val DEFAULT_PRIORITY_NAME = "default"
+    const val HIGH_PRIORITY_NAME = "high"
+  }
+
   fun initialize(dataplaneGroupId: String) {
     logger.info { "Initializing ApiQueueConsumer for $dataplaneGroupId" }
 
-    val defaultPriorityThreadPool = Schedulers.newBoundedElastic(defaultPriorityParallelism, queueTaskCap, "default")
-    val highPriorityThreadPool = Schedulers.newBoundedElastic(highPriorityParallelism, queueTaskCap, "high")
+    val defaultPriorityThreadPool =
+      reactorMetricsWrapper.asTimedScheduler(
+        scheduler = Schedulers.newBoundedElastic(defaultPriorityParallelism, queueTaskCap, DEFAULT_PRIORITY_NAME),
+        metricPrefix = QUEUE_CONSUMER_METRIC_PREFIX,
+        MetricAttribute(MetricTags.QUEUE_NAME_TAG, "$dataplaneGroupId-$DEFAULT_PRIORITY_NAME"),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroupId),
+        MetricAttribute(MetricTags.PRIORITY_TAG, DEFAULT_PRIORITY_NAME),
+      )
+    val highPriorityThreadPool =
+      reactorMetricsWrapper.asTimedScheduler(
+        scheduler = Schedulers.newBoundedElastic(highPriorityParallelism, queueTaskCap, HIGH_PRIORITY_NAME),
+        metricPrefix = QUEUE_CONSUMER_METRIC_PREFIX,
+        MetricAttribute(MetricTags.QUEUE_NAME_TAG, "$dataplaneGroupId-$HIGH_PRIORITY_NAME"),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroupId),
+        MetricAttribute(MetricTags.PRIORITY_TAG, HIGH_PRIORITY_NAME),
+      )
 
     val defaultPriorityQueuePollerFlux =
       defaultPriorityQueuePoller
