@@ -2,12 +2,16 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Box } from "components/ui/Box";
+import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { AISyncFailureDrawerTitle, AISyncFailureExplanation } from "area/connection/components";
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
+import { useDrawerActions } from "core/services/ui/DrawerService";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { JobStats } from "./JobStats";
 import { UserCancelledDescription } from "./TimelineEventUser";
@@ -29,6 +33,27 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
   const failureUiDetails = !!event.summary.failureReason
     ? failureUiDetailsFromReason(event.summary.failureReason, formatMessage)
     : undefined;
+  const llmSyncFailureExperimentEnabled = useExperiment("platform.llm-sync-job-failure-explanation");
+  const { openDrawer } = useDrawerActions();
+
+  const showAIJobExplanation = () => {
+    if (!llmSyncFailureExperimentEnabled) {
+      return;
+    }
+    openDrawer({
+      title: <AISyncFailureDrawerTitle />,
+      content: (
+        <Box px="lg">
+          <AISyncFailureExplanation
+            jobSummary={event.summary}
+            jobStatus={jobStatus}
+            titleId={titleId}
+            titleValues={{ value: streamsToList.length }}
+          />
+        </Box>
+      ),
+    });
+  };
 
   return (
     <ConnectionTimelineEventItem>
@@ -48,6 +73,13 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
           {failureUiDetails && (
             <Box pt="xs">
               <JobFailureDetails failureUiDetails={failureUiDetails} />
+            </Box>
+          )}
+          {llmSyncFailureExperimentEnabled && failureUiDetails && (
+            <Box my="md">
+              <Button onClick={showAIJobExplanation} variant="magic">
+                <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />
+              </Button>
             </Box>
           )}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}

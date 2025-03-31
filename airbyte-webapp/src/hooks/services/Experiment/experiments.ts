@@ -26,6 +26,7 @@ export interface Experiments {
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.declarativeOauth": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
+  "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
@@ -55,6 +56,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.customComponents": false,
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.generateConnectorFromParams": false,
+  "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,

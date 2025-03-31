@@ -916,6 +916,11 @@
   "connection.timeline.mapping_delete.row_filtering.description": "{user} deleted a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.encryption.description": "{user} deleted an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
 
+  "connection.llmSyncFailureExplanation.explain": "Explain this error",
+  "connection.llmSyncFailureExplanation.title": "AI Sync Failure Explanation",
+  "connection.llmSyncFailureExplanation.error": "An error occurred while generating a response. Please try again later.",
+  "connection.llmSyncFailureExplanation.loading": "Analyzing sync job...",
+
   "connectionAutoDisabledReason.TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS": "Airbyte disabled the connection due to consecutive failures with no recent success.",
   "connectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY": "Airbyte disabled the connection due to only failed jobs recently.",
   "connectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW": "Airbyte disabled the connection due to consecutive failures.",
