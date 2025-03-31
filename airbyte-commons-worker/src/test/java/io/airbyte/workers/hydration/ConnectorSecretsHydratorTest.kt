@@ -14,6 +14,9 @@ import io.airbyte.api.client.model.generated.SecretPersistenceType
 import io.airbyte.api.client.model.generated.SecretStorageIdRequestBody
 import io.airbyte.api.client.model.generated.SecretStorageRead
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.secrets.ConfigWithSecretReferences
+import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
@@ -59,7 +62,7 @@ class ConnectorSecretsHydratorTest {
         metricClient,
       )
 
-    val unhydratedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = ConfigWithSecretReferences(POJONode("un-hydrated"), mapOf())
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -111,7 +114,7 @@ class ConnectorSecretsHydratorTest {
         metricClient,
       )
 
-    val unhydratedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = ConfigWithSecretReferences(POJONode("un-hydrated"), mapOf())
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -152,12 +155,13 @@ class ConnectorSecretsHydratorTest {
     val secretStorageId = UUID.randomUUID()
 
     val unhydratedConfig =
-      Jsons.jsonNode(
+      ConfigWithSecretReferences(
+        Jsons.emptyObject(),
         mapOf(
-          "password" to
-            mapOf(
-              "_secret" to "my-secret-coord",
-              "_secret_storage_id" to secretStorageId.toString(),
+          "$.password" to
+            SecretReferenceConfig(
+              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate("my-secret-coord", 1),
+              secretStorageId = secretStorageId,
             ),
         ),
       )

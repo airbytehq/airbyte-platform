@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.hydration
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.micronaut.context.annotation.Requires
@@ -31,7 +32,7 @@ class NoOpSecretsHydrator : SecretsHydrator {
   ): JsonNode = secretCoordinate
 
   override fun hydrate(
-    config: JsonNode,
+    config: ConfigWithSecretReferences,
     secretPersistence: SecretPersistence,
-  ): JsonNode = config
+  ): JsonNode = config.config
 }

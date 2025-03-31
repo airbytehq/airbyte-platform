@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import io.airbyte.domain.models.SecretReference
 import io.airbyte.domain.models.SecretReferenceScopeType
+import io.airbyte.domain.models.SecretReferenceWithConfig
 import java.util.UUID
 
 interface SecretReferenceService {
@@ -15,4 +16,9 @@ interface SecretReferenceService {
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReference>
+
+  fun listWithConfigByScopeTypeAndScopeId(
+    scopeType: SecretReferenceScopeType,
+    scopeId: UUID,
+  ): List<SecretReferenceWithConfig>
 }

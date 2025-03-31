@@ -13,13 +13,16 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretHydrationContext;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -42,16 +45,18 @@ public class ConfigurationUpdate {
   private final DestinationService destinationService;
   private final WorkspaceHelper workspaceHelper;
   private final SecretPersistenceService secretPersistenceService;
+  private final SecretReferenceService secretReferenceService;
   private final SecretsRepositoryReader secretsRepositoryReader;
 
   public ConfigurationUpdate(final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final SourceService sourceService,
                              final DestinationService destinationService,
                              final SecretPersistenceService secretPersistenceService,
+                             final SecretReferenceService secretReferenceService,
                              final SecretsRepositoryReader secretsRepositoryReader,
                              final WorkspaceHelper workspaceHelper) {
     this(new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService, secretPersistenceService,
-        secretsRepositoryReader, workspaceHelper);
+        secretReferenceService, secretsRepositoryReader, workspaceHelper);
   }
 
   public ConfigurationUpdate(final JsonSecretsProcessor secretsProcessor,
@@ -59,6 +64,7 @@ public class ConfigurationUpdate {
                              final SourceService sourceService,
                              final DestinationService destinationService,
                              final SecretPersistenceService secretPersistenceService,
+                             final SecretReferenceService secretReferenceService,
                              final SecretsRepositoryReader secretsRepositoryReader,
                              final WorkspaceHelper workspaceHelper) {
     this.secretsProcessor = secretsProcessor;
@@ -66,6 +72,7 @@ public class ConfigurationUpdate {
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.secretPersistenceService = secretPersistenceService;
+    this.secretReferenceService = secretReferenceService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.workspaceHelper = workspaceHelper;
   }
@@ -112,8 +119,10 @@ public class ConfigurationUpdate {
     final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(
         workspaceHelper.getOrganizationForWorkspace(source.getWorkspaceId()),
         source.getWorkspaceId());
-    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(source.getConfiguration(), hydrationContext);
-    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(source.getConfiguration(), secretPersistence);
+    final ConfigWithSecretReferences configWithRefs =
+        secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, sourceId, source.getConfiguration());
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(configWithRefs, hydrationContext);
+    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(configWithRefs, secretPersistence);
     return Jsons.clone(source).withConfiguration(hydratedConfig);
   }
 
@@ -185,8 +194,10 @@ public class ConfigurationUpdate {
     final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(
         workspaceHelper.getOrganizationForWorkspace(destination.getWorkspaceId()),
         destination.getWorkspaceId());
-    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(destination.getConfiguration(), hydrationContext);
-    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(destination.getConfiguration(), secretPersistence);
+    final ConfigWithSecretReferences configWithRefs =
+        secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, destinationId, destination.getConfiguration());
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(configWithRefs, hydrationContext);
+    final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(configWithRefs, secretPersistence);
     return Jsons.clone(destination).withConfiguration(hydratedConfig);
   }
 

@@ -49,6 +49,7 @@ private val logger = KotlinLogging.logger {}
 object SecretsHelpers {
   private const val COORDINATE_FIELD = "_secret"
   private const val SECRET_STORAGE_ID_FIELD = "_secret_storage_id"
+  private const val SECRET_REF_ID_FIELD = "_secret_reference_id"
 
   /**
    * Used to separate secrets out of some configuration. This will output a partial config that
@@ -161,14 +162,21 @@ object SecretsHelpers {
    * Replaces {"_secret": "full_coordinate"} objects in the partial config with the string secret
    * payloads loaded from the secret persistence at those coordinates.
    *
-   * @param partialConfig configuration containing secret coordinates (references to secrets)
+   * @param configWithRefs configuration containing secret coordinates (references to secrets)
    * @param secretPersistence secret storage mechanism
    * @return full config including actual secret values
    */
   fun combineConfig(
+    configWithRefs: ConfigWithSecretReferences?,
+    secretPersistence: ReadOnlySecretPersistence,
+  ): JsonNode = combineInlinedConfig(configWithRefs?.toInlined()?.value, secretPersistence)
+
+  @VisibleForTesting
+  internal fun combineInlinedConfig(
     partialConfig: JsonNode?,
     secretPersistence: ReadOnlySecretPersistence,
   ): JsonNode {
+    // This should be updated to operate on ConfigWithSecretReferences instead of raw json nodes after legacy secrets are gone
     return if (partialConfig != null) {
       val config = partialConfig.deepCopy<JsonNode>()
 
@@ -183,10 +191,10 @@ object SecretsHelpers {
       config.fields().forEachRemaining { (fieldName, fieldNode): Map.Entry<String, JsonNode> ->
         if (fieldNode is ArrayNode) {
           for (i in 0 until fieldNode.size()) {
-            fieldNode[i] = combineConfig(fieldNode[i], secretPersistence)
+            fieldNode[i] = combineInlinedConfig(fieldNode[i], secretPersistence)
           }
         } else if (fieldNode is ObjectNode) {
-          (config as ObjectNode).replace(fieldName, combineConfig(fieldNode, secretPersistence))
+          (config as ObjectNode).replace(fieldName, combineInlinedConfig(fieldNode, secretPersistence))
         }
       }
       config
@@ -369,19 +377,85 @@ object SecretsHelpers {
    * configs.
    */
   object SecretReferenceHelpers {
+    fun getSecretStorageIdFromConfig(config: ConfigWithSecretReferences): UUID? =
+      config.referencedSecrets.values
+        .mapNotNull { it.secretStorageId }
+        .toSet()
+        .let { secretStorageIds ->
+          when {
+            secretStorageIds.size > 1 -> throw IllegalStateException("Multiple secret storage IDs found in the config: $secretStorageIds")
+            secretStorageIds.isNotEmpty() -> secretStorageIds.first()
+            else -> null
+          }
+        }
+
+    fun inlineSecretReferences(
+      config: JsonNode,
+      secretRefConfigs: Map<String, SecretReferenceConfig>,
+    ): InlinedConfigWithSecretRefs {
+      var inlinedJson = Jsons.clone(config)
+      secretRefConfigs.forEach { (hydrationPath, secretRefConfig) ->
+        val secretNode =
+          Jsons.jsonNode(
+            buildMap {
+              put(COORDINATE_FIELD, secretRefConfig.secretCoordinate.fullCoordinate)
+              secretRefConfig.secretStorageId?.let { put(SECRET_STORAGE_ID_FIELD, it) }
+            },
+          )
+
+        inlinedJson =
+          when (hydrationPath) {
+            "$" -> secretNode
+            else -> JsonPaths.replaceAt(inlinedJson, hydrationPath) { _: JsonNode, _: String? -> secretNode }
+          }
+      }
+
+      return InlinedConfigWithSecretRefs(inlinedJson)
+    }
+
     /**
-     * This function will return all the secret store ids from the config.
+     * Extracts all secret references from a config.
      */
-    fun getSecretStorageIdsFromConfig(config: JsonNode): Set<UUID> {
-      val secretStoreIds = mutableSetOf<UUID>()
-      config.fields().forEach { (key, value) ->
-        if (key == SECRET_STORAGE_ID_FIELD) {
-          secretStoreIds.add(UUID.fromString(value.asText()))
-        } else if (value.isObject) {
-          secretStoreIds.addAll(getSecretStorageIdsFromConfig(value))
+    fun getReferenceMapFromConfig(config: InlinedConfigWithSecretRefs): Map<String, SecretReferenceConfig> =
+      getReferenceMapFromInlinedConfig(config.value)
+
+    private fun getReferenceMapFromInlinedConfig(
+      config: JsonNode,
+      path: String = "$",
+    ): Map<String, SecretReferenceConfig> {
+      if (config.isObject && config.has(COORDINATE_FIELD)) {
+        val secretRefConfig =
+          SecretReferenceConfig(
+            secretCoordinate = SecretCoordinate.fromFullCoordinate(config[COORDINATE_FIELD].asText()),
+            secretStorageId = config[SECRET_STORAGE_ID_FIELD]?.takeIf { it.isTextual }?.let { UUID.fromString(it.asText()) },
+          )
+        return mapOf(path to secretRefConfig)
+      }
+
+      val secretRefConfigs = mutableMapOf<String, SecretReferenceConfig>()
+      config.fields().forEachRemaining { (key, value) ->
+        if (value.isObject) {
+          secretRefConfigs.putAll(getReferenceMapFromInlinedConfig(value, "$path.$key"))
+        } else if (value.isArray) {
+          for (i in 0 until value.size()) {
+            secretRefConfigs.putAll(getReferenceMapFromInlinedConfig(value[i], "$path.$key[$i]"))
+          }
         }
       }
-      return secretStoreIds
+
+      return secretRefConfigs
+    }
+
+    fun getSecretReferenceIdsFromConfig(config: JsonNode): Set<UUID> {
+      val secretRefIds = mutableSetOf<UUID>()
+      config.fields().forEach { (key, value) ->
+        if (key == SECRET_REF_ID_FIELD) {
+          secretRefIds.add(UUID.fromString(value.asText()))
+        } else if (value.isObject) {
+          secretRefIds.addAll(getSecretReferenceIdsFromConfig(value))
+        }
+      }
+      return secretRefIds
     }
   }
 }

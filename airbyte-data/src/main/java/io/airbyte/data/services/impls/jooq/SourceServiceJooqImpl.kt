@@ -284,10 +284,14 @@ class SourceServiceJooqImpl(
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
-  override fun getSourceConnection(sourceId: UUID): SourceConnection =
-    listSourceQuery(Optional.of(sourceId))
-      .findFirst()
-      .orElseThrow<ConfigNotFoundException?>(Supplier { ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId) })
+  override fun getSourceConnection(sourceId: UUID): SourceConnection {
+    val sourceConnection =
+      listSourceQuery(Optional.of(sourceId))
+        .findFirst()
+        .orElseThrow({ ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId) })
+
+    return sourceConnection
+  }
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }

@@ -59,7 +59,6 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -192,7 +191,6 @@ class ReplicationInputHydratorTest {
       null,
       null);
 
-  private static SecretsRepositoryReader secretsRepositoryReader;
   private static MapperSecretHydrationHelper mapperSecretHydrationHelper;
   private static ConnectorSecretsHydrator connectorSecretsHydrator;
   private static AirbyteApiClient airbyteApiClient;
@@ -210,7 +208,6 @@ class ReplicationInputHydratorTest {
 
   @BeforeEach
   void setup() throws IOException {
-    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     mapperSecretHydrationHelper = mock(MapperSecretHydrationHelper.class);
     connectorSecretsHydrator = mock(ConnectorSecretsHydrator.class);
     airbyteApiClient = mock(AirbyteApiClient.class);

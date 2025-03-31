@@ -41,6 +41,7 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -52,8 +53,10 @@ import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretHydrationContext;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled;
@@ -105,6 +108,7 @@ public class OAuthHandler {
   private final OAuthService oAuthService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final SecretPersistenceService secretPersistenceService;
+  private final SecretReferenceService secretReferenceService;
   private final WorkspaceService workspaceService;
   private final MetricClient metricClient;
 
@@ -119,6 +123,7 @@ public class OAuthHandler {
                       final OAuthService oauthService,
                       final SecretPersistenceConfigService secretPersistenceConfigService,
                       final SecretPersistenceService secretPersistenceService,
+                      final SecretReferenceService secretReferenceService,
                       final WorkspaceService workspaceService,
                       final MetricClient metricClient) {
     this.oAuthImplementationFactory = oauthImplementationFactory;
@@ -132,6 +137,7 @@ public class OAuthHandler {
     this.oAuthService = oauthService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.secretPersistenceService = secretPersistenceService;
+    this.secretReferenceService = secretReferenceService;
     this.workspaceService = workspaceService;
     this.metricClient = metricClient;
   }
@@ -187,7 +193,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final JsonNode hydratedSourceConfig = getHydratedConfiguration(sourceConnection.getConfiguration(), organizationId, workspaceId);
+        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
+            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
             sourceOauthConsentRequest.getoAuthInputConfiguration());
@@ -265,7 +273,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final JsonNode hydratedDestinationConfig = getHydratedConfiguration(destinationConnection.getConfiguration(), organizationId, workspaceId);
+        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
+            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
             destinationOauthConsentRequest.getoAuthInputConfiguration());
@@ -348,7 +358,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final JsonNode hydratedSourceConfig = getHydratedConfiguration(sourceConnection.getConfiguration(), organizationId, workspaceId);
+        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
+            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
             completeSourceOauthRequest.getoAuthInputConfiguration());
@@ -422,7 +434,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final JsonNode hydratedDestinationConfig = getHydratedConfiguration(destinationConnection.getConfiguration(), organizationId, workspaceId);
+        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
+            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
             completeDestinationOAuthRequest.getoAuthInputConfiguration());
@@ -474,7 +488,9 @@ public class OAuthHandler {
     }
     final JsonNode sourceOAuthParamConfig =
         getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceDefinitionId());
-    final JsonNode hydratedSourceConfig = getHydratedConfiguration(sourceConnection.getConfiguration(), organizationId, workspaceId);
+    final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
+        sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+    final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
     oAuthFlowImplementation.revokeSourceOauth(
         revokeSourceOauthTokensRequest.getWorkspaceId(),
         revokeSourceOauthTokensRequest.getSourceDefinitionId(),
@@ -689,7 +705,7 @@ public class OAuthHandler {
     oAuthService.writeDestinationOAuthParam(param);
   }
 
-  private JsonNode getHydratedConfiguration(final JsonNode config, final UUID organizationId, final UUID workspaceId) {
+  private JsonNode getHydratedConfiguration(final ConfigWithSecretReferences config, final UUID organizationId, final UUID workspaceId) {
     final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(organizationId, workspaceId);
     final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(config, hydrationContext);
     return secretsRepositoryReader.hydrateConfig(config, secretPersistence);

@@ -10,6 +10,7 @@ import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody
 import io.airbyte.api.client.model.generated.SecretStorageIdRequestBody
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
@@ -51,10 +52,10 @@ class ConnectorSecretsHydrator(
   }
 
   private fun getPersistence(
-    jsonConfig: JsonNode,
+    config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
   ): SecretPersistence {
-    val secretStorageId = getStorageIdFromConfig(jsonConfig)
+    val secretStorageId = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdFromConfig(config)
     return when {
       secretStorageId != null -> getPersistenceByStorageId(secretStorageId)
       useRuntimeSecretPersistence -> getLegacyPersistenceByOrgId(context.organizationId)
@@ -62,23 +63,11 @@ class ConnectorSecretsHydrator(
     }
   }
 
-  // this logic could move down to the Helper
-  private fun getStorageIdFromConfig(jsonConfig: JsonNode): UUID? {
-    // TODO(pedro): For now we only get one secret storage ID from the config,
-    //  but we could support hydrating each secret individually from its corresponding storage.
-    val secretStorageIds = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdsFromConfig(jsonConfig)
-    return when {
-      secretStorageIds.size > 1 -> throw IllegalStateException("Multiple secret storage IDs found in the config: $secretStorageIds")
-      secretStorageIds.isNotEmpty() -> secretStorageIds.first()
-      else -> null
-    }
-  }
-
   fun hydrateConfig(
-    jsonConfig: JsonNode,
+    config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
   ): JsonNode? {
-    val secretPersistence = getPersistence(jsonConfig, context)
-    return secretsRepositoryReader.hydrateConfig(jsonConfig, secretPersistence)
+    val secretPersistence = getPersistence(config, context)
+    return secretsRepositoryReader.hydrateConfig(config, secretPersistence)
   }
 }

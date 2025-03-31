@@ -44,4 +44,5 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.testcontainers.vault)
   testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
+  testFixturesImplementation(project(":oss:airbyte-config:config-models"))
 }

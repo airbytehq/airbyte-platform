@@ -102,6 +102,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         .withIsCustomConnector(isCustomConnector)
         .withResourceRequirements(resourceRequirements);
 
+    // TODO(pedro): Make sure we pass the (inlined) ConfigWithSecretRefs to the job
+
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext =
         new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage(), sourceVersion.getInternalSupportLevel());

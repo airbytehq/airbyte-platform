@@ -4,10 +4,10 @@
 
 package io.airbyte.domain.services.secrets
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SecretPersistenceConfig
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
@@ -49,17 +49,6 @@ class SecretPersistenceService(
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {
-  private fun getStorageIdFromConfig(jsonConfig: JsonNode): SecretStorageId? {
-    // TODO(pedro): For now we only get one secret storage ID from the config,
-    //  but we could support hydrating each secret individually from its corresponding storage.
-    val secretStorageIds = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdsFromConfig(jsonConfig)
-    return when {
-      secretStorageIds.size > 1 -> throw IllegalStateException("Multiple secret storage IDs found in the config: $secretStorageIds")
-      secretStorageIds.isNotEmpty() -> SecretStorageId(secretStorageIds.first())
-      else -> null
-    }
-  }
-
   private fun getPersistenceByStorageId(secretStorageId: SecretStorageId): SecretPersistence {
     val secretStorage = secretStorageService.getById(secretStorageId)
     val secretStorageConfig = secretStorageService.hydrateStorageConfig(secretStorage).config
@@ -90,10 +79,10 @@ class SecretPersistenceService(
   }
 
   fun getPersistenceFromConfig(
-    jsonConfig: JsonNode,
+    config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
   ): SecretPersistence {
-    val secretStorageId = getStorageIdFromConfig(jsonConfig)
+    val secretStorageId = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdFromConfig(config)?.let { SecretStorageId(it) }
     val useRuntimeSecretPersistence = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(context.organizationId.value))
     return when {
       secretStorageId != null -> getPersistenceByStorageId(secretStorageId)

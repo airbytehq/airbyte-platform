@@ -6,6 +6,9 @@ package io.airbyte.domain.services.secrets
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ScopeType
+import io.airbyte.config.secrets.ConfigWithSecretReferences
+import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -60,7 +63,7 @@ class SecretPersistenceServiceTest {
 
   @Test
   fun `test getPersistenceFromConfig with default persistence`() {
-    val config = Jsons.emptyObject()
+    val config = ConfigWithSecretReferences(Jsons.emptyObject(), mapOf())
     val context =
       SecretHydrationContext(
         organizationId,
@@ -75,12 +78,13 @@ class SecretPersistenceServiceTest {
   fun `test getPersistenceFromConfig with explicit storage id`() {
     val secretStorageId = UUID.randomUUID()
     val config =
-      Jsons.jsonNode(
+      ConfigWithSecretReferences(
+        Jsons.emptyObject(),
         mapOf(
-          "password" to
-            mapOf(
-              "_secret" to "my-secret-coord",
-              "_secret_storage_id" to secretStorageId.toString(),
+          "$.password" to
+            SecretReferenceConfig(
+              secretStorageId = secretStorageId,
+              secretCoordinate = SecretCoordinate.ExternalSecretCoordinate("_my_coord"),
             ),
         ),
       )
@@ -115,17 +119,18 @@ class SecretPersistenceServiceTest {
   @Test
   fun `test getPersistenceFromConfig with multiple storage IDs fails`() {
     val config =
-      Jsons.jsonNode(
+      ConfigWithSecretReferences(
+        Jsons.emptyObject(),
         mapOf(
-          "password" to
-            mapOf(
-              "_secret" to "my-secret-coord",
-              "_secret_storage_id" to UUID.randomUUID().toString(),
+          "$.password" to
+            SecretReferenceConfig(
+              secretStorageId = UUID.randomUUID(),
+              secretCoordinate = SecretCoordinate.ExternalSecretCoordinate("my-secret-coord"),
             ),
-          "token" to
-            mapOf(
-              "_secret" to "my-secret-coord2",
-              "_secret_storage_id" to UUID.randomUUID().toString(),
+          "$.token" to
+            SecretReferenceConfig(
+              secretStorageId = UUID.randomUUID(),
+              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
             ),
         ),
       )
@@ -141,7 +146,7 @@ class SecretPersistenceServiceTest {
 
   @Test
   fun `test getPersistenceFromConfig with legacy RuntimeSecretPersistence`() {
-    val config = Jsons.emptyObject()
+    val config = ConfigWithSecretReferences(Jsons.emptyObject(), mapOf())
     val context = SecretHydrationContext(organizationId, workspaceId)
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns true
 

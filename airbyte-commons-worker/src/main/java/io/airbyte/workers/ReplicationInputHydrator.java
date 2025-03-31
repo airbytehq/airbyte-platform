@@ -40,6 +40,8 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -207,7 +209,9 @@ public class ReplicationInputHydrator {
     final JsonNode fullSourceConfig;
 
     try {
-      fullDestinationConfig = connectorSecretsHydrator.hydrateConfig(replicationActivityInput.getDestinationConfiguration(), hydrationContext);
+      final ConfigWithSecretReferences destConfig =
+          InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(replicationActivityInput.getDestinationConfiguration());
+      fullDestinationConfig = connectorSecretsHydrator.hydrateConfig(destConfig, hydrationContext);
     } catch (final SecretCoordinateException e) {
       metricClient.count(
           OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
@@ -218,7 +222,9 @@ public class ReplicationInputHydrator {
     }
 
     try {
-      fullSourceConfig = connectorSecretsHydrator.hydrateConfig(replicationActivityInput.getSourceConfiguration(), hydrationContext);
+      final ConfigWithSecretReferences sourceConfig =
+          InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(replicationActivityInput.getSourceConfiguration());
+      fullSourceConfig = connectorSecretsHydrator.hydrateConfig(sourceConfig, hydrationContext);
     } catch (final SecretCoordinateException e) {
       metricClient.count(
           OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,

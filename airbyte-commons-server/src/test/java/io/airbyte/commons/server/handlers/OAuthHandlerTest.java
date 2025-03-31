@@ -33,6 +33,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
@@ -66,6 +67,7 @@ class OAuthHandlerTest {
   private OAuthService oauthService;
   private SecretPersistenceService secretPersistenceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private SecretReferenceService secretReferenceService;
   private WorkspaceService workspaceService;
   private MetricClient metricClient;
 
@@ -83,6 +85,7 @@ class OAuthHandlerTest {
     oauthService = mock(OAuthService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     secretPersistenceService = mock(SecretPersistenceService.class);
+    secretReferenceService = mock(SecretReferenceService.class);
     workspaceService = mock(WorkspaceService.class);
     handler = new OAuthHandler(
         oauthImplementationFactory,
@@ -96,6 +99,7 @@ class OAuthHandlerTest {
         oauthService,
         secretPersistenceConfigService,
         secretPersistenceService,
+        secretReferenceService,
         workspaceService,
         metricClient);
   }

@@ -6,6 +6,8 @@ package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.ExternalSecretCoordinate
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.config.secrets.test.cases.ArrayOneOfTestCase
@@ -17,12 +19,14 @@ import io.airbyte.config.secrets.test.cases.OneOfTestCase
 import io.airbyte.config.secrets.test.cases.OptionalPasswordTestCase
 import io.airbyte.config.secrets.test.cases.PostgresSshKeyTestCase
 import io.airbyte.config.secrets.test.cases.SimpleTestCase
+import io.airbyte.protocol.models.Jsons
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.kotlintest.matchers.string.shouldStartWith
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -36,7 +40,7 @@ import java.util.stream.Stream
 private const val PROVIDE_TEST_CASES = "provideTestCases"
 
 internal class SecretsHelpersTest {
-  private val secretPresistence: SecretPersistence = MemorySecretPersistence()
+  private val secretPersistence: SecretPersistence = MemorySecretPersistence()
 
   @ParameterizedTest
   @MethodSource(PROVIDE_TEST_CASES)
@@ -62,7 +66,7 @@ internal class SecretsHelpersTest {
         SecretsTestCase.WORKSPACE_ID,
         inputConfig,
         testCase.spec.connectionSpecification,
-        secretPresistence,
+        secretPersistence,
       )
     Assertions.assertEquals(testCase.partialConfig, splitConfig.partialConfig)
     Assertions.assertEquals(testCase.firstSecretMap, splitConfig.getCoordinateToPayload())
@@ -106,7 +110,7 @@ internal class SecretsHelpersTest {
         SecretsTestCase.WORKSPACE_ID,
         inputConfig,
         testCase.spec.connectionSpecification,
-        secretPresistence,
+        secretPersistence,
         customSecretPrefix,
       )
 
@@ -159,7 +163,7 @@ internal class SecretsHelpersTest {
     val inputPartialConfig: JsonNode = testCase.partialConfig
     val inputPartialConfigCopy = inputPartialConfig.deepCopy<JsonNode>()
     val actualCombinedConfig: JsonNode =
-      SecretsHelpers.combineConfig(
+      SecretsHelpers.combineInlinedConfig(
         testCase.partialConfig,
         secretPersistence,
       )
@@ -188,7 +192,7 @@ internal class SecretsHelpersTest {
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) {
-      SecretsHelpers.combineConfig(
+      SecretsHelpers.combineInlinedConfig(
         testCase.partialConfig,
         secretPersistence,
       )
@@ -293,6 +297,147 @@ internal class SecretsHelpersTest {
     org.assertj.core.api.Assertions
       .assertThat(secretsPaths)
       .containsExactlyElementsOf(testCase.expectedSecretsPaths)
+  }
+
+  @Nested
+  inner class SecretReferenceHelpersTest {
+    @Test
+    fun testGetReferenceMapFromInlinedConfig() {
+      val storageId = UUID.randomUUID()
+      val jsonConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "topLevelSecret" to
+              mapOf(
+                "_secret" to "airbyte_workspace_123_secret_456_v1",
+                "_secret_storage_id" to storageId.toString(),
+              ),
+            "topLevelExternalSecret" to
+              mapOf(
+                "_secret" to "my-top-level-ext-secret",
+                "_secret_storage_id" to storageId.toString(),
+              ),
+            "topLevelLegacySecret" to
+              mapOf(
+                "_secret" to "airbyte_workspace_123_secret_567_v12",
+              ),
+            "nestedObject" to
+              mapOf(
+                "nestedSecret" to
+                  mapOf(
+                    "_secret" to "airbyte_workspace_123_secret_789_v1",
+                    "_secret_storage_id" to storageId.toString(),
+                  ),
+              ),
+            "nestedArray" to
+              listOf(
+                mapOf(
+                  "_secret" to "airbyte_workspace_123_secret_890_v2",
+                  "_secret_storage_id" to storageId.toString(),
+                ),
+                mapOf(
+                  "_secret" to "my-array-secret-2",
+                  "_secret_storage_id" to storageId.toString(),
+                ),
+              ),
+          ),
+        )
+
+      val expectedMap =
+        mapOf(
+          "$.topLevelSecret" to
+            SecretReferenceConfig(
+              secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_456"),
+              secretStorageId = storageId,
+            ),
+          "$.topLevelExternalSecret" to
+            SecretReferenceConfig(
+              secretCoordinate = ExternalSecretCoordinate("my-top-level-ext-secret"),
+              secretStorageId = storageId,
+            ),
+          "$.topLevelLegacySecret" to
+            SecretReferenceConfig(
+              secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_567", 12),
+              secretStorageId = null,
+            ),
+          "$.nestedObject.nestedSecret" to
+            SecretReferenceConfig(
+              secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_789"),
+              secretStorageId = storageId,
+            ),
+          "$.nestedArray[0]" to
+            SecretReferenceConfig(
+              secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_890", 2),
+              secretStorageId = storageId,
+            ),
+          "$.nestedArray[1]" to
+            SecretReferenceConfig(
+              secretCoordinate = ExternalSecretCoordinate("my-array-secret-2"),
+              secretStorageId = storageId,
+            ),
+        )
+
+      val referenceMap = SecretsHelpers.SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(jsonConfig))
+      Assertions.assertEquals(expectedMap, referenceMap)
+
+      // test conversion is lossless
+      val inlinedConfig = SecretsHelpers.SecretReferenceHelpers.inlineSecretReferences(jsonConfig, expectedMap)
+      val reExtractedReferenceMap = SecretsHelpers.SecretReferenceHelpers.getReferenceMapFromConfig(inlinedConfig)
+      Assertions.assertEquals(referenceMap, reExtractedReferenceMap)
+    }
+
+    @Test
+    fun testInlineSecretReferences() {
+      val storageId = UUID.randomUUID()
+      val jsonConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "username" to "bob",
+            "password" to mapOf("_ref_id" to "123"),
+            "apiKey" to mapOf("_ref_id" to "456"),
+            "legacySecret" to mapOf("_secret" to "my-coord"),
+          ),
+        )
+      val referenceConfigs =
+        mapOf(
+          "$.password" to
+            SecretReferenceConfig(
+              secretStorageId = storageId,
+              secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_123"),
+            ),
+          "$.apiKey" to
+            SecretReferenceConfig(
+              secretStorageId = storageId,
+              secretCoordinate = ExternalSecretCoordinate("my-external-coordinate"),
+            ),
+        )
+
+      val expectedInlined =
+        InlinedConfigWithSecretRefs(
+          Jsons.jsonNode(
+            mapOf(
+              "username" to "bob",
+              "password" to
+                mapOf(
+                  "_secret" to "airbyte_workspace_123_secret_123_v1",
+                  "_secret_storage_id" to storageId.toString(),
+                ),
+              "apiKey" to
+                mapOf(
+                  "_secret" to "my-external-coordinate",
+                  "_secret_storage_id" to storageId.toString(),
+                ),
+              "legacySecret" to
+                mapOf(
+                  "_secret" to "my-coord",
+                ),
+            ),
+          ),
+        )
+
+      val inlined = SecretsHelpers.SecretReferenceHelpers.inlineSecretReferences(jsonConfig, referenceConfigs)
+      Assertions.assertEquals(expectedInlined, inlined)
+    }
   }
 
   companion object {

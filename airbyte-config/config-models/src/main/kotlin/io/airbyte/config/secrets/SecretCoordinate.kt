@@ -45,7 +45,7 @@ sealed class SecretCoordinate {
     )
 
     override val fullCoordinate: String
-      get() = "${coordinateBase}${VERSION_DELIMITER}$version"
+      get() = "${coordinateBase}$VERSION_DELIMITER$version"
 
     companion object {
       const val DEFAULT_SECRET_BASE_PREFIX = "workspace_"
@@ -66,7 +66,7 @@ sealed class SecretCoordinate {
         secretBasePrefix: String,
         secretBaseId: UUID,
         uuidSupplier: Supplier<UUID> = Supplier { UUID.randomUUID() },
-      ): String = "${AIRBYTE_PREFIX}${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
+      ): String = "$AIRBYTE_PREFIX${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
 
       /**
        * Used to turn a full string coordinate into an [AirbyteManagedSecretCoordinate] if it

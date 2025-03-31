@@ -7,6 +7,8 @@ package io.airbyte.workers.hydration
 import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.ActorContext
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -20,7 +22,7 @@ class DiscoverCatalogInputHydratorTest {
 
     val hydrator = DiscoverCatalogInputHydrator(base)
 
-    val unhydratedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = InlinedConfigWithSecretRefs(POJONode("un-hydrated"))
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -30,11 +32,11 @@ class DiscoverCatalogInputHydratorTest {
         .withActorContext(ActorContext().withWorkspaceId(workspaceId).withOrganizationId(orgId))
         .withConfigHash(UUID.randomUUID().toString())
         .withSourceId(UUID.randomUUID().toString())
-        .withConnectionConfiguration(unhydratedConfig)
+        .withConnectionConfiguration(unhydratedConfig.value)
 
     every {
       base.hydrateConfig(
-        unhydratedConfig,
+        unhydratedConfig.toConfigWithRefs(),
         SecretHydrationContext(
           organizationId = orgId,
           workspaceId = workspaceId,

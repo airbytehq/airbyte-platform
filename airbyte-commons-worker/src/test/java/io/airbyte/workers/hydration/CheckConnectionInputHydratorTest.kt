@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorType
 import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -21,7 +23,7 @@ class CheckConnectionInputHydratorTest {
 
     val hydrator = CheckConnectionInputHydrator(base)
 
-    val unhydratedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = InlinedConfigWithSecretRefs(POJONode("un-hydrated"))
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -31,11 +33,11 @@ class CheckConnectionInputHydratorTest {
         .withActorContext(ActorContext().withWorkspaceId(workspaceId).withOrganizationId(orgId))
         .withActorType(ActorType.DESTINATION)
         .withActorId(UUID.randomUUID())
-        .withConnectionConfiguration(unhydratedConfig)
+        .withConnectionConfiguration(unhydratedConfig.value)
 
     every {
       base.hydrateConfig(
-        unhydratedConfig,
+        unhydratedConfig.toConfigWithRefs(),
         SecretHydrationContext(
           organizationId = orgId,
           workspaceId = workspaceId,

@@ -56,6 +56,10 @@ open class SecretsRepositoryReader(
    * @param configWithSecrets Config with _secrets in it.
    * @return Config with _secrets hydrated.
    */
+  @Deprecated(
+    "Use hydrateConfig instead",
+    ReplaceWith("hydrateConfig(configWithSecrets, secretPersistence)", "io.airbyte.config.secrets.SecretsRepositoryReader"),
+  )
   fun hydrateConfigFromDefaultSecretPersistence(configWithSecrets: JsonNode?): JsonNode? =
     if (configWithSecrets != null) {
       secretsHydrator.hydrateFromDefaultSecretPersistence(configWithSecrets)
@@ -63,6 +67,10 @@ open class SecretsRepositoryReader(
       null
     }
 
+  @Deprecated(
+    "Use hydrateConfig instead",
+    ReplaceWith("hydrateConfig(configWithSecrets, runtimeSecretPersistence)", "io.airbyte.config.secrets.SecretsRepositoryReader"),
+  )
   fun hydrateConfigFromRuntimeSecretPersistence(
     configuration: JsonNode?,
     runtimeSecretPersistence: RuntimeSecretPersistence,
@@ -74,7 +82,7 @@ open class SecretsRepositoryReader(
     }
 
   fun hydrateConfig(
-    configuration: JsonNode?,
+    configuration: ConfigWithSecretReferences?,
     secretPersistence: SecretPersistence,
   ): JsonNode? =
     if (configuration != null) {
