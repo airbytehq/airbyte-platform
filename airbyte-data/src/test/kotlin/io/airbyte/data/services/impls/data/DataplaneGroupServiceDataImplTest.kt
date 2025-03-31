@@ -61,6 +61,7 @@ class DataplaneGroupServiceDataImplTest {
 
     every { dataplaneGroupRepository.existsById(dataplaneGroup.id) } returns false
     every { dataplaneGroupRepository.save(any()) } returns dataplaneGroup
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns emptyList()
 
     val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.writeDataplaneGroup(dataplaneGroup.toConfigModel())
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
@@ -75,6 +76,7 @@ class DataplaneGroupServiceDataImplTest {
 
     every { dataplaneGroupRepository.existsById(dataplaneGroup.id) } returns true
     every { dataplaneGroupRepository.update(any()) } returns dataplaneGroup
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns emptyList()
 
     val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.writeDataplaneGroup(dataplaneGroup.toConfigModel())
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
@@ -181,6 +183,38 @@ class DataplaneGroupServiceDataImplTest {
     val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDataplaneGroups(mockOrganizationId, false)
 
     assertEquals(retrievedDataplaneGroups.size, 2)
+  }
+
+  @Test
+  fun `validateDataplaneGroupName throws if name conflicts with default org`() {
+    val conflictingName = GEOGRAPHY_US
+    val dataplaneGroup =
+      DataplaneGroup(
+        organizationId = UUID.randomUUID(), // not default
+        name = conflictingName,
+        enabled = true,
+        tombstone = false,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    val defaultGroup =
+      DataplaneGroup(
+        id = UUID.randomUUID(),
+        organizationId = DEFAULT_ORGANIZATION_ID,
+        name = conflictingName,
+        enabled = true,
+        tombstone = false,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns
+      listOf(defaultGroup)
+
+    assertThrows<RuntimeException> {
+      dataplaneGroupServiceDataImpl.validateDataplaneGroupName(dataplaneGroup.toConfigModel())
+    }
   }
 
   private fun createDataplaneGroup(id: UUID): DataplaneGroup =
