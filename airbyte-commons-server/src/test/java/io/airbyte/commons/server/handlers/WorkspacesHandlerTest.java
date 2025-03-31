@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.helpers.NotificationSettingsHelpersKt.patchNotificationSettingsWithDefaultValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -202,12 +203,12 @@ class WorkspacesHandlerTest {
   }
 
   private NotificationSettings generateNotificationSettings() {
-    return new NotificationSettings()
+    return patchNotificationSettingsWithDefaultValue(new NotificationSettings()
         .withSendOnFailure(
             new NotificationItem()
                 .withNotificationType(new ArrayList<>(List.of(NotificationType.SLACK)))
                 .withSlackConfiguration(new SlackNotificationConfiguration()
-                    .withWebhook(FAILURE_NOTIFICATION_WEBHOOK)));
+                    .withWebhook(FAILURE_NOTIFICATION_WEBHOOK))));
   }
 
   private io.airbyte.api.model.generated.Notification generateApiNotification() {
@@ -219,6 +220,7 @@ class WorkspacesHandlerTest {
 
   private io.airbyte.api.model.generated.NotificationSettings generateApiNotificationSettings() {
     return new io.airbyte.api.model.generated.NotificationSettings()
+
         .sendOnFailure(
             new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of(io.airbyte.api.model.generated.NotificationType.SLACK))
                 .slackConfiguration(new io.airbyte.api.model.generated.SlackNotificationConfiguration()
@@ -506,7 +508,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -523,7 +525,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace2.getAnonymousDataCollection())
         .securityUpdates(workspace2.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -553,7 +555,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(WEBHOOK_CONFIG_ID).name(TEST_NAME)))
         .organizationId(ORGANIZATION_ID)
@@ -703,7 +705,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .securityUpdates(false)
         .notifications(List.of(expectedNotificationRead))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().name(TEST_NAME).id(WEBHOOK_CONFIG_ID)))
         .organizationId(ORGANIZATION_ID)
@@ -816,7 +818,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
         .tombstone(false);
@@ -915,20 +917,18 @@ class WorkspacesHandlerTest {
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
     // This is the workspace that exists before the update. It has a customerio notification for both
-    // success and failure,
-    // and a webhook ("slack") notification for failure.
+    // success and failure, and a webhook ("slack") notification for failure.
     //
-    // customerio notifications are not exposed via the public API, so part of this test is to show that
-    // an update
-    // from the public API leaves the internal customerio data unmodified.
-    final StandardWorkspace existingWorkspace = Jsons.clone(workspace).withNotificationSettings(new NotificationSettings()
+    // This test shows that the notifications can be patched, and leave the existing settings in place.
+    final StandardWorkspace existingWorkspace = Jsons.clone(workspace);
+    existingWorkspace.getNotificationSettings()
         .withSendOnSuccess(new NotificationItem()
             .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
             .withNotificationType(new ArrayList<>(List.of(NotificationType.CUSTOMERIO))))
         .withSendOnFailure(new NotificationItem()
             .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/failure"))
             .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
-            .withNotificationType(new ArrayList<>(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK)))));
+            .withNotificationType(new ArrayList<>(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK))));
 
     // The update from the public API adds a webhook ("slack") notification for success,
     // and disables the webhook ("slack") notification for failure.
@@ -940,18 +940,19 @@ class WorkspacesHandlerTest {
             .failure(new NotificationConfig()
                 .webhook(new WebhookNotificationConfig().enabled(false))));
 
-    final StandardWorkspace expectedWorkspace = Jsons.clone(existingWorkspace)
-        .withNotificationSettings(new NotificationSettings()
-            .withSendOnSuccess(new NotificationItem()
-                .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/success"))
-                .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
-                .withNotificationType(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK)))
-            .withSendOnFailure(new NotificationItem()
-                .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/failure"))
-                .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
-                .withNotificationType(List.of(NotificationType.CUSTOMERIO))))
-        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs()
-            .withWebhookConfigs(Collections.emptyList())));
+    final StandardWorkspace expectedWorkspace = Jsons.clone(existingWorkspace);
+    expectedWorkspace.getNotificationSettings()
+        .withSendOnSuccess(new NotificationItem()
+            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/success"))
+            .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+            .withNotificationType(List.of(NotificationType.CUSTOMERIO, NotificationType.SLACK)))
+        .withSendOnFailure(new NotificationItem()
+            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://foo.bar/failure"))
+            .withCustomerioConfiguration(new CustomerioNotificationConfiguration())
+            .withNotificationType(List.of(NotificationType.CUSTOMERIO)));
+
+    expectedWorkspace.withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs()
+        .withWebhookConfigs(Collections.emptyList())));
 
     when(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(existingWorkspace)

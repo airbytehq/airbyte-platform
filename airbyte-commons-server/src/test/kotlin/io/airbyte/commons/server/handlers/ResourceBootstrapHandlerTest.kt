@@ -13,7 +13,6 @@ import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -32,9 +31,7 @@ class ResourceBootstrapHandlerTest {
   private val permissionService: PermissionService = mockk()
   private val currentUserService: CurrentUserService = mockk()
   private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
-  private val featureFlagClient: FeatureFlagClient = mockk()
   private val organizationPaymentConfigService: OrganizationPaymentConfigService = mockk()
-  private val airbyteEdition: AirbyteEdition = mockk()
 
   private val handler =
     ResourceBootstrapHandler(
@@ -44,9 +41,8 @@ class ResourceBootstrapHandlerTest {
       permissionService,
       currentUserService,
       apiAuthorizationHelper,
-      featureFlagClient,
       organizationPaymentConfigService,
-      airbyteEdition,
+      AirbyteEdition.COMMUNITY,
     )
 
   @Nested

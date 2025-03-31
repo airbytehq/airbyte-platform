@@ -4,18 +4,21 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.NotificationItem
-import io.airbyte.api.model.generated.NotificationSettings
-import io.airbyte.api.model.generated.NotificationType
+import com.google.common.base.Strings
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem
+import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem
 import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter
-import io.airbyte.config.Configs
+import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.Notification
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -43,34 +46,12 @@ fun buildStandardWorkspace(
     displaySetupWizard = workspaceCreateWithId.displaySetupWizard ?: false
     tombstone = false
     notifications = NotificationConverter.toConfigList(workspaceCreateWithId.notifications)
-    notificationSettings = NotificationSettingsConverter.toConfig(patchNotificationSettingsWithDefaultValue(workspaceCreateWithId))
+    notificationSettings =
+      patchNotificationSettingsWithDefaultValue(NotificationSettingsConverter.toConfig(workspaceCreateWithId.notificationSettings))
     defaultGeography = geography
     webhookOperationConfigs = WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier)
     organizationId = organization.organizationId
     email = workspaceCreateWithId.email
-  }
-}
-
-private fun patchNotificationSettingsWithDefaultValue(workspaceCreateWithId: WorkspaceCreateWithId): NotificationSettings {
-  val defaultNotificationType = NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO)
-
-  return NotificationSettings().apply {
-    // Grab a reference to this `apply` scope's `this`, could also avoid this and reference `this@apply` in the following `with` function instead.
-    val ns = this
-
-    with(workspaceCreateWithId.notificationSettings) {
-      ns.sendOnSuccess = this?.sendOnSuccess ?: NotificationItem().notificationType(emptyList())
-      ns.sendOnFailure = this?.sendOnFailure ?: defaultNotificationType
-      ns.sendOnConnectionUpdate = this?.sendOnConnectionUpdate ?: defaultNotificationType
-
-      ns.sendOnConnectionUpdateActionRequired = this?.sendOnConnectionUpdateActionRequired ?: defaultNotificationType
-
-      ns.sendOnSyncDisabled = this?.sendOnSyncDisabled ?: defaultNotificationType
-      ns.sendOnSyncDisabledWarning = this?.sendOnSyncDisabledWarning ?: defaultNotificationType
-      ns.sendOnBreakingChangeWarning = this?.sendOnBreakingChangeWarning ?: defaultNotificationType
-
-      ns.sendOnBreakingChangeSyncsDisabled = this?.sendOnBreakingChangeSyncsDisabled ?: defaultNotificationType
-    }
   }
 }
 
@@ -94,6 +75,58 @@ fun getDefaultWorkspaceName(
   return defaultWorkspaceName
 }
 
+fun validateWorkspace(
+  workspace: StandardWorkspace,
+  airbyteEdition: AirbyteEdition,
+) {
+  if (workspace.notificationSettings != null) {
+    val settings = workspace.notificationSettings
+    validateNotificationItem(settings.sendOnSuccess, "success")
+    validateNotificationItem(settings.sendOnFailure, "failure")
+    validateNotificationItem(settings.sendOnConnectionUpdate, "connectionUpdate")
+    validateNotificationItem(settings.sendOnConnectionUpdateActionRequired, "connectionUpdateActionRequired")
+    validateNotificationItem(settings.sendOnSyncDisabled, "syncDisabled")
+    validateNotificationItem(settings.sendOnSyncDisabledWarning, "syncDisabledWarning")
+
+    // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
+    // this rule only applies to Airbyte Cloud, because OSS doesn't support email notifications.
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      if (!settings.sendOnConnectionUpdateActionRequired.hasEmail()) {
+        throw NotificationRequiredProblem(
+          ProblemMessageData().message("The 'connectionUpdateActionRequired' email notification can't be disabled"),
+        )
+      }
+      if (!settings.sendOnSyncDisabled.hasEmail()) {
+        throw NotificationRequiredProblem(
+          ProblemMessageData().message("The 'syncDisabled' email notification can't be disabled"),
+        )
+      }
+    }
+  }
+}
+
+private fun io.airbyte.config.NotificationItem?.hasEmail(): Boolean {
+  if (this == null) return false
+  return this.notificationType.contains(Notification.NotificationType.CUSTOMERIO)
+}
+
+private fun validateNotificationItem(
+  item: io.airbyte.config.NotificationItem?,
+  notificationName: String,
+) {
+  if (item == null) {
+    return
+  }
+
+  if (item.notificationType != null && item.notificationType.contains(Notification.NotificationType.SLACK)) {
+    if (item.slackConfiguration == null || Strings.isNullOrEmpty(item.slackConfiguration.webhook)) {
+      throw NotificationMissingUrlProblem(
+        ProblemMessageData().message(String.format("The '%s' notification is enabled but is missing a URL.", notificationName)),
+      )
+    }
+  }
+}
+
 /**
  * If the airbyte edition is cloud and the workspace's default geography is AUTO or null, set it to US.
  * If not cloud, set a null default geography to AUTO.
@@ -101,18 +134,18 @@ fun getDefaultWorkspaceName(
  */
 fun getWorkspaceWithFixedGeography(
   workspace: StandardWorkspace,
-  airbyteEdition: Configs.AirbyteEdition,
+  airbyteEdition: AirbyteEdition,
 ): StandardWorkspace {
   workspace.defaultGeography = getDefaultGeographyForAirbyteEdition(airbyteEdition, workspace.defaultGeography)
   return workspace
 }
 
 private fun getDefaultGeographyForAirbyteEdition(
-  airbyteEdition: Configs.AirbyteEdition,
+  airbyteEdition: AirbyteEdition,
   geography: String?,
 ): String {
   if (
-    airbyteEdition == Configs.AirbyteEdition.CLOUD &&
+    airbyteEdition == AirbyteEdition.CLOUD &&
     (geography == null || geography.lowercase() == GEOGRAPHY_AUTO.lowercase())
   ) {
     return GEOGRAPHY_US

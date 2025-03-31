@@ -360,12 +360,12 @@ open class WorkspaceServiceImpl(
 
 fun NotificationsConfig.toNotificationSettings() =
   NotificationSettings()
-    .sendOnFailure(failure?.toNotificationItem())
-    .sendOnSuccess(success?.toNotificationItem())
-    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem())
-    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem())
-    .sendOnSyncDisabled(syncDisabled?.toNotificationItem())
-    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem())
+    .sendOnFailure(failure?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSuccess(success?.toNotificationItem(enableEmailByDefault = false))
+    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabled(syncDisabled?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem(enableEmailByDefault = true))
 
 private fun NotificationsConfig?.toInternalNotificationConfig() =
   this?.let {
@@ -402,7 +402,15 @@ private fun WebhookNotificationConfig?.toInternalWebhookNotificationConfig() =
       .url(it.url)
   }
 
-private fun NotificationConfig.toNotificationItem() =
-  NotificationItem()
-    .notificationType(if (this.webhook?.enabled == true) listOf(NotificationType.SLACK) else emptyList())
-    .slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+private fun NotificationConfig.toNotificationItem(enableEmailByDefault: Boolean): NotificationItem {
+  val item = NotificationItem()
+  if (this.webhook?.enabled == true) {
+    item.addNotificationTypeItem(NotificationType.SLACK)
+    item.slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+  }
+
+  if (this.email?.enabled == true || (enableEmailByDefault && this.email == null)) {
+    item.addNotificationTypeItem(NotificationType.CUSTOMERIO)
+  }
+  return item
+}
