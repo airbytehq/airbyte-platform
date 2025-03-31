@@ -18,10 +18,10 @@ import java.util.UUID
 data class PartialUserConfig(
   @field:Id
   @AutoPopulated
-  var id: UUID,
+  var id: UUID? = null,
   var workspaceId: UUID,
   var configTemplateId: UUID,
-  @TypeDef(type = DataType.JSON)
+  @field:TypeDef(type = DataType.JSON)
   var partialUserConfigProperties: JsonNode,
   var tombstone: Boolean = false,
   @DateCreated

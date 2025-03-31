@@ -21,7 +21,5 @@ open class PartialUserConfigServiceDataImpl(
 
   override fun listPartialUserConfigs(workspaceId: UUID): List<PartialUserConfig> = repository.findByWorkspaceId(workspaceId)
 
-  override fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfig {
-    TODO("Not yet implemented")
-  }
+  override fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfig = repository.save(partialUserConfigCreate)
 }

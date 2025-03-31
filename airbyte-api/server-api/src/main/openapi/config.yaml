@@ -18375,9 +18375,9 @@ components:
     ConfigTemplateListRequest:
       type: object
       required:
-        - workspaceId
+        - organizationId
       properties:
-        workspaceId:
+        organizationId:
           type: string
           format: uuid
     ConfigTemplateList:
@@ -18417,7 +18417,7 @@ components:
         - id
         - name
         - icon
-        - sourceDefintionVersionId
+        - sourceDefinitionId
         - configTemplateSpec
       properties:
         id:
@@ -18428,25 +18428,11 @@ components:
         icon:
           type: string
           description: url to icon in connector asset (svg) registry
-        sourceDefintionVersionId:
+        sourceDefinitionId:
           type: string
           format: uuid
         configTemplateSpec:
-          $ref: "#/components/schemas/ConfigTemplateSpec"
-    ConfigTemplateSpec:
-      description: matches the properties available for a SourceCreate
-      type: object
-      required:
-        - connectionSpecification
-      properties:
-        connectionSpecification:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
-        documentationUrl:
-          type: string
-        advancedAuth:
-          $ref: "#/components/schemas/AdvancedAuth"
-        advancedAuthGlobalCredentialsAvailable:
-          type: boolean
+          type: object
 
     # PARTIAL USER CONFIGS
     PartialUserConfigRequestBody:

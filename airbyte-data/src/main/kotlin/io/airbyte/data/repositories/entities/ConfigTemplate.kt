@@ -9,6 +9,8 @@ import io.micronaut.data.annotation.AutoPopulated
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import jakarta.persistence.Id
 import java.util.UUID
 
@@ -19,7 +21,9 @@ data class ConfigTemplate(
   var id: UUID? = null,
   var organizationId: UUID,
   var actorDefinitionId: UUID,
+  @field:TypeDef(type = DataType.JSON)
   var partialDefaultConfig: JsonNode,
+  @field:TypeDef(type = DataType.JSON)
   var userConfigSpec: JsonNode,
   var tombstone: Boolean = false,
   @DateCreated

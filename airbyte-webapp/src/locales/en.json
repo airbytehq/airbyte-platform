@@ -2400,5 +2400,7 @@
   "jinjaInput.suggest.userInput.description": "Inserts a reference to the user-provided value for the `{label}` user input.",
   "jinjaInput.suggest.userInput.currentTestingValue": "Current Testing Value",
   "jinjaInput.suggest.userInput.createNew.label": "Create new user input…",
-  "jinjaInput.suggest.userInput.createNew.doc": "Create a new user input and insert a reference to it here."
+  "jinjaInput.suggest.userInput.createNew.doc": "Create a new user input and insert a reference to it here.",
+
+  "configTemplates.emptyState": "This organization has no available sources available to configure."
 }

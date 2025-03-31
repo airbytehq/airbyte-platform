@@ -4,7 +4,7 @@ export const mockTemplateForGDrive: ConfigTemplateRead = {
   id: "3",
   name: "GDrive",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-google-drive/latest/icon.svg",
-  sourceDefintionVersionId: "312341234",
+  sourceDefinitionId: "312341234",
   configTemplateSpec: {
     advancedAuth: {
       authFlowType: "oauth2.0",
@@ -611,7 +611,7 @@ export const mockConfigTemplateFakerOne: ConfigTemplateRead = {
   id: "1",
   name: "FakerOne",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
-  sourceDefintionVersionId: "actor-definition-version-id",
+  sourceDefinitionId: "actor-definition-version-id",
   configTemplateSpec: {
     connectionSpecification: {
       type: "object",
@@ -635,7 +635,7 @@ export const mockConfigTemplateAlsoFaker: ConfigTemplateRead = {
   id: "2",
   name: "Also Faker!",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
-  sourceDefintionVersionId: "actor-definition-version-id",
+  sourceDefinitionId: "actor-definition-version-id",
   configTemplateSpec: {
     connectionSpecification: {
       type: "object",

@@ -1,14 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 
-import {
-  mockConfigTemplateAlsoFaker,
-  mockConfigTemplateFakerOne,
-  mockConfigTemplateList,
-  mockTemplateForGDrive,
-} from "test-utils/mock-data/mockConfigTemplates";
+import { useNotificationService } from "hooks/services/Notification";
 
+import { listConfigTemplates, getConfigTemplate, createPartialUserConfig } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { ConfigTemplateList, ConfigTemplateRead, PartialUserConfigCreate } from "../types/AirbyteClient";
+import { ConfigTemplateList, PartialUserConfigCreate } from "../types/AirbyteClient";
+import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const configTemplates = {
@@ -17,42 +14,44 @@ const configTemplates = {
   detail: (configTemplateId: string) => [...configTemplates.all, "details", configTemplateId] as const,
 };
 
-/**
- * these are all mocked versions of these hooks as the actual endpoints
- * are all no ops.
- *
- * they return the mocks imported above instead of real data
- */
 export const useListConfigTemplates = (organizationId: string): ConfigTemplateList => {
-  console.log(organizationId);
+  const requestOptions = useRequestOptions();
+
   return useSuspenseQuery(configTemplates.lists(), () => {
-    return mockConfigTemplateList;
+    return listConfigTemplates({ organizationId }, requestOptions);
   });
 };
 
 export const useGetConfigTemplate = (configTemplateId: string) => {
-  return useSuspenseQuery(configTemplates.detail(configTemplateId), (): ConfigTemplateRead => {
-    if (configTemplateId === "1") {
-      return mockConfigTemplateFakerOne;
-    }
-    if (configTemplateId === "2") {
-      return mockConfigTemplateAlsoFaker;
-    }
-    if (configTemplateId === "3") {
-      return mockTemplateForGDrive;
-    }
-    return mockConfigTemplateFakerOne;
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(configTemplates.detail(configTemplateId), () => {
+    return getConfigTemplate({ configTemplateId }, requestOptions);
   });
 };
 
 export const useCreatePartialUserConfig = () => {
-  return useMutation(async (partialUserConfigCreate: PartialUserConfigCreate) => {
-    console.log(partialUserConfigCreate);
-    try {
-      // Try to create source
-      return alert(`${JSON.stringify(partialUserConfigCreate)}`);
-    } catch (e) {
-      throw e;
+  const requestOptions = useRequestOptions();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(
+    async (partialUserConfigCreate: PartialUserConfigCreate) => {
+      return await createPartialUserConfig(partialUserConfigCreate, requestOptions);
+    },
+    {
+      onSuccess: () =>
+        registerNotification({
+          id: "partial-user-config-success",
+          type: "success",
+          text: "Success!",
+        }),
+      onError: (error: Error) => {
+        registerNotification({
+          id: "partial-user-config-error",
+          type: "error",
+          text: error.message,
+        });
+      },
     }
-  });
+  );
 };

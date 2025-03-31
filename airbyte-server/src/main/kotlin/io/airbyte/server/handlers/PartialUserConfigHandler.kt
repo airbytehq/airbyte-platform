@@ -7,20 +7,17 @@ package io.airbyte.server.handlers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.PartialUserConfigCreate
-import io.airbyte.api.model.generated.PartialUserConfigRead
-import io.airbyte.api.model.generated.PartialUserConfigWithSource
 import io.airbyte.api.model.generated.SourceCreate
-import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
-import io.airbyte.data.repositories.entities.PartialUserConfig
+import io.airbyte.config.PartialUserConfig
+import io.airbyte.config.PartialUserConfigWithSourceId
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.toEntity
 import jakarta.inject.Singleton
-import java.util.UUID
 
 @Singleton
 class PartialUserConfigHandler(
@@ -29,7 +26,7 @@ class PartialUserConfigHandler(
   private val actorDefinitionService: ActorDefinitionService,
   private val sourceHandler: SourceHandler,
 ) {
-  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfigCreate): PartialUserConfigWithSource {
+  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithSourceId {
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId).toConfigModel()
     val actorDefinition =
       actorDefinitionService
@@ -45,60 +42,39 @@ class PartialUserConfigHandler(
     val combinedConfigs = combineProperties(configTemplate.partialDefaultConfig, partialUserConfigCreate.partialUserConfigProperties)
 
     val sourceCreate = createSourceCreateFromPartialUserConfig(configTemplate, partialUserConfigCreate, combinedConfigs, actorNameOrElseUUID)
-    val partialUserConfig = createPartialUserConfigEntity(partialUserConfigCreate)
 
     val savedSource = sourceHandler.createSource(sourceCreate)
-    val savedPartialUserConfig = partialUserConfigService.createPartialUserConfig(partialUserConfig)
+    val savedPartialUserConfig = partialUserConfigService.createPartialUserConfig(partialUserConfigCreate.toEntity()).toConfigModel()
 
-    return buildResponse(savedSource, savedPartialUserConfig)
+    val partialUserConfigWithSourceId =
+      PartialUserConfigWithSourceId(
+        id = savedPartialUserConfig.id,
+        workspaceId = savedPartialUserConfig.workspaceId,
+        configTemplateId = savedPartialUserConfig.configTemplateId,
+        partialUserConfigProperties = savedPartialUserConfig.partialUserConfigProperties,
+        sourceId = savedSource.sourceId,
+      )
+
+    return partialUserConfigWithSourceId
   }
 
   private fun createSourceCreateFromPartialUserConfig(
     configTemplate: ConfigTemplate,
-    partialUserConfigCreate: PartialUserConfigCreate,
+    partialUserConfig: PartialUserConfig,
     combinedConfigs: JsonNode,
     actorNameOrElseUUID: String?,
   ): SourceCreate =
     SourceCreate().apply {
-      name = "$actorNameOrElseUUID ${partialUserConfigCreate.workspaceId}"
+      name = "$actorNameOrElseUUID ${partialUserConfig.workspaceId}"
       sourceDefinitionId = configTemplate.actorDefinitionId
-      workspaceId = partialUserConfigCreate.workspaceId
+      workspaceId = partialUserConfig.workspaceId
       connectionConfiguration = combinedConfigs
-    }
-
-  private fun createPartialUserConfigEntity(partialUserConfigCreate: PartialUserConfigCreate): PartialUserConfig =
-    PartialUserConfig(
-      id = UUID.randomUUID(),
-      workspaceId = partialUserConfigCreate.workspaceId,
-      configTemplateId = partialUserConfigCreate.configTemplateId,
-      partialUserConfigProperties = partialUserConfigCreate.partialUserConfigProperties,
-      tombstone = false,
-    )
-
-  private fun buildResponse(
-    savedSource: SourceRead,
-    savedPartialUserConfig: PartialUserConfig,
-  ): PartialUserConfigWithSource =
-    PartialUserConfigWithSource().apply {
-      partialUserConfig =
-        PartialUserConfigRead()
-          .partialUserConfigId(savedPartialUserConfig.id)
-          .configTemplateId(savedPartialUserConfig.configTemplateId)
-          .partialUserConfigProperties(savedPartialUserConfig.partialUserConfigProperties)
-          .sourceId(savedSource.sourceId)
-
-      source =
-        SourceRead()
-          .sourceId(savedSource.sourceId)
-          .connectionConfiguration(savedSource.connectionConfiguration)
-          .name(savedSource.name)
-          .sourceDefinitionId(savedSource.sourceDefinitionId)
     }
 
   /**
    * Combines all properties from ConfigTemplate.partialDefaultConfig and
    * PartialUserConfig.partialUserConfigProperties into a single JSON object.
-   * Simply concatenates all properties without worrying about overlaps.
+   * Recursively merges the JSON structures, with user config values taking precedence.
    */
   internal fun combineProperties(
     configTemplateNode: JsonNode,
@@ -107,35 +83,55 @@ class PartialUserConfigHandler(
     val objectMapper = ObjectMapper()
     val combinedNode = objectMapper.createObjectNode()
 
-    // Helper function to merge two JSON objects
+    // Helper function to merge two JSON objects recursively
     fun mergeObjects(
       target: ObjectNode,
       source: ObjectNode,
     ) {
       source.fields().forEach { (key, value) ->
-        if (target.has(key) && target.get(key).isObject && value.isObject) {
-          mergeObjects(target.get(key) as ObjectNode, value as ObjectNode)
+        if (target.has(key)) {
+          val targetValue = target.get(key)
+          if (targetValue.isObject && value.isObject) {
+            // Both are objects, merge them recursively
+            val targetObjectNode = targetValue as ObjectNode
+            val sourceObjectNode = value as ObjectNode
+            mergeObjects(targetObjectNode, sourceObjectNode)
+          } else if (targetValue.isObject != value.isObject) {
+            // One is an object, the other isn't - this is a type conflict
+            throw IllegalArgumentException(
+              "Type mismatch for property '$key': Cannot merge object with non-object",
+            )
+          } else {
+            // Neither is an object, just override
+            target.set<JsonNode>(key, value)
+          }
         } else {
+          // Key doesn't exist in target, just set it
           target.set<JsonNode>(key, value)
         }
       }
     }
 
-    // If configTemplateNode has a connectionConfiguration field, use that
-    if (configTemplateNode.has("connectionConfiguration")) {
-      val defaultConfig = configTemplateNode.get("connectionConfiguration")
-      if (defaultConfig is ObjectNode) {
-        mergeObjects(combinedNode, defaultConfig)
+    // First, extract the connectionConfiguration objects from both nodes
+    val defaultConfigNode =
+      if (configTemplateNode.has("connectionConfiguration")) {
+        configTemplateNode.get("connectionConfiguration") as? ObjectNode
+      } else {
+        null
       }
-    }
 
-    // If partialUserConfigNode has a connectionConfiguration field, use that
-    if (partialUserConfigNode.has("connectionConfiguration")) {
-      val userConfig = partialUserConfigNode.get("connectionConfiguration")
-      if (userConfig is ObjectNode) {
-        mergeObjects(combinedNode, userConfig)
+    val userConfigNode =
+      if (partialUserConfigNode.has("connectionConfiguration")) {
+        partialUserConfigNode.get("connectionConfiguration") as? ObjectNode
+      } else {
+        null
       }
-    }
+
+    // Apply default configuration first
+    defaultConfigNode?.let { mergeObjects(combinedNode, it) }
+
+    // Then apply user configuration (which will override defaults where they overlap)
+    userConfigNode?.let { mergeObjects(combinedNode, it) }
 
     return combinedNode
   }

@@ -9,13 +9,15 @@ import io.airbyte.data.repositories.entities.PartialUserConfig
 typealias EntityPartialUserConfig = PartialUserConfig
 typealias ModelPartialUserConfig = io.airbyte.config.PartialUserConfig
 
-fun EntityPartialUserConfig.toConfigModel(): ModelPartialUserConfig =
-  ModelPartialUserConfig(
-    id = this.id,
+fun EntityPartialUserConfig.toConfigModel(): ModelPartialUserConfig {
+  this.id ?: throw IllegalStateException("Cannot map Partial User Config entity that lacks an id")
+  return ModelPartialUserConfig(
+    id = this.id!!,
     workspaceId = this.workspaceId,
     configTemplateId = this.configTemplateId,
     partialUserConfigProperties = this.partialUserConfigProperties,
   )
+}
 
 fun ModelPartialUserConfig.toEntity(): EntityPartialUserConfig =
   EntityPartialUserConfig(

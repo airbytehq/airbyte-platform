@@ -35,3 +35,9 @@ data class ConfigTemplate(
   val createdAt: OffsetDateTime?,
   val updatedAt: OffsetDateTime?,
 )
+
+data class ConfigTemplateWithActorDetails(
+  val configTemplate: ConfigTemplate,
+  val actorName: String,
+  val actorIcon: String,
+)

@@ -4,14 +4,16 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.data.repositories.entities.ConfigTemplate
 
 typealias EntityConfigTemplate = ConfigTemplate
 typealias ModelConfigTemplate = io.airbyte.config.ConfigTemplate
 
+val objectMapper = ObjectMapper()
+
 fun EntityConfigTemplate.toConfigModel(): ModelConfigTemplate =
   ModelConfigTemplate(
-//   todo: this is probably not safe to assert non null but doing it for now...
     id = this.id!!,
     organizationId = this.organizationId,
     actorDefinitionId = this.actorDefinitionId,
