@@ -325,6 +325,13 @@ create table "public"."notification_configuration" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "notification_configuration_pkey" primary key ("id")
 );
+create table "public"."oauth_state" (
+  "id" varchar(2147483647) not null,
+  "state" varchar(2147483647) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "oauth_state_pkey" primary key ("id")
+);
 create table "public"."operation" (
   "id" uuid not null,
   "workspace_id" uuid not null,
