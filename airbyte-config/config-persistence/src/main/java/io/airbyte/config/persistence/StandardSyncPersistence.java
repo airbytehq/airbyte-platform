@@ -16,6 +16,7 @@ import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
@@ -25,7 +26,6 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.data.config.OrganizationConstantsKt;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;

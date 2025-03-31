@@ -5,6 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.constants.GEOGRAPHY_EU
 import io.airbyte.commons.constants.GEOGRAPHY_US
@@ -18,7 +19,6 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
-import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.init.DatabaseInitializer

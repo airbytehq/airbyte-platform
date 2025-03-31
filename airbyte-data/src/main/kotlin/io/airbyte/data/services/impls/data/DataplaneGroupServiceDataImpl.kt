@@ -4,9 +4,9 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.services.DataplaneGroupService

@@ -4,11 +4,11 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService

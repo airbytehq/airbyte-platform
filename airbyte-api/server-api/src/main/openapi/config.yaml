@@ -3449,6 +3449,12 @@ paths:
         to the platform default behavior. Entries other than 'auto' are two-letter country codes that
         follow the ISO 3166-1 alpha-2 standard.
       operationId: webBackendListGeographies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebBackendGeographiesListRequest"
+        required: true
       responses:
         "200":
           description: Successful operation
@@ -10002,6 +10008,14 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
+    WebBackendGeographiesListRequest:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
     WebBackendGeographiesListResult:
       type: object
       required:

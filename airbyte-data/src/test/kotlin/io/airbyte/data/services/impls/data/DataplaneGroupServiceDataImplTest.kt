@@ -4,8 +4,8 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.constants.GEOGRAPHY_US
-import io.airbyte.data.config.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup

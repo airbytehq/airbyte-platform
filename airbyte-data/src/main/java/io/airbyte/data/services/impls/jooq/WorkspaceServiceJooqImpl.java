@@ -20,6 +20,7 @@ import static org.jooq.impl.SQLDataType.VARCHAR;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
@@ -31,7 +32,6 @@ import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.data.config.OrganizationConstantsKt;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
