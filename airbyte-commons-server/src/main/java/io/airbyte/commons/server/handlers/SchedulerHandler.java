@@ -96,8 +96,8 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -567,7 +567,7 @@ public class SchedulerHandler {
     if (response.isSuccess()) {
       final ActorCatalog catalog = catalogService.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
-          io.airbyte.protocol.models.AirbyteCatalog.class);
+          io.airbyte.protocol.models.v0.AirbyteCatalog.class);
       sourceDiscoverSchemaRead.catalog(catalogConverter.toApi(persistenceCatalog, sourceVersion));
       sourceDiscoverSchemaRead.catalogId(response.getOutput());
     }

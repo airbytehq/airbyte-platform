@@ -10,7 +10,7 @@ import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteDestination

@@ -2856,12 +2856,12 @@ class ConnectionsHandlerTest {
 
       // use Jsons.object to convert the json string to an AirbyteCatalog model
 
-      final io.airbyte.protocol.models.AirbyteCatalog badCatalog = Jsons.deserialize(
-          bad_catalog_json, io.airbyte.protocol.models.AirbyteCatalog.class);
-      final io.airbyte.protocol.models.AirbyteCatalog goodCatalog = Jsons.deserialize(
-          good_catalog_json, io.airbyte.protocol.models.AirbyteCatalog.class);
-      final io.airbyte.protocol.models.AirbyteCatalog goodCatalogAltered = Jsons.deserialize(
-          good_catalog_altered_json, io.airbyte.protocol.models.AirbyteCatalog.class);
+      final io.airbyte.protocol.models.v0.AirbyteCatalog badCatalog = Jsons.deserialize(
+          bad_catalog_json, io.airbyte.protocol.models.v0.AirbyteCatalog.class);
+      final io.airbyte.protocol.models.v0.AirbyteCatalog goodCatalog = Jsons.deserialize(
+          good_catalog_json, io.airbyte.protocol.models.v0.AirbyteCatalog.class);
+      final io.airbyte.protocol.models.v0.AirbyteCatalog goodCatalogAltered = Jsons.deserialize(
+          good_catalog_altered_json, io.airbyte.protocol.models.v0.AirbyteCatalog.class);
       final ConfiguredAirbyteCatalog badConfiguredCatalog = Jsons.deserialize(
           bad_config_catalog_json, io.airbyte.config.ConfiguredAirbyteCatalog.class);
       final ConfiguredAirbyteCatalog goodConfiguredCatalog = Jsons.deserialize(
@@ -3276,8 +3276,8 @@ class ConnectionsHandlerTest {
     private static final UUID DESTINATION_ID = UUID.randomUUID();
     private static final UUID DISCOVERED_CATALOG_ID = UUID.randomUUID();
     private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
-    private static final io.airbyte.protocol.models.AirbyteCatalog airbyteCatalog =
-        io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
+    private static final io.airbyte.protocol.models.v0.AirbyteCatalog airbyteCatalog =
+        io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
     private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
         catalogHelpers.createConfiguredAirbyteCatalog(SHOES, null, Field.of(SKU, JsonSchemaType.STRING));
     private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
@@ -3297,7 +3297,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setup() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException,
         io.airbyte.config.persistence.ConfigNotFoundException {
-      airbyteCatalog.getStreams().get(0).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH));
+      airbyteCatalog.getStreams().get(0).withSupportedSyncModes(List.of(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH));
       standardSync = new StandardSync()
           .withConnectionId(CONNECTION_ID)
           .withSourceId(SOURCE_ID)
@@ -3413,7 +3413,7 @@ class ConnectionsHandlerTest {
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES,
               Field.of(SKU, JsonSchemaType.STRING),
               newField),
           SOURCE_VERSION);
@@ -3452,7 +3452,7 @@ class ConnectionsHandlerTest {
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES,
               Field.of(SKU, JsonSchemaType.STRING),
               newField),
           SOURCE_VERSION);
@@ -3491,7 +3491,7 @@ class ConnectionsHandlerTest {
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = catalogConverter.toApi(
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES,
               Field.of(SKU, JsonSchemaType.STRING),
               newField),
           SOURCE_VERSION);

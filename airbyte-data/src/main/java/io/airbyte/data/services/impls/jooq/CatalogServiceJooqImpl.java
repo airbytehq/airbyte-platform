@@ -21,7 +21,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
-import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;

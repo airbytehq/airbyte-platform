@@ -15,7 +15,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.micrometer.core.instrument.Counter
 import io.mockk.every

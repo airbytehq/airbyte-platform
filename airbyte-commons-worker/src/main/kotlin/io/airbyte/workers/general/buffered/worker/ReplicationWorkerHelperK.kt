@@ -23,10 +23,10 @@ import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type.RECORD
-import io.airbyte.protocol.models.AirbyteMessage.Type.STATE
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type.RECORD
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type.STATE
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.general.buffered.worker.BytesSizeHelper.byteCountToDisplaySize

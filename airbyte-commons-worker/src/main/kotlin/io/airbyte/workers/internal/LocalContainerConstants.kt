@@ -6,7 +6,7 @@ package io.airbyte.workers.internal
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import java.time.Duration
 
 object LocalContainerConstants {

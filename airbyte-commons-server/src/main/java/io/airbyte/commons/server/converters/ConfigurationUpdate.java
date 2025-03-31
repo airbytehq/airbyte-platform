@@ -24,7 +24,7 @@ import io.airbyte.domain.services.secrets.SecretHydrationContext;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;

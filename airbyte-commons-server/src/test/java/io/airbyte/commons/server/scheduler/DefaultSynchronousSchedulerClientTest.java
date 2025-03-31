@@ -48,7 +48,7 @@ import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.UUID;

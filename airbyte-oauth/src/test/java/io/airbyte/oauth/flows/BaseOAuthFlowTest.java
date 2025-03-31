@@ -21,7 +21,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.http.HttpClient;

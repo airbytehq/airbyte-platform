@@ -26,7 +26,7 @@ import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
-import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Value

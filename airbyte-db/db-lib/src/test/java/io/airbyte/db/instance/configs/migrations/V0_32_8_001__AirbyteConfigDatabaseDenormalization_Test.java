@@ -41,7 +41,7 @@ import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatab
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardDestinationDefinition;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardSourceDefinition;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StatusType;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;

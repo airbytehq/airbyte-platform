@@ -6,10 +6,10 @@ package io.airbyte.workers.internal
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.ScopeType
-import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
-import io.airbyte.protocol.models.AirbyteLogMessage
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteLogMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE

@@ -72,7 +72,7 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.Notification
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

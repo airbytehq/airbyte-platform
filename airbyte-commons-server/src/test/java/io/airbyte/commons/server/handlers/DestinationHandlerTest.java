@@ -62,7 +62,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

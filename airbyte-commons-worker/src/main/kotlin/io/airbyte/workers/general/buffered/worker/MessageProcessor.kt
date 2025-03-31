@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.general.buffered.worker
 
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}

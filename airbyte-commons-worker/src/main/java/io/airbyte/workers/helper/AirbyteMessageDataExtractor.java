@@ -4,9 +4,9 @@
 
 package io.airbyte.workers.helper;
 
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -4,18 +4,18 @@
 
 package io.airbyte.workers.internal.stateaggregator;
 
-import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.GLOBAL;
-import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.LEGACY;
-import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.STREAM;
+import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.GLOBAL;
+import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.LEGACY;
+import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.STREAM;
 
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteGlobalState;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Spliterator;

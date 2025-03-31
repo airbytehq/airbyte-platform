@@ -41,7 +41,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton

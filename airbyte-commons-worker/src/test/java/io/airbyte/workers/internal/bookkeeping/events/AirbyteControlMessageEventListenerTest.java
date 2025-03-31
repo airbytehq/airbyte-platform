@@ -13,11 +13,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
-import io.airbyte.protocol.models.AirbyteControlMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.Config;
+import io.airbyte.protocol.models.v0.AirbyteControlConnectorConfigMessage;
+import io.airbyte.protocol.models.v0.AirbyteControlMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.Config;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
 import java.io.IOException;

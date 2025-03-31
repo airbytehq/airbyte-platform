@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
+import static io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,11 +73,11 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

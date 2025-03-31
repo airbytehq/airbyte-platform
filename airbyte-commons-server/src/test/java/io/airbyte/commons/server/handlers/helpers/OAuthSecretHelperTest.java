@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;

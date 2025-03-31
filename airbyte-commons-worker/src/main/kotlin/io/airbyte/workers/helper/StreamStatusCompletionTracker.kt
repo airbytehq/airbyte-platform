@@ -5,10 +5,10 @@
 package io.airbyte.workers.helper
 
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper
 import jakarta.inject.Singleton

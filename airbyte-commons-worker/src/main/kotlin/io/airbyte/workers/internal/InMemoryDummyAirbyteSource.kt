@@ -5,9 +5,9 @@
 package io.airbyte.workers.internal
 
 import io.airbyte.config.WorkerSourceConfig
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.Jsons
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import org.joda.time.Instant
 import java.nio.file.Path
 import java.util.Optional

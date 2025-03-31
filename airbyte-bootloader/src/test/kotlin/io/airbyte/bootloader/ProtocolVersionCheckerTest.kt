@@ -14,7 +14,7 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

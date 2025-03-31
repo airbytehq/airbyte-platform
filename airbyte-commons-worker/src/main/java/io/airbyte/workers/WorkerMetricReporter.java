@@ -7,7 +7,7 @@ package io.airbyte.workers;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;

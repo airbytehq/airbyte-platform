@@ -10,10 +10,10 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.AirbyteMapper
 import io.mockk.every
@@ -199,8 +199,7 @@ internal class StreamStatusCompletionTrackerTest {
             AirbyteStreamStatusTraceMessage()
               .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
               .withStreamDescriptor(
-                io.airbyte.protocol.models
-                  .StreamDescriptor()
+                StreamDescriptor()
                   .withName(name)
                   .withNamespace(namespace),
               ),

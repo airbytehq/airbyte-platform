@@ -14,7 +14,7 @@ import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.SourceRead
 import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.commons.json.Jsons
-import io.airbyte.protocol.models.Config
+import io.airbyte.protocol.models.v0.Config
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

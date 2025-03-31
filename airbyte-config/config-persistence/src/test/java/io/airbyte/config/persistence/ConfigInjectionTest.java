@@ -41,7 +41,7 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.Collections;

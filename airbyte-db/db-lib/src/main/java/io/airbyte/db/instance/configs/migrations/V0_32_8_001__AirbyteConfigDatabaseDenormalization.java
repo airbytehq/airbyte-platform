@@ -25,7 +25,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;

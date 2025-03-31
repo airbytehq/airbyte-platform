@@ -5,7 +5,7 @@
 package io.airbyte.connector_builder.exceptions;
 
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;

@@ -12,7 +12,7 @@ import io.airbyte.api.client.model.generated.DestinationUpdate
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.commons.json.Jsons
-import io.airbyte.protocol.models.Config
+import io.airbyte.protocol.models.v0.Config
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.nio.charset.StandardCharsets

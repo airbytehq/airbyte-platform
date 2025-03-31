@@ -24,7 +24,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

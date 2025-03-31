@@ -17,14 +17,14 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.ProtocolConverters;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteGlobalState;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -96,7 +96,7 @@ class EmptyAirbyteSourceTest {
   @Test
   void testGlobal() throws Exception {
     final List<StreamDescriptor> streamDescriptors = getProtocolStreamDescriptorFromName(Lists.newArrayList("a", "b", "c"));
-    final List<io.airbyte.protocol.models.StreamDescriptor> expectedStreamDescriptors =
+    final List<io.airbyte.protocol.models.v0.StreamDescriptor> expectedStreamDescriptors =
         streamDescriptors.stream().map(ProtocolConverters::toProtocol).toList();
 
     final List<StreamDescriptor> streamsToReset = getConfigStreamDescriptorFromName(Lists.newArrayList("a", "b", "c"));
@@ -525,7 +525,7 @@ class EmptyAirbyteSourceTest {
     Assertions.assertThat(message.getTrace().getStreamStatus().getStatus()).isEqualTo(status);
 
     Assertions.assertThat(message.getTrace().getStreamStatus().getStreamDescriptor()).isEqualTo(
-        new io.airbyte.protocol.models.StreamDescriptor()
+        new io.airbyte.protocol.models.v0.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace()));
   }
@@ -540,7 +540,7 @@ class EmptyAirbyteSourceTest {
 
     final AirbyteStateMessage stateMessage = message.getState();
     Assertions.assertThat(stateMessage.getType()).isEqualTo(AirbyteStateType.STREAM);
-    Assertions.assertThat(stateMessage.getStream().getStreamDescriptor()).isEqualTo(new io.airbyte.protocol.models.StreamDescriptor()
+    Assertions.assertThat(stateMessage.getStream().getStreamDescriptor()).isEqualTo(new io.airbyte.protocol.models.v0.StreamDescriptor()
         .withName(streamDescriptor.getName())
         .withNamespace(streamDescriptor.getNamespace()));
     Assertions.assertThat(stateMessage.getStream().getStreamState()).isNull();

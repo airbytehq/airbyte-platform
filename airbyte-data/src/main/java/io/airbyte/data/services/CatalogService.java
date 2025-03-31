@@ -8,7 +8,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;

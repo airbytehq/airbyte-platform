@@ -11,7 +11,7 @@ import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.file_writer.AirbyteArgument;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriter;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

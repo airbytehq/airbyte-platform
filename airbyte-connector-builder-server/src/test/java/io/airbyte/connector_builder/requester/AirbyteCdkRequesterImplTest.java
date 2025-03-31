@@ -23,7 +23,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;

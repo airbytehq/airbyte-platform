@@ -37,9 +37,9 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags

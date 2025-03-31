@@ -56,11 +56,11 @@ import io.airbyte.config.User;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.protocol.models.AdvancedAuth;
-import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.AdvancedAuth;
+import io.airbyte.protocol.models.v0.AdvancedAuth.AuthFlowType;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -468,8 +468,8 @@ public class MockData {
         .withDocumentationUrl(URI.create("whatever"))
         .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0))
         .withChangelogUrl(URI.create("whatever"))
-        .withSupportedDestinationSyncModes(Arrays.asList(io.airbyte.protocol.models.DestinationSyncMode.APPEND,
-            io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE, io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP))
+        .withSupportedDestinationSyncModes(Arrays.asList(io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND,
+            io.airbyte.protocol.models.v0.DestinationSyncMode.OVERWRITE, io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP))
         .withSupportsDBT(true)
         .withSupportsIncremental(true)
         .withSupportsNormalization(true);
@@ -793,33 +793,19 @@ public class MockData {
 
   private static ConfiguredAirbyteCatalog getConfiguredCatalog() {
     final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
+        io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
             io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER),
             io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING))
             .withSupportedSyncModes(
-                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
+                Lists.newArrayList(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
+    return convertToInternal(io.airbyte.protocol.models.v0.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
   }
 
-  public static ConfiguredAirbyteCatalog getConfiguredCatalogWithV1DataTypes() {
-    final AirbyteCatalog catalog = new AirbyteCatalog().withStreams(List.of(
-        io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream(
-            "models",
-            "models_schema",
-            io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER_V1),
-            io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER_V1),
-            io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING_V1))
-            .withSupportedSyncModes(
-                Lists.newArrayList(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL))
-            .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
-    return convertToInternal(io.airbyte.protocol.models.CatalogHelpers.toDefaultConfiguredCatalog(catalog));
-  }
-
-  private static ConfiguredAirbyteCatalog convertToInternal(final io.airbyte.protocol.models.ConfiguredAirbyteCatalog catalog) {
+  private static ConfiguredAirbyteCatalog convertToInternal(final io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog catalog) {
     return Jsons.convertValue(catalog, ConfiguredAirbyteCatalog.class);
   }
 

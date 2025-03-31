@@ -12,17 +12,17 @@ import io.airbyte.api.model.generated.StreamState
 import io.airbyte.commons.enums.Enums
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
-import io.airbyte.protocol.models.AirbyteGlobalState
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
-import io.airbyte.protocol.models.AirbyteStreamState
+import io.airbyte.protocol.models.v0.AirbyteGlobalState
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
+import io.airbyte.protocol.models.v0.AirbyteStreamState
 import java.util.UUID
 import io.airbyte.api.client.model.generated.ConnectionState as ClientConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStateType as ClientConnectionStateType
 import io.airbyte.api.client.model.generated.GlobalState as ClientGlobalState
 import io.airbyte.api.client.model.generated.StreamDescriptor as ClientStreamDescriptor
 import io.airbyte.api.client.model.generated.StreamState as ClientStreamState
-import io.airbyte.protocol.models.StreamDescriptor as ProtocolStreamDescriptor
+import io.airbyte.protocol.models.v0.StreamDescriptor as ProtocolStreamDescriptor
 
 /**
  * Converters for state.
@@ -363,7 +363,7 @@ private fun streamDescriptorToApi(protocolStreamDescriptor: ProtocolStreamDescri
   StreamDescriptor().name(protocolStreamDescriptor.name).namespace(protocolStreamDescriptor.namespace)
 
 private fun streamDescriptorToClient(
-  protocolStreamDescriptor: io.airbyte.protocol.models.StreamDescriptor,
+  protocolStreamDescriptor: io.airbyte.protocol.models.v0.StreamDescriptor,
 ): io.airbyte.api.client.model.generated.StreamDescriptor =
   io.airbyte.api.client.model.generated.StreamDescriptor(
     protocolStreamDescriptor.name,
@@ -371,13 +371,13 @@ private fun streamDescriptorToClient(
   )
 
 private fun streamDescriptorToProtocol(apiStreamDescriptor: StreamDescriptor): ProtocolStreamDescriptor =
-  io.airbyte.protocol.models
+  io.airbyte.protocol.models.v0
     .StreamDescriptor()
     .withName(apiStreamDescriptor.name)
     .withNamespace(apiStreamDescriptor.namespace)
 
 private fun clientStreamDescriptorToProtocol(clientStreamDescriptor: ClientStreamDescriptor): ProtocolStreamDescriptor =
-  io.airbyte.protocol.models
+  io.airbyte.protocol.models.v0
     .StreamDescriptor()
     .withName(clientStreamDescriptor.name)
     .withNamespace(clientStreamDescriptor.namespace)

@@ -1001,7 +1001,8 @@ public class ConnectionsHandler {
     final SourceConnection sourceConnection = sourceService.getSourceConnection(connection.getSourceId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
-    final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
+    final io.airbyte.protocol.models.v0.AirbyteCatalog jsonCatalog =
+        Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.v0.AirbyteCatalog.class);
     final StandardDestinationDefinition destination = destinationService.getDestinationDefinitionFromConnection(connectionId);
     // Note: we're using the workspace from the source to save an extra db request.
     final ActorDefinitionVersion destinationVersion =
@@ -1756,9 +1757,9 @@ public class ConnectionsHandler {
       throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final ActorCatalog catalog = catalogService.getActorCatalogById(catalogId);
-    final io.airbyte.protocol.models.AirbyteCatalog persistenceCatalog = Jsons.object(
+    final io.airbyte.protocol.models.v0.AirbyteCatalog persistenceCatalog = Jsons.object(
         catalog.getCatalog(),
-        io.airbyte.protocol.models.AirbyteCatalog.class);
+        io.airbyte.protocol.models.v0.AirbyteCatalog.class);
     return catalogConverter.toApi(persistenceCatalog, sourceVersion);
   }
 

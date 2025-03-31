@@ -24,8 +24,8 @@ import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration as Clien
 import io.airbyte.api.client.model.generated.ConfiguredStreamMapper as ClientConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.SyncMode as ClientSyncMode
 import io.airbyte.config.AirbyteStream as ConfigAirbyteStream
-import io.airbyte.protocol.models.AirbyteCatalog as ProtocolAirbyteCatalog
-import io.airbyte.protocol.models.AirbyteStream as ProtocolAirbyteStream
+import io.airbyte.protocol.models.v0.AirbyteCatalog as ProtocolAirbyteCatalog
+import io.airbyte.protocol.models.v0.AirbyteStream as ProtocolAirbyteStream
 
 /**
  * Utilities to convert Catalog protocol to Catalog API client. This class is similar to the

@@ -10,10 +10,10 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.LocalDateTime

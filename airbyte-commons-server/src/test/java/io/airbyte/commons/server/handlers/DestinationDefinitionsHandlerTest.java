@@ -71,7 +71,7 @@ import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;

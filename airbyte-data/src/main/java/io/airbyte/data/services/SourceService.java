@@ -11,7 +11,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.SourceAndDefinition;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
