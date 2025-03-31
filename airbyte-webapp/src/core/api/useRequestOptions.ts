@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { useAuthService } from "core/services/auth";
 
@@ -15,5 +16,17 @@ export const useRequestOptions = (): ApiCallOptions => {
       includeCredentials: authType === "simple",
     }),
     [getAccessToken, authType]
+  );
+};
+
+export const useQueryParamsRequestOptions = (): ApiCallOptions => {
+  const [searchParams] = useSearchParams();
+  const scopedAuthToken = searchParams.get("auth");
+
+  return useMemo(
+    () => ({
+      getAccessToken: () => Promise.resolve(scopedAuthToken),
+    }),
+    [scopedAuthToken]
   );
 };

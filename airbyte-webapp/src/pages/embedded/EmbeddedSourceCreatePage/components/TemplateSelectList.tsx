@@ -12,6 +12,7 @@ import styles from "./TemplateSelectList.module.scss";
 
 export const TemplateSelectList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+
   const organizationId = searchParams.get("organizationId") ?? "";
 
   const onTemplateSelect = (templateId: string) => {

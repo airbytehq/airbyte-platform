@@ -4,7 +4,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 
-import { useCreatePartialUserConfig, useCurrentWorkspace, useGetConfigTemplate } from "core/api";
+import { useCreatePartialUserConfig, useGetConfigTemplate } from "core/api";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { Controls } from "views/Connector/ConnectorCard/components/Controls";
 import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
@@ -12,7 +12,7 @@ import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorFor
 export const MaskCreateForm: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTemplateId = searchParams.get("selectedTemplateId");
-  const { workspaceId } = useCurrentWorkspace();
+  const workspaceId = searchParams.get("workspaceId") ?? "";
   const { mutate: createPartialUserConfig } = useCreatePartialUserConfig();
   const configTemplate = useGetConfigTemplate(selectedTemplateId ?? "");
   const maskDefinitionSpecification: SourceDefinitionSpecificationDraft = {

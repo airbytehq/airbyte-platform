@@ -190,6 +190,7 @@ export const Routing: React.FC = () => {
   const { inited, loggedOut } = useAuthService();
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useBuildUpdateCheck();
+  const allowEmbeddedWidgetContent = useFeature(FeatureItem.EmbeddedUI);
 
   useEffectOnce(() => {
     storeUtmFromQuery(search);
@@ -210,6 +211,9 @@ export const Routing: React.FC = () => {
 
     return (
       <Routes>
+        {allowEmbeddedWidgetContent && (
+          <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
+        )}
         {!initialSetupComplete ? (
           <Route path="*" element={<PreferencesRoutes />} />
         ) : (
