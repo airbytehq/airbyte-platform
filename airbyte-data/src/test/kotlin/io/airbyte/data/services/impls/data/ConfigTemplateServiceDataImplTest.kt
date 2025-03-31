@@ -18,7 +18,7 @@ import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
