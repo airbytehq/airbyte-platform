@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigTemplate
+import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
@@ -56,7 +57,7 @@ class PartialUserConfigHandlerTest {
     val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId)
     val savedSource = createMockSourceRead(sourceId)
 
-    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate.toEntity()
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig.toEntity()
     every { sourceHandler.createSource(any()) } returns savedSource
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
@@ -225,15 +226,19 @@ class PartialUserConfigHandlerTest {
     id: UUID,
     actorDefinitionId: UUID = UUID.randomUUID(),
     partialDefaultConfig: JsonNode = objectMapper.createObjectNode(),
-  ): ConfigTemplate =
-    ConfigTemplate(
-      id = id,
-      actorDefinitionId = actorDefinitionId,
-      partialDefaultConfig = partialDefaultConfig,
-      organizationId = UUID.randomUUID(),
-      userConfigSpec = objectMapper.createObjectNode(),
-      createdAt = null,
-      updatedAt = null,
+  ): ConfigTemplateWithActorDetails =
+    ConfigTemplateWithActorDetails(
+      ConfigTemplate(
+        id = id,
+        actorDefinitionId = actorDefinitionId,
+        partialDefaultConfig = partialDefaultConfig,
+        organizationId = UUID.randomUUID(),
+        userConfigSpec = objectMapper.createObjectNode(),
+        createdAt = null,
+        updatedAt = null,
+      ),
+      actorName = "test-source",
+      actorIcon = "test-icon",
     )
 
   private fun createMockActorDefinition(id: UUID): ActorDefinitionVersion {

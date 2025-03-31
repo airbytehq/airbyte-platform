@@ -12,6 +12,11 @@ import java.util.UUID
  */
 
 @JvmInline
+value class ActorDefinitionId(
+  val value: UUID,
+)
+
+@JvmInline
 value class ConnectionId(
   val value: UUID,
 )

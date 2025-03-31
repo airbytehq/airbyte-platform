@@ -4,19 +4,32 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.data.repositories.entities.ConfigTemplate
+import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.config.ConfigTemplate
+import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.domain.models.ActorDefinitionId
+import io.airbyte.domain.models.OrganizationId
 import java.util.UUID
 
 /**
  * A service that manages config templates
  */
 interface ConfigTemplateService {
-  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplate
+  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateWithActorDetails
 
-  fun listConfigTemplates(organizationId: UUID): List<ConfigTemplate>
+  fun listConfigTemplatesForOrganization(organizationId: OrganizationId): List<ConfigTemplateWithActorDetails>
 
-  fun listConfigTemplates(
-    organizationId: UUID,
-    actorDefinitionId: UUID,
-  ): List<ConfigTemplate>
+  fun createTemplate(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+    partialDefaultConfig: JsonNode,
+    userConfigSpec: JsonNode,
+  ): ConfigTemplate
+
+  fun updateTemplate(
+    configTemplateId: UUID,
+    name: String? = null,
+    partialDefaultConfig: JsonNode? = null,
+    userConfigSpec: JsonNode? = null,
+  ): ConfigTemplate
 }

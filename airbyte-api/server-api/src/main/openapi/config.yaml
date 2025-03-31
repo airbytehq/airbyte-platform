@@ -6169,6 +6169,50 @@ paths:
                 $ref: "#/components/schemas/ConfigTemplateRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/config_templates/create:
+    post:
+      summary: Create a config template
+      tags:
+        - config_template
+        - embedded
+      operationId: createConfigTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully created config template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/config_templates/update:
+    post:
+      summary: Update a config template
+      tags:
+        - config_template
+        - embedded
+      operationId: updateConfigTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully update config template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/get:
     post:
       summary: Get details of a specific partial user config
@@ -18434,6 +18478,56 @@ components:
         configTemplateSpec:
           type: object
 
+    ConfigTemplateCreateRequestBody:
+      type: object
+      required:
+        - name
+        - actorDefinitionId
+        - partialDefaultConfig
+        - userConfigSpec
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+    ConfigTemplateSpec:
+      type: object
+    ConfigTemplateCreateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+    ConfigTemplateUpdateRequestBody:
+      type: object
+      required:
+        - configTemplateId
+      properties:
+        configTemplateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+    ConfigTemplateUpdateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
     # PARTIAL USER CONFIGS
     PartialUserConfigRequestBody:
       type: object

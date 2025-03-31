@@ -27,21 +27,22 @@ class PartialUserConfigHandler(
   private val sourceHandler: SourceHandler,
 ) {
   fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithSourceId {
-    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId).toConfigModel()
+    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
     val actorDefinition =
       actorDefinitionService
-        .getDefaultVersionForActorDefinitionIdOptional(configTemplate.actorDefinitionId)
+        .getDefaultVersionForActorDefinitionIdOptional(configTemplate.configTemplate.actorDefinitionId)
         .orElse(null)
 
     val actorNameOrElseUUID =
       actorDefinition
         ?.additionalProperties
         ?.get("name") as? String
-        ?: configTemplate.actorDefinitionId.toString()
+        ?: configTemplate.configTemplate.actorDefinitionId.toString()
 
-    val combinedConfigs = combineProperties(configTemplate.partialDefaultConfig, partialUserConfigCreate.partialUserConfigProperties)
+    val combinedConfigs = combineProperties(configTemplate.configTemplate.partialDefaultConfig, partialUserConfigCreate.partialUserConfigProperties)
 
-    val sourceCreate = createSourceCreateFromPartialUserConfig(configTemplate, partialUserConfigCreate, combinedConfigs, actorNameOrElseUUID)
+    val sourceCreate =
+      createSourceCreateFromPartialUserConfig(configTemplate.configTemplate, partialUserConfigCreate, combinedConfigs, actorNameOrElseUUID)
 
     val savedSource = sourceHandler.createSource(sourceCreate)
     val savedPartialUserConfig = partialUserConfigService.createPartialUserConfig(partialUserConfigCreate.toEntity()).toConfigModel()

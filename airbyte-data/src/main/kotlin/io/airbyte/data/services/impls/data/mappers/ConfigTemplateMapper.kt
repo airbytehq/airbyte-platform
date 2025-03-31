@@ -13,6 +13,7 @@ typealias ModelConfigTemplate = io.airbyte.config.ConfigTemplate
 val objectMapper = ObjectMapper()
 
 fun EntityConfigTemplate.toConfigModel(): ModelConfigTemplate =
+
   ModelConfigTemplate(
     id = this.id!!,
     organizationId = this.organizationId,

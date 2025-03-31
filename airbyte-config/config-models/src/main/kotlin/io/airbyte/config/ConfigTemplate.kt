@@ -32,8 +32,8 @@ data class ConfigTemplate(
    * - documentationUrl (optional)
    */
   val userConfigSpec: JsonNode,
-  val createdAt: OffsetDateTime?,
-  val updatedAt: OffsetDateTime?,
+  val createdAt: OffsetDateTime? = null,
+  val updatedAt: OffsetDateTime? = null,
 )
 
 data class ConfigTemplateWithActorDetails(
