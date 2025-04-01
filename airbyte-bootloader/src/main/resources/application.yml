@@ -44,6 +44,7 @@ airbyte:
   auth:
     default-realm: ${DEFAULT_REALM:airbyte}
     kubernetes-secret:
+      creation-enabled: ${AB_AUTH_SECRET_CREATION_ENABLED:true}
       name: ${AB_KUBERNETES_SECRET_NAME:airbyte-auth-secrets}
       keys:
         instance-admin-password-secret-key: ${AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY:instance-admin-password}

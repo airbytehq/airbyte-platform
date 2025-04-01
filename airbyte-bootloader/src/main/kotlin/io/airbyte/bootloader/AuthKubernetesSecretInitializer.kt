@@ -9,6 +9,7 @@ import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Property
+import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -17,6 +18,7 @@ private val logger = KotlinLogging.logger {}
 const val SECRET_LENGTH = 32
 
 @Singleton
+@Requires(property = "airbyte.auth.kubernetes-secret.creation-enabled", value = "true")
 class AuthKubernetesSecretInitializer(
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
   private val kubernetesClient: KubernetesClient,

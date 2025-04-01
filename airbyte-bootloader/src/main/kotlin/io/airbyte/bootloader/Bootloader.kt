@@ -53,7 +53,7 @@ class Bootloader(
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataplaneInitializer: DataplaneInitializer,
   val airbyteEdition: AirbyteEdition,
-  private val authSecretInitializer: AuthKubernetesSecretInitializer,
+  private val authSecretInitializer: AuthKubernetesSecretInitializer?,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -103,8 +103,10 @@ class Bootloader(
     jobPersistence.setVersion(airbyteVersion)
     log.info { "Set version to '$airbyteVersion'" }
 
-    log.info { "Initializing auth secrets..." }
-    authSecretInitializer.initializeSecrets()
+    if (authSecretInitializer != null) {
+      log.info { "Initializing auth secrets..." }
+      authSecretInitializer.initializeSecrets()
+    }
 
     postLoadExecution?.execute()?.also {
       log.info { "Finished running post load Execution." }
