@@ -45,7 +45,6 @@ const ConnectionsListCardPrev = () => {
   const tagFilterSet = useMemo(() => new Set(tagFilters), [tagFilters]);
 
   const [graphLookback, setGraphLookback] = useState<LookbackWindow>("7d");
-  const showConnectionsGraph = useExperiment("connection.connectionsGraph");
 
   const [filterValues, setFilterValue, resetFilters] = useFilters<FilterValues>({
     search: "",
@@ -148,16 +147,14 @@ const ConnectionsListCardPrev = () => {
           setTagFilters={setTagFilters}
         />
       </div>
-      {showConnectionsGraph && (
-        <Box px="lg">
-          <FlexContainer justifyContent="flex-end">
-            <Box pb="md">
-              <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
-            </Box>
-          </FlexContainer>
-          <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
-        </Box>
-      )}
+      <Box px="lg">
+        <FlexContainer justifyContent="flex-end">
+          <Box pb="md">
+            <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
+          </Box>
+        </FlexContainer>
+        <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
+      </Box>
       <div className={styles.table}>
         <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />
       </div>
@@ -181,7 +178,6 @@ export const ConnectionsListCardNext: React.FC<{
   const tagFilterSet = useMemo(() => new Set(tagFilters), [tagFilters]);
 
   const [graphLookback, setGraphLookback] = useState<LookbackWindow>("7d");
-  const showConnectionsGraph = useExperiment("connection.connectionsGraph");
 
   const [filterValues, setFilterValue, resetFilters] = useFilters<FilterValues>({
     search: "",
@@ -289,16 +285,14 @@ export const ConnectionsListCardNext: React.FC<{
           setTagFilters={setTagFilters}
         />
       </div>
-      {showConnectionsGraph && (
-        <Box px="lg">
-          <FlexContainer justifyContent="flex-end">
-            <Box pb="md">
-              <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
-            </Box>
-          </FlexContainer>
-          <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
-        </Box>
-      )}
+      <Box px="lg">
+        <FlexContainer justifyContent="flex-end">
+          <Box pb="md">
+            <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
+          </Box>
+        </FlexContainer>
+        <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
+      </Box>
       <div className={styles.table}>
         <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />
       </div>
