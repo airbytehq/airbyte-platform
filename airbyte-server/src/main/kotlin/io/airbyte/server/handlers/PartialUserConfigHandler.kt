@@ -12,61 +12,66 @@ import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithSourceId
-import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.inject.Singleton
 
 @Singleton
 class PartialUserConfigHandler(
   private val partialUserConfigService: PartialUserConfigService,
   private val configTemplateService: ConfigTemplateService,
-  private val actorDefinitionService: ActorDefinitionService,
   private val sourceHandler: SourceHandler,
 ) {
   fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithSourceId {
+    // Get the config template and actor definition
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
-    val actorDefinition =
-      actorDefinitionService
-        .getDefaultVersionForActorDefinitionIdOptional(configTemplate.configTemplate.actorDefinitionId)
-        .orElse(null)
 
-    val actorNameOrElseUUID =
-      actorDefinition
-        ?.additionalProperties
-        ?.get("name") as? String
-        ?: configTemplate.configTemplate.actorDefinitionId.toString()
-
+    // Create and persist the source
     val combinedConfigs = combineProperties(configTemplate.configTemplate.partialDefaultConfig, partialUserConfigCreate.partialUserConfigProperties)
-
     val sourceCreate =
-      createSourceCreateFromPartialUserConfig(configTemplate.configTemplate, partialUserConfigCreate, combinedConfigs, actorNameOrElseUUID)
-
+      createSourceCreateFromPartialUserConfig(configTemplate.configTemplate, partialUserConfigCreate, combinedConfigs, configTemplate.actorName)
     val savedSource = sourceHandler.createSource(sourceCreate)
-    val savedPartialUserConfig = partialUserConfigService.createPartialUserConfig(partialUserConfigCreate.toEntity()).toConfigModel()
 
-    val partialUserConfigWithSourceId =
-      PartialUserConfigWithSourceId(
-        id = savedPartialUserConfig.id,
-        workspaceId = savedPartialUserConfig.workspaceId,
-        configTemplateId = savedPartialUserConfig.configTemplateId,
-        partialUserConfigProperties = savedPartialUserConfig.partialUserConfigProperties,
-        sourceId = savedSource.sourceId,
+    // Handle secrets in configuration
+    val connectorSpec =
+      ConnectorSpecification().apply {
+        connectionSpecification = configTemplate.configTemplate.userConfigSpec.get("connectionSpecification")
+      }
+
+    val connectionConfig = partialUserConfigCreate.partialUserConfigProperties.get("connectionConfiguration")
+    val secureConfig =
+      sourceHandler.persistSecretsAndUpdateSourceConnection(
+        null,
+        connectionConfig,
+        partialUserConfigCreate.workspaceId,
+        connectorSpec,
       )
 
-    return partialUserConfigWithSourceId
+    // Save the secure config
+    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig)
+    val savedConfig = partialUserConfigService.createPartialUserConfig(securePartialUserConfig.toEntity()).toConfigModel()
+
+    // Return with source ID
+    return PartialUserConfigWithSourceId(
+      id = savedConfig.id,
+      workspaceId = savedConfig.workspaceId,
+      configTemplateId = savedConfig.configTemplateId,
+      partialUserConfigProperties = savedConfig.partialUserConfigProperties,
+      sourceId = savedSource.sourceId,
+    )
   }
 
   private fun createSourceCreateFromPartialUserConfig(
     configTemplate: ConfigTemplate,
     partialUserConfig: PartialUserConfig,
     combinedConfigs: JsonNode,
-    actorNameOrElseUUID: String?,
+    actorName: String,
   ): SourceCreate =
     SourceCreate().apply {
-      name = "$actorNameOrElseUUID ${partialUserConfig.workspaceId}"
+      name = "$actorName ${partialUserConfig.workspaceId}"
       sourceDefinitionId = configTemplate.actorDefinitionId
       workspaceId = partialUserConfig.workspaceId
       connectionConfiguration = combinedConfigs

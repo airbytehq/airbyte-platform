@@ -8,11 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
-import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
-import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.toEntity
@@ -22,13 +20,11 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.Optional
 import java.util.UUID
 
 class PartialUserConfigHandlerTest {
   private lateinit var partialUserConfigService: PartialUserConfigService
   private lateinit var configTemplateService: ConfigTemplateService
-  private lateinit var actorDefinitionService: ActorDefinitionService
   private lateinit var sourceHandler: SourceHandler
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
@@ -43,16 +39,14 @@ class PartialUserConfigHandlerTest {
   fun setup() {
     partialUserConfigService = mockk<PartialUserConfigService>()
     configTemplateService = mockk<ConfigTemplateService>()
-    actorDefinitionService = mockk<ActorDefinitionService>()
     sourceHandler = mockk<SourceHandler>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, actorDefinitionService, sourceHandler)
+    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler)
     objectMapper = ObjectMapper()
   }
 
   @Test
   fun `test createPartialUserConfig with valid inputs`() {
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
-    val actorDefinition = createMockActorDefinition(actorDefinitionId)
     val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
     val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId)
     val savedSource = createMockSourceRead(sourceId)
@@ -60,8 +54,8 @@ class PartialUserConfigHandlerTest {
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig.toEntity()
     every { sourceHandler.createSource(any()) } returns savedSource
-    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
-      Optional.of(actorDefinition)
+    every { sourceHandler.persistSecretsAndUpdateSourceConnection(null, any(), any(), any()) } returns
+      partialUserConfigCreate.partialUserConfigProperties
 
     val result = handler.createPartialUserConfig(partialUserConfigCreate)
 
@@ -240,15 +234,6 @@ class PartialUserConfigHandlerTest {
       actorName = "test-source",
       actorIcon = "test-icon",
     )
-
-  private fun createMockActorDefinition(id: UUID): ActorDefinitionVersion {
-    val actorDefinitionVersion = ActorDefinitionVersion()
-    val actorDefinitionIdField = ActorDefinitionVersion::class.java.getDeclaredField("actorDefinitionId")
-    actorDefinitionIdField.isAccessible = true
-    actorDefinitionIdField.set(actorDefinitionVersion, id)
-
-    return actorDefinitionVersion
-  }
 
   private fun createMockPartialUserConfigCreate(
     workspaceId: UUID,
