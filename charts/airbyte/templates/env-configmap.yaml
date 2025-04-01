@@ -59,7 +59,7 @@ data:
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
   {{- end }}
 
-  CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
+  CONNECTOR_BUILDER_API_HOST: {{ ternary (printf "%s-airbyte-connector-builder-server-svc:%d" .Release.Name (index .Values "connector-builder-server" "service" "port" | int)) "localhost" (index .Values "connector-builder-server" "enabled") }}
 
   {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
     {{- if $airbyteYmlDict }}
