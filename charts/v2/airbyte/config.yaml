@@ -106,7 +106,16 @@ auth.bootstrap:
     - env: AB_JWT_SIGNATURE_SECRET_KEY
       key: security.jwtSignatureSecretKey
       defaultValue: jwt-signature-secret
-      
+
+    # dataplane secret keys
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: dataPlane.clientIdSecretKey
+      defaultValue: dataplane-client-id
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: dataPlane.clientSecretSecretKey
+      defaultValue: dataplane-client-secret
+
 auth.identityProvider:
   keyBasePath: global.auth.identityProvider
   discriminatorField: type
@@ -280,7 +289,20 @@ cluster:
       discriminatorOpts:
        - data-plane
        - hybrid
-  
+
+cluster.controlPlane.bootstrap:
+  keyBasePath: global.cluster.controlPlane.bootstrap       
+  config:
+    - env: DATAPLANE_SECRET_NAME
+      key: dataPlane.secretName
+      defaultValue: dataplane-creds
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: dataPlane.clientIdSecretKey
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: dataPlane.clientSecretSecretKey
+
 connector:
   keyBasePath: global.connectorRegistry
   config: 
@@ -1238,6 +1260,10 @@ workloadApiServer:
 
 workloadLauncher:
   config:
+    - env: CONTROL_PLANE_TOKEN_ENDPOINT
+      key: controlPlane.tokenEndpoint
+      valueExp: (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")))
+
     - env: WORKLOAD_LAUNCHER_ENABLED
       key: enabled
       defaultValue: true
@@ -1245,6 +1271,32 @@ workloadLauncher:
     - env: WORKLOAD_LAUNCHER_PARALLELISM
       key: parallelism
       defaultValue: 10
+
+workloadLauncher.dataPlane:
+  config:
+    - env: DATAPLANE_CLIENT_ID
+      key: clientId
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_NAME
+      key: secretName
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: clientIdSecretKey
+      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" . }}'
+      defaultValue: DATAPLANE_CLIENT_ID
+
+    - env: DATAPLANE_CLIENT_SECRET
+      key: clientSecret
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+      key: secretName
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: clientSecretSecretKey
+      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" . }}'
+      defaulValue: DATAPLANE_CLIENT_SECRET
 
 workloadLauncher.images:
   keyBasePath: workloadLauncher

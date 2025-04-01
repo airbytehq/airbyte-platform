@@ -15,6 +15,12 @@ global:
     controlPlane: 
       remoteDataPlaneServiceAccounts: {}
 
+      bootstrap:
+        dataPlane:
+          secretName: ""
+          clientIdSecretKey: ""
+          clientSecretSecretKey: ""
+
     dataPlane:
       id: "local"
       controlPlaneAuthEndpoint: ""
@@ -97,6 +103,10 @@ global:
       cookieSameSiteSetting: "Strict"
 
       jwtSignatureSecretKey: ""
+
+    dataPlane:
+      clientIdSecretKey: ""
+      clientSecretSecretKey: ""
 
   api:
     authHeaderName: "X-Airbyte-Auth"
@@ -1046,6 +1056,17 @@ workloadLauncher:
     repository: airbyte/workload-launcher
     # -- The pull policy to use for the airbyte workload launcher image
     pullPolicy: IfNotPresent
+
+  controlPlane:
+    tokenEndpoint: ""
+  
+  dataPlane:
+    clientId: ""
+    clientIdSecretName: ""
+    clientIdSecretKey: ""
+    clientSecret: ""
+    clientSecretSecretName: ""
+    clientSecretSecretKey: ""
 
   env_vars: {}
 

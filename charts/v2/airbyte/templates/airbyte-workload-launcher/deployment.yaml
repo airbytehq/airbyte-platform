@@ -92,6 +92,7 @@ spec:
         {{- include "airbyte.workloads.queues.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.envs" . | nindent 8 }}
+        {{- include "airbyte.workloadLauncher.dataPlane.envs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.images.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}

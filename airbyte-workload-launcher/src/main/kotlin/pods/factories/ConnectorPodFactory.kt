@@ -40,7 +40,7 @@ data class ConnectorPodFactory(
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   private val resourceRequirementsFactory: ResourceRequirementsFactory,
 ) {
-  fun create(
+  internal fun create(
     allLabels: Map<String, String>,
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
@@ -52,9 +52,21 @@ data class ConnectorPodFactory(
   ): Pod {
     val volumeMountPairs = volumeFactory.connector()
 
-    val init: Container = initContainerFactory.create(initContainerReqs, volumeMountPairs.initMounts, runtimeEnvVars, workspaceId)
-    val main: Container = buildMainContainer(connectorContainerReqs, volumeMountPairs.mainMounts, kubePodInfo.mainContainerInfo!!, runtimeEnvVars)
-    val sidecar: Container = buildSidecarContainer(volumeMountPairs.sidecarMounts)
+    val init: Container =
+      initContainerFactory.create(
+        resourceReqs = initContainerReqs,
+        volumeMounts = volumeMountPairs.initMounts,
+        runtimeEnvVars = runtimeEnvVars,
+        workspaceId = workspaceId,
+      )
+    val main: Container =
+      buildMainContainer(
+        resourceReqs = connectorContainerReqs,
+        volumeMounts = volumeMountPairs.mainMounts,
+        containerInfo = kubePodInfo.mainContainerInfo!!,
+        runtimeEnvVars = runtimeEnvVars,
+      )
+    val sidecar: Container = buildSidecarContainer(volumeMounts = volumeMountPairs.sidecarMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -127,8 +139,8 @@ data class ConnectorPodFactory(
   }
 
   companion object {
-    const val CHECK_OPERATION_NAME = "check"
-    const val DISCOVER_OPERATION_NAME = "discover"
-    const val SPEC_OPERATION_NAME = "spec"
+    internal const val CHECK_OPERATION_NAME = "check"
+    internal const val DISCOVER_OPERATION_NAME = "discover"
+    internal const val SPEC_OPERATION_NAME = "spec"
   }
 }

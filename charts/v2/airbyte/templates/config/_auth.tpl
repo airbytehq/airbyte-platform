@@ -254,6 +254,42 @@ Renders the auth.bootstrap.security.jwtSignatureSecretKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.dataPlane.clientIdSecretKey value
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" }}
+    {{- .Values.global.auth.dataPlane.clientIdSecretKey | default "dataplane-client-id" }}
+{{- end }}
+
+{{/*
+Renders the auth.bootstrap.dataPlane.clientIdSecretKey environment variable
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey.env" }}
+- name: DATAPLANE_CLIENT_ID_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_ID_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the global.auth.dataPlane.clientSecretSecretKey value
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" }}
+    {{- .Values.global.auth.dataPlane.clientSecretSecretKey | default "dataplane-client-secret" }}
+{{- end }}
+
+{{/*
+Renders the auth.bootstrap.dataPlane.clientSecretSecretKey environment variable
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey.env" }}
+- name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+{{- end }}
+
+{{/*
 Renders the set of all auth.bootstrap environment variables
 */}}
 {{- define "airbyte.auth.bootstrap.envs" }}
@@ -267,6 +303,8 @@ Renders the set of all auth.bootstrap environment variables
 {{- include "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey.env" . }}
 {{- include "airbyte.auth.bootstrap.security.jwtSignatureSecret.env" . }}
 {{- include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey.env" . }}
+{{- include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey.env" . }}
+{{- include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey.env" . }}
 {{- end }}
 
 {{/*
@@ -279,6 +317,8 @@ AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instan
 AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientIdSecretKey" . | quote }}
 AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey" . | quote }}
 AB_JWT_SIGNATURE_SECRET_KEY: {{ include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" . | quote }}
 {{- end }}
 
 {{/*

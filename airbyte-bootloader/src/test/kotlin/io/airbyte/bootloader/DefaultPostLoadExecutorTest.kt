@@ -21,32 +21,28 @@ internal class DefaultPostLoadExecutorTest {
   fun testPostLoadExecution() {
     val applyDefinitionsHelper = mockk<ApplyDefinitionsHelper>()
     val declarativeSourceUpdater = mockk<DeclarativeSourceUpdater>()
-    val authSecretInitializer = mockk<AuthKubernetesSecretInitializer>()
 
     // Set up expected behavior
     every { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) } returns Unit
     every { declarativeSourceUpdater.apply() } returns Unit
-    every { authSecretInitializer.initializeSecrets() } returns Unit
 
     val postLoadExecution =
-      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer)
+      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
 
     Assertions.assertDoesNotThrow { postLoadExecution.execute() }
     verify(exactly = 1) { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) }
     verify(exactly = 1) { declarativeSourceUpdater.apply() }
-    verify(exactly = 1) { authSecretInitializer.initializeSecrets() }
   }
 
   @Test
   fun testPostLoadExecutionWithException() {
     val applyDefinitionsHelper = mockk<ApplyDefinitionsHelper>()
     val declarativeSourceUpdater = mockk<DeclarativeSourceUpdater>()
-    val authSecretInitializer = mockk<AuthKubernetesSecretInitializer>()
 
     every { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) } throws IOException("test")
 
     val postLoadExecution =
-      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer)
+      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
 
     Assertions.assertThrows(IOException::class.java) { postLoadExecution.execute() }
   }

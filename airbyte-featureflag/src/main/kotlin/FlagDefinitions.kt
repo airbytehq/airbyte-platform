@@ -208,7 +208,7 @@ object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-wo
 
 object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = false)
 
-object WorkloadLauncherUseDataPlaneAuthNFlow : Temporary<Boolean>(key = "platform.workload-launcher-use-data-plane-auth-n-flow", default = false)
+object WorkloadLauncherUseDataPlaneAuthNFlow : Temporary<Boolean>(key = "platform.workload-launcher-use-data-plane-auth-n-flow", default = true)
 
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
 

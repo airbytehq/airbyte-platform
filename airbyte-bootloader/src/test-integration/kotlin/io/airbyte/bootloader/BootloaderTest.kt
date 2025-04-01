@@ -250,7 +250,7 @@ internal class BootloaderTest {
         featureFlagClient!!,
       )
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
-    val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authKubeSecretInitializer)
+    val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
@@ -271,6 +271,7 @@ internal class BootloaderTest {
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
+        authSecretInitializer = authKubeSecretInitializer,
       )
     bootloader.load()
 
@@ -433,7 +434,7 @@ internal class BootloaderTest {
         featureFlagClient!!,
       )
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
-    val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authKubeSecretInitializer)
+    val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk()
 
     val bootloader =
@@ -454,6 +455,7 @@ internal class BootloaderTest {
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
+        authSecretInitializer = authKubeSecretInitializer,
       )
 
     // starting from no previous version is always legal.
@@ -709,6 +711,7 @@ internal class BootloaderTest {
         }
       }
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
+    val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val bootloader =
       Bootloader(
         autoUpgradeConnectors = false,
@@ -727,6 +730,7 @@ internal class BootloaderTest {
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
+        authSecretInitializer = authKubeSecretInitializer,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())

@@ -331,7 +331,8 @@ class RuntimeEnvVarFactoryTest {
 
     val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
-    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
+    val expected =
+      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
 
     assertEquals(expected, result)
   }

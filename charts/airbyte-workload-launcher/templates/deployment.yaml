@@ -325,6 +325,29 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: SHOULD_RUN_NOTIFY_WORKFLOWS
+        - name: CONTROL_PLANE_TOKEN_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTROL_PLANE_TOKEN_ENDPOINT
+        - name: DATAPLANE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.dataplaneClientIdSecretKey | default "dataplane-client-id" | quote }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_NAME
+          value: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_KEY
+          value: {{ .Values.global.auth.dataplaneClientIdSecretKey | default "dataplane-client-id" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.dataplaneClientSecretSecretKey | default "dataplane-client-secret" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+          value: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+          value: {{ .Values.global.auth.dataplaneClientSecretSecretKey | default "dataplane-client-secret" | quote }}
         - name: MICRONAUT_ENVIRONMENTS
           valueFrom:
             configMapKeyRef:

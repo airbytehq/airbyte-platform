@@ -19,21 +19,20 @@ import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.lang.Exception
-import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+
+private val CLIENT_RETRY_EXCEPTIONS: List<Class<out Exception>> =
+  listOf(
+    IllegalStateException::class.java,
+    IOException::class.java,
+    UnsupportedOperationException::class.java,
+    ClientException::class.java,
+    ServerException::class.java,
+  )
 
 @Factory
 class ApiClientSupportFactory {
-  companion object {
-    private val clientRetryExceptions: List<Class<out Exception>> =
-      listOf(
-        IllegalStateException::class.java,
-        IOException::class.java,
-        UnsupportedOperationException::class.java,
-        ClientException::class.java,
-        ServerException::class.java,
-      )
-  }
-
   @Singleton
   @Named("airbyteApiClientRetryPolicy")
   @Requires(property = "airbyte.internal-api.base-path")
@@ -49,7 +48,7 @@ class ApiClientSupportFactory {
       maxRetries = maxRetries,
       metricClient = metricClient,
       clientApiType = ClientApiType.SERVER,
-      clientRetryExceptions = clientRetryExceptions,
+      clientRetryExceptions = CLIENT_RETRY_EXCEPTIONS,
     )
 
   @Singleton
@@ -59,11 +58,12 @@ class ApiClientSupportFactory {
     @Value("\${airbyte.internal-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.internal-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     interceptors: List<AirbyteApiInterceptor>,
-  ): OkHttpClient {
-    val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    interceptors.forEach(builder::addInterceptor)
-    builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
-    builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
-    return builder.build()
-  }
+  ): OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .apply {
+        interceptors.forEach { addInterceptor(it) }
+        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
+      }.build()
 }

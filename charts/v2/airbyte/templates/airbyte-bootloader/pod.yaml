@@ -50,6 +50,7 @@ spec:
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- end }}
 
+        {{- include "airbyte.cluster.controlPlane.bootstrap.envs" . | nindent 8 }}
         {{- include "airbyte.common.version.env" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}

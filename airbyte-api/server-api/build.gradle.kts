@@ -40,6 +40,7 @@ dependencies {
   implementation(libs.jakarta.validation.api)
   implementation(libs.jackson.datatype)
   implementation(libs.jackson.databind)
+  implementation(libs.micronaut.security.oauth2)
   implementation(libs.openapi.jackson.databind.nullable)
   implementation(libs.reactor.core)
   implementation(libs.slf4j.api)

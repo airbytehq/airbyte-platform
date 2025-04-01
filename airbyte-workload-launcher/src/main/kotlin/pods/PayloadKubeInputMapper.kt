@@ -91,20 +91,20 @@ class PayloadKubeInputMapper(
     val initReqs = resourceRequirementsFactory.replInit(input)
 
     return ReplicationKubeInput(
-      podName,
-      labels,
-      replicationWorkerConfigs.workerKubeAnnotations,
-      nodeSelectors,
-      orchImage,
-      sourceImage,
-      destinationImage,
-      ResourceConversionUtils.domainToApi(orchestratorReqs),
-      ResourceConversionUtils.domainToApi(sourceReqs),
-      ResourceConversionUtils.domainToApi(destinationReqs),
-      ResourceConversionUtils.domainToApi(initReqs),
-      orchRuntimeEnvVars,
-      sourceRuntimeEnvVars,
-      destinationRuntimeEnvVars,
+      podName = podName,
+      labels = labels,
+      annotations = replicationWorkerConfigs.workerKubeAnnotations,
+      nodeSelectors = nodeSelectors,
+      orchestratorImage = orchImage,
+      sourceImage = sourceImage,
+      destinationImage = destinationImage,
+      orchestratorReqs = ResourceConversionUtils.domainToApi(orchestratorReqs),
+      sourceReqs = ResourceConversionUtils.domainToApi(sourceReqs),
+      destinationReqs = ResourceConversionUtils.domainToApi(destinationReqs),
+      initReqs = ResourceConversionUtils.domainToApi(initReqs),
+      orchestratorRuntimeEnvVars = orchRuntimeEnvVars,
+      sourceRuntimeEnvVars = sourceRuntimeEnvVars,
+      destinationRuntimeEnvVars = destinationRuntimeEnvVars,
     )
   }
 

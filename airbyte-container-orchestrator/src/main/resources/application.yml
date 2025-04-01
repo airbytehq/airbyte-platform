@@ -33,7 +33,24 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
   security:
-    enabled: false
+    enabled: true
+    filter:
+      enabled: false
+    oauth2:
+      clients:
+        keycloak:
+          client-id: ${KEYCLOAK_CLIENT_ID:}
+          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+          client-credentials:
+            enabled: true
+          openid:
+            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
+        dataplane:
+          client-id: ${DATAPLANE_CLIENT_ID}
+          client-secret: ${DATAPLANE_CLIENT_SECRET}
+          token:
+            url: ${CONTROL_PLANE_TOKEN_ENDPOINT}
+            auth-method: client_secret_post
 
 airbyte:
   license-key: ${AIRBYTE_LICENSE_KEY:empty}

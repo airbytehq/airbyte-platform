@@ -168,3 +168,75 @@ DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH: {{ include "airbyte.cluster.dataPla
 {{- end }}
 
 {{- end }}
+
+{{/*
+Renders the global.cluster.controlPlane.bootstrap.dataPlane.secretName value
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName" }}
+    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.secretName | default "dataplane-creds" }}
+{{- end }}
+
+{{/*
+Renders the cluster.controlPlane.bootstrap.dataPlane.secretName environment variable
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName.env" }}
+- name: DATAPLANE_SECRET_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_SECRET_NAME
+{{- end }}
+
+{{/*
+Renders the global.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey value
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey" }}
+    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey }}
+{{- end }}
+
+{{/*
+Renders the cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey environment variable
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey.env" }}
+- name: DATAPLANE_CLIENT_ID_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_ID_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the global.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey value
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey" }}
+    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey }}
+{{- end }}
+
+{{/*
+Renders the cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey environment variable
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey.env" }}
+- name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the set of all cluster.controlPlane.bootstrap environment variables
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.envs" }}
+{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName.env" . }}
+{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey.env" . }}
+{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all cluster.controlPlane.bootstrap config map variables
+*/}}
+{{- define "airbyte.cluster.controlPlane.bootstrap.configVars" }}
+DATAPLANE_SECRET_NAME: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey" . | quote }}
+{{- end }}

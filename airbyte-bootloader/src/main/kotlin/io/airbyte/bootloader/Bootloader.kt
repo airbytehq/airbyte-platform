@@ -7,7 +7,6 @@ package io.airbyte.bootloader
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
 import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
@@ -54,6 +53,7 @@ class Bootloader(
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataplaneInitializer: DataplaneInitializer,
   val airbyteEdition: AirbyteEdition,
+  private val authSecretInitializer: AuthKubernetesSecretInitializer,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -102,6 +102,9 @@ class Bootloader(
     log.info { "Setting Airbyte version to '$airbyteVersion'" }
     jobPersistence.setVersion(airbyteVersion)
     log.info { "Set version to '$airbyteVersion'" }
+
+    log.info { "Initializing auth secrets..." }
+    authSecretInitializer.initializeSecrets()
 
     postLoadExecution?.execute()?.also {
       log.info { "Finished running post load Execution." }
@@ -216,6 +219,8 @@ class Bootloader(
   ) {
     val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
 
+    // Cloud currently depends on a "US" Dataplane group to exist. Once this is no longer the case,
+    // we can remove Cloud-specific code from the bootloader.
     if (airbyteEdition == AirbyteEdition.CLOUD) {
       if (!dataplaneGroups.any { it.name == "US" }) {
         log.info { "Creating US dataplane group." }
@@ -229,20 +234,6 @@ class Bootloader(
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
       }
-
-      if (!dataplaneGroups.any { it.name == "EU" }) {
-        log.info { "Creating EU dataplane group." }
-        val dataplaneGroupId = UUID.randomUUID()
-        val dataplaneGroup =
-          DataplaneGroup()
-            .withId(dataplaneGroupId)
-            .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-            .withName(GEOGRAPHY_EU)
-            .withEnabled(true)
-            .withTombstone(false)
-        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
-      }
-
       return
     } else if (dataplaneGroups.isNotEmpty()) {
       log.info { "Dataplane group already exists for the deployment." }

@@ -31,6 +31,25 @@ micronaut:
       type: cached
       n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
       core-pool-size: 0
+  security:
+    enabled: true
+    filter:
+      enabled: false
+    oauth2:
+      clients:
+        keycloak:
+          client-id: ${KEYCLOAK_CLIENT_ID:}
+          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+          client-credentials:
+            enabled: true
+          openid:
+            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
+        dataplane:
+          client-id: ${DATAPLANE_CLIENT_ID}
+          client-secret: ${DATAPLANE_CLIENT_SECRET}
+          token:
+            url: ${CONTROL_PLANE_TOKEN_ENDPOINT}
+            auth-method: client_secret_post
 
 airbyte:
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
@@ -54,9 +73,14 @@ airbyte:
   container:
     rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
   data-plane-credentials:
-    client-id: ${DATAPLANE_CLIENT_ID:client-id}
-    client-secret: ${DATAPLANE_CLIENT_SECRET:client-secret}
+    client-id: ${DATAPLANE_CLIENT_ID}
+    client-id-secret-key: ${DATAPLANE_CLIENT_ID_SECRET_KEY}
+    client-id-secret-name: ${DATAPLANE_CLIENT_ID_SECRET_NAME}
+    client-secret: ${DATAPLANE_CLIENT_SECRET}
+    client-secret-secret-key: ${DATAPLANE_CLIENT_SECRET_SECRET_KEY}
+    client-secret-secret-name: ${DATAPLANE_CLIENT_SECRET_SECRET_NAME}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
   edition: ${AIRBYTE_EDITION:COMMUNITY}

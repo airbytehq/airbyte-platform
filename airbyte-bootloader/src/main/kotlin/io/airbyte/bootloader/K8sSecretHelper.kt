@@ -54,6 +54,43 @@ object K8sSecretHelper {
     }
   }
 
+  /**
+   * Helper function for copying a Kubernetes secret from one namespace to another. Used for
+   * new Cloud instances that operate in two separate namespaces.
+   */
+  fun copySecretToNamespace(
+    kubernetesClient: KubernetesClient,
+    secretName: String,
+    sourceNamespace: String,
+    targetNamespace: String,
+  ) {
+    val existingSecret =
+      kubernetesClient
+        .secrets()
+        .inNamespace(targetNamespace)
+        .withName(secretName)
+        .get()
+    if (existingSecret != null) {
+      logger.info { "Secret $secretName already exists in namespace $targetNamespace. Skipping copy." }
+      return
+    }
+    val secret =
+      kubernetesClient
+        .secrets()
+        .inNamespace(sourceNamespace)
+        .withName(secretName)
+        .get()
+        ?: throw IllegalStateException("Secret $secretName not found in namespace $sourceNamespace")
+    val copiedSecret =
+      SecretBuilder(secret)
+        .withNewMetadata()
+        .withName(secretName)
+        .withNamespace(targetNamespace)
+        .endMetadata()
+        .build()
+    kubernetesClient.resource(copiedSecret).create()
+  }
+
   @OptIn(ExperimentalEncodingApi::class)
   internal fun String.toBase64(): String = Base64.encode(this.toByteArray())
 }

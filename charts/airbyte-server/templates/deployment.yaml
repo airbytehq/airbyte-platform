@@ -236,7 +236,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: ENTERPRISE_SOURCE_STUBS_URL
-
+        - name: AB_JWT_SIGNATURE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
         # Values for Airbyte auth configurations, secrets, and credentials in Community edition
         - name: AB_INSTANCE_ADMIN_PASSWORD
@@ -254,11 +258,6 @@ spec:
             secretKeyRef:
               name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
               key: {{ .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" | quote }}
-        - name: AB_JWT_SIGNATURE_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
         - name: AB_COOKIE_SECURE
           value: {{ .Values.global.auth.cookieSecureSetting | default "true" | quote }}
         - name: AB_COOKIE_SAME_SITE

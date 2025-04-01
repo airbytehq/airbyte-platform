@@ -134,6 +134,10 @@ spec:
         - name: AB_JWT_SIGNATURE_SECRET
           value: {{ .Values.global.auth.jwtSignatureSecret | quote }}
         {{- end }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_KEY
+          value: dataplane-client-id
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+          value: dataplane-client-secret
 
         {{- include "airbyte.database.envs" . | nindent 8 }}
 

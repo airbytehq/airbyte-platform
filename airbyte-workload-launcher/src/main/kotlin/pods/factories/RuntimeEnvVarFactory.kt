@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher.pods.factories
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.Configs
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
@@ -34,12 +34,12 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+import kotlin.collections.plus
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 /**
- * Legacy deployment mode environment variable that is still used by some
- * connectors.
+ * Legacy deployment mode environment variable that is still used by some connectors.
  */
 internal const val CLOUD_DEPLOYMENT_MODE = "CLOUD"
 internal const val DEPLOYMENT_MODE = "DEPLOYMENT_MODE"
@@ -47,6 +47,7 @@ internal const val OSS_DEPLOYMENT_MODE = "OSS"
 
 /**
  * Performs dynamic mapping of config to env vars based on runtime inputs.
+ *
  * For static stat time configuration see EnvVarConfigBeanFactory.
  */
 @Singleton
@@ -59,7 +60,7 @@ class RuntimeEnvVarFactory(
   private val featureFlagClient: FeatureFlagClient,
   private val airbyteEdition: Configs.AirbyteEdition,
 ) {
-  fun orchestratorEnvVars(
+  internal fun orchestratorEnvVars(
     replicationInput: ReplicationInput,
     workloadId: String,
   ): List<EnvVar> {
@@ -131,7 +132,7 @@ class RuntimeEnvVarFactory(
   /**
    * Env vars to enable APM metrics for the connector if enabled.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getConnectorApmEnvVars(
     image: String,
     context: Context,
@@ -147,7 +148,7 @@ class RuntimeEnvVarFactory(
   /**
    * Metadata env vars. Unsure of purpose. Copied from AirbyteIntegrationLauncher.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getMetadataEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> =
     listOf(
       // Connectors still rely on the DEPLOYMENT_MODE env var, so map the Airbyte edition to it.
@@ -160,7 +161,7 @@ class RuntimeEnvVarFactory(
   /**
    * Env vars that specify the resource limits of the connectors. For use by the connectors.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getResourceEnvVars(resourceReqs: AirbyteResourceRequirements?): List<EnvVar> {
     val envList = mutableListOf<EnvVar>()
     if (resourceReqs?.ephemeralStorageLimit != null) {
@@ -177,7 +178,7 @@ class RuntimeEnvVarFactory(
    * These theoretically configure runtime connector behavior. Copied from AirbyteIntegrationLauncher.
    * Unsure if still necessary.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getConfigurationEnvVars(
     dockerImage: String,
     connectionId: UUID,
@@ -201,7 +202,7 @@ class RuntimeEnvVarFactory(
   /**
    * Env vars for controlling runtime secrets hydration behavior.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getSecretPersistenceEnvVars(organizationId: UUID): List<EnvVar> {
     val useRuntimeSecretPersistence = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))
 
@@ -213,7 +214,7 @@ class RuntimeEnvVarFactory(
   /**
    * Env vars for controlling runtime custom code execution behaviour.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getDeclarativeCustomCodeSupportEnvVars(context: Context): List<EnvVar> {
     val useAllowCustomCode = featureFlagClient.boolVariation(UseAllowCustomCode, context)
 
@@ -232,7 +233,7 @@ class RuntimeEnvVarFactory(
   /**
    * Conditionally adds AWS assumed role env vars for use by connector pods.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun resolveAwsAssumedRoleEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
     // Only inject into connectors we own.
     if (launcherConfig.isCustomConnector) {
@@ -252,6 +253,6 @@ class RuntimeEnvVarFactory(
   }
 
   companion object {
-    const val MYSQL_SOURCE_NAME = "airbyte/source-mysql"
+    internal const val MYSQL_SOURCE_NAME = "airbyte/source-mysql"
   }
 }

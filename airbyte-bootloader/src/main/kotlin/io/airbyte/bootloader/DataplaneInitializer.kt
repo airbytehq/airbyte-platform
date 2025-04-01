@@ -5,6 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -19,8 +20,6 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
-internal const val SECRET_NAME_CLIENT_ID = "DATAPLANE_CLIENT_ID"
-internal const val SECRET_NAME_CLIENT_SECRET = "DATAPLANE_CLIENT_SECRET"
 
 @Singleton
 class DataplaneInitializer(
@@ -30,29 +29,45 @@ class DataplaneInitializer(
   private val k8sClient: KubernetesClient,
   private val edition: AirbyteEdition,
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
+  @Property(name = "airbyte.auth.dataplane-credentials.client-id-secret-key") private val clientIdSecretKey: String,
+  @Property(name = "airbyte.auth.dataplane-credentials.client-secret-secret-key") private val clientSecretSecretKey: String,
 ) {
   /**
    * Creates a dataplane if the following conditions are met
-   * - not running on CLOUD
-   * - a single dataplane group exists
-   * - the dataplane group has no existing dataplanes
+   * - If running on cloud, a dataplane does not yet exist for the "US" dataplane group
+   * - If running on OSS, a single dataplane group exists that does not have any existing dataplanes
    */
   fun createDataplaneIfNotExists() {
-    if (edition == AirbyteEdition.CLOUD) {
-      log.info { "Dataplane registration is not supported for $edition." }
-      return
-    }
-
     val group =
-      groupService
-        .listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
-        .singleOrNull() ?: run {
-        log.info { "Dataplane registration will be skipped due to an incorrect number of default dataplane groups." }
-        return
+      when (edition) {
+        AirbyteEdition.CLOUD ->
+          groupService.getDataplaneGroupByOrganizationIdAndGeography(
+            DEFAULT_ORGANIZATION_ID,
+            GEOGRAPHY_US,
+          )
+        else -> {
+          val groups = groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+          when {
+            groups.size > 1 -> {
+              log.info { "Skipping dataplane creation because multiple dataplane groups exist." }
+              return
+            }
+            groups.isEmpty() -> throw IllegalStateException("No dataplane groups exist.")
+            else -> groups.first()
+          }
+        }
       }
 
     val dataplane = createDataplane(group) ?: return
-    createK8sSecret(dataplaneCredentialsService.createCredentials(dataplaneId = dataplane.id))
+    val credentials = dataplaneCredentialsService.createCredentials(dataplaneId = dataplane.id)
+    createK8sSecret(credentials)
+
+    // Cloud puts dataplane pods in the jobs namespace, so we need to copy the secret containing
+    // the dataplane credentials to the jobs namespace.
+    if (edition == AirbyteEdition.CLOUD) {
+      log.info { "Copying secret $secretName to jobs namespace" }
+      K8sSecretHelper.copySecretToNamespace(k8sClient, secretName, k8sClient.namespace, "jobs")
+    }
   }
 
   private fun createDataplane(group: DataplaneGroup): Dataplane? {
@@ -83,8 +98,8 @@ class DataplaneInitializer(
   private fun createK8sSecret(creds: DataplaneClientCredentials) {
     val secretData =
       mapOf(
-        SECRET_NAME_CLIENT_ID to creds.clientId,
-        SECRET_NAME_CLIENT_SECRET to creds.clientSecret,
+        clientIdSecretKey to creds.clientId,
+        clientSecretSecretKey to creds.clientSecret,
       )
     K8sSecretHelper.createOrUpdateSecret(k8sClient, secretName, secretData)
   }
