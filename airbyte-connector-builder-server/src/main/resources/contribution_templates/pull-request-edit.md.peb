@@ -2,9 +2,9 @@
 
 This PR updates source {{ connectorName }} ({{ connectorImageName }}).
 
-The contributor provided the following description of the change:
+#### The contributor provided the following description of the change:
 
-{{ contributionDescription }}
+> {{ contributionDescription }}
 
 ## Reviewer checklist
 - [ ] Resolve any merge conflicts and validate file diffs (make sure the PR only includes changes intended by the contributor)

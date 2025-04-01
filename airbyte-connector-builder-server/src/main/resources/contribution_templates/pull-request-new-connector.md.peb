@@ -2,13 +2,13 @@
 
 This PR adds a new connector for source {{ connectorName }} ({{ connectorImageName }}).
 
-Contributor-provided connector description:
+#### Contributor-provided connector description:
 
-{{ connectorDescription }}
+> {{ connectorDescription }}
 
-The contributor provided the following description of the change:
+#### The contributor provided the following description of the change:
 
-{{ contributionDescription }}
+> {{ contributionDescription }}
 
 ## Details
 
