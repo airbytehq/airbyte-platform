@@ -24,7 +24,7 @@ import io.airbyte.data.services.SecretStorageService as SecretStorageRepository
  * Domain service for performing operations related to Airbyte's SecretStorage domain model.
  */
 @Singleton
-class SecretStorageService(
+open class SecretStorageService(
   private val secretStorageRepository: SecretStorageRepository,
   private val organizationRepository: OrganizationRepository,
   private val secretReferenceRepository: SecretReferenceRepository,
