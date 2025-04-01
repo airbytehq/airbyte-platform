@@ -31,6 +31,7 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.saveStreamsToRefresh
+import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.ANONYMOUS
@@ -460,10 +461,10 @@ class TemporalClient(
 
     val input =
       StandardCheckConnectionInput()
-        .withActorType(config.getActorType())
-        .withActorId(config.getActorId())
-        .withConnectionConfiguration(config.getConnectionConfiguration())
-        .withResourceRequirements(config.getResourceRequirements())
+        .withActorType(config.actorType)
+        .withActorId(config.actorId)
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
+        .withResourceRequirements(config.resourceRequirements)
         .withActorContext(context)
         .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId))
 
@@ -504,7 +505,7 @@ class TemporalClient(
         .withPriority(priority)
     val input =
       StandardDiscoverCatalogInput()
-        .withConnectionConfiguration(config.getConnectionConfiguration())
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
         .withSourceId(config.getSourceId())
         .withConnectorVersion(config.getConnectorVersion())
         .withConfigHash(config.getConfigHash())

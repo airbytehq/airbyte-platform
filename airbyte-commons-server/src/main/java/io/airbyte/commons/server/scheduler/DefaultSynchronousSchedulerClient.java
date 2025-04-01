@@ -32,6 +32,10 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -61,6 +65,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   private final JobTracker jobTracker;
   private final JobErrorReporter jobErrorReporter;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final SecretReferenceService secretReferenceService;
 
   private final ConfigInjector configInjector;
   private final ContextBuilder contextBuilder;
@@ -71,13 +76,15 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                            final JobErrorReporter jobErrorReporter,
                                            final OAuthConfigSupplier oAuthConfigSupplier,
                                            final ConfigInjector configInjector,
-                                           final ContextBuilder contextBuilder) {
+                                           final ContextBuilder contextBuilder,
+                                           final SecretReferenceService secretReferenceService) {
     this.temporalClient = temporalClient;
     this.jobTracker = jobTracker;
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.configInjector = configInjector;
     this.contextBuilder = contextBuilder;
+    this.secretReferenceService = secretReferenceService;
   }
 
   @Override
@@ -88,21 +95,28 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                                                                            final ResourceRequirements resourceRequirements)
       throws IOException {
     final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
-    final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
+    final JsonNode configWithOauthParams = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
         source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
+    final JsonNode injectedConfig = configInjector.injectConfig(configWithOauthParams, source.getSourceDefinitionId());
+
+    final ConfigWithSecretReferences sourceConfig =
+        source.getSourceId() == null ? InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(injectedConfig)
+            : secretReferenceService.getConfigWithSecretReferences(
+                SecretReferenceScopeType.ACTOR,
+                source.getSourceId(),
+                injectedConfig);
+
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.SOURCE)
         .withActorId(source.getSourceId())
-        .withConnectionConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()))
+        .withConnectionConfiguration(sourceConfig)
         .withDockerImage(dockerImage)
         .withProtocolVersion(new Version(sourceVersion.getProtocolVersion()))
         .withIsCustomConnector(isCustomConnector)
         .withResourceRequirements(resourceRequirements);
-
-    // TODO(pedro): Make sure we pass the (inlined) ConfigWithSecretRefs to the job
 
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext =
@@ -129,15 +143,24 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                                                                                 final ResourceRequirements resourceRequirements)
       throws IOException {
     final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
-    final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
+    final JsonNode configWithOauthParams = oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
         destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration());
+    final JsonNode injectedConfig = configInjector.injectConfig(configWithOauthParams, destination.getDestinationDefinitionId());
+
+    final ConfigWithSecretReferences destinationConfig =
+        destination.getDestinationId() == null ? InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(injectedConfig)
+            : secretReferenceService.getConfigWithSecretReferences(
+                SecretReferenceScopeType.ACTOR,
+                destination.getDestinationId(),
+                injectedConfig);
+
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.DESTINATION)
         .withActorId(destination.getDestinationId())
-        .withConnectionConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()))
+        .withConnectionConfiguration(destinationConfig)
         .withDockerImage(dockerImage)
         .withProtocolVersion(new Version(destinationVersion.getProtocolVersion()))
         .withIsCustomConnector(isCustomConnector)
@@ -168,13 +191,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                                            final WorkloadPriority priority)
       throws IOException {
     final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
-    final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
+    final JsonNode configWithOauthParams = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
         source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
+    final JsonNode injectedConfig = configInjector.injectConfig(configWithOauthParams, source.getSourceDefinitionId());
+
+    final ConfigWithSecretReferences sourceConfig = secretReferenceService.getConfigWithSecretReferences(
+        SecretReferenceScopeType.ACTOR,
+        source.getSourceId(),
+        injectedConfig);
+
     final JobDiscoverCatalogConfig jobDiscoverCatalogConfig = new JobDiscoverCatalogConfig()
-        .withConnectionConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()))
+        .withConnectionConfiguration(sourceConfig)
         .withDockerImage(dockerImage)
         .withProtocolVersion(new Version(sourceVersion.getProtocolVersion()))
         .withSourceId(source.getSourceId().toString())
