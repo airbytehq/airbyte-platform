@@ -33,7 +33,7 @@ class StartupApplicationEventListenerTest {
         claimedProcessor = claimedProcessor,
         claimProcessorTracker = mockk(relaxed = true),
         metricClient = mockk(relaxed = true),
-        temporalWorkerController = mockk(relaxed = true),
+        queueConsumerController = mockk(relaxed = true),
         launcherShutdownHelper = launcherShutdownHelper,
         identityService = identityService,
       )

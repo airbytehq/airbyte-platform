@@ -9,7 +9,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.launcher.authn.DataplaneIdentityService
-import io.airbyte.workload.launcher.temporal.TemporalWorkerController
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.discovery.event.ServiceReadyEvent
@@ -23,7 +22,7 @@ class StartupApplicationEventListener(
   private val claimedProcessor: ClaimedProcessor,
   private val claimProcessorTracker: ClaimProcessorTracker,
   private val metricClient: MetricClient,
-  private val temporalWorkerController: TemporalWorkerController,
+  private val queueConsumerController: QueueConsumerController,
   private val launcherShutdownHelper: LauncherShutdownHelper,
   private val identityService: DataplaneIdentityService,
 ) : ApplicationEventListener<ServiceReadyEvent> {
@@ -49,7 +48,7 @@ class StartupApplicationEventListener(
     trackerThread =
       thread {
         claimProcessorTracker.await()
-        temporalWorkerController.start()
+        queueConsumerController.start()
       }
   }
 }

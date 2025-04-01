@@ -11,7 +11,6 @@ import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitResponse
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.featureflag.WorkloadLauncherUseDataPlaneAuthNFlow
 import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
@@ -44,19 +43,13 @@ class DataplaneIdentityServiceTest {
   @BeforeEach
   fun setup() {
     apiClient = mockk()
-    featureFlagMap =
-      mutableMapOf(
-        WorkloadLauncherUseDataPlaneAuthNFlow.key to true,
-      )
+    featureFlagMap = mutableMapOf()
     featureFlagClient = TestClient(featureFlagMap)
     eventPublisher = mockk(relaxed = true)
     service =
       DataplaneIdentityService(
-        dataplaneIdProperty = dataplaneIdProperty,
-        dataplaneNameProperty = dataplaneNameProperty,
         dataplaneCredentials = dataplaneCreds,
         airbyteApiClient = apiClient,
-        featureFlagClient = featureFlagClient,
         eventPublisher = eventPublisher,
       )
   }
@@ -86,7 +79,6 @@ class DataplaneIdentityServiceTest {
         dataplaneEnabled = initResponse.dataplaneEnabled,
         dataplaneGroupId = initResponse.dataplaneGroupId,
         dataplaneGroupName = initResponse.dataplaneGroupName,
-        temporalConsumerEnabled = true,
       )
     assertEquals(expectedConfig, service.authNDrivenDataplaneConfig)
 
@@ -104,17 +96,6 @@ class DataplaneIdentityServiceTest {
 
     assertThrows<Exception> {
       service.initialize()
-    }
-    assertNull(service.authNDrivenDataplaneConfig)
-    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
-  }
-
-  @Test
-  fun `shouldn't poll if feature flag is off`() {
-    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
-    service.initialize()
-    verify(exactly = 0) {
-      apiClient.dataplaneApi.initializeDataplane(any())
     }
     assertNull(service.authNDrivenDataplaneConfig)
     verify(exactly = 0) { eventPublisher.publishEvent(any()) }
@@ -139,7 +120,6 @@ class DataplaneIdentityServiceTest {
         dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
         dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
         dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
-        temporalConsumerEnabled = true,
       )
     verify { eventPublisher.publishEvent(expectedConfig) }
   }
@@ -209,18 +189,7 @@ class DataplaneIdentityServiceTest {
   }
 
   @Test
-  fun `Heartbeat is a noop if feature flag is off`() {
-    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
-
-    service.heartbeat()
-    verify(exactly = 0) {
-      apiClient.dataplaneApi.heartbeatDataplane(any())
-      eventPublisher.publishEvent(any())
-    }
-  }
-
-  @Test
-  fun `getters returns static property based values if ff off and api config based values if ff on`() {
+  fun `getters returns api config based values`() {
     val initResponse =
       DataplaneInitResponse(
         dataplaneName = "data-driven-dataplane-name",
@@ -237,11 +206,6 @@ class DataplaneIdentityServiceTest {
       }
     service.initialize()
 
-    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = false
-    assertEquals(dataplaneIdProperty, service.getDataplaneId())
-    assertEquals(dataplaneNameProperty, service.getDataplaneName())
-
-    featureFlagMap[WorkloadLauncherUseDataPlaneAuthNFlow.key] = true
     assertEquals(initResponse.dataplaneName, service.getDataplaneName())
     assertEquals(initResponse.dataplaneId.toString(), service.getDataplaneId())
   }
@@ -262,6 +226,5 @@ class DataplaneIdentityServiceTest {
       dataplaneEnabled = dataplaneEnabled,
       dataplaneGroupId = dataplaneGroupId,
       dataplaneGroupName = dataplaneGroupName,
-      temporalConsumerEnabled = true,
     )
 }

@@ -12,6 +12,4 @@ data class DataplaneConfig(
   val dataplaneEnabled: Boolean,
   val dataplaneGroupId: UUID,
   val dataplaneGroupName: String,
-  @Deprecated("delete after the temporal transition")
-  val temporalConsumerEnabled: Boolean,
 )

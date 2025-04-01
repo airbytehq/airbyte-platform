@@ -58,10 +58,12 @@ class WorkloadApiQueuePoller(
   }
 
   fun suspendPolling() {
+    logger.info { "Suspending ApiQueuePoller with $groupId and $priority" }
     suspended = true
   }
 
   fun resumePolling() {
+    logger.info { "Resuming ApiQueuePoller with $groupId and $priority" }
     suspended = false
   }
 

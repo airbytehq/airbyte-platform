@@ -122,11 +122,6 @@ object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-defaul
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
 
-/**
- * Defines whether a workload launcher should be consuming tasks.
- */
-object WorkloadLauncherConsumerEnabled : Permanent<Boolean>(key = "workload-launcher-consumer-enabled", default = true)
-
 object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
 
 /**
@@ -149,8 +144,6 @@ object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", defa
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
 
 object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
-
-object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)
 
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
@@ -204,12 +197,8 @@ object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-she
 
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
-object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-workload-queue-table", default = false)
+object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-workload-queue-table", default = true)
 
-object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = false)
-
-object WorkloadLauncherUseDataPlaneAuthNFlow : Temporary<Boolean>(key = "platform.workload-launcher-use-data-plane-auth-n-flow", default = true)
+object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = true)
 
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
-
-object UseWorkloadTemporalConsumer : Temporary<Boolean>(key = "platform.use-workload-temporal-consumer", default = true)

@@ -57,7 +57,7 @@ import java.util.UUID
 @ExecuteOn(TaskExecutors.IO)
 open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
-  private val workloadService: WorkloadService,
+  private val workloadQueueService: WorkloadQueueService,
   private val defaultDeadlineValues: DefaultDeadlineValues,
 ) {
   @POST
@@ -111,7 +111,7 @@ open class WorkloadApi(
       workloadCreateRequest.dataplaneGroup,
       workloadCreateRequest.priority,
     )
-    workloadService.create(
+    workloadQueueService.create(
       workloadId = workloadCreateRequest.workloadId,
       workloadInput = workloadCreateRequest.workloadInput,
       workloadCreateRequest.labels.associate { it.key to it.value },
