@@ -36,6 +36,7 @@ import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ConfigSchema
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DeclarativeManifest
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.ConnectorBuilderService
@@ -76,6 +77,7 @@ class DefinitionsController(
   val connectorBuilderProjectsHandler: ConnectorBuilderProjectsHandler,
   val connectorBuilderService: ConnectorBuilderService,
   val declarativeSourceDefinitionsHandler: DeclarativeSourceDefinitionsHandler,
+  val airbyteEdition: AirbyteEdition,
 ) : PublicSourceDefinitionsApi,
   PublicDestinationDefinitionsApi,
   PublicDeclarativeSourceDefinitionsApi {
@@ -83,6 +85,11 @@ class DefinitionsController(
     workspaceId: UUID,
     createDefinitionRequest: CreateDefinitionRequest,
   ) = wrap {
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      throw BadRequestProblem(
+        ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
+      )
+    }
     ensureUserCanWrite(workspaceId)
 
     sourceDefinitionsHandler
@@ -144,6 +151,11 @@ class DefinitionsController(
     workspaceId: UUID,
     createDefinitionRequest: CreateDefinitionRequest,
   ) = wrap {
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      throw BadRequestProblem(
+        ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
+      )
+    }
     ensureUserCanWrite(workspaceId)
 
     destinationDefinitionsHandler
@@ -313,6 +325,12 @@ class DefinitionsController(
     definitionId: UUID,
     updateDefinitionRequest: UpdateDefinitionRequest,
   ) = wrap {
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      throw BadRequestProblem(
+        ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
+      )
+    }
+
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     ensureUserCanWrite(workspaceId, def.custom)
 
@@ -375,6 +393,11 @@ class DefinitionsController(
     definitionId: UUID,
     updateDefinitionRequest: UpdateDefinitionRequest,
   ) = wrap {
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      throw BadRequestProblem(
+        ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
+      )
+    }
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
     ensureUserCanWrite(workspaceId, def.custom)
 
