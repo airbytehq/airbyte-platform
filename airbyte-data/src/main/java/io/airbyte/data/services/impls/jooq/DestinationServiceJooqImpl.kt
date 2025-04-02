@@ -69,7 +69,7 @@ import java.util.stream.Stream
 class DestinationServiceJooqImpl
   @VisibleForTesting
   constructor(
-    @Named("configDatabase") database: Database?,
+    @Named("configDatabase") database: Database,
     featureFlagClient: FeatureFlagClient,
     secretsRepositoryWriter: SecretsRepositoryWriter,
     secretPersistenceConfigService: SecretPersistenceConfigService,
@@ -560,7 +560,7 @@ class DestinationServiceJooqImpl
       includeTombstone: Boolean,
     ): Stream<StandardDestinationDefinition?>? =
       database
-        .query<Result<Record?>?>(
+        .query<Result<Record>>(
           ContextQueryFunction { ctx: DSLContext? ->
             ctx!!
               .select(Tables.ACTOR_DEFINITION.asterisk())

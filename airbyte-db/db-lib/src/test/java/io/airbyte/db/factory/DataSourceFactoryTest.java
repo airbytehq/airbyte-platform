@@ -6,7 +6,6 @@ package io.airbyte.db.factory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -61,8 +60,7 @@ class DataSourceFactoryTest extends CommonFactoryTest {
 
   @Test
   void testCreatingPostgresDataSourceWithConnectionTimeoutSetBelowDefault() {
-    final Map<String, String> connectionProperties = Map.of(
-        CONNECT_TIMEOUT, "30");
+    final Map<String, String> connectionProperties = Map.of(CONNECT_TIMEOUT, "30");
     final DataSource dataSource = DataSourceFactory.create(
         username,
         password,
@@ -116,41 +114,6 @@ class DataSourceFactoryTest extends CommonFactoryTest {
     final Map<String, String> connectionProperties = Map.of("foo", "bar");
 
     final DataSource dataSource = DataSourceFactory.create(username, password, driverClassName, jdbcUrl, connectionProperties);
-    assertNotNull(dataSource);
-    assertEquals(HikariDataSource.class, dataSource.getClass());
-    assertEquals(10, ((HikariDataSource) dataSource).getHikariConfigMXBean().getMaximumPoolSize());
-  }
-
-  @Test
-  void testCreatingADataSourceWithHostAndPort() {
-    final DataSource dataSource = DataSourceFactory.create(username, password, host, port, database, driverClassName);
-    assertNotNull(dataSource);
-    assertEquals(HikariDataSource.class, dataSource.getClass());
-    assertEquals(10, ((HikariDataSource) dataSource).getHikariConfigMXBean().getMaximumPoolSize());
-  }
-
-  @Test
-  void testCreatingADataSourceWithHostPortAndConnectionProperties() {
-    final Map<String, String> connectionProperties = Map.of("foo", "bar");
-
-    final DataSource dataSource = DataSourceFactory.create(username, password, host, port, database, driverClassName, connectionProperties);
-    assertNotNull(dataSource);
-    assertEquals(HikariDataSource.class, dataSource.getClass());
-    assertEquals(10, ((HikariDataSource) dataSource).getHikariConfigMXBean().getMaximumPoolSize());
-  }
-
-  @Test
-  void testCreatingAnInvalidDataSourceWithHostAndPort() {
-    final String driverClassName = "Unknown";
-
-    assertThrows(RuntimeException.class, () -> {
-      DataSourceFactory.create(username, password, host, port, database, driverClassName);
-    });
-  }
-
-  @Test
-  void testCreatingAPostgresqlDataSource() {
-    final DataSource dataSource = DataSourceFactory.createPostgres(username, password, host, port, database);
     assertNotNull(dataSource);
     assertEquals(HikariDataSource.class, dataSource.getClass());
     assertEquals(10, ((HikariDataSource) dataSource).getHikariConfigMXBean().getMaximumPoolSize());

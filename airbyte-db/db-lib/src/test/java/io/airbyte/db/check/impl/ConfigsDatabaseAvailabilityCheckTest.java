@@ -8,6 +8,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.db.check.ConfigsDatabaseAvailabilityCheck;
 import io.airbyte.db.check.DatabaseCheckException;
 import org.jooq.DSLContext;
 import org.jooq.Select;
@@ -36,8 +37,7 @@ class ConfigsDatabaseAvailabilityCheckTest extends CommonDatabaseCheckTest {
 
   @Test
   void checkDatabaseAvailabilityNullDslContext() {
-    final var check = new ConfigsDatabaseAvailabilityCheck(null, TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, check::check);
+    Assertions.assertThrows(NullPointerException.class, () -> new ConfigsDatabaseAvailabilityCheck(null, TIMEOUT_MS));
   }
 
 }

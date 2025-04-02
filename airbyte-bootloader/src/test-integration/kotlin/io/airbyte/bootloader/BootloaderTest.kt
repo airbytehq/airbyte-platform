@@ -89,6 +89,10 @@ internal class BootloaderTest {
         .withUsername(DOCKER)
         .withPassword(DOCKER)
     container.start()
+    configsDataSource =
+      DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
+    jobsDataSource =
+      DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
 
     configsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
     jobsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
@@ -276,10 +280,10 @@ internal class BootloaderTest {
     bootloader.load()
 
     val jobsMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
-    Assertions.assertEquals(getMigrationVersion(CURRENT_JOBS_MIGRATION), jobsMigrator.latestMigration.version.version)
+    Assertions.assertEquals(getMigrationVersion(CURRENT_JOBS_MIGRATION), jobsMigrator.getLatestMigration()?.version?.version)
 
     val configsMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
-    Assertions.assertEquals(getMigrationVersion(CURRENT_CONFIGS_MIGRATION), configsMigrator.latestMigration.version.version)
+    Assertions.assertEquals(getMigrationVersion(CURRENT_CONFIGS_MIGRATION), configsMigrator.getLatestMigration()?.version?.version)
 
     val workspaces = workspaceService.listStandardWorkspaces(false)
     Assertions.assertEquals(workspaces.size, 1)

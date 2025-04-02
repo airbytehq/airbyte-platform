@@ -8,6 +8,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.db.check.DatabaseCheckException;
+import io.airbyte.db.check.JobsDatabaseAvailabilityCheck;
+import io.airbyte.db.check.JobsDatabaseMigrationCheck;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationInfoService;
@@ -90,16 +92,16 @@ class JobsDatabaseMigrationCheckTest {
     when(migrationInfoService.current()).thenReturn(migrationInfo);
     when(flyway.info()).thenReturn(migrationInfoService);
 
-    final var check = new JobsDatabaseMigrationCheck(null, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, check::check);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> new JobsDatabaseMigrationCheck(null, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS));
   }
 
   @Test
   void testMigrationCheckNullFlyway() {
     final var minimumVersion = VERSION_2;
     final var databaseAvailabilityCheck = mock(JobsDatabaseAvailabilityCheck.class);
-    final var check = new JobsDatabaseMigrationCheck(databaseAvailabilityCheck, null, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, check::check);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> new JobsDatabaseMigrationCheck(databaseAvailabilityCheck, null, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS));
   }
 
   @Test

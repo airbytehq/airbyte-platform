@@ -9,8 +9,6 @@ val migrations: Configuration by configurations.creating {
   extendsFrom(configurations.getByName("implementation"))
 }
 
-val envVars = mapOf("VERSION" to "dev")
-
 configurations.all {
   exclude(group = "io.micronaut.flyway")
 }
@@ -35,9 +33,10 @@ dependencies {
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
+  implementation(libs.kotlin.logging)
 
   migrations(libs.platform.testcontainers.postgresql)
-  migrations(sourceSets["main"].output)
+  migrations(sourceSets["main"].runtimeClasspath)
 
   // Mark as compile Only to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)
@@ -68,52 +67,54 @@ tasks.named<Test>("test") {
   )
 }
 
+val envVars = mapOf("VERSION" to "dev")
+
 tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("configs", "create")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 tasks.register<JavaExec>("runConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("configs", "migrate")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 tasks.register<JavaExec>("dumpConfigsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("configs", "dump_schema")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 tasks.register<JavaExec>("newJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("jobs", "create")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 tasks.register<JavaExec>("runJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("jobs", "migrate")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 tasks.register<JavaExec>("dumpJobsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
-  classpath = files(migrations.files)
+  classpath = files(migrations)
   args = listOf("jobs", "dump_schema")
   environment = envVars
-  dependsOn(":oss:airbyte-db:db-lib:build")
+  dependsOn(tasks.classes)
 }
 
 val copyInitSql =

@@ -6,12 +6,12 @@ package io.airbyte.db.factory;
 
 import static org.mockito.Mockito.mock;
 
-import io.airbyte.db.check.impl.ConfigsDatabaseAvailabilityCheck;
-import io.airbyte.db.check.impl.ConfigsDatabaseMigrationCheck;
-import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
-import io.airbyte.db.check.impl.JobsDatabaseMigrationCheck;
-import io.airbyte.db.init.impl.ConfigsDatabaseInitializer;
-import io.airbyte.db.init.impl.JobsDatabaseInitializer;
+import io.airbyte.db.check.ConfigsDatabaseAvailabilityCheck;
+import io.airbyte.db.check.ConfigsDatabaseMigrationCheck;
+import io.airbyte.db.check.JobsDatabaseAvailabilityCheck;
+import io.airbyte.db.check.JobsDatabaseMigrationCheck;
+import io.airbyte.db.init.ConfigsDatabaseInitializer;
+import io.airbyte.db.init.JobsDatabaseInitializer;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Assertions;
@@ -31,8 +31,8 @@ class DatabaseCheckFactoryTest {
     Assertions.assertNotNull(check);
     Assertions.assertEquals(ConfigsDatabaseAvailabilityCheck.class, check.getClass());
     Assertions.assertEquals(timeoutMs, check.getTimeoutMs());
-    Assertions.assertTrue(check.getDslContext().isPresent());
-    Assertions.assertEquals(dslContext, check.getDslContext().get());
+    Assertions.assertNotNull(check.getDslContext());
+    Assertions.assertEquals(dslContext, check.getDslContext());
   }
 
   @Test
@@ -44,8 +44,8 @@ class DatabaseCheckFactoryTest {
     Assertions.assertNotNull(check);
     Assertions.assertEquals(JobsDatabaseAvailabilityCheck.class, check.getClass());
     Assertions.assertEquals(timeoutMs, check.getTimeoutMs());
-    Assertions.assertTrue(check.getDslContext().isPresent());
-    Assertions.assertEquals(dslContext, check.getDslContext().get());
+    Assertions.assertNotNull(check.getDslContext());
+    Assertions.assertEquals(dslContext, check.getDslContext());
   }
 
   @Test
@@ -58,12 +58,12 @@ class DatabaseCheckFactoryTest {
 
     Assertions.assertNotNull(check);
     Assertions.assertEquals(ConfigsDatabaseMigrationCheck.class, check.getClass());
-    Assertions.assertTrue(check.getDatabaseAvailabilityCheck().isPresent());
-    Assertions.assertEquals(ConfigsDatabaseAvailabilityCheck.class, check.getDatabaseAvailabilityCheck().get().getClass());
+    Assertions.assertNotNull(check.getDatabaseAvailabilityCheck());
+    Assertions.assertEquals(ConfigsDatabaseAvailabilityCheck.class, check.getDatabaseAvailabilityCheck().getClass());
     Assertions.assertEquals(minimumMigrationVersion, check.getMinimumFlywayVersion());
     Assertions.assertEquals(timeoutMs, check.getTimeoutMs());
-    Assertions.assertTrue(check.getFlyway().isPresent());
-    Assertions.assertEquals(flyway, check.getFlyway().get());
+    Assertions.assertNotNull(check.getFlyway());
+    Assertions.assertEquals(flyway, check.getFlyway());
   }
 
   @Test
@@ -76,12 +76,12 @@ class DatabaseCheckFactoryTest {
 
     Assertions.assertNotNull(check);
     Assertions.assertEquals(JobsDatabaseMigrationCheck.class, check.getClass());
-    Assertions.assertTrue(check.getDatabaseAvailabilityCheck().isPresent());
-    Assertions.assertEquals(JobsDatabaseAvailabilityCheck.class, check.getDatabaseAvailabilityCheck().get().getClass());
+    Assertions.assertNotNull(check.getDatabaseAvailabilityCheck());
+    Assertions.assertEquals(JobsDatabaseAvailabilityCheck.class, check.getDatabaseAvailabilityCheck().getClass());
     Assertions.assertEquals(minimumMigrationVersion, check.getMinimumFlywayVersion());
     Assertions.assertEquals(timeoutMs, check.getTimeoutMs());
-    Assertions.assertTrue(check.getFlyway().isPresent());
-    Assertions.assertEquals(flyway, check.getFlyway().get());
+    Assertions.assertNotNull(check.getFlyway());
+    Assertions.assertEquals(flyway, check.getFlyway());
   }
 
   @Test
@@ -93,11 +93,11 @@ class DatabaseCheckFactoryTest {
 
     Assertions.assertNotNull(initializer);
     Assertions.assertEquals(ConfigsDatabaseInitializer.class, initializer.getClass());
-    Assertions.assertTrue(initializer.getDatabaseAvailabilityCheck().isPresent());
-    Assertions.assertEquals(ConfigsDatabaseAvailabilityCheck.class, initializer.getDatabaseAvailabilityCheck().get().getClass());
-    Assertions.assertEquals(timeoutMs, initializer.getDatabaseAvailabilityCheck().get().getTimeoutMs());
-    Assertions.assertTrue(initializer.getDslContext().isPresent());
-    Assertions.assertEquals(dslContext, initializer.getDslContext().get());
+    Assertions.assertNotNull(initializer.getDatabaseAvailabilityCheck());
+    Assertions.assertEquals(ConfigsDatabaseAvailabilityCheck.class, initializer.getDatabaseAvailabilityCheck().getClass());
+    Assertions.assertEquals(timeoutMs, initializer.getDatabaseAvailabilityCheck().getTimeoutMs());
+    Assertions.assertNotNull(initializer.getDslContext());
+    Assertions.assertEquals(dslContext, initializer.getDslContext());
     Assertions.assertEquals(initialSchema, initializer.getInitialSchema());
   }
 
@@ -110,11 +110,11 @@ class DatabaseCheckFactoryTest {
 
     Assertions.assertNotNull(initializer);
     Assertions.assertEquals(JobsDatabaseInitializer.class, initializer.getClass());
-    Assertions.assertTrue(initializer.getDatabaseAvailabilityCheck().isPresent());
-    Assertions.assertEquals(JobsDatabaseAvailabilityCheck.class, initializer.getDatabaseAvailabilityCheck().get().getClass());
-    Assertions.assertEquals(timeoutMs, initializer.getDatabaseAvailabilityCheck().get().getTimeoutMs());
-    Assertions.assertTrue(initializer.getDslContext().isPresent());
-    Assertions.assertEquals(dslContext, initializer.getDslContext().get());
+    Assertions.assertNotNull(initializer.getDatabaseAvailabilityCheck());
+    Assertions.assertEquals(JobsDatabaseAvailabilityCheck.class, initializer.getDatabaseAvailabilityCheck().getClass());
+    Assertions.assertEquals(timeoutMs, initializer.getDatabaseAvailabilityCheck().getTimeoutMs());
+    Assertions.assertNotNull(initializer.getDslContext());
+    Assertions.assertEquals(dslContext, initializer.getDslContext());
     Assertions.assertEquals(initialSchema, initializer.getInitialSchema());
   }
 

@@ -41,6 +41,9 @@ dependencies {
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
   jooqGenerator(libs.jackson.kotlin)
+  // the jooqGenerator picks up the wrong version of kotlin by default, not sure why
+  // TODO: figure out why _and_ fix!
+  jooqGenerator("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.20")
 }
 
 jooq {

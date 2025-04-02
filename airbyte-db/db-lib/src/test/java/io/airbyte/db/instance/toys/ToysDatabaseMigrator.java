@@ -20,9 +20,4 @@ public class ToysDatabaseMigrator extends FlywayDatabaseMigrator {
     super(database, flyway);
   }
 
-  @Override
-  protected String getDisclaimer() {
-    return "";
-  }
-
 }

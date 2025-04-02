@@ -71,7 +71,7 @@ import java.util.stream.Stream
 
 @Singleton
 class SourceServiceJooqImpl(
-  @Named("configDatabase") database: Database?,
+  @Named("configDatabase") database: Database,
   featureFlagClient: FeatureFlagClient,
   secretsRepositoryWriter: SecretsRepositoryWriter,
   secretPersistenceConfigService: SecretPersistenceConfigService,
@@ -570,7 +570,7 @@ class SourceServiceJooqImpl(
     includeTombstone: Boolean,
   ): Stream<StandardSourceDefinition?>? =
     database
-      .query<Result<Record?>?>(
+      .query<Result<Record>>(
         ContextQueryFunction { ctx: DSLContext? ->
           ctx!!
             .select(Tables.ACTOR_DEFINITION.asterisk())
