@@ -77,7 +77,7 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
           )}
           {llmSyncFailureExperimentEnabled && failureUiDetails && (
             <Box my="md">
-              <Button onClick={showAIJobExplanation} variant="magic">
+              <Button onClick={showAIJobExplanation} icon="aiStars" variant="magic">
                 <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />
               </Button>
             </Box>

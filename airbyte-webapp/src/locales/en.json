@@ -919,7 +919,11 @@
   "connection.llmSyncFailureExplanation.explain": "Explain this error",
   "connection.llmSyncFailureExplanation.title": "AI Sync Failure Explanation",
   "connection.llmSyncFailureExplanation.error": "An error occurred while generating a response. Please try again later.",
-  "connection.llmSyncFailureExplanation.loading": "Analyzing sync job...",
+  "connection.llmSyncFailureExplanation.loading.process_logs": "Processing error logs and context...",
+  "connection.llmSyncFailureExplanation.loading.check_connectors": "Checking connector versions...",
+  "connection.llmSyncFailureExplanation.loading.examine_sync_config": "Examining sync configuration...",
+  "connection.llmSyncFailureExplanation.loading.analyze_sync_failure_patterns": "Analyzing sync failure patterns...",
+  "connection.llmSyncFailureExplanation.loading.investigate_root_cause": "Investigating root cause...",
 
   "connectionAutoDisabledReason.TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS": "Airbyte disabled the connection due to consecutive failures with no recent success.",
   "connectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY": "Airbyte disabled the connection due to only failed jobs recently.",

@@ -64,7 +64,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
         )}
         {llmSyncFailureExperimentEnabled && (
           <Box mt="md">
-            <Button onClick={showAIJobExplanation} variant="magic">
+            <Button onClick={showAIJobExplanation} icon="aiStars" variant="magic">
               <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />
             </Button>
           </Box>
