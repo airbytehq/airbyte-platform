@@ -2,7 +2,15 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import { ReactNode, useEffect } from "react";
-import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
+import {
+  useForm,
+  FormProvider,
+  KeepStateOptions,
+  DefaultValues,
+  UseFormReturn,
+  UseFormProps,
+  FieldValues,
+} from "react-hook-form";
 import * as yup from "yup";
 import { z } from "zod";
 
@@ -10,8 +18,7 @@ import styles from "./Form.module.scss";
 import { FormChangeTracker } from "./FormChangeTracker";
 import { FormDevTools } from "./FormDevTools";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FormValues = Record<string, any>;
+export type FormValues = FieldValues;
 
 export type FormSubmissionHandler<T extends FormValues> = (
   values: T,
