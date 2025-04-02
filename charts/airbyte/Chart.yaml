@@ -19,72 +19,68 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.0
+version: 1.5.1
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "dev"
+appVersion: dev
 
 dependencies:
   - condition: airbyte-bootloader.enabled
     name: airbyte-bootloader
-    repository: "file://../airbyte-bootloader"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: temporal.enabled
     name: temporal
-    repository: "file://../airbyte-temporal"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: temporal-ui.enabled
     name: temporal-ui
-    repository: "file://../airbyte-temporal-ui"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: webapp.enabled
     name: webapp
-    repository: "file://../airbyte-webapp"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: server.enabled
     name: server
-    repository: "file://../airbyte-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: worker.enabled
     name: worker
-    repository: "file://../airbyte-worker"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: workload-api-server.enabled
     name: workload-api-server
-    repository: "file://../airbyte-workload-api-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: workload-launcher.enabled
     name: workload-launcher
-    repository: "file://../airbyte-workload-launcher"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: metrics.enabled
     name: metrics
-    repository: "file://../airbyte-metrics"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: cron.enabled
     name: cron
-    repository: "file://../airbyte-cron"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: connector-builder-server.enabled
     name: connector-builder-server
-    repository: "file://../airbyte-connector-builder-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: connector-rollout-worker.enabled
     name: connector-rollout-worker
-    repository: "file://../airbyte-connector-rollout-worker"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: keycloak.enabled
     name: keycloak
-    repository: "file://../airbyte-keycloak"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
   - condition: keycloak-setup.enabled
     name: keycloak-setup
-    repository: "file://../airbyte-keycloak-setup"
-    version: "*"
-  - condition: featureflag-server.enabled
-    name: featureflag-server
-    repository: "file://../airbyte-featureflag-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 1.5.1
