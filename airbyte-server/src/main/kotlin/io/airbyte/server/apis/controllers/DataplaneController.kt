@@ -9,7 +9,6 @@ import io.airbyte.api.model.generated.AccessToken
 import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneCreateResponse
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneGetIdRequestBody
 import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.model.generated.DataplaneInitRequestBody
@@ -17,7 +16,6 @@ import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
-import io.airbyte.api.model.generated.DataplaneReadId
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
@@ -119,18 +117,6 @@ open class DataplaneController(
       .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.updatedAt), ZoneOffset.UTC))
 
     return dataplaneRead
-  }
-
-  @Secured(ADMIN)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getDataplaneId(dataplaneGetIdRequestBody: DataplaneGetIdRequestBody): DataplaneReadId {
-    val connectionId = dataplaneGetIdRequestBody.connectionId
-    val actorType = dataplaneGetIdRequestBody.actorType
-    val actorId = dataplaneGetIdRequestBody.actorId
-    val workspaceId = dataplaneGetIdRequestBody.workspaceId
-    val queueName = dataplaneService.getQueueName(connectionId, actorType, actorId, workspaceId, dataplaneGetIdRequestBody.workloadPriority)
-
-    return DataplaneReadId().id(queueName)
   }
 
   @Secured(SecurityRule.IS_ANONYMOUS)
