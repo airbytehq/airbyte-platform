@@ -53,7 +53,7 @@ abstract class MetricRepositoryTest {
 
   @BeforeEach
   void setUp() {
-    ctx.truncate(ACTOR).execute();
+    ctx.truncate(ACTOR).cascade().execute();
     ctx.truncate(CONNECTION).cascade().execute();
     ctx.truncate(JOBS).cascade().execute();
     ctx.truncate(ATTEMPTS).cascade().execute();

@@ -383,6 +383,7 @@ create table "public"."partial_user_config" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "actor_id" uuid,
   constraint "partial_user_config_pkey" primary key ("id")
 );
 create table "public"."permission" (
@@ -739,6 +740,7 @@ alter table "public"."notification_configuration" add constraint "notification_c
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_payment_config" add constraint "organization_payment_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_template_id_fkey" foreign key ("config_template_id") references "public"."config_template" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."permission" add constraint "permission_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
