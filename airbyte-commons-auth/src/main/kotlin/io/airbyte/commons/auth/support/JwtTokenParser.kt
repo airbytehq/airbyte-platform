@@ -30,7 +30,7 @@ object JwtTokenParser {
   private const val EXPECTED_SPLIT_LENGTH: Int = 2
 
   /**
-   * Parse out JWT token and extract fields backend cares about into a map.
+   * Get the payload part of the given JWT.
    */
   @JvmStatic
   fun getJwtPayloadToken(jwtToken: String): String = jwtToken.split("\\.".toRegex())[1]
