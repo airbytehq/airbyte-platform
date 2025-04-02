@@ -15,12 +15,17 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamCursorCell.module.scss";
-import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { checkIsFieldHashed, getFieldPathType, checkCursorAndPKRequirements, getFieldPathDisplayName } from "../utils";
-import { updateCursorField } from "../utils/streamConfigHelpers";
+import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
+import {
+  checkIsFieldHashed,
+  getFieldPathType,
+  checkCursorAndPKRequirements,
+  getFieldPathDisplayName,
+} from "../../utils";
+import { updateCursorField } from "../../utils/streamConfigHelpers";
+import { CatalogComboBox } from "../CatalogComboBox/CatalogComboBox";
 
 interface NextCursorCellProps {
   row: Row<SyncCatalogUIModel>;

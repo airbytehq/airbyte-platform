@@ -7,6 +7,7 @@ import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text, TextWithOverflowTooltip } from "components/ui/Text";
+import { TextHighlighter } from "components/ui/TextHighlighter";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { getDataType } from "area/connection/utils";
@@ -15,9 +16,8 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { TextHighlighter } from "./TextHighlighter";
-import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
+import { SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 import {
   isChildFieldCursor as checkIsChildFieldCursor,
   isChildFieldPrimaryKey as checkIsChildFieldPrimaryKey,
@@ -28,7 +28,7 @@ import {
   checkIsFieldHashed,
   getSelectedMandatoryFields,
   updateFieldSelected,
-} from "../utils";
+} from "../../utils";
 
 interface StreamFieldNameCellProps {
   row: Row<SyncCatalogUIModel>;

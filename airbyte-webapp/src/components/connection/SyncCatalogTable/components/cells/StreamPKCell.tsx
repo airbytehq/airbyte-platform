@@ -14,17 +14,17 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { MultiCatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
 import styles from "./StreamPKCell.module.scss";
-import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
+import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 import {
   checkIsFieldHashed,
   getFieldPathType,
   checkCursorAndPKRequirements,
   getFieldPathDisplayName,
   updatePrimaryKey,
-} from "../utils";
+} from "../../utils";
+import { MultiCatalogComboBox } from "../CatalogComboBox/CatalogComboBox";
 
 interface NextPKCellProps {
   row: Row<SyncCatalogUIModel>;

@@ -197,11 +197,13 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         >
                           <table
                             class="<removed-for-snapshot-test>"
+                            context="[object Object]"
                             data-testid="sync-catalog-table"
                             style="border-spacing: 0;"
                           >
                             <thead
                               class="<removed-for-snapshot-test>"
+                              context="[object Object]"
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
@@ -316,6 +318,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="0"
                                 data-item-index="0"
                                 data-known-size="40"
@@ -427,6 +430,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="1"
                                 data-item-index="1"
                                 data-known-size="40"
@@ -559,6 +563,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="2"
                                 data-item-index="2"
                                 data-known-size="40"
@@ -691,6 +696,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="3"
                                 data-item-index="3"
                                 data-known-size="40"
@@ -990,11 +996,13 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                         >
                           <table
                             class="<removed-for-snapshot-test>"
+                            context="[object Object]"
                             data-testid="sync-catalog-table"
                             style="border-spacing: 0;"
                           >
                             <thead
                               class="<removed-for-snapshot-test>"
+                              context="[object Object]"
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
@@ -1109,6 +1117,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="0"
                                 data-item-index="0"
                                 data-known-size="40"
@@ -1220,6 +1229,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="1"
                                 data-item-index="1"
                                 data-known-size="40"
@@ -1352,6 +1362,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="2"
                                 data-item-index="2"
                                 data-known-size="40"
@@ -1484,6 +1495,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="3"
                                 data-item-index="3"
                                 data-known-size="40"

@@ -10,8 +10,8 @@ import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { links } from "core/utils/links";
 
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { isPrimaryKey, checkCursorAndPKRequirements } from "../utils";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
+import { isPrimaryKey, checkCursorAndPKRequirements } from "../../utils";
 
 export interface FieldPKCellProps {
   row: Row<SyncCatalogUIModel>;

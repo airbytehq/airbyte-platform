@@ -3,7 +3,7 @@ import React from "react";
 
 import { Text } from "components/ui/Text";
 
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 
 interface FieldSelectionStatusCellProps {
   row: Row<SyncCatalogUIModel>;

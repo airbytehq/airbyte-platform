@@ -5,13 +5,13 @@ import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { TextWithOverflowTooltip } from "components/ui/Text";
+import { TextHighlighter } from "components/ui/TextHighlighter";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { TextHighlighter } from "./TextHighlighter";
-import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
+import { SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 
 interface StreamNameCellProps {
   value: string;

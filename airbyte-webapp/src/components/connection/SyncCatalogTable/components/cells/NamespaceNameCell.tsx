@@ -3,6 +3,13 @@ import React, { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
+import { FormConnectionFormValues, SyncStreamFieldWithId } from "components/connection/ConnectionForm/formConfig";
+import {
+  DestinationNamespaceFormValues,
+  DestinationNamespaceModal,
+} from "components/connection/DestinationNamespaceModal";
+import { SyncCatalogUIModel } from "components/connection/SyncCatalogTable/SyncCatalogTable";
+import { getColumnFilterValue } from "components/connection/SyncCatalogTable/utils";
 import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -12,11 +19,6 @@ import { Text } from "components/ui/Text";
 import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
-
-import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
-import { DestinationNamespaceFormValues, DestinationNamespaceModal } from "../../DestinationNamespaceModal";
-import { SyncCatalogUIModel } from "../SyncCatalogTable";
-import { getColumnFilterValue } from "../utils";
 
 interface NamespaceNameCellProps extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat"> {
   row: Row<SyncCatalogUIModel>;
@@ -125,7 +127,7 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
                     namespaceFormat,
                   }}
                   onCancel={onCancel}
-                  onSubmit={async (values) => {
+                  onSubmit={async (values: DestinationNamespaceFormValues) => {
                     destinationNamespaceChange(values);
                     onComplete();
                   }}
