@@ -45,7 +45,6 @@ class WorkloadApiQueuePollerTest {
   private val pollSizeItems: Int = 10
 
   private val pollIntervalSeconds: Long = 5
-  private val jitterRange: Double = 0.0
 
   private val priority: WorkloadPriority = WorkloadPriority.DEFAULT
 
@@ -66,7 +65,6 @@ class WorkloadApiQueuePollerTest {
         pollIntervalSeconds,
         priority,
         dataplaneName,
-        jitterRange = jitterRange,
       )
   }
 
