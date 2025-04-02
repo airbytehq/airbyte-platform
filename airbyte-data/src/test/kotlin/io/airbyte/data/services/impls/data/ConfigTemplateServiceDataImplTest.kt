@@ -255,10 +255,10 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.organizationId, organizationId)
-      assertEquals(configTemplate.actorDefinitionId, actorDefinitionId)
-      assertEquals(configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(configTemplate.configTemplate.organizationId, organizationId)
+      assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
     }
 
     @Test
@@ -335,8 +335,8 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
     }
 
     @Test
@@ -418,8 +418,8 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
     }
 
     @Test
@@ -683,8 +683,8 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
     }
   }
 
@@ -726,7 +726,7 @@ class ConfigTemplateServiceDataImplTest {
   }
 
   @Nested
-  inner class EditTemplateTests {
+  inner class UpdateTemplateTests {
     private lateinit var configTemplateEntity: EntityConfigTemplate
 
     @BeforeEach
@@ -747,23 +747,23 @@ class ConfigTemplateServiceDataImplTest {
     }
 
     @Test
-    fun `test edit raises an exception if the config template does not exist`() {
+    fun `test update raises an exception if the config template does not exist`() {
       val id = UUID.randomUUID()
       every { repository.findById(id) } returns Optional.empty()
       org.junit.jupiter.api.assertThrows<NoSuchElementException> {
-        service.updateTemplate(configTemplateId = id)
+        service.updateTemplate(configTemplateId = id, organizationId = OrganizationId(organizationId))
       }
     }
 
     @Test
-    fun `test edit nothing should succeed`() {
-      val response = service.updateTemplate(configTemplateId = configTemplateEntity.id!!)
+    fun `test update nothing should succeed`() {
+      val response = service.updateTemplate(configTemplateId = configTemplateEntity.id!!, OrganizationId(organizationId))
 
-      assertEquals(response.id, configTemplateEntity.id)
-      assertEquals(response.organizationId, configTemplateEntity.organizationId)
-      assertEquals(response.userConfigSpec, configTemplateEntity.userConfigSpec)
-      assertEquals(response.actorDefinitionId, configTemplateEntity.actorDefinitionId)
-      assertEquals(response.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
+      assertEquals(response.configTemplate.id, configTemplateEntity.id)
+      assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
+      assertEquals(response.configTemplate.userConfigSpec, configTemplateEntity.userConfigSpec)
+      assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
+      assertEquals(response.configTemplate.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
     }
 
     @Test
@@ -772,13 +772,22 @@ class ConfigTemplateServiceDataImplTest {
 
       every { repository.save(any()) } returns configTemplateEntity
 
-      val response = service.updateTemplate(configTemplateId = configTemplateEntity.id!!, partialDefaultConfig = updatedDefaultValues)
+      val updatedConfigTemplateEntity = configTemplateEntity.copy(partialDefaultConfig = updatedDefaultValues)
 
-      assertEquals(response.id, configTemplateEntity.id)
-      assertEquals(response.organizationId, configTemplateEntity.organizationId)
-      assertEquals(response.userConfigSpec, configTemplateEntity.userConfigSpec)
-      assertEquals(response.actorDefinitionId, configTemplateEntity.actorDefinitionId)
-      assertEquals(updatedDefaultValues, response.partialDefaultConfig)
+      every { repository.update(any()) } returns updatedConfigTemplateEntity
+
+      val response =
+        service.updateTemplate(
+          configTemplateId = configTemplateEntity.id!!,
+          partialDefaultConfig = updatedDefaultValues,
+          organizationId = OrganizationId(organizationId),
+        )
+
+      assertEquals(response.configTemplate.id, configTemplateEntity.id)
+      assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
+      assertEquals(response.configTemplate.userConfigSpec, configTemplateEntity.userConfigSpec)
+      assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
+      assertEquals(updatedDefaultValues, response.configTemplate.partialDefaultConfig)
     }
 
     @Test
@@ -787,13 +796,22 @@ class ConfigTemplateServiceDataImplTest {
 
       every { repository.save(any()) } returns configTemplateEntity
 
-      val response = service.updateTemplate(configTemplateId = configTemplateEntity.id!!, userConfigSpec = updatedUserConfigSpec)
+      val updatedConfigTemplateEntity = configTemplateEntity.copy(userConfigSpec = updatedUserConfigSpec)
 
-      assertEquals(response.id, configTemplateEntity.id)
-      assertEquals(response.organizationId, configTemplateEntity.organizationId)
-      assertEquals(response.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
-      assertEquals(response.actorDefinitionId, configTemplateEntity.actorDefinitionId)
-      assertEquals(updatedUserConfigSpec, response.userConfigSpec)
+      every { repository.update(any()) } returns updatedConfigTemplateEntity
+
+      val response =
+        service.updateTemplate(
+          configTemplateId = configTemplateEntity.id!!,
+          userConfigSpec = updatedUserConfigSpec,
+          organizationId = OrganizationId(organizationId),
+        )
+
+      assertEquals(response.configTemplate.id, configTemplateEntity.id)
+      assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
+      assertEquals(response.configTemplate.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
+      assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
+      assertEquals(updatedUserConfigSpec, response.configTemplate.userConfigSpec)
     }
 
     @Test
@@ -804,7 +822,11 @@ class ConfigTemplateServiceDataImplTest {
       every { repository.save(any()) } returns configTemplateEntity
 
       org.junit.jupiter.api.assertThrows<JsonValidationException> {
-        service.updateTemplate(configTemplateId = configTemplateEntity.id!!, userConfigSpec = updatedUserConfigSpec)
+        service.updateTemplate(
+          configTemplateId = configTemplateEntity.id!!,
+          userConfigSpec = updatedUserConfigSpec,
+          organizationId = OrganizationId(organizationId),
+        )
       }
     }
   }

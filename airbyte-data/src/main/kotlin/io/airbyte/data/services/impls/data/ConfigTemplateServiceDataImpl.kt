@@ -7,7 +7,6 @@ package io.airbyte.data.services.impls.data
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.repositories.ConfigTemplateRepository
 import io.airbyte.data.services.ActorDefinitionService
@@ -15,7 +14,6 @@ import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.impls.data.mappers.EntityConfigTemplate
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -63,7 +61,7 @@ open class ConfigTemplateServiceDataImpl(
     actorDefinitionId: ActorDefinitionId,
     partialDefaultConfig: JsonNode,
     userConfigSpec: JsonNode,
-  ): ConfigTemplate {
+  ): ConfigTemplateWithActorDetails {
     validateSource(actorDefinitionId, partialDefaultConfig, userConfigSpec)
 
     val entity =
@@ -74,39 +72,59 @@ open class ConfigTemplateServiceDataImpl(
         userConfigSpec = userConfigSpec,
       )
 
-    return repository
-      .save(
-        entity,
-      ).toConfigModel()
+    val configTemplate =
+      repository
+        .save(
+          entity,
+        ).toConfigModel()
+
+    val actorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
+
+    return ConfigTemplateWithActorDetails(
+      configTemplate = configTemplate,
+      actorName = actorDefinition.name,
+      actorIcon = actorDefinition.iconUrl,
+    )
   }
 
   override fun updateTemplate(
     configTemplateId: UUID,
-    name: String?,
+    organizationId: OrganizationId,
     partialDefaultConfig: JsonNode?,
     userConfigSpec: JsonNode?,
-  ): ConfigTemplate {
+  ): ConfigTemplateWithActorDetails {
     val configTemplate = repository.findById(configTemplateId).orElseThrow().toConfigModel()
 
-    // Also need to check and update the name!
-    if (partialDefaultConfig != null || userConfigSpec != null) {
-      val finalPartialDefaultConfig = partialDefaultConfig ?: configTemplate.partialDefaultConfig
-      val finalUserConfigSpec = userConfigSpec ?: configTemplate.userConfigSpec
-      validateSource(ActorDefinitionId(configTemplate.actorDefinitionId), finalPartialDefaultConfig, finalUserConfigSpec)
-
-      val updated =
-        ConfigTemplate(
-          id = configTemplate.id,
-          organizationId = configTemplate.organizationId,
-          actorDefinitionId = configTemplate.actorDefinitionId,
-          partialDefaultConfig = finalPartialDefaultConfig,
-          userConfigSpec = finalUserConfigSpec,
-        )
-      repository.save(updated.toEntity())
-      return updated
-    } else {
-      return configTemplate
+    if (configTemplate.organizationId != organizationId.value) {
+      throw IllegalArgumentException("OrganizationId does not match")
     }
+
+    val updatedConfigTemplate =
+      if (partialDefaultConfig != null || userConfigSpec != null) {
+        val finalPartialDefaultConfig = partialDefaultConfig ?: configTemplate.partialDefaultConfig
+        val finalUserConfigSpec = userConfigSpec ?: configTemplate.userConfigSpec
+        validateSource(ActorDefinitionId(configTemplate.actorDefinitionId), finalPartialDefaultConfig, finalUserConfigSpec)
+
+        val entity =
+          EntityConfigTemplate(
+            id = configTemplate.id,
+            organizationId = configTemplate.organizationId,
+            actorDefinitionId = configTemplate.actorDefinitionId,
+            partialDefaultConfig = finalPartialDefaultConfig,
+            userConfigSpec = finalUserConfigSpec,
+          )
+        repository.update(entity).toConfigModel()
+      } else {
+        configTemplate
+      }
+
+    val actorDefinition = sourceService.getStandardSourceDefinition(updatedConfigTemplate.actorDefinitionId, false)
+
+    return ConfigTemplateWithActorDetails(
+      configTemplate = updatedConfigTemplate,
+      actorName = actorDefinition.name,
+      actorIcon = actorDefinition.iconUrl,
+    )
   }
 
   private fun validateSource(

@@ -611,7 +611,7 @@ export const mockConfigTemplateFakerOne: ConfigTemplateRead = {
   id: "1",
   name: "FakerOne",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
-  sourceDefinitionId: "actor-definition-version-id",
+  sourceDefinitionId: "actor-definition-id",
   configTemplateSpec: {
     connectionSpecification: {
       type: "object",
@@ -635,7 +635,7 @@ export const mockConfigTemplateAlsoFaker: ConfigTemplateRead = {
   id: "2",
   name: "Also Faker!",
   icon: "https://connectors.airbyte.com/files/metadata/airbyte/source-faker/latest/icon.svg",
-  sourceDefinitionId: "actor-definition-version-id",
+  sourceDefinitionId: "actor-definition-id",
   configTemplateSpec: {
     connectionSpecification: {
       type: "object",

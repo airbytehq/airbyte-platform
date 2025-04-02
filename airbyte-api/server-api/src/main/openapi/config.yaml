@@ -6112,12 +6112,13 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /v1/config_templates/list:
+  /public/v1/config_templates/list:
     post:
       summary: List all config templates available to a workspace
       tags:
         - config_template
         - embedded
+        - public
       operationId: listConfigTemplates
       requestBody:
         content:
@@ -6134,12 +6135,13 @@ paths:
                 $ref: "#/components/schemas/ConfigTemplateList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/config_templates/get:
+  /public/v1/config_templates/get:
     post:
       summary: Get details of a specific config template
       tags:
         - config_template
         - embedded
+        - public
       operationId: getConfigTemplate
       requestBody:
         content:
@@ -6156,12 +6158,13 @@ paths:
                 $ref: "#/components/schemas/ConfigTemplateRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/config_templates/create:
+  /public/v1/config_templates/create:
     post:
       summary: Create a config template
       tags:
         - config_template
         - embedded
+        - public
       operationId: createConfigTemplate
       requestBody:
         content:
@@ -6178,12 +6181,13 @@ paths:
                 $ref: "#/components/schemas/ConfigTemplateCreateResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/config_templates/update:
+  /public/v1/config_templates/update:
     post:
       summary: Update a config template
       tags:
         - config_template
         - embedded
+        - public
       operationId: updateConfigTemplate
       requestBody:
         content:
@@ -18454,10 +18458,9 @@ components:
     ConfigTemplateCreateRequestBody:
       type: object
       required:
-        - name
         - actorDefinitionId
         - partialDefaultConfig
-        - userConfigSpec
+        - partialUserConfigSpec
         - organizationId
       properties:
         organizationId:
@@ -18468,7 +18471,7 @@ components:
         partialDefaultConfig:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
+          $ref: "#/components/schemas/SourceConfiguration"
     ConfigTemplateSpec:
       type: object
     ConfigTemplateCreateResponse:
@@ -18482,17 +18485,19 @@ components:
     ConfigTemplateUpdateRequestBody:
       type: object
       required:
+        - organizationId
         - configTemplateId
       properties:
         configTemplateId:
           type: string
           format: uuid
-        name:
+        organizationId:
           type: string
+          format: uuid
         partialDefaultConfig:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
+          $ref: "#/components/schemas/SourceConfiguration"
     ConfigTemplateUpdateResponse:
       type: object
       required:
