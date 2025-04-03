@@ -20,9 +20,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Duration
 import kotlin.concurrent.Volatile
-import kotlin.random.Random
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -37,15 +34,10 @@ class WorkloadApiQueuePoller(
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
   private val pollSizeItems: Int,
-  pollIntervalSeconds: Long,
+  private val pollIntervalSeconds: Long,
   private val priority: WorkloadPriority,
   private val dataplaneName: String,
-  jitterRange: Double = 0.1,
 ) {
-  // This is to some add jitter to the polling. jitterRange is +/- percentage of the pollInterval
-  private val basePollIntervalDuration: Duration = (pollIntervalSeconds * 1000 * (1 - jitterRange)).milliseconds.toJavaDuration()
-  private val pollJitterRangeInMillis: Int = (pollIntervalSeconds * 2 * jitterRange * 1000).toInt()
-
   @Volatile
   private var suspended = true
   private var initialized = false
@@ -78,7 +70,7 @@ class WorkloadApiQueuePoller(
   fun isSuspended(): Boolean = !featureFlagClient.boolVariation(UseWorkloadQueueTableConsumer, PlaneName(dataplaneName)) || suspended
 
   private fun buildInputFlux(): Flux<LauncherInput> {
-    val interval = Flux.interval(basePollIntervalDuration)
+    val interval = Flux.interval(Duration.ofSeconds(pollIntervalSeconds))
 
     val pollFlux: Flux<Workload> =
       Flux.create { sink ->
@@ -95,7 +87,6 @@ class WorkloadApiQueuePoller(
 
     return interval
       .onBackpressureDrop()
-      .delayUntil { Mono.delay(Random.nextInt(0, pollJitterRangeInMillis + 1).milliseconds.toJavaDuration()) }
       .filter { !isSuspended() }
       .flatMap { pollFlux }
       .map(Workload::toLauncherInput)
