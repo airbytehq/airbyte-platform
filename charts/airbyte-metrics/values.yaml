@@ -21,6 +21,8 @@ enabled: true
 ##  metrics.replicaCount Number of metrics-reporter replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  metrics.image.repository The repository to use for the airbyte metrics-reporter image.
 ##  metrics.image.pullPolicy the pull policy to use for the airbyte metrics-reporter image
 ##  metrics.image.tag The airbyte metrics-reporter image tag. Defaults to the chart's AppVersion
