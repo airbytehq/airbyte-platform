@@ -20,7 +20,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Following docs from
- * https://www.typeform.com/developers/get-started/applications/#3-write-your-application
+ * https://www.typeform.com/developers/get-started/applications/#3-write-your-application.
  */
 public class TypeformOAuthFlow extends BaseOAuth2Flow {
 

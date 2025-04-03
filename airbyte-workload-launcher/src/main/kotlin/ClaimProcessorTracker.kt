@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Singleton
 class ClaimProcessorTracker(
   @Value("\${airbyte.workload-launcher.parallelism.default-queue}") private val parallelism: Int,
-  @Value("\${airbyte.workload-launcher.parallelism.max-surge}") private val parallelismMaxSurge: Int = 0,
+  @Value("\${airbyte.workload-launcher.parallelism.max-surge:0}") private val parallelismMaxSurge: Int,
 ) {
   private val latch: CountDownLatch = CountDownLatch(maxOf(100 - parallelismMaxSurge, 0) percentOf parallelism)
 

@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://developer.xero.com/documentation/guides/oauth2/auth-flow
+ * Following docs from https://developer.xero.com/documentation/guides/oauth2/auth-flow.
  */
 public class XeroOAuthFlow extends BaseOAuth2Flow {
 

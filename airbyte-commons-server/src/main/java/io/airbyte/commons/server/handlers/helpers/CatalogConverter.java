@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Convert classes between io.airbyte.protocol.models and io.airbyte.api.model.generated
+ * Convert classes between io.airbyte.protocol.models and io.airbyte.api.model.generated.
  */
 @Singleton
 public class CatalogConverter {

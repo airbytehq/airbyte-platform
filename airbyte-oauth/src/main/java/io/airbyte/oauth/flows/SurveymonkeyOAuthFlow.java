@@ -24,7 +24,7 @@ import org.apache.http.client.utils.URIBuilder;
 public class SurveymonkeyOAuthFlow extends BaseOAuth2Flow {
 
   /**
-   * https://developer.surveymonkey.com/api/v3/#access-url
+   * https://developer.surveymonkey.com/api/v3/#access-url.
    */
   private static final String API_ACCESS_URL_USA = "https://api.surveymonkey.com/";
   private static final String API_ACCESS_URL_EU = "https://api.eu.surveymonkey.com/";

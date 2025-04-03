@@ -33,7 +33,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorRecord
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
@@ -52,7 +51,6 @@ import org.jooq.JSONB
 import org.jooq.JoinType
 import org.jooq.Record
 import org.jooq.Record1
-import org.jooq.RecordMapper
 import org.jooq.Result
 import org.jooq.impl.DSL
 import org.slf4j.Logger
@@ -60,12 +58,11 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.invoke.MethodHandles
 import java.time.OffsetDateTime
-import java.util.Map
+import java.util.Map.entry
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.function.Function
-import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
@@ -118,7 +115,7 @@ class SourceServiceJooqImpl(
   ): StandardSourceDefinition? =
     sourceDefQuery(Optional.of(sourceDefinitionId), includeTombstones)!!
       .findFirst()
-      .orElseThrow<ConfigNotFoundException?>(Supplier { ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId) })
+      .orElseThrow { ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId) }
 
   /**
    * Get source definition form source.
@@ -174,11 +171,11 @@ class SourceServiceJooqImpl(
   override fun listPublicSourceDefinitions(includeTombstone: Boolean): MutableList<StandardSourceDefinition?> =
     listStandardActorDefinitions<StandardSourceDefinition?>(
       ActorType.source,
-      Function { record: Record? ->
+      { record: Record? ->
         DbConverter.buildStandardSourceDefinition(
           record,
           retrieveDefaultMaxSecondsBetweenMessages(
-            record!!.get<UUID?>(
+            record!!.get(
               Tables.ACTOR_DEFINITION.ID,
             ),
           ),
@@ -206,11 +203,11 @@ class SourceServiceJooqImpl(
       ScopeType.workspace,
       JoinType.JOIN,
       ActorType.source,
-      Function { record: Record? ->
+      { record: Record? ->
         DbConverter.buildStandardSourceDefinition(
           record,
           retrieveDefaultMaxSecondsBetweenMessages(
-            record!!.get<UUID?>(
+            record!!.get(
               Tables.ACTOR_DEFINITION.ID,
             ),
           ),
@@ -237,19 +234,19 @@ class SourceServiceJooqImpl(
       ScopeType.workspace,
       JoinType.LEFT_OUTER_JOIN,
       ActorType.source,
-      Function { record: Record? -> this.mapRecordToSourceDefinitionWithGrantStatus(record!!) },
+      { record: Record? -> this.mapRecordToSourceDefinitionWithGrantStatus(record!!) },
       Tables.ACTOR_DEFINITION.CUSTOM.eq(false),
       includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
     )
 
   private fun mapRecordToSourceDefinitionWithGrantStatus(record: Record): MutableMap.MutableEntry<StandardSourceDefinition?, Boolean?> =
-    actorDefinitionWithGrantStatus<StandardSourceDefinition?>(record, Function { rec: Record? -> buildStandardSourceDefinition(rec!!) })
+    actorDefinitionWithGrantStatus<StandardSourceDefinition?>(record, { rec: Record? -> buildStandardSourceDefinition(rec!!) })
 
   private fun buildStandardSourceDefinition(record: Record): StandardSourceDefinition? {
     // Extract the StandardSourceDefinition from the record using the default max seconds logic.
     return DbConverter.buildStandardSourceDefinition(
       record,
-      retrieveDefaultMaxSecondsBetweenMessages(record.get<UUID?>(Tables.ACTOR_DEFINITION.ID)),
+      retrieveDefaultMaxSecondsBetweenMessages(record.get(Tables.ACTOR_DEFINITION.ID)),
     )
   }
 
@@ -267,8 +264,8 @@ class SourceServiceJooqImpl(
     getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
 
     database.transaction<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        Companion.writeStandardSourceDefinition(mutableListOf<StandardSourceDefinition?>(sourceDefinition), ctx!!)
+      { ctx: DSLContext? ->
+        writeStandardSourceDefinition(mutableListOf(sourceDefinition), ctx!!)
         null
       },
     )
@@ -307,8 +304,8 @@ class SourceServiceJooqImpl(
   @Throws(IOException::class)
   override fun writeSourceConnectionNoSecrets(partialSource: SourceConnection?) {
     database.transaction<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        writeSourceConnection(mutableListOf<SourceConnection?>(partialSource), ctx!!)
+      { ctx: DSLContext? ->
+        writeSourceConnection(mutableListOf(partialSource), ctx!!)
         null
       },
     )
@@ -334,7 +331,7 @@ class SourceServiceJooqImpl(
   override fun listWorkspaceSourceConnection(workspaceId: UUID?): MutableList<SourceConnection?> {
     val result =
       database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR)
@@ -344,7 +341,7 @@ class SourceServiceJooqImpl(
             .fetch()
         },
       )
-    return result.stream().map<SourceConnection?> { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
+    return result.stream().map { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
   }
 
   /**
@@ -356,8 +353,8 @@ class SourceServiceJooqImpl(
    */
   @Throws(IOException::class)
   override fun isSourceActive(sourceId: UUID?): Boolean? =
-    database.query<Boolean?>(
-      ContextQueryFunction { ctx: DSLContext? ->
+    database.query(
+      { ctx: DSLContext? ->
         ctx!!.fetchExists(
           DSL
             .select()
@@ -379,7 +376,7 @@ class SourceServiceJooqImpl(
   override fun listWorkspacesSourceConnections(resourcesQueryPaginated: ResourcesQueryPaginated): MutableList<SourceConnection?> {
     val result =
       database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR)
@@ -391,7 +388,7 @@ class SourceServiceJooqImpl(
             .fetch()
         },
       )
-    return result.stream().map<SourceConnection?> { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
+    return result.stream().map { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
   }
 
   /**
@@ -405,7 +402,7 @@ class SourceServiceJooqImpl(
   override fun listSourcesForDefinition(definitionId: UUID?): MutableList<SourceConnection?> {
     val result =
       database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR)
@@ -415,7 +412,7 @@ class SourceServiceJooqImpl(
             .fetch()
         },
       )
-    return result.stream().map<SourceConnection?> { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
+    return result.stream().map { record: Record? -> DbConverter.buildSourceConnection(record) }.collect(Collectors.toList())
   }
 
   /**
@@ -429,7 +426,7 @@ class SourceServiceJooqImpl(
   override fun getSourceAndDefinitionsFromSourceIds(sourceIds: MutableList<UUID?>?): MutableList<SourceAndDefinition?> {
     val records =
       database.query<Result<Record>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(Tables.ACTOR.asterisk(), Tables.ACTOR_DEFINITION.asterisk())
             .from(Tables.ACTOR)
@@ -440,7 +437,7 @@ class SourceServiceJooqImpl(
         },
       )
 
-    val sourceAndDefinitions: MutableList<SourceAndDefinition?> = ArrayList<SourceAndDefinition?>()
+    val sourceAndDefinitions: MutableList<SourceAndDefinition?> = ArrayList()
 
     for (record in records) {
       val source = DbConverter.buildSourceConnection(record)
@@ -473,7 +470,7 @@ class SourceServiceJooqImpl(
     breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
   ) {
     database.transaction<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
+      { ctx: DSLContext? ->
         writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx!!)
         null
       },
@@ -491,8 +488,8 @@ class SourceServiceJooqImpl(
     scopeType: io.airbyte.config.ScopeType,
   ) {
     database.transaction<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        writeConnectorMetadata(sourceDefinition, defaultVersion, listOf<ActorDefinitionBreakingChange>(), ctx!!)
+      { ctx: DSLContext? ->
+        writeConnectorMetadata(sourceDefinition, defaultVersion, listOf(), ctx!!)
         writeActorDefinitionWorkspaceGrant(
           sourceDefinition.getSourceDefinitionId(),
           scopeId,
@@ -503,14 +500,14 @@ class SourceServiceJooqImpl(
       },
     )
 
-    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, mutableListOf<ActorDefinitionBreakingChange>())
+    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, mutableListOf())
   }
 
   @Throws(IOException::class)
   override fun listSourcesWithIds(sourceIds: MutableList<UUID?>?): MutableList<SourceConnection?> {
     val result =
       database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR)
@@ -520,7 +517,7 @@ class SourceServiceJooqImpl(
             .fetch()
         },
       )
-    return result.stream().map<SourceConnection?> { record: Record? -> DbConverter.buildSourceConnection(record) }.toList()
+    return result.stream().map { record: Record? -> DbConverter.buildSourceConnection(record) }.toList()
   }
 
   /**
@@ -543,12 +540,12 @@ class SourceServiceJooqImpl(
       ctx
         .insertInto<ActorDefinitionWorkspaceGrantRecord?>(
           Tables.ACTOR_DEFINITION_WORKSPACE_GRANT,
-        ).set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
-        .set<ScopeType?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
-        .set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId)
+        ).set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
+        .set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
+        .set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId)
     // todo remove when we drop the workspace_id column
     if (scopeType == ScopeType.workspace) {
-      insertStep = insertStep.set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId)
+      insertStep = insertStep.set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId)
     }
     return insertStep.execute()
   }
@@ -559,7 +556,7 @@ class SourceServiceJooqImpl(
     breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
     ctx: DSLContext,
   ) {
-    writeStandardSourceDefinition(mutableListOf<StandardSourceDefinition?>(sourceDefinition), ctx)
+    writeStandardSourceDefinition(mutableListOf(sourceDefinition), ctx)
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx)
     ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx)
   }
@@ -571,12 +568,12 @@ class SourceServiceJooqImpl(
   ): Stream<StandardSourceDefinition?>? =
     database
       .query<Result<Record>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(Tables.ACTOR_DEFINITION.asterisk())
             .from(Tables.ACTOR_DEFINITION)
             .where(Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.source))
-            .and(sourceDefId.map<Condition?>(Function { t: UUID? -> Tables.ACTOR_DEFINITION.ID.eq(t) }).orElse(DSL.noCondition()))
+            .and(sourceDefId.map { t: UUID? -> Tables.ACTOR_DEFINITION.ID.eq(t) }.orElse(DSL.noCondition()))
             .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
             .fetch()
         },
@@ -598,7 +595,7 @@ class SourceServiceJooqImpl(
   ): MutableList<T?> {
     val records =
       database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR_DEFINITION)
@@ -674,7 +671,7 @@ class SourceServiceJooqImpl(
 
     val finalScopeConditional = scopeConditional
     return database.query<Result<Record?>>(
-      ContextQueryFunction { ctx: DSLContext? ->
+      { ctx: DSLContext? ->
         ctx!!
           .select(DSL.asterisk())
           .from(Tables.ACTOR_DEFINITION)
@@ -693,16 +690,16 @@ class SourceServiceJooqImpl(
   private fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
     val optionalRecord =
       database.query<Optional<Record1<UUID?>?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
-            .select<UUID?>(Tables.WORKSPACE.ORGANIZATION_ID)
+            .select(Tables.WORKSPACE.ORGANIZATION_ID)
             .from(
               Tables.WORKSPACE,
             ).where(Tables.WORKSPACE.ID.eq(scopeId))
             .fetchOptional()
         },
       )
-    return optionalRecord.map<UUID?>(Function { obj: Record1<UUID?>? -> obj!!.value1() })
+    return optionalRecord.map { obj: Record1<UUID?>? -> obj!!.value1() }
   }
 
   private fun <T> actorDefinitionWithGrantStatus(
@@ -710,8 +707,8 @@ class SourceServiceJooqImpl(
     recordToActorDefinition: Function<Record?, T?>,
   ): MutableMap.MutableEntry<T?, Boolean?> {
     val actorDefinition = recordToActorDefinition.apply(outerJoinRecord)
-    val granted = outerJoinRecord.get<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null
-    return Map.entry<T?, Boolean?>(actorDefinition, granted)
+    val granted = outerJoinRecord.get(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null
+    return entry<T?, Boolean?>(actorDefinition, granted)
   }
 
   private fun writeSourceConnection(
@@ -730,35 +727,35 @@ class SourceServiceJooqImpl(
           )
         if (isExistingConfig) {
           ctx
-            .update<ActorRecord?>(Tables.ACTOR)
-            .set<UUID?>(Tables.ACTOR.ID, sourceConnection.getSourceId())
-            .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
-            .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, sourceConnection.getSourceDefinitionId())
-            .set<String?>(Tables.ACTOR.NAME, sourceConnection.getName())
-            .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(sourceConnection.getConfiguration())))
-            .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.source)
-            .set<Boolean?>(Tables.ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
-            .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
-            .set<JSONB?>(
+            .update(Tables.ACTOR)
+            .set(Tables.ACTOR.ID, sourceConnection.getSourceId())
+            .set(Tables.ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
+            .set(Tables.ACTOR.ACTOR_DEFINITION_ID, sourceConnection.getSourceDefinitionId())
+            .set(Tables.ACTOR.NAME, sourceConnection.getName())
+            .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(sourceConnection.getConfiguration())))
+            .set(Tables.ACTOR.ACTOR_TYPE, ActorType.source)
+            .set(Tables.ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
+            .set(Tables.ACTOR.UPDATED_AT, timestamp)
+            .set(
               Tables.ACTOR.RESOURCE_REQUIREMENTS,
               JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(sourceConnection.getResourceRequirements())),
             ).where(Tables.ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute()
         } else {
           ctx
-            .insertInto<ActorRecord?>(Tables.ACTOR)
-            .set<UUID?>(Tables.ACTOR.ID, sourceConnection.getSourceId())
-            .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
-            .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, sourceConnection.getSourceDefinitionId())
-            .set<String?>(Tables.ACTOR.NAME, sourceConnection.getName())
-            .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(sourceConnection.getConfiguration())))
-            .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.source)
-            .set<Boolean?>(Tables.ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
-            .set<OffsetDateTime?>(Tables.ACTOR.CREATED_AT, timestamp)
-            .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
-            .set<JSONB?>(
+            .insertInto(Tables.ACTOR)
+            .set(Tables.ACTOR.ID, sourceConnection.getSourceId())
+            .set(Tables.ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
+            .set(Tables.ACTOR.ACTOR_DEFINITION_ID, sourceConnection.getSourceDefinitionId())
+            .set(Tables.ACTOR.NAME, sourceConnection.getName())
+            .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(sourceConnection.getConfiguration())))
+            .set(Tables.ACTOR.ACTOR_TYPE, ActorType.source)
+            .set(Tables.ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
+            .set(Tables.ACTOR.CREATED_AT, timestamp)
+            .set(Tables.ACTOR.UPDATED_AT, timestamp)
+            .set(
               Tables.ACTOR.RESOURCE_REQUIREMENTS,
-              JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(sourceConnection.getResourceRequirements())),
+              JSONB.valueOf(Jsons.serialize(sourceConnection.getResourceRequirements())),
             ).execute()
         }
       },
@@ -778,7 +775,7 @@ class SourceServiceJooqImpl(
         },
       )
 
-    return result.map<SourceConnection?>(RecordMapper { record: Record? -> DbConverter.buildSourceConnection(record) }).stream()
+    return result.map { record: Record? -> DbConverter.buildSourceConnection(record) }.stream()
   }
 
   private fun includeTombstones(

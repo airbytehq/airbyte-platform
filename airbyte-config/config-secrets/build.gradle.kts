@@ -34,8 +34,8 @@ dependencies {
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-featureflag"))
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlin.test.runner.junit5)

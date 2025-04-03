@@ -4,15 +4,12 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigSchema
-import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.DestinationConnection
-import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
@@ -30,9 +27,7 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorRecord
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
@@ -48,7 +43,6 @@ import org.jooq.JSONB
 import org.jooq.JoinType
 import org.jooq.Record
 import org.jooq.Record1
-import org.jooq.RecordMapper
 import org.jooq.Result
 import org.jooq.impl.DSL
 import org.slf4j.Logger
@@ -56,12 +50,11 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.invoke.MethodHandles
 import java.time.OffsetDateTime
-import java.util.Map
+import java.util.Map.entry
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.function.Function
-import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
@@ -113,16 +106,14 @@ class DestinationServiceJooqImpl
       destinationDefinitionId: UUID,
       includeTombstone: Boolean,
     ): StandardDestinationDefinition? =
-      destDefQuery(Optional.of<UUID?>(destinationDefinitionId), includeTombstone)!!
+      destDefQuery(Optional.of(destinationDefinitionId), includeTombstone)!!
         .findFirst()
-        .orElseThrow<ConfigNotFoundException?>(
-          Supplier {
-            ConfigNotFoundException(
-              ConfigSchema.STANDARD_DESTINATION_DEFINITION,
-              destinationDefinitionId,
-            )
-          },
-        )
+        .orElseThrow {
+          ConfigNotFoundException(
+            ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+            destinationDefinitionId,
+          )
+        }
 
     /**
      * Get destination definition form destination.
@@ -149,8 +140,8 @@ class DestinationServiceJooqImpl
      */
     @Throws(IOException::class)
     override fun isDestinationActive(destinationId: UUID?): Boolean? =
-      database.query<Boolean?>(
-        ContextQueryFunction { ctx: DSLContext? ->
+      database.query(
+        { ctx: DSLContext? ->
           ctx!!.fetchExists(
             DSL
               .select()
@@ -185,7 +176,7 @@ class DestinationServiceJooqImpl
      */
     @Throws(IOException::class)
     override fun listStandardDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition?> =
-      destDefQuery(Optional.empty<UUID?>(), includeTombstone)!!.toList()
+      destDefQuery(Optional.empty(), includeTombstone)!!.toList()
 
     /**
      * List public destination definitions.
@@ -198,7 +189,7 @@ class DestinationServiceJooqImpl
     override fun listPublicDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition?> =
       listStandardActorDefinitions<StandardDestinationDefinition?>(
         ActorType.destination,
-        Function { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
+        { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
         includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
         Tables.ACTOR_DEFINITION.PUBLIC.eq(true),
       )
@@ -221,7 +212,7 @@ class DestinationServiceJooqImpl
         ScopeType.workspace,
         JoinType.JOIN,
         ActorType.destination,
-        Function { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
+        { record: Record? -> DbConverter.buildStandardDestinationDefinition(record) },
         includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
       )
 
@@ -243,7 +234,7 @@ class DestinationServiceJooqImpl
         ScopeType.workspace,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.destination,
-        Function { record: Record? -> this.mapRecordToDestinationDefinitionWithGrantStatus(record!!) },
+        { record: Record? -> this.mapRecordToDestinationDefinitionWithGrantStatus(record!!) },
         Tables.ACTOR_DEFINITION.CUSTOM.eq(false),
         includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
       )
@@ -251,7 +242,7 @@ class DestinationServiceJooqImpl
     private fun mapRecordToDestinationDefinitionWithGrantStatus(record: Record): MutableMap.MutableEntry<StandardDestinationDefinition?, Boolean?> =
       actorDefinitionWithGrantStatus<StandardDestinationDefinition?>(
         record,
-        Function { record: Record? ->
+        { record: Record? ->
           this.buildDestinationDefinition(
             record!!,
           )
@@ -273,8 +264,8 @@ class DestinationServiceJooqImpl
       getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
 
       database.transaction<Any?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          Companion.writeStandardDestinationDefinition(mutableListOf<StandardDestinationDefinition?>(destinationDefinition), ctx!!)
+        { ctx: DSLContext? ->
+          writeStandardDestinationDefinition(mutableListOf(destinationDefinition), ctx!!)
           null
         },
       )
@@ -291,9 +282,9 @@ class DestinationServiceJooqImpl
      */
     @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getDestinationConnection(destinationId: UUID): DestinationConnection =
-      listDestinationQuery(Optional.of<UUID?>(destinationId))
+      listDestinationQuery(Optional.of(destinationId))
         .findFirst()
-        .orElseThrow<ConfigNotFoundException?>(Supplier { ConfigNotFoundException(ConfigSchema.DESTINATION_CONNECTION, destinationId) })
+        .orElseThrow { ConfigNotFoundException(ConfigSchema.DESTINATION_CONNECTION, destinationId) }
 
     /**
      * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
@@ -309,8 +300,8 @@ class DestinationServiceJooqImpl
     @Throws(IOException::class)
     override fun writeDestinationConnectionNoSecrets(partialDestination: DestinationConnection?) {
       database.transaction<Any?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          writeDestinationConnection(mutableListOf<DestinationConnection?>(partialDestination), ctx!!)
+        { ctx: DSLContext? ->
+          writeDestinationConnection(mutableListOf(partialDestination), ctx!!)
           null
         },
       )
@@ -323,7 +314,7 @@ class DestinationServiceJooqImpl
      * @throws IOException - you never know when you IO
      */
     @Throws(IOException::class)
-    override fun listDestinationConnection(): MutableList<DestinationConnection?> = listDestinationQuery(Optional.empty<UUID?>()).toList()
+    override fun listDestinationConnection(): MutableList<DestinationConnection?> = listDestinationQuery(Optional.empty()).toList()
 
     /**
      * Returns all destinations for a workspace. Does not contain secrets.
@@ -336,7 +327,7 @@ class DestinationServiceJooqImpl
     override fun listWorkspaceDestinationConnection(workspaceId: UUID?): MutableList<DestinationConnection?> {
       val result =
         database.query<Result<Record?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(DSL.asterisk())
               .from(Tables.ACTOR)
@@ -348,7 +339,7 @@ class DestinationServiceJooqImpl
         )
       return result
         .stream()
-        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .map { record: Record? -> DbConverter.buildDestinationConnection(record) }
         .collect(Collectors.toList())
     }
 
@@ -363,7 +354,7 @@ class DestinationServiceJooqImpl
     override fun listWorkspacesDestinationConnections(resourcesQueryPaginated: ResourcesQueryPaginated): MutableList<DestinationConnection?> {
       val result =
         database.query<Result<Record?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(DSL.asterisk())
               .from(Tables.ACTOR)
@@ -377,7 +368,7 @@ class DestinationServiceJooqImpl
         )
       return result
         .stream()
-        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .map { record: Record? -> DbConverter.buildDestinationConnection(record) }
         .collect(Collectors.toList())
     }
 
@@ -392,7 +383,7 @@ class DestinationServiceJooqImpl
     override fun listDestinationsForDefinition(definitionId: UUID?): MutableList<DestinationConnection?> {
       val result =
         database.query<Result<Record?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(DSL.asterisk())
               .from(Tables.ACTOR)
@@ -404,7 +395,7 @@ class DestinationServiceJooqImpl
         )
       return result
         .stream()
-        .map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }
+        .map { record: Record? -> DbConverter.buildDestinationConnection(record) }
         .collect(Collectors.toList())
     }
 
@@ -419,7 +410,7 @@ class DestinationServiceJooqImpl
     override fun getDestinationAndDefinitionsFromDestinationIds(destinationIds: MutableList<UUID?>?): MutableList<DestinationAndDefinition?> {
       val records =
         database.query<Result<Record>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(Tables.ACTOR.asterisk(), Tables.ACTOR_DEFINITION.asterisk())
               .from(Tables.ACTOR)
@@ -430,7 +421,7 @@ class DestinationServiceJooqImpl
           },
         )
 
-      val destinationAndDefinitions: MutableList<DestinationAndDefinition?> = ArrayList<DestinationAndDefinition?>()
+      val destinationAndDefinitions: MutableList<DestinationAndDefinition?> = ArrayList()
 
       for (record in records) {
         val destination = DbConverter.buildDestinationConnection(record)
@@ -459,8 +450,8 @@ class DestinationServiceJooqImpl
       scopeType: io.airbyte.config.ScopeType,
     ) {
       database.transaction<Any?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          writeConnectorMetadata(destinationDefinition, defaultVersion, listOf<ActorDefinitionBreakingChange>(), ctx!!)
+        { ctx: DSLContext? ->
+          writeConnectorMetadata(destinationDefinition, defaultVersion, listOf(), ctx!!)
           writeActorDefinitionWorkspaceGrant(
             destinationDefinition.getDestinationDefinitionId(),
             scopeId,
@@ -474,7 +465,7 @@ class DestinationServiceJooqImpl
       actorDefinitionVersionUpdater.updateDestinationDefaultVersion(
         destinationDefinition,
         defaultVersion,
-        mutableListOf<ActorDefinitionBreakingChange>(),
+        mutableListOf(),
       )
     }
 
@@ -496,7 +487,7 @@ class DestinationServiceJooqImpl
       breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
     ) {
       database.transaction<Any?>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx!!)
           null
         },
@@ -510,7 +501,7 @@ class DestinationServiceJooqImpl
     override fun listDestinationsWithIds(destinationIds: MutableList<UUID?>?): MutableList<DestinationConnection?> {
       val result =
         database.query<Result<Record?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(DSL.asterisk())
               .from(Tables.ACTOR)
@@ -520,7 +511,7 @@ class DestinationServiceJooqImpl
               .fetch()
           },
         )
-      return result.stream().map<DestinationConnection?> { record: Record? -> DbConverter.buildDestinationConnection(record) }.toList()
+      return result.stream().map { record: Record? -> DbConverter.buildDestinationConnection(record) }.toList()
     }
 
     private fun writeActorDefinitionWorkspaceGrant(
@@ -533,12 +524,12 @@ class DestinationServiceJooqImpl
         ctx
           .insertInto<ActorDefinitionWorkspaceGrantRecord?>(
             Tables.ACTOR_DEFINITION_WORKSPACE_GRANT,
-          ).set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
+          ).set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
           .set<ScopeType?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
-          .set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId)
+          .set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId)
       // todo remove when we drop the workspace_id column
       if (scopeType == ScopeType.workspace) {
-        insertStep = insertStep.set<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId)
+        insertStep = insertStep.set(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId)
       }
       return insertStep.execute()
     }
@@ -581,7 +572,7 @@ class DestinationServiceJooqImpl
     ): MutableList<T?> {
       val records =
         database.query<Result<Record?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+          { ctx: DSLContext? ->
             ctx!!
               .select(DSL.asterisk())
               .from(Tables.ACTOR_DEFINITION)
@@ -657,7 +648,7 @@ class DestinationServiceJooqImpl
 
       val finalScopeConditional = scopeConditional
       return database.query<Result<Record?>>(
-        ContextQueryFunction { ctx: DSLContext? ->
+        { ctx: DSLContext? ->
           ctx!!
             .select(DSL.asterisk())
             .from(Tables.ACTOR_DEFINITION)
@@ -675,17 +666,17 @@ class DestinationServiceJooqImpl
     @Throws(IOException::class)
     private fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
       val optionalRecord =
-        database.query<Optional<Record1<UUID?>?>>(
-          ContextQueryFunction { ctx: DSLContext? ->
+        database.query<Optional<Record1<UUID?>>>(
+          { ctx: DSLContext? ->
             ctx!!
-              .select<UUID?>(Tables.WORKSPACE.ORGANIZATION_ID)
+              .select(Tables.WORKSPACE.ORGANIZATION_ID)
               .from(
                 Tables.WORKSPACE,
               ).where(Tables.WORKSPACE.ID.eq(scopeId))
               .fetchOptional()
           },
         )
-      return optionalRecord.map<UUID?>(Function { obj: Record1<UUID?>? -> obj!!.value1() })
+      return optionalRecord.map({ obj: Record1<UUID?>? -> obj!!.value1() })
     }
 
     private fun writeDestinationConnection(
@@ -700,39 +691,39 @@ class DestinationServiceJooqImpl
               DSL
                 .select()
                 .from(Tables.ACTOR)
-                .where(Tables.ACTOR.ID.eq(destinationConnection!!.getDestinationId())),
+                .where(Tables.ACTOR.ID.eq(destinationConnection!!.destinationId)),
             )
           if (isExistingConfig) {
             ctx
-              .update<ActorRecord?>(Tables.ACTOR)
-              .set<UUID?>(Tables.ACTOR.ID, destinationConnection.getDestinationId())
-              .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
-              .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.getDestinationDefinitionId())
-              .set<String?>(Tables.ACTOR.NAME, destinationConnection.getName())
-              .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(destinationConnection.getConfiguration())))
-              .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
-              .set<Boolean?>(Tables.ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
-              .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
-              .set<JSONB?>(
+              .update(Tables.ACTOR)
+              .set(Tables.ACTOR.ID, destinationConnection.destinationId)
+              .set(Tables.ACTOR.WORKSPACE_ID, destinationConnection.workspaceId)
+              .set(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.destinationDefinitionId)
+              .set(Tables.ACTOR.NAME, destinationConnection.name)
+              .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.configuration)))
+              .set(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
+              .set(Tables.ACTOR.TOMBSTONE, destinationConnection.tombstone != null && destinationConnection.tombstone)
+              .set(Tables.ACTOR.UPDATED_AT, timestamp)
+              .set(
                 Tables.ACTOR.RESOURCE_REQUIREMENTS,
-                JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(destinationConnection.getResourceRequirements())),
-              ).where(Tables.ACTOR.ID.eq(destinationConnection.getDestinationId()))
+                JSONB.valueOf(Jsons.serialize(destinationConnection.resourceRequirements)),
+              ).where(Tables.ACTOR.ID.eq(destinationConnection.destinationId))
               .execute()
           } else {
             ctx
-              .insertInto<ActorRecord?>(Tables.ACTOR)
-              .set<UUID?>(Tables.ACTOR.ID, destinationConnection.getDestinationId())
-              .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
-              .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.getDestinationDefinitionId())
-              .set<String?>(Tables.ACTOR.NAME, destinationConnection.getName())
-              .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize<JsonNode?>(destinationConnection.getConfiguration())))
-              .set<ActorType?>(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
-              .set<Boolean?>(Tables.ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
-              .set<OffsetDateTime?>(Tables.ACTOR.CREATED_AT, timestamp)
-              .set<OffsetDateTime?>(Tables.ACTOR.UPDATED_AT, timestamp)
-              .set<JSONB?>(
+              .insertInto(Tables.ACTOR)
+              .set(Tables.ACTOR.ID, destinationConnection.destinationId)
+              .set(Tables.ACTOR.WORKSPACE_ID, destinationConnection.workspaceId)
+              .set(Tables.ACTOR.ACTOR_DEFINITION_ID, destinationConnection.destinationDefinitionId)
+              .set(Tables.ACTOR.NAME, destinationConnection.name)
+              .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.configuration)))
+              .set(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
+              .set(Tables.ACTOR.TOMBSTONE, destinationConnection.tombstone != null && destinationConnection.tombstone)
+              .set(Tables.ACTOR.CREATED_AT, timestamp)
+              .set(Tables.ACTOR.UPDATED_AT, timestamp)
+              .set(
                 Tables.ACTOR.RESOURCE_REQUIREMENTS,
-                JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(destinationConnection.getResourceRequirements())),
+                JSONB.valueOf(Jsons.serialize(destinationConnection.resourceRequirements)),
               ).execute()
           }
         },
@@ -742,21 +733,20 @@ class DestinationServiceJooqImpl
     private fun includeTombstones(
       tombstoneField: Field<Boolean?>,
       includeTombstones: Boolean,
-    ): Condition {
+    ): Condition =
       if (includeTombstones) {
-        return DSL.trueCondition()
+        DSL.trueCondition()
       } else {
-        return tombstoneField.eq(false)
+        tombstoneField.eq(false)
       }
-    }
 
     private fun <T> actorDefinitionWithGrantStatus(
       outerJoinRecord: Record,
       recordToActorDefinition: Function<Record?, T?>,
     ): MutableMap.MutableEntry<T?, Boolean?> {
       val actorDefinition = recordToActorDefinition.apply(outerJoinRecord)
-      val granted = outerJoinRecord.get<UUID?>(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null
-      return Map.entry<T?, Boolean?>(actorDefinition, granted)
+      val granted = outerJoinRecord.get(Tables.ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null
+      return entry<T?, Boolean?>(actorDefinition, granted)
     }
 
     @Throws(IOException::class)
@@ -772,7 +762,7 @@ class DestinationServiceJooqImpl
           },
         )
 
-      return result.map<DestinationConnection?>(RecordMapper { record: Record? -> DbConverter.buildDestinationConnection(record) }).stream()
+      return result.map { record: Record? -> DbConverter.buildDestinationConnection(record) }.stream()
     }
 
     /**
@@ -847,63 +837,63 @@ class DestinationServiceJooqImpl
               )
             if (isExistingConfig) {
               ctx
-                .update<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-                .set<UUID?>(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
-                .set<String?>(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
-                .set<String?>(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
-                .set<String?>(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
-                .set<ActorType?>(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
-                .set<JSONB?>(
+                .update(Tables.ACTOR_DEFINITION)
+                .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
+                .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
+                .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+                .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
+                .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
+                .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
+                .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
+                .set(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+                .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
+                .set(
                   Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                   if (standardDestinationDefinition.getResourceRequirements() == null) {
                     null
                   } else {
-                    JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(standardDestinationDefinition.getResourceRequirements()))
+                    JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements()))
                   },
-                ).set<JSONB?>(
+                ).set(
                   Tables.ACTOR_DEFINITION.METRICS,
                   if (standardDestinationDefinition.getMetrics() == null) {
                     null
                   } else {
-                    JSONB.valueOf(Jsons.serialize<ConnectorRegistryEntryMetrics?>(standardDestinationDefinition.getMetrics()))
+                    JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics()))
                   },
-                ).set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+                ).set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
                 .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition.getDestinationDefinitionId()))
                 .execute()
             } else {
               ctx
-                .insertInto<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-                .set<UUID?>(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
-                .set<String?>(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
-                .set<String?>(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
-                .set<String?>(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
-                .set<ActorType?>(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
-                .set<Boolean?>(
+                .insertInto(Tables.ACTOR_DEFINITION)
+                .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
+                .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
+                .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+                .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
+                .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
+                .set(
                   Tables.ACTOR_DEFINITION.TOMBSTONE,
                   standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone(),
-                ).set<Boolean?>(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
-                .set<Boolean?>(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
-                .set<JSONB?>(
+                ).set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
+                .set(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+                .set(Tables.ACTOR_DEFINITION.ENTERPRISE, standardDestinationDefinition.getEnterprise())
+                .set(
                   Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                   if (standardDestinationDefinition.getResourceRequirements() == null) {
                     null
                   } else {
-                    JSONB.valueOf(Jsons.serialize<ScopedResourceRequirements?>(standardDestinationDefinition.getResourceRequirements()))
+                    JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements()))
                   },
-                ).set<JSONB?>(
+                ).set(
                   Tables.ACTOR_DEFINITION.METRICS,
                   if (standardDestinationDefinition.getMetrics() == null) {
                     null
                   } else {
-                    JSONB.valueOf(Jsons.serialize<ConnectorRegistryEntryMetrics?>(standardDestinationDefinition.getMetrics()))
+                    JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics()))
                   },
-                ).set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
-                .set<OffsetDateTime?>(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+                ).set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
+                .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
                 .execute()
             }
           },

@@ -21,7 +21,7 @@ import java.util.UUID;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://developer.okta.com/docs/guides/implement-oauth-for-okta/main/
+ * Following docs from https://developer.okta.com/docs/guides/implement-oauth-for-okta/main/.
  */
 public class OktaOAuthFlow extends BaseOAuth2Flow {
 

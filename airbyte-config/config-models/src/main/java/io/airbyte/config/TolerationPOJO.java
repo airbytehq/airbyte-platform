@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents a minimal io.fabric8.kubernetes.api.model.Toleration
+ * Represents a minimal {@link io.fabric8.kubernetes.api.model.Toleration}.
  */
 @SuppressWarnings("PMD.ShortVariable")
 public class TolerationPOJO {

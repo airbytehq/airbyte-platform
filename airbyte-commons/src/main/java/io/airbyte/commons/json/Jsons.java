@@ -669,7 +669,7 @@ public class Jsons {
   }
 
   /**
-   * Merge updateNode into mainNode Stolen from
+   * Merge updateNode into mainNode. Stolen from
    * https://stackoverflow.com/questions/9895041/merging-two-json-documents-using-jackson
    */
   public static JsonNode mergeNodes(final JsonNode mainNode, final JsonNode updateNode) {

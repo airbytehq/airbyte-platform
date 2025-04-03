@@ -32,7 +32,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Following docs from
- * https://airtable.com/developers/web/api/oauth-reference#authorization-request-query
+ * https://airtable.com/developers/web/api/oauth-reference#authorization-request-query.
  */
 public class AirtableOAuthFlow extends BaseOAuth2Flow {
 
@@ -52,7 +52,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
-   * Must be a cryptographically generated string; 43-128 characters long
+   * Must be a cryptographically generated string; 43-128 characters long.
    * https://airtable.com/developers/web/api/oauth-reference#authorization-parameter-rules
    */
   public String getCodeVerifier() {
@@ -68,7 +68,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
-   * Base64 url encoding of the sha256 hash of code_verifier
+   * Base64 url encoding of the sha256 hash of code_verifier.
    * https://airtable.com/developers/web/api/oauth-reference#authorization-parameter-rules
    */
   public String getCodeChallenge(String codeVerifier) throws IOException {
