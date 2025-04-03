@@ -7,15 +7,14 @@ package io.airbyte.server.handlers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.PartialUserConfig
-import io.airbyte.config.PartialUserConfigWithSourceId
+import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.inject.Singleton
 
@@ -25,7 +24,13 @@ class PartialUserConfigHandler(
   private val configTemplateService: ConfigTemplateService,
   private val sourceHandler: SourceHandler,
 ) {
-  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithSourceId {
+  /**
+   * Creates a partial user config and its associated source.
+   *
+   * @param partialUserConfigCreate The updated partial user config
+   * @return The created partial user config with actor details
+   */
+  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithActorDetails {
     // Get the config template and actor definition
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
 
@@ -51,17 +56,62 @@ class PartialUserConfigHandler(
       )
 
     // Save the secure config
-    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig)
-    val savedConfig = partialUserConfigService.createPartialUserConfig(securePartialUserConfig.toEntity()).toConfigModel()
+    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig, sourceId = savedSource.sourceId)
+    return partialUserConfigService.createPartialUserConfig(securePartialUserConfig)
+  }
 
-    // Return with source ID
-    return PartialUserConfigWithSourceId(
-      id = savedConfig.id,
-      workspaceId = savedConfig.workspaceId,
-      configTemplateId = savedConfig.configTemplateId,
-      partialUserConfigProperties = savedConfig.partialUserConfigProperties,
-      sourceId = savedSource.sourceId,
+  /**
+   * Updates an existing partial user config and its associated source.
+   *
+   * @param partialUserConfig The updated partial user config
+   * @return The updated partial user config with actor details
+   */
+  fun updatePartialUserConfig(partialUserConfig: PartialUserConfig): PartialUserConfigWithActorDetails {
+    // First get the existing config to verify it exists
+    val existingConfig =
+      partialUserConfigService
+        .getPartialUserConfig(partialUserConfig.id)
+        .partialUserConfig
+
+    // Get the config template to use for merging properties
+    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId)
+
+    // Combine the template's default config and user config
+    val combinedConfigs =
+      combineProperties(
+        ObjectMapper().valueToTree(configTemplate.configTemplate.partialDefaultConfig),
+        ObjectMapper().valueToTree(partialUserConfig.partialUserConfigProperties),
+      )
+
+    // Update the source using the combined config
+    // "Partial update" allows us to update the configuration without changing the name or other properties on the source
+
+    sourceHandler.partialUpdateSource(
+      PartialSourceUpdate().apply {
+        sourceId = existingConfig.sourceId
+        connectionConfiguration = combinedConfigs
+      },
     )
+
+    // Handle secrets in configuration
+    val connectorSpec =
+      ConnectorSpecification().apply {
+        connectionSpecification = configTemplate.configTemplate.userConfigSpec.get("connectionSpecification")
+      }
+
+    val connectionConfig = partialUserConfig.partialUserConfigProperties.get("connectionConfiguration")
+    val secureConfig =
+      sourceHandler.persistSecretsAndUpdateSourceConnection(
+        null,
+        connectionConfig,
+        partialUserConfig.workspaceId,
+        connectorSpec,
+      )
+
+    val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig)
+
+    // Update the partial user config in the database
+    return partialUserConfigService.updatePartialUserConfig(securePartialUserConfig)
   }
 
   private fun createSourceCreateFromPartialUserConfig(

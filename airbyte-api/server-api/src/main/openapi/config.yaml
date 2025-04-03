@@ -18574,11 +18574,12 @@ components:
       type: object
       required:
         - partialUserConfigId
+        - partialUserConfigProperties
       properties:
         partialUserConfigId:
           type: string
           format: uuid
-        actorProperties:
+        partialUserConfigProperties:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigReadList:
       type: object
@@ -18595,6 +18596,7 @@ components:
         - partialUserConfigId
         - configTemplateName
         - configTemplateIcon
+        - configTemplateId
       properties:
         partialUserConfigId:
           type: string
@@ -18605,7 +18607,9 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
-
+        configTemplateId:
+          type: string
+          format: uuid
   responses:
     NotFoundResponse:
       description: Object with given id was not found.

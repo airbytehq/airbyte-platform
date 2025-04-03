@@ -6,20 +6,24 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
+import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
-import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class PartialUserConfigHandlerTest {
@@ -48,11 +52,11 @@ class PartialUserConfigHandlerTest {
   fun `test createPartialUserConfig with valid inputs`() {
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
     val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
-    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId)
+    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
     val savedSource = createMockSourceRead(sourceId)
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
-    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig.toEntity()
+    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
     every { sourceHandler.createSource(any()) } returns savedSource
     every { sourceHandler.persistSecretsAndUpdateSourceConnection(null, any(), any(), any()) } returns
       partialUserConfigCreate.partialUserConfigProperties
@@ -60,11 +64,99 @@ class PartialUserConfigHandlerTest {
     val result = handler.createPartialUserConfig(partialUserConfigCreate)
 
     Assertions.assertNotNull(result)
-    Assertions.assertEquals(partialUserConfigId, result.id)
-    Assertions.assertEquals(sourceId, result.sourceId)
+    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
+    Assertions.assertEquals(sourceId, result.partialUserConfig.sourceId)
 
     verify { partialUserConfigService.createPartialUserConfig(any()) }
     verify { sourceHandler.createSource(any()) }
+  }
+
+  @Test
+  fun `test createPartialUserConfig does not create config if creating source fails`() {
+    // Arrange
+    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
+    val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
+
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+
+    every { sourceHandler.createSource(any()) } throws RuntimeException("Source creation failed")
+
+    assertThrows<RuntimeException> {
+      handler.createPartialUserConfig(partialUserConfigCreate)
+    }
+
+    // Verify that the partial user config service was never called to write the config
+    verify(exactly = 0) { partialUserConfigService.createPartialUserConfig(any()) }
+  }
+
+  @Test
+  fun `test updatePartialUserConfig with valid inputs`() {
+    val initialConnectionConfig = objectMapper.createObjectNode().put("testKey", "initialValue")
+
+    val initialProperties =
+      objectMapper
+        .createObjectNode()
+        .set<JsonNode>("connectionConfiguration", initialConnectionConfig)
+
+    val partialUserConfig =
+      createMockPartialUserConfig(
+        partialUserConfigId,
+        workspaceId,
+        configTemplateId,
+        sourceId,
+        initialProperties,
+      )
+
+    val updateConnectionConfig = objectMapper.createObjectNode().put("testKey", "updatedValue")
+    val updateUserConfig =
+      objectMapper
+        .createObjectNode()
+        .set<JsonNode>("connectionConfiguration", updateConnectionConfig)
+
+    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
+
+    val partialUserConfigRequest =
+      PartialUserConfig(
+        id = partialUserConfig.partialUserConfig.id,
+        workspaceId = partialUserConfig.partialUserConfig.workspaceId,
+        configTemplateId = partialUserConfig.partialUserConfig.configTemplateId,
+        sourceId = partialUserConfig.partialUserConfig.sourceId,
+        partialUserConfigProperties = updateUserConfig,
+      )
+
+    every {
+      sourceHandler.persistSecretsAndUpdateSourceConnection(
+        any(),
+        any(),
+        any(),
+        any<ConnectorSpecification>(),
+      )
+    } returns
+      updateUserConfig
+
+    val configSlot = slot<PartialUserConfig>()
+    every { partialUserConfigService.updatePartialUserConfig(capture(configSlot)) } returns partialUserConfig
+
+    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfig
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+
+    val sourceUpdateSlot = slot<PartialSourceUpdate>()
+    every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId)
+
+    val result = handler.updatePartialUserConfig(partialUserConfigRequest)
+
+    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
+    Assertions.assertEquals(sourceId, result.partialUserConfig.sourceId)
+    verify { partialUserConfigService.updatePartialUserConfig(any()) }
+    verify { sourceHandler.partialUpdateSource(any()) }
+
+    val capturedConnectionConfig = sourceUpdateSlot.captured.connectionConfiguration
+    val capturedUserConfig = configSlot.captured.partialUserConfigProperties
+
+    Assertions.assertNotNull(capturedConnectionConfig)
+    Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
+    Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
+    Assertions.assertEquals("updatedValue", capturedUserConfig.get("connectionConfiguration").get("testKey").asText())
   }
 
   @Test
@@ -251,12 +343,20 @@ class PartialUserConfigHandlerTest {
     id: UUID,
     workspaceId: UUID,
     configTemplateId: UUID,
-  ): PartialUserConfig =
-    PartialUserConfig(
-      id = id,
-      workspaceId = workspaceId,
-      configTemplateId = configTemplateId,
-      partialUserConfigProperties = objectMapper.createObjectNode(),
+    sourceId: UUID? = null,
+    properties: JsonNode = objectMapper.createObjectNode(),
+  ): PartialUserConfigWithActorDetails =
+    PartialUserConfigWithActorDetails(
+      partialUserConfig =
+        PartialUserConfig(
+          id = id,
+          workspaceId = workspaceId,
+          configTemplateId = configTemplateId,
+          partialUserConfigProperties = properties,
+          sourceId = sourceId,
+        ),
+      actorName = "test-source",
+      actorIcon = "test-icon",
     )
 
   private fun createMockSourceRead(id: UUID): SourceRead =

@@ -8,12 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import java.util.UUID
 
 /**
- * Entity for manipulating PartialUserConfigs
+ * Config model for manipulating PartialUserConfigs
  *
  * The partialUserConfigProperties field is expected to contain a JSON string
  * representing specific user configuration properties.
  *
- * This will be deprecated in favor of the version with sourceId in https://github.com/airbytehq/airbyte-internal-issues/issues/12247
  */
 
 data class PartialUserConfig(
@@ -24,24 +23,16 @@ data class PartialUserConfig(
    * JSON string containing user-specific configuration properties that will be
    * applied to the template configuration
    */
-  val partialUserConfigProperties: JsonNode,
+  var partialUserConfigProperties: JsonNode,
+  val sourceId: UUID? = null,
 )
 
 /**
- * Entity for manipulating PartialUserConfigs with sourceId
- *
- * The partialUserConfigProperties field is expected to contain a JSON string
- * representing specific user configuration properties.
- *
+ * Config model for manipulating PartialUserConfigs with actor details
  */
-data class PartialUserConfigWithSourceId(
-  val id: UUID,
-  val workspaceId: UUID,
-  val configTemplateId: UUID,
-  /**
-   * JSON string containing user-specific configuration properties that will be
-   * applied to the template configuration
-   */
-  val partialUserConfigProperties: JsonNode,
-  val sourceId: UUID,
+
+data class PartialUserConfigWithActorDetails(
+  val partialUserConfig: PartialUserConfig,
+  val actorIcon: String,
+  val actorName: String,
 )
