@@ -1,0 +1,791 @@
+common:
+  keyBasePath: "."
+  config:
+    - env: AIRBYTE_EDITION
+      key: edition
+      defaultValue: community
+
+    - env: AIRBYTE_VERSION
+      key: version
+      defaultValueExp: .Chart.AppVersion
+
+    - env: AIRBYTE_URL
+      key: airbyteUrl
+
+    - env: AIRBYTE_API_AUTH_HEADER_NAME
+      key: api.authHeaderName
+      defaultValue: "X-Airbyte-Auth"
+
+    - env: API_AUTHORIZATION_ENABLED
+      key: api.authEnabled
+      defaultValue: true
+
+    - env: INTERNAL_API_HOST
+      key: api.internalHost
+      defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
+    
+    - env: LOCAL
+      key: local
+      defaultValue: false
+
+dataPlane:
+  keyBasePath: dataPlane
+  config:
+    - env: DATA_PLANE_ID
+      key: id
+      defaultValue: local
+
+    - env: CONTROL_PLANE_AUTH_ENDPOINT
+      key: controlPlaneAuthEndpoint
+      defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
+
+    - env: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
+      key: serviceAccountEmail
+
+    - env: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
+      key: serviceAccountCredentialsPath
+      defaultValue: /secrets/dataplane-creds/sa.json
+
+jobs:
+  keyBasePath: jobs
+  config:
+    - env: JOB_KUBE_SERVICEACCOUNT
+      key: kube.serviceAccount
+      valueExp: .Values.serviceAccountName
+
+    # TODO: This may need to be conditional depending on whether we are running
+    # the control plane or the data plane.
+    - env: JOB_KUBE_NAMESPACE
+      key: kube.namespace
+      valueFrom: 
+        fieldRef:
+          fieldPath: metadata.namespace
+
+    - env: JOB_KUBE_LOCAL_VOLUME_ENABLED
+      key: kube.localVolume.enabled
+      defaultValue: false
+
+    - env: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY
+      key: kube.mainContainerImagePullPolicy
+      defaultValue: IfNotPresent
+
+    - env: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
+      key: kube.mainContainerImagePullSecret
+      valueExp: join "," (ternary (concat .Values.imagePullSecrets (list .Values.jobs.kube.mainContainerImagePullSecret)) .Values.imagePullSecrets (empty .Values.jobs.kube.mainContainerImagePullSecret))
+
+    - env: JOB_KUBE_ANNOTATIONS
+      key: kube.annotations
+      valueExp: .Values.jobs.kube.annotations | include "airbyte-data-plane.flattenMap"
+
+    - env: JOB_KUBE_LABELS
+      key: kube.labels
+      valueExp: .Values.jobs.kube.labels | include "airbyte-data-plane.flattenMap"
+
+    - env: JOB_KUBE_NODE_SELECTORS
+      key: kube.nodeSelector
+      valueExp: .Values.jobs.kube.nodeSelector | include "airbyte-data-plane.flattenMap"
+
+    - env: JOB_KUBE_TOLERATIONS
+      key: kube.tolerations
+      valueExp: .Values.jobs.kube.tolerations | include "airbyte-data-plane.flattenArrayMap"
+
+jobs.errors:
+  keyBasePath: jobs.errors
+  discriminatorField: reportingStrategy
+  discriminatorFieldOpts:
+    - logging
+    - sentry
+  config:
+    - env: JOB_ERROR_REPORTING_STRATEGY
+      key: reportingStrategy
+      defaultValue: logging
+
+    - env: JOB_ERROR_REPORTING_SENTRY_DSN
+      key: sentry.dsn
+      discriminatorOpts:
+        - sentry
+
+jobs.scheduling:
+  keyBasePath: jobs.kube.scheduling
+  config:
+    - env: CHECK_JOB_KUBE_NODE_SELECTORS
+      key: check.nodeSelectors
+      valueExp: check.nodeSelectors | include "airbyte.flattenMap"
+
+    - env: CHECK_JOB_KUBE_RUNTIME_CLASS_NAME
+      key: check.runtimeClassName
+
+    - env: DISCOVER_JOB_KUBE_NODE_SELECTORS
+      key: discover.nodeSelectors
+      valueExp: discover.nodeSelectors | include "airbyte.flattenMap"
+
+    - env: DISCOVER_JOB_KUBE_RUNTIME_CLASS_NAME
+      key: discover.runtimeClassName
+
+    - env: JOB_ISOLATED_KUBE_NODE_SELECTORS 
+      key: isolated.nodeSelectors
+      valueExp: isolated.nodeSelectors | include "airbyte.flattenMap"
+
+    - env: JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME
+      key: isolated.runtimeClassName
+
+keycloak.client:
+  keyBasePath: keycloak
+  config:
+    - env: KEYCLOAK_HOST
+      key: host
+      valueExp: (get (urlParse .Values.airbyteUrl) "host")
+
+    - env: KEYCLOAK_INTERNAL_REALM
+      key: internalRealm
+      defaultValue: _airbyte-internal
+
+    - env: KEYCLOAK_INTERNAL_REALM_ISSUER
+      key: realmIssuer
+      valueExp: (printf "%s/auth/realms/%s" (include "airbyte-data-plane.common.airbyteUrl" .) (include "airbyte-data-plane.keycloak.client.internalRealm" .))
+
+    - env: KEYCLOAK_PROTOCOL
+      key: protocol
+      defaultValue: https
+
+logging:
+  keyBasePath: logging
+  config: 
+    - env: LOG_LEVEL
+      key: level
+      defaultValue: INFO
+
+metrics:
+  keyBasePath: metrics
+  config:
+    - env: MICROMETER_METRICS_ENABLED
+      key: enabled
+      defaultValue: false
+
+    - env: MICROMETER_METRICS_STEP
+      key: step
+      defaultValue: PT1M
+
+    - env: MICROMETER_METRICS_STATSD_FLAVOR
+      key: statsd.flavor
+      defaultValue: datadog
+
+    - env: MICROMETER_METRICS_OTLP_ENABLED
+      key: otlp.enabled
+      defaultValue: false
+
+    - env: OTEL_COLLECTOR_ENDPOINT
+      key: otlp.collectorEndpoint
+
+    - env: MICROMETER_METRICS_STATSD_ENABLED
+      key: statsd.enabled
+      defaultValue: false
+
+    - env: STATSD_HOST
+      key: statsd.host
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    
+    - env: STATSD_PORT
+      key: statsd.port
+      defaultValue: 8125
+
+micronaut:
+  keyBasePath: micronaut
+  config:
+    - env: MICRONAUT_ENVIRONMENTS
+      key: environments
+      valueExp: join "," (concat .Values.micronaut.environments (list "data-plane"))
+
+secretsManager:
+  keyBasePath: secretsManager
+  discriminatorField: type
+  discriminatorFieldOpts:
+    - AWS_SECRET_MANAGER
+    - AZURE_KEY_VAULT
+    - GOOGLE_SECRET_MANAGER
+    - TESTING_CONFIG_DB_TABLE
+    - VAULT
+  config:
+    - env: SECRET_PERSISTENCE
+      key: type
+      defaultValue: vault
+
+    - env: AWS_SECRET_MANAGER_ACCESS_KEY_ID 
+      key: awsSecretManager.accessKeyId
+      sensitive: true
+      discriminatorOpts: 
+        - AWS_SECRET_MANAGER 
+
+    - env: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY
+      key: awsSecretManager.secretAccessKey
+      sensitive: true
+      discriminatorOpts: 
+        - AWS_SECRET_MANAGER 
+
+    - env: AWS_SECRET_MANAGER_REGION
+      key: awsSecretManager.region
+      discriminatorOpts: 
+        - AWS_SECRET_MANAGER 
+
+    - env: AWS_SECRET_MANAGER_SECRET_TAGS
+      key: awsSecretManager.tags
+      discriminatorOpts: 
+        - AWS_SECRET_MANAGER 
+      valueExp: include "airbyte-data-plane.tagsToString" .Values.secretsManager.awsSecretManager.tags
+
+    - env: AWS_KMS_KEY_ARN
+      key: awsSecretManager.kmsArn
+      discriminatorOpts: 
+        - AWS_SECRET_MANAGER 
+      defaultValue: ""
+
+    - env: AB_AZURE_KEY_VAULT_CLIENT_ID
+      key: azureKeyVault.clientId
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+      sensitive: true
+
+    - env: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+      key: azureKeyVault.clientSecret
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+      sensitive: true
+
+    - env: AB_AZURE_KEY_VAULT_TENANT_ID
+      key: azureKeyVault.tenantId
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+
+    - env: AB_AZURE_KEY_VAULT_VAULT_URL
+      key: azureKeyVault.vaultUrl
+      discriminatorOpts:  
+        - AZURE_KEY_VAULT
+
+    - env: AB_AZURE_KEY_CLIENT_ID_REF_NAME
+      key: azureKeyVault.clientIdRefName
+      valueExp: include "airbyte-data-plane.secretsManager.secretName" .
+      discriminatorOpts:  
+        - AZURE_KEY_VAULT
+
+    - env: AB_AZURE_KEY_CLIENT_ID_REF_KEY
+      key: azureKeyVault.clientIdRefKey
+      valueExp: .Values.secretsManager.azureKeyVault.clientIdSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_ID"
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+
+    - env: AB_AZURE_KEY_CLIENT_SECRET_REF_NAME
+      key: azureKeyVault.clientSecretRefName
+      valueExp: include "airbyte-data-plane.secretsManager.secretName" .
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+
+    - env: AB_AZURE_KEY_CLIENT_SECRET_REF_KEY
+      key: azureKeyVault.clientSecretRefKey
+      valueExp: .Values.secretsManager.azureKeyVault.clientSecretSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_SECRET"
+      discriminatorOpts: 
+        - AZURE_KEY_VAULT
+
+    - env: SECRET_STORE_GCP_PROJECT_ID
+      key: googleSecretManager.projectId
+      discriminatorOpts: 
+        - GOOGLE_SECRET_MANAGER
+
+    - env: SECRET_STORE_GCP_CREDENTIALS
+      key: googleSecretManager.credentials
+      discriminatorOpts: 
+        - GOOGLE_SECRET_MANAGER
+      sensitive: true
+
+    - env: VAULT_ADDRESS
+      key: vault.address
+      defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace)
+      discriminatorOpts: 
+        - VAULT
+
+    - env: VAULT_PREFIX
+      key: vault.prefix
+      defaultValue: secret/
+      discriminatorOpts: 
+        - VAULT
+
+    - env: VAULT_AUTH_TOKEN
+      key: vault.authToken
+      discriminatorOpts: 
+        - VAULT
+      sensitive: true
+
+storage:
+  keyBasePath: storage
+  discriminatorField: type
+  discriminatorFieldOpts: 
+    - azure
+    - gcs
+    - minio
+    - s3
+  config: 
+    - env: STORAGE_TYPE      
+      key: type
+      defaultValue: minio
+
+    - env: STORAGE_BUCKET_ACTIVITY_PAYLOAD
+      key: bucket.activityPayload
+      defaultValue: airbyte-storage
+
+    - env: STORAGE_BUCKET_LOG
+      key: bucket.log
+      defaultValue: airbyte-storage
+
+    - env: STORAGE_BUCKET_STATE
+      key: bucket.state
+      defaultValue: airbyte-storage
+
+    - env: STORAGE_BUCKET_WORKLOAD_OUTPUT
+      key: bucket.workloadOutput
+      defaultValue: airbyte-storage
+
+    - env: AWS_DEFAULT_REGION
+      key: s3.region
+      discriminatorOpts: 
+        - s3
+
+    - env: AWS_AUTHENTICATION_TYPE
+      key: s3.authenticationType
+      defaultValue: credentials
+      discriminatorOpts: 
+        - s3
+
+    - env: AWS_ACCESS_KEY_ID
+      key: s3.accessKeyId
+      discriminatorOpts:
+        - s3
+      sensitive: true
+
+    - env: AWS_SECRET_ACCESS_KEY
+      key: s3.secretAccesskey
+      discriminatorOpts:
+        - s3
+      sensitive: true
+
+    - env: AZURE_STORAGE_CONNECTION_STRING
+      key: azure.connectionString
+      discriminatorOpts: 
+        - azure
+      sensitive: true
+
+    - env: GOOGLE_APPLICATION_CREDENTIALS_JSON
+      key: gcs.credentialsJson
+      discriminatorOpts: 
+        - gcs
+      sensitive: true
+
+    - env: GOOGLE_APPLICATION_CREDENTIALS
+      key: gcs.credentialsJsonPath
+      discriminatorOpts: 
+        - gcs
+      defaultValue: "/secrets/gcp-creds/gcp.json"
+
+    - env: AWS_ACCESS_KEY_ID
+      key: minio.accessKeyId
+      discriminatorOpts: 
+        - minio
+      sensitive: true
+      defaultValue: minio
+
+    - env: AWS_SECRET_ACCESS_KEY
+      key: minio.secretAccessKey
+      discriminatorOpts: 
+        - minio
+      sensitive: true
+      defaultValue: minio123
+
+    - env: MINIO_ENDPOINT
+      key: minio.endpoint
+      discriminatorOpts: 
+        - minio
+      defaultValueExp: (printf "http://airbyte-minio-svc.%s:9000" .Release.Namespace)
+
+    - env: S3_PATH_STYLE
+      key: minio.s3PathStyleAccess
+      discriminatorOpts: 
+        - minio
+      defaultValue: true
+
+temporal:
+  keyBasePath: temporal
+  config:
+    - env: TEMPORAL_HOST
+      key: host
+      valueExp: ternary (include "airbyte-data-plane.temporal.cloud.host" .) (.Values.temporal.host) (eq (include "airbyte-data-plane.temporal.cloud.enabled" .) "true")
+
+    - env: DYNAMIC_CONFIG_FILE_PATH
+      key: configFilePath
+      defaultValue: config/dynamicconfig/development.yaml
+
+    - env: PROMETHEUS_ENDPOINT
+      key: prometheus.endpoint
+      defaultValue: 0.0.0.0:9090
+
+temporal.cloud:
+  keyBasePath: temporal.cloud
+  secretNamePath: temporal.secretName
+  config:
+    - env: TEMPORAL_CLOUD_ENABLED
+      key: enabled
+      defaultValue: false
+
+    - env: TEMPORAL_CLOUD_CLIENT_CERT
+      key: clientCert
+      sensitive: true
+
+    - env: TEMPORAL_CLOUD_CLIENT_KEY
+      key: clientKey
+      sensitive: true
+
+    - env: TEMPORAL_CLOUD_NAMESPACE
+      key: namespace
+
+    - env: TEMPORAL_CLOUD_HOST
+      key: host
+
+temporal.sdk:
+  config:
+    - env: TEMPORAL_SDK_RPC_TIMEOUT
+      key: rpc.timeout
+      defaultValue: 120s
+
+    - env: TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT
+      key: rpc.longPollTimeout
+      defaultValue: 140s
+
+    - env: TEMPORAL_SDK_RPC_QUERY_TIMEOUT
+      key: rpc.queryTimeout
+      defaultValue: 20s
+
+temporal.worker:
+  config:
+    - env: TEMPORAL_WORKER_PORTS
+      key: ports
+      valueExp: join "," (seq 9000 9040) 
+
+tracking:
+  keyBasePath: tracking
+  config:
+    - env: TRACKING_ENABLED
+      key: enabled
+      defaultValue: true
+    
+    - env: TRACKING_STRATEGY
+      key: strategy
+      defaultValue: logging
+
+    - env: SEGMENT_WRITE_KEY
+      key: segment.writeKeySecretKey
+      defaultValue: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
+
+worker:
+  config:
+    - env: ACTIVITY_MAX_ATTEMPT
+      key: activityMaxAttempt
+      default: ""
+
+    - env: ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS
+      key: activityInitialDelayBetweenAttemptsSeconds
+
+    - env: ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS
+      key: activityMaxDelayBetweenAttemptsSeconds
+
+    - env: CONFIG_ROOT
+      key: configRoot
+      defaultValue: /configs
+
+    - env: MAX_NOTIFY_WORKERS
+      key: maxNotifyWorkers
+      defaultValue: 30
+
+    - env: MAX_SYNC_WORKERS
+      key: maxSyncWorkers
+      defaultValue: 5
+      
+    #- env: SHOULD_HANDLE_SYNC_CONTROL_PLANE_TASKS
+    #  key: shouldHandleSyncControlPlaneTasks
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS
+    #  key: shouldRunCheckConnectionWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS
+    #  key: shouldRunConnectionManagerWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_DISCOVER_WORKFLOWS
+    #  key: shouldRunDiscoverWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_GET_SPEC_WORKFLOWS
+    #  key: shouldRunGetSpecWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_NOTIFY_WORKFLOWS
+    #  key: shouldRunNotifyWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_SYNC_WORKFLOWS
+    #  key: shouldRunSyncWorkflows
+    #  defaultValue: true
+
+    #- env: SKIP_DATABASE_AVAILABILITY_CHECKS
+    #  key: skipDatabaseAvailabilityChecks
+    #  defaultValue: true
+
+    - env: SYNC_JOB_MAX_ATTEMPTS
+      key: syncJobMaxAttempts
+      defaultValue: 3
+
+    - env: SYNC_JOB_MAX_TIMEOUT_DAYS
+      key: syncJobMaxTimeoutDays
+      defaultValue: 3
+
+    - env: SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES
+      key: syncJobInitRetryTimeoutMinutes
+      defaultValue: 5
+
+    - env: USE_STREAM_CAPABLE_STATE
+      key: useStreamCapableState
+      defaultValue: true
+
+    - env: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
+      key: workflowFailureRestartDelaySeconds
+
+    - env: WORKSPACE_DOCKER_MOUNT
+      key: workspaceDockerMount
+      defaultValue: airbyte_workspace
+
+    - env: WORKSPACE_ROOT
+      key: workspaceRoot
+      defaultValue: /workspace
+
+    - env: WORKER_ENVIRONMENT
+      key: environment
+      value: kubernetes
+
+workloadApiServer:
+  config:
+    - env: WORKLOAD_API_HOST
+      key: host
+      defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
+
+    - env: WORKLOAD_API_BEARER_TOKEN
+      key: bearerToken
+      defaultValue: token
+      sensitive: true
+
+    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
+      key: bearerTokenSecretName
+      defaultValueExp: (include "airbyte-data-plane.workloadApiServer.secretName" .)
+
+    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
+      key: bearerTokenSecretKey
+      defaultValue: WORKLOAD_API_BEARER_TOKEN
+
+workloadLauncher:
+  config:
+    - env: RUNNING_TTL_MINUTES
+      key: timeToDeletePods.running
+
+    - env: SUCCEEDED_TTL_MINUTES
+      key: timeToDeletePods.succeeded 
+      defaultValue: 10
+
+    - env: UNSUCCESSFUL_TTL_MINUTES
+      key: timeToDeletePods.unsuccessful
+      defaultValue: 120
+
+    - env: WORKLOAD_LAUNCHER_ENABLED
+      key: enabled
+      defaultValue: true
+
+    - env: WORKLOAD_LAUNCHER_PARALLELISM
+      key: parallelism
+      defaultValue: 10
+
+workloadLauncher.images:
+  keyBasePath: workloadLauncher
+  config:
+    - env: CONNECTOR_PROFILER_IMAGE
+      key: connectorProfiler.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $)
+
+    - env: CONNECTOR_SIDECAR_IMAGE
+      key:  connectorSidecar.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorSidecar.image $)
+
+    - env: CONTAINER_ORCHESTRATOR_ENABLED
+      key: containerOrchestrator.enabled
+
+    - env: CONTAINER_ORCHESTRATOR_IMAGE
+      key: containerOrchestrator.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.containerOrchestrator.image $)
+
+    - env: WORKLOAD_INIT_IMAGE
+      key: workloadInit.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.workloadInit.image $)
+
+workloads:
+  keyBasePath: workloads
+  config:
+    - env: CONTAINER_ORCHESTRATOR_SECRET_NAME
+      key: containerOrchestrator.secretName
+      defaultValueExp: .Values.secretName
+
+    - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH
+      key: containerOrchestrator.dataPlane.secretMountPath
+      defaultValue: /secrets/dataplane-creds
+
+    - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
+      key: containerOrchestrator.dataPlane.secretName
+
+    - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+      key: containerOrchestrator.dataPlane.secretKey
+      defaultValue: sa.json
+
+    - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
+      key: containerOrchestrator.javaOpts
+      defaultValue: -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent
+
+    - env: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
+      key: containerOrchestrator.secretMountPath
+      defaultValue: /secrets/gcp-creds
+
+    - env: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
+      key: kubernetesClientMaxIdleConnections
+      defaultValue: 100
+
+    - env: KUBERNETES_CLIENT_MAX_RETRIES
+      key: kuberentesClientMaxRetries
+      defaultValue: ""
+
+    - env: WORKLOADS_NAMESPACE
+      key: namespace
+      defaultValueExp: .Release.Namespace
+
+    - env: PUB_SUB_ENABLED
+      key: pubSub.enabled
+      defaultValue: false
+
+    - env: PUB_SUB_TOPIC_NAME
+      key: pubSub.topicName
+      defaultValue: ""
+
+workloads.resources:
+  keyBasePath: workloads.resources
+  config:
+    - env: CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED
+      key: useConnectorResourceDefaults
+      defaultValue: true
+
+    - env: JOB_MAIN_CONTAINER_CPU_LIMIT
+      key: mainContainer.cpu.limit
+      defaultValue: ""
+
+    - env: JOB_MAIN_CONTAINER_CPU_REQUEST
+      key: mainContainer.cpu.request
+      defaultValue: ""
+
+    - env: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+      key: mainContainer.memory.limit
+      defaultValue: ""
+
+    - env: JOB_MAIN_CONTAINER_MEMORY_REQUEST
+      key: mainContainer.memory.request
+      defaultValue: ""
+
+    - env: CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT
+      key: check.cpu.limit
+      defaultValue: ""
+
+    - env: CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST
+      key: check.cpu.request
+      defaultValue: ""
+
+    - env: CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT
+      key: check.memory.limit
+      defaultValue: ""
+
+    - env: CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST
+      key: check.memory.request
+      defaultValue: ""
+
+    - env: DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT
+      key: discover.cpu.limit
+      defaultValue: ""
+
+    - env: DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST
+      key: discover.cpu.request
+      defaultValue: ""
+
+    - env: DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT
+      key: discover.memory.limit
+      defaultValue: ""
+
+    - env: DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST
+      key: discover.memory.request
+      defaultValue: ""
+
+    - env: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+      key: fileTransfer.storage.limit
+      defaultValue: ""
+
+    - env: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+      key: fileTransfer.storage.request
+      defaultValue: ""
+
+    - env: REPLICATION_ORCHESTRATOR_CPU_LIMIT
+      key: replication.cpu.limit
+      defaultValue: ""
+
+    - env: REPLICATION_ORCHESTRATOR_CPU_REQUEST
+      key: replication.cpu.request
+      defaultValue: ""
+
+    - env: REPLICATION_ORCHESTRATOR_MEMORY_LIMIT
+      key: replication.memory.limit
+      defaultValue: ""
+
+    - env: REPLICATION_ORCHESTRATOR_MEMORY_REQUEST
+      key: replication.memory.request
+      defaultValue: ""
+
+    - env: SIDECAR_MAIN_CONTAINER_CPU_LIMIT
+      key: sidecar.cpu.limit
+      defaultValue: ""
+
+    - env: SIDECAR_MAIN_CONTAINER_CPU_REQUEST
+      key: sidecar.cpu.request
+      defaultValue: ""
+
+    - env: SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT
+      key: sidecar.memory.limit
+      defaultValue: ""
+
+    - env: SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST
+      key: sidecar.memory.request
+      defaultValue: ""
+
+workloads.queues:
+  keyBasePath: workloads.queues
+  config:
+    - env: DATA_CHECK_TASK_QUEUES
+      key: check
+      valueExp: join " " .Values.workloads.queues.check
+
+    - env: DATA_DISCOVER_TASK_QUEUES
+      key: discover
+      valueExp: join " " .Values.workloads.queues.discover
+      
+    - env: DATA_SYNC_TASK_QUEUES
+      key: sync
+      valueExp: join " " .Values.workloads.queues.sync
+
