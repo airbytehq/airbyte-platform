@@ -24,7 +24,7 @@ data class PartialUserConfig(
   @field:TypeDef(type = DataType.JSON)
   var partialUserConfigProperties: JsonNode,
   var tombstone: Boolean = false,
-  var sourceId: UUID? = null,
+  var sourceId: UUID,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated

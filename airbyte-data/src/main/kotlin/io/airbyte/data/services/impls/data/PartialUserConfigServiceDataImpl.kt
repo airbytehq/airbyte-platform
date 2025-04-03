@@ -6,7 +6,9 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
+import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.data.repositories.PartialUserConfigRepository
+import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
@@ -18,20 +20,23 @@ import java.util.UUID
 open class PartialUserConfigServiceDataImpl(
   private val repository: PartialUserConfigRepository,
   private val sourceService: SourceService,
+  private val configTemplateService: ConfigTemplateService,
 ) : PartialUserConfigService {
-  override fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithActorDetails {
+  override fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithConfigTemplateAndActorDetails {
     val partialUserConfig =
       repository
         .findById(partialUserConfigId)
         .orElseThrow {
           throw RuntimeException("PartialUserConfig not found")
         }.toConfigModel()
-    val sourceDefinition = sourceService.getSourceDefinitionFromSource(partialUserConfig.sourceId)
 
-    return PartialUserConfigWithActorDetails(
+    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId)
+
+    return PartialUserConfigWithConfigTemplateAndActorDetails(
       partialUserConfig = partialUserConfig,
-      actorName = sourceDefinition.name,
-      actorIcon = sourceDefinition.iconUrl,
+      actorName = configTemplate.actorName,
+      actorIcon = configTemplate.actorIcon,
+      configTemplate = configTemplate.configTemplate,
     )
   }
 
@@ -66,7 +71,7 @@ open class PartialUserConfigServiceDataImpl(
         throw RuntimeException("PartialUserConfig not found for update")
       }
 
-    val updatedPartialUserConfig = repository.save(partialUserConfig.toEntity()).toConfigModel()
+    val updatedPartialUserConfig = repository.update(partialUserConfig.toEntity()).toConfigModel()
     val sourceDefinition = sourceService.getSourceDefinitionFromSource(updatedPartialUserConfig.sourceId)
 
     return PartialUserConfigWithActorDetails(

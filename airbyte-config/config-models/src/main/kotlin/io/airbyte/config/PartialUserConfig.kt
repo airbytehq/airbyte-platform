@@ -36,3 +36,14 @@ data class PartialUserConfigWithActorDetails(
   val actorIcon: String,
   val actorName: String,
 )
+
+/**
+ * Config model for manipulating PartialUserConfigs with config template details
+ */
+
+data class PartialUserConfigWithConfigTemplateAndActorDetails(
+  val partialUserConfig: PartialUserConfig,
+  val configTemplate: ConfigTemplate,
+  val actorName: String,
+  val actorIcon: String,
+)

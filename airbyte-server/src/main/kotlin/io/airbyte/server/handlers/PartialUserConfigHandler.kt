@@ -12,7 +12,7 @@ import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.PartialUserConfig
-import io.airbyte.config.PartialUserConfigWithActorDetails
+import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -30,7 +30,7 @@ class PartialUserConfigHandler(
    * @param partialUserConfigCreate The updated partial user config
    * @return The created partial user config with actor details
    */
-  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithActorDetails {
+  fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithConfigTemplateAndActorDetails {
     // Get the config template and actor definition
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
 
@@ -57,7 +57,14 @@ class PartialUserConfigHandler(
 
     // Save the secure config
     val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig, sourceId = savedSource.sourceId)
-    return partialUserConfigService.createPartialUserConfig(securePartialUserConfig)
+    val createdPartialUserConfig = partialUserConfigService.createPartialUserConfig(securePartialUserConfig)
+
+    return PartialUserConfigWithConfigTemplateAndActorDetails(
+      partialUserConfig = createdPartialUserConfig.partialUserConfig,
+      configTemplate = configTemplate.configTemplate,
+      actorName = createdPartialUserConfig.actorName,
+      actorIcon = createdPartialUserConfig.actorIcon,
+    )
   }
 
   /**
@@ -66,7 +73,7 @@ class PartialUserConfigHandler(
    * @param partialUserConfig The updated partial user config
    * @return The updated partial user config with actor details
    */
-  fun updatePartialUserConfig(partialUserConfig: PartialUserConfig): PartialUserConfigWithActorDetails {
+  fun updatePartialUserConfig(partialUserConfig: PartialUserConfig): PartialUserConfigWithConfigTemplateAndActorDetails {
     // First get the existing config to verify it exists
     val existingConfig =
       partialUserConfigService
@@ -111,7 +118,14 @@ class PartialUserConfigHandler(
     val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig)
 
     // Update the partial user config in the database
-    return partialUserConfigService.updatePartialUserConfig(securePartialUserConfig)
+    val updatedPartialUserConfig = partialUserConfigService.updatePartialUserConfig(securePartialUserConfig)
+
+    return PartialUserConfigWithConfigTemplateAndActorDetails(
+      partialUserConfig = updatedPartialUserConfig.partialUserConfig,
+      configTemplate = configTemplate.configTemplate,
+      actorName = updatedPartialUserConfig.actorName,
+      actorIcon = updatedPartialUserConfig.actorIcon,
+    )
   }
 
   private fun createSourceCreateFromPartialUserConfig(

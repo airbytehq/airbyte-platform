@@ -6,13 +6,14 @@ package io.airbyte.data.services
 
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
+import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import java.util.UUID
 
 /**
  * A service that manages config templates
  */
 interface PartialUserConfigService {
-  fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithActorDetails
+  fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithConfigTemplateAndActorDetails
 
   fun listPartialUserConfigs(workspaceId: UUID): List<PartialUserConfigWithActorDetails>
 

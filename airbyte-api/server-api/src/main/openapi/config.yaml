@@ -18518,17 +18518,16 @@ components:
     PartialUserConfigRead:
       type: object
       required:
-        - partialUserConfigId
-        - configTemplateId
+        - id
         - partialUserConfigProperties
+        - configTemplate
+        - sourceId
       properties:
-        partialUserConfigId:
+        id:
           type: string
           format: uuid
-        configTemplateId:
-          description: the template that this user config is connected with
-          type: string
-          format: uuid
+        configTemplate:
+          $ref: "#/components/schemas/ConfigTemplateRead"
         sourceId:
           description: the source that this partial user config is for
           type: string
@@ -18596,7 +18595,6 @@ components:
         - partialUserConfigId
         - configTemplateName
         - configTemplateIcon
-        - configTemplateId
       properties:
         partialUserConfigId:
           type: string
@@ -18607,9 +18605,7 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
-        configTemplateId:
-          type: string
-          format: uuid
+
   responses:
     NotFoundResponse:
       description: Object with given id was not found.

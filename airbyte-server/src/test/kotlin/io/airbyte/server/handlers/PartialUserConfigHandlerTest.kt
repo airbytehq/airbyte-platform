@@ -13,6 +13,7 @@ import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
+import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -106,6 +107,14 @@ class PartialUserConfigHandlerTest {
         sourceId,
         initialProperties,
       )
+    val partialUserConfigWithTemplate =
+      createMockPartialUserConfigWithTemplate(
+        id = partialUserConfigId,
+        workspaceId = workspaceId,
+        configTemplateId = configTemplateId,
+        sourceId = sourceId,
+        properties = initialProperties,
+      )
 
     val updateConnectionConfig = objectMapper.createObjectNode().put("testKey", "updatedValue")
     val updateUserConfig =
@@ -137,7 +146,7 @@ class PartialUserConfigHandlerTest {
     val configSlot = slot<PartialUserConfig>()
     every { partialUserConfigService.updatePartialUserConfig(capture(configSlot)) } returns partialUserConfig
 
-    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfig
+    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfigWithTemplate
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
 
     val sourceUpdateSlot = slot<PartialSourceUpdate>()
@@ -355,6 +364,35 @@ class PartialUserConfigHandlerTest {
           partialUserConfigProperties = properties,
           sourceId = sourceId,
         ),
+      actorName = "test-source",
+      actorIcon = "test-icon",
+    )
+
+  private fun createMockPartialUserConfigWithTemplate(
+    id: UUID,
+    workspaceId: UUID,
+    configTemplateId: UUID,
+    sourceId: UUID? = null,
+    properties: JsonNode = objectMapper.createObjectNode(),
+    configTemplate: ConfigTemplate =
+      ConfigTemplate(
+        id = configTemplateId,
+        actorDefinitionId = UUID.randomUUID(),
+        partialDefaultConfig = objectMapper.createObjectNode(),
+        organizationId = UUID.randomUUID(),
+        userConfigSpec = objectMapper.createObjectNode(),
+      ),
+  ): PartialUserConfigWithConfigTemplateAndActorDetails =
+    PartialUserConfigWithConfigTemplateAndActorDetails(
+      partialUserConfig =
+        PartialUserConfig(
+          id = id,
+          workspaceId = workspaceId,
+          configTemplateId = configTemplateId,
+          partialUserConfigProperties = properties,
+          sourceId = sourceId,
+        ),
+      configTemplate = configTemplate,
       actorName = "test-source",
       actorIcon = "test-icon",
     )

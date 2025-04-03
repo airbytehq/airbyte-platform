@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ListPartialUserConfigsRequest
 import io.airbyte.api.model.generated.PartialUserConfigCreate
 import io.airbyte.api.model.generated.PartialUserConfigListItem
@@ -15,6 +16,7 @@ import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
+import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.server.handlers.PartialUserConfigHandler
 import io.micronaut.http.annotation.Body
@@ -42,7 +44,7 @@ class PartialUserConfigController(
   fun createPartialUserConfig(
     @Body partialUserConfigCreate: PartialUserConfigCreate,
   ): PartialUserConfigRead =
-    partialUserConfigWithActorDetailsToApiModel(
+    partialUserConfigWithTemplateAndActorDetailsToApiModel(
       partialUserConfigHandler.createPartialUserConfig(partialUserConfigCreate.toConfigModel()),
     )
 
@@ -52,7 +54,7 @@ class PartialUserConfigController(
   fun updatePartialUserConfig(
     @Body partialUserConfigUpdate: PartialUserConfigUpdate,
   ): PartialUserConfigRead =
-    partialUserConfigWithActorDetailsToApiModel(
+    partialUserConfigWithTemplateAndActorDetailsToApiModel(
       partialUserConfigHandler.updatePartialUserConfig(partialUserConfigUpdate.toConfigModel()),
     )
 
@@ -62,7 +64,9 @@ class PartialUserConfigController(
   fun getPartialUserConfig(
     @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
   ): PartialUserConfigRead =
-    partialUserConfigWithActorDetailsToApiModel(partialUserConfigService.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId))
+    partialUserConfigWithTemplateAndActorDetailsToApiModel(
+      partialUserConfigService.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId),
+    )
 
   private fun PartialUserConfigCreate.toConfigModel(): PartialUserConfig =
     PartialUserConfig(
@@ -88,18 +92,26 @@ class PartialUserConfigController(
       this.map { partialUserConfig ->
         PartialUserConfigListItem()
           .partialUserConfigId(partialUserConfig.partialUserConfig.id)
-          .configTemplateId(partialUserConfig.partialUserConfig.configTemplateId)
           .configTemplateIcon(partialUserConfig.actorIcon)
           .configTemplateName(partialUserConfig.actorName)
       }
     return PartialUserConfigReadList().partialUserConfigs(items)
   }
 
-  private fun partialUserConfigWithActorDetailsToApiModel(partialUserConfig: PartialUserConfigWithActorDetails): PartialUserConfigRead =
+  private fun partialUserConfigWithTemplateAndActorDetailsToApiModel(
+    partialUserConfig: PartialUserConfigWithConfigTemplateAndActorDetails,
+  ): PartialUserConfigRead =
     PartialUserConfigRead()
-      .partialUserConfigId(
+      .id(
         partialUserConfig.partialUserConfig.id,
-      ).configTemplateId(partialUserConfig.partialUserConfig.configTemplateId)
-      .sourceId(partialUserConfig.partialUserConfig.sourceId)
+      ).sourceId(partialUserConfig.partialUserConfig.sourceId)
       .partialUserConfigProperties(partialUserConfig.partialUserConfig.partialUserConfigProperties)
+      .configTemplate(
+        ConfigTemplateRead()
+          .id(
+            partialUserConfig.configTemplate.id,
+          ).configTemplateSpec(partialUserConfig.configTemplate.userConfigSpec)
+          .icon(partialUserConfig.actorIcon)
+          .name(partialUserConfig.actorName),
+      )
 }
