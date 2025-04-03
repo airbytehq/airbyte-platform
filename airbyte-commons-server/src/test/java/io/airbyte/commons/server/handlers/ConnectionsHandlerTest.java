@@ -180,6 +180,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
@@ -313,6 +314,7 @@ class ConnectionsHandlerTest {
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
   private MetricClient metricClient;
   private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretReferenceService secretReferenceService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -434,6 +436,7 @@ class ConnectionsHandlerTest {
     featureFlagClient = mock(TestClient.class);
     metricClient = mock(MetricClient.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretReferenceService = mock(SecretReferenceService.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -454,7 +457,8 @@ class ConnectionsHandlerTest {
             featureFlagClient,
             secretsRepositoryWriter,
             metricClient,
-            secretPersistenceConfigService);
+            secretPersistenceConfigService,
+            secretReferenceService);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -477,7 +481,8 @@ class ConnectionsHandlerTest {
         apiPojoConverters,
         metricClient,
         Configs.AirbyteEdition.COMMUNITY,
-        secretsRepositoryWriter);
+        secretsRepositoryWriter,
+        secretReferenceService);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

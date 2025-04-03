@@ -36,6 +36,8 @@ import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -44,6 +46,8 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -87,6 +91,7 @@ public class DestinationHandler {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final MetricClient metricClient;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final SecretReferenceService secretReferenceService;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -106,7 +111,8 @@ public class DestinationHandler {
                             final FeatureFlagClient featureFlagClient,
                             final SecretsRepositoryWriter secretsRepositoryWriter,
                             final MetricClient metricClient,
-                            final SecretPersistenceConfigService secretPersistenceConfigService) {
+                            final SecretPersistenceConfigService secretPersistenceConfigService,
+                            final SecretReferenceService secretReferenceService) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -125,6 +131,7 @@ public class DestinationHandler {
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.metricClient = metricClient;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.secretReferenceService = secretReferenceService;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -273,7 +280,12 @@ public class DestinationHandler {
 
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return buildDestinationRead(destinationIdRequestBody.getDestinationId());
+    return getDestination(destinationIdRequestBody, false);
+  }
+
+  public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody, final Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildDestinationRead(destinationIdRequestBody.getDestinationId(), includeSecretCoordinates);
   }
 
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -418,23 +430,53 @@ public class DestinationHandler {
 
   public DestinationRead buildDestinationRead(final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return buildDestinationRead(destinationService.getDestinationConnection(destinationId));
+    return buildDestinationRead(destinationId, false);
+  }
+
+  public DestinationRead buildDestinationRead(final UUID destinationId, final Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildDestinationRead(destinationService.getDestinationConnection(destinationId), includeSecretCoordinates);
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildDestinationRead(destinationConnection, false);
+  }
+
+  private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectorSpecification spec =
         getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
             destinationConnection.getDestinationId());
-    return buildDestinationRead(destinationConnection, spec);
+    return buildDestinationRead(destinationConnection, spec, includeSecretCoordinates);
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final ConnectorSpecification spec)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildDestinationRead(destinationConnection, spec, false);
+  }
+
+  private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection,
+                                               final ConnectorSpecification spec,
+                                               final Boolean includeSecretCoordinates)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
 
     // remove secrets from config before returning the read
     final DestinationConnection dci = Jsons.clone(destinationConnection);
-    dci.setConfiguration(secretsProcessor.prepareSecretsForOutput(dci.getConfiguration(), spec.getConnectionSpecification()));
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.getWorkspaceId());
+    if (includeSecretCoordinates
+        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
+      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
+    }
+    final ConfigWithSecretReferences configWithRefs =
+        this.secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, dci.getDestinationId(), dci.getConfiguration());
+    final JsonNode sanitizedConfig =
+        includeSecretCoordinates
+            ? secretsProcessor.simplifySecretsForOutput(
+                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
+                spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+    dci.setConfiguration(sanitizedConfig);
 
     final StandardDestinationDefinition standardDestinationDefinition =
         destinationService.getStandardDestinationDefinition(dci.getDestinationDefinitionId());

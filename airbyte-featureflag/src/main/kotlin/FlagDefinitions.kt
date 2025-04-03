@@ -189,6 +189,11 @@ object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow
 
 object AllowConfigTemplateEndpoints : Permanent<Boolean>(key = "platform.allow-config-template-endpoints", default = false)
 
+object AllowConfigWithSecretCoordinatesEndpoints : Permanent<Boolean>(
+  key = "platform.allow-config-with-secret-coordinates-endpoints",
+  default = false,
+)
+
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)

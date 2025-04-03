@@ -145,7 +145,10 @@ open class SourcesController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicGetSource(sourceId: String): Response {
+  override fun publicGetSource(
+    sourceId: String,
+    includeSecretCoordinates: Boolean?,
+  ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermission(
       sourceId,
@@ -159,6 +162,7 @@ open class SourcesController(
         {
           sourceService.getSource(
             UUID.fromString(sourceId),
+            includeSecretCoordinates,
           )
         },
         SOURCES_WITH_ID_PATH,

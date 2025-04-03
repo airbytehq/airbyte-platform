@@ -27,6 +27,8 @@ interface EntitlementProvider {
   ): Map<UUID, Boolean>
 
   fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean
+
+  fun hasConfigWithSecretCoordinatesEntitlements(organizationId: UUID): Boolean
 }
 
 /**
@@ -41,6 +43,8 @@ class DefaultEntitlementProvider : EntitlementProvider {
   ): Map<UUID, Boolean> = actorDefinitionIds.associateWith { _ -> false }
 
   override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = false
+
+  override fun hasConfigWithSecretCoordinatesEntitlements(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -67,6 +71,8 @@ class EnterpriseEntitlementProvider(
   }
 
   override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = activeLicense.license?.isEmbedded ?: false
+
+  override fun hasConfigWithSecretCoordinatesEntitlements(organizationId: UUID): Boolean = activeLicense.license?.isEmbedded ?: false
 }
 
 /**
@@ -103,4 +109,9 @@ class CloudEntitlementProvider(
 
   override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean =
     featureFlagClient.boolVariation(AllowConfigTemplateEndpoints, Organization(organizationId))
+
+  // TODO: In the future, we should check in the DB to see if this org is using a custom secret manager to enabled this (isEntitled && usingCustomSecretManager).  For now, this is disabled for all cloud users. https://github.com/airbytehq/airbyte-internal-issues/issues/12217
+  override fun hasConfigWithSecretCoordinatesEntitlements(organizationId: UUID): Boolean =
+//    featureFlagClient.boolVariation(AllowConfigWithSecretCoordinatesEndpoints, Organization(organizationId))
+    false
 }

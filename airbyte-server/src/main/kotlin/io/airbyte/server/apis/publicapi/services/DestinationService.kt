@@ -38,7 +38,10 @@ interface DestinationService {
     destinationDefinitionId: UUID,
   ): DestinationResponse
 
-  fun getDestination(destinationId: UUID): DestinationResponse
+  fun getDestination(
+    destinationId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): DestinationResponse
 
   fun updateDestination(
     destinationId: UUID,
@@ -112,14 +115,17 @@ class DestinationServiceImpl(
   /**
    * Gets a destination by ID.
    */
-  override fun getDestination(destinationId: UUID): DestinationResponse {
+  override fun getDestination(
+    destinationId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): DestinationResponse {
     val destinationIdRequestBody = DestinationIdRequestBody()
     destinationIdRequestBody.destinationId = destinationId
 
     val result =
       kotlin
         .runCatching {
-          destinationHandler.getDestination(destinationIdRequestBody)
+          destinationHandler.getDestination(destinationIdRequestBody, includeSecretCoordinates == true)
         }.onFailure {
           log.error("Error while getting destination: ", it)
           ConfigClientErrorHandler.handleError(it)

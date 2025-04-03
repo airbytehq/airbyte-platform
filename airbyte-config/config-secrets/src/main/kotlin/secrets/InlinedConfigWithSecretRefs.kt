@@ -7,6 +7,7 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 
 @JvmInline
+// An actor config with secret references resolved back to coordinates
 value class InlinedConfigWithSecretRefs(
   val value: JsonNode,
 )

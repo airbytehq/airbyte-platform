@@ -137,6 +137,14 @@ paths:
       x-speakeasy-alias: "getSource"
       x-speakeasy-group: "Sources"
       summary: "Get Source details"
+      parameters:
+        - in: "query"
+          name: includeSecretCoordinates
+          schema:
+            type: boolean
+          required: false
+          description: Rather than return *** for secret properties include the secret coordinate information
+
     patch:
       tags:
       - "public_sources"

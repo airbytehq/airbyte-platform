@@ -53,7 +53,10 @@ interface SourceService {
 
   fun deleteSource(sourceId: UUID)
 
-  fun getSource(sourceId: UUID): SourceResponse
+  fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse
 
   fun getSourceSchema(
     sourceId: UUID,
@@ -181,13 +184,16 @@ open class SourceServiceImpl(
   /**
    * Gets a source by ID.
    */
-  override fun getSource(sourceId: UUID): SourceResponse {
+  override fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse {
     val sourceIdRequestBody = SourceIdRequestBody()
     sourceIdRequestBody.sourceId = sourceId
 
     val result =
       kotlin
-        .runCatching { sourceHandler.getSource(sourceIdRequestBody) }
+        .runCatching { sourceHandler.getSource(sourceIdRequestBody, includeSecretCoordinates == true) }
         .onFailure {
           log.error("Error for getSource", it)
           ConfigClientErrorHandler.handleError(it)

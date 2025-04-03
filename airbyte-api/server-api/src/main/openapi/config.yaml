@@ -7532,6 +7532,13 @@ paths:
       x-sdk-alias: getSource
       x-sdk-group: Sources
       summary: Get Source details
+      parameters:
+        - in: "query"
+          name: includeSecretCoordinates
+          schema:
+            type: boolean
+          required: false
+          description: Rather than return *** for secret properties include the secret coordinate information
     patch:
       tags:
         - public_sources
@@ -7779,6 +7786,13 @@ paths:
       x-sdk-alias: getDestination
       x-sdk-group: Destinations
       summary: Get Destination details
+      parameters:
+        - in: "query"
+          name: includeSecretCoordinates
+          schema:
+            type: boolean
+          required: false
+          description: Rather than return *** for secret properties include the secret coordinate information
     delete:
       tags:
         - public_destinations

@@ -53,11 +53,14 @@ import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -67,6 +70,7 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -113,6 +117,7 @@ class DestinationHandlerTest {
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private MetricClient metricClient;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private SecretReferenceService secretReferenceService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -133,6 +138,7 @@ class DestinationHandlerTest {
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     metricClient = mock(MetricClient.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    secretReferenceService = mock(SecretReferenceService.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -175,7 +181,8 @@ class DestinationHandlerTest {
             featureFlagClient,
             secretsRepositoryWriter,
             metricClient,
-            secretPersistenceConfigService);
+            secretPersistenceConfigService,
+            secretReferenceService);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -206,6 +213,8 @@ class DestinationHandlerTest {
     when(secretsRepositoryWriter.createFromConfig(destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(),
         destinationDefinitionVersion.getSpec().getConnectionSpecification(), null))
             .thenReturn(destinationConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -293,7 +302,8 @@ class DestinationHandlerTest {
             featureFlagClient,
             secretsRepositoryWriter,
             metricClient,
-            secretPersistenceConfigService);
+            secretPersistenceConfigService,
+            secretReferenceService);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -356,6 +366,8 @@ class DestinationHandlerTest {
     when(secretsRepositoryWriter.updateFromConfig(destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(),
         destinationConnection.getConfiguration(), destinationDefinitionVersion.getSpec().getConnectionSpecification(), null))
             .thenReturn(destinationConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
 
     final DestinationRead actualDestinationRead = destinationHandler.updateDestination(destinationUpdate);
 
@@ -442,7 +454,8 @@ class DestinationHandlerTest {
             featureFlagClient,
             secretsRepositoryWriter,
             metricClient,
-            secretPersistenceConfigService);
+            secretPersistenceConfigService,
+            secretReferenceService);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
@@ -502,6 +515,8 @@ class DestinationHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId()))
             .thenReturn(destinationDefinitionVersion);
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
 
     final DestinationRead actualDestinationRead = destinationHandler.getDestination(destinationIdRequestBody);
 
@@ -545,6 +560,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
 
     final DestinationReadList actualDestinationRead = destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody);
 
@@ -590,6 +607,9 @@ class DestinationHandlerTest {
                 .thenReturn(destinationConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+
     destinationHandler.deleteDestination(destinationIdRequestBody);
 
     // We should not no longer get secrets or write secrets anymore (since we are deleting the
@@ -626,6 +646,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
 
     final DestinationSearch validDestinationSearch = new DestinationSearch().name(destinationConnection.getName());
     DestinationReadList actualDestinationRead = destinationHandler.searchDestinations(validDestinationSearch);

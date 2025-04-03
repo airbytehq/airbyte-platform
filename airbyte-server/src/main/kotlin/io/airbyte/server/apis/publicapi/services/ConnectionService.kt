@@ -137,7 +137,7 @@ class ConnectionServiceImpl(
     val connectionRead = result.getOrNull()!!
 
     // get workspace id from source id
-    val sourceResponse: SourceResponse = sourceService.getSource(connectionRead.sourceId)
+    val sourceResponse: SourceResponse = sourceService.getSource(connectionRead.sourceId, false)
 
     return ConnectionReadMapper.from(
       connectionRead,

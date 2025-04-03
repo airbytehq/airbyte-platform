@@ -45,6 +45,8 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -57,6 +59,8 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -106,6 +110,7 @@ public class SourceHandler {
   private final MetricClient metricClient;
   private final Configs.AirbyteEdition airbyteEdition;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final SecretReferenceService secretReferenceService;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -129,7 +134,8 @@ public class SourceHandler {
                        final ApiPojoConverters apiPojoConverters,
                        final MetricClient metricClient,
                        final Configs.AirbyteEdition airbyteEdition,
-                       final SecretsRepositoryWriter secretsRepositoryWriter) {
+                       final SecretsRepositoryWriter secretsRepositoryWriter,
+                       final SecretReferenceService secretReferenceService) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -152,6 +158,7 @@ public class SourceHandler {
     this.metricClient = metricClient;
     this.airbyteEdition = airbyteEdition;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.secretReferenceService = secretReferenceService;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -305,7 +312,12 @@ public class SourceHandler {
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
       throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    return buildSourceRead(sourceIdRequestBody.getSourceId());
+    return getSource(sourceIdRequestBody, false);
+  }
+
+  public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody, Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    return buildSourceRead(sourceIdRequestBody.getSourceId(), includeSecretCoordinates);
   }
 
   public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalogWithUpdatedAt(final SourceIdRequestBody sourceIdRequestBody)
@@ -444,26 +456,56 @@ public class SourceHandler {
 
   public SourceRead buildSourceRead(final UUID sourceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildSourceRead(sourceId, false);
+  }
+
+  public SourceRead buildSourceRead(final UUID sourceId, final Boolean includeSecretCoordinates)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
     final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceId);
-    return buildSourceRead(sourceConnection);
+    return buildSourceRead(sourceConnection, includeSecretCoordinates);
   }
 
   private SourceRead buildSourceRead(final SourceConnection sourceConnection)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildSourceRead(sourceConnection, false);
+  }
+
+  private SourceRead buildSourceRead(final SourceConnection sourceConnection, final Boolean includeSecretCoordinates)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
-    return buildSourceRead(sourceConnection, spec);
+    return buildSourceRead(sourceConnection, spec, includeSecretCoordinates);
   }
 
   private SourceRead buildSourceRead(final SourceConnection sourceConnection, final ConnectorSpecification spec)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildSourceRead(sourceConnection, spec, false);
+  }
+
+  private SourceRead buildSourceRead(final SourceConnection sourceConnection,
+                                     final ConnectorSpecification spec,
+                                     final Boolean includeSecretCoordinates)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
     final StandardSourceDefinition standardSourceDefinition = sourceService
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final JsonNode sanitizedConfig = secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), spec.getConnectionSpecification());
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
+    if (includeSecretCoordinates
+        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
+      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
+    }
+    final ConfigWithSecretReferences configWithRefs =
+        this.secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, sourceConnection.getSourceId(),
+            sourceConnection.getConfiguration());
+    final JsonNode sanitizedConfig =
+        includeSecretCoordinates
+            ? secretsProcessor.simplifySecretsForOutput(
+                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
+                spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
     sourceConnection.setConfiguration(sanitizedConfig);
     return toSourceRead(sourceConnection, standardSourceDefinition);
   }

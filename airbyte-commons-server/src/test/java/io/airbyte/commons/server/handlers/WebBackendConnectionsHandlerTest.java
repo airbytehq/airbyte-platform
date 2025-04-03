@@ -107,6 +107,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -121,6 +122,8 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
@@ -160,6 +163,7 @@ class WebBackendConnectionsHandlerTest {
   private OperationsHandler operationsHandler;
   private SchedulerHandler schedulerHandler;
   private StateHandler stateHandler;
+  private SourceHandler sourceHandler;
   private DestinationHandler destinationHandler;
   private WebBackendConnectionsHandler wbHandler;
   private SourceRead sourceRead;
@@ -233,6 +237,12 @@ class WebBackendConnectionsHandlerTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
 
+    // Always mock the secretReferenceService to return the passed in config for both source and
+    // destination
+    final SecretReferenceService secretReferenceService = mock(SecretReferenceService.class);
+    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+
     final Supplier uuidGenerator = mock(Supplier.class);
 
     destinationHandler = new DestinationHandler(
@@ -253,9 +263,10 @@ class WebBackendConnectionsHandlerTest {
         featureFlagClient,
         secretsRepositoryWriter,
         metricClient,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        secretReferenceService);
 
-    final SourceHandler sourceHandler = new SourceHandler(
+    sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
         validator,
@@ -277,7 +288,8 @@ class WebBackendConnectionsHandlerTest {
         apiPojoConverters,
         metricClient,
         Configs.AirbyteEdition.COMMUNITY,
-        secretsRepositoryWriter);
+        secretsRepositoryWriter,
+        secretReferenceService);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,
